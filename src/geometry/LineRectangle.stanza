@@ -1,0 +1,55 @@
+; TODO - Most geometry is defined in JITX esir.stanza
+;   why is this in JSL/OCDB ? Should this move to JITX proper.
+#use-added-syntax(jitx)
+defpackage jsl/geometry/LineRectangle:
+  import core
+  import jitx
+  import jitx-commands
+
+defn gen-default-width ():
+  clearance(current-rules(), MinSilkscreenWidth)
+
+doc: \<DOC>
+Rectangle constructed via lines of a specified width.
+This rectangle is anchored in the center of the shape.
+@param w Width of Rectangle (x) not accounting for line width
+@param h Height of the Rectangle (y) not accounting for line width
+@param xc Center X coordinate of rectangle shape
+@param yc Center Y coordinate of rectangle shape
+@param line-w Width of the line segment used to draw all 4 edges
+  of the rectangle. If no width is provided, the default is the
+  minimum silkscreen width from the current design rules.
+<DOC>
+public defn LineRectangle (
+  w:Double, h:Double,
+  xc:Double = 0.0, yc:Double = 0.0,
+  line-w:Double = gen-default-width()) :
+  val w2 = w * 0.5
+  val h2 = h * 0.5
+  Line(line-w, [
+    Point(xc - w2, yc - h2)
+    Point(xc + w2, yc - h2)
+    Point(xc + w2, yc + h2)
+    Point(xc - w2, yc + h2)
+    Point(xc - w2, yc - h2)])
+
+doc: \<DOC>
+Rectangle constructed via lines of a specified width.
+This rectangle is anchored in the center of the shape.
+@param d Width/Height of Rectangle (x/y) not accounting for line width
+@param pt Center coordinate of rectangle shape
+@param line-w Width of the line segment used to draw all 4 edges
+  of the rectangle. If no width is provided, the default is the
+  minimum silkscreen width from the current design rules.
+<DOC>
+public defn LineRectangle (d:Dims, pt:Point = Point(0.0, 0.0), line-w:Double = gen-default-width()):
+  LineRectangle(x(d), y(d), x(pt), y(pt), line-w)
+
+; Create a rectangle around another shape
+doc: \<DOC>
+Generate a line rectangle that outlines the passed shape.
+@param s Generate the maximum bounding rectangle for this shape
+  and use it to generate a LineRectangle.
+<DOC>
+public defn outline-bounding-box (s:Shape) :
+  LineRectangle(dims(s))

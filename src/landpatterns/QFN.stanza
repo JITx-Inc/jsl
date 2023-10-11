@@ -1,0 +1,108 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/QFN:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/quad
+  import jsl/landpatterns/leads
+
+public defn make-qfn-landpattern (
+  pins-W : PinEdgeConfig,
+  pins-S : PinEdgeConfig,
+  pins-E : PinEdgeConfig,
+  pins-N : PinEdgeConfig,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-length: Toleranced,
+  package-width: Toleranced = package-length,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
+  corner-pads?:False|[Pad, Pad] = false, ; corner pads
+  thermal-pad?: Shape|False = false
+  ):
+  make-quad-landpattern(
+    pins-W, pins-S, pins-E, pins-N,
+    lead-length, lead-width,
+    package-length, package-width, ; lead-span-[x,y]
+    QuadFlatNoLeads,
+    package-length, package-width,
+    density-level = density-level,
+    corner-pads? = corner-pads?
+    thermal-pad? = thermal-pad?
+  )
+
+public defn make-qfn-landpattern (
+  num-pins:Int,
+  pitch:Double,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-size: Toleranced,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,
+  corner-pads?:False|[Pad, Pad] = false,
+  thermal-pad?: Shape|False = false
+  ):
+  make-quad-landpattern(
+    num-pins, pitch,
+    lead-length, lead-width,
+    package-size, ; lead-span
+    QuadFlatNoLeads,
+    package-size,
+    density-level = density-level,
+    corner-pads? = corner-pads?
+    thermal-pad? = thermal-pad?
+  )
+
+public pcb-landpattern qfn-landpattern (
+  pins-W : PinEdgeConfig,
+  pins-S : PinEdgeConfig,
+  pins-E : PinEdgeConfig,
+  pins-N : PinEdgeConfig,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-length: Toleranced,
+  package-width: Toleranced = package-length,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
+  corner-pads?:False|[Pad, Pad] = false, ; corner pads
+  thermal-pad?: Shape|False = false
+  ):
+  name = to-string("QFN%_X%_" % [pitch, package-width, package-length])
+  make-qfn-landpattern(
+    pins-W, pins-S, pins-E, pins-N,
+    lead-length, lead-width,
+    package-length, package-width, ; lead-span-[x,y]
+    density-level = density-level,
+    corner-pads? = corner-pads?,
+    thermal-pad? = thermal-pad?
+  )
+
+public pcb-landpattern qfn-landpattern (
+  num-pins:Int,
+  pitch:Double,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-size: Toleranced,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,
+  corner-pads?:False|[Pad, Pad] = false,
+  thermal-pad?: Shape|False = false
+  ):
+  name = to-string("QFN%_P%_X%_" % [pitch, package-size, package-size])
+  make-qfn-landpattern(
+    num-pins, pitch,
+    lead-length, lead-width,
+    package-size,
+    density-level = density-level,
+    corner-pads? = corner-pads?,
+    thermal-pad? = thermal-pad?
+  )

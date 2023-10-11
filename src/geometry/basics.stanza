@@ -1,0 +1,47 @@
+#use-added-syntax(jitx)
+defpackage jsl/geometry/basics:
+  import core
+  import jitx
+
+; TODO -
+;   I want to refactor the shape definitions in esir.stanza:
+;   1.  We keep the form of `Shape(anchor:Anchor, args ...)` - this is useful for
+;       reducing a lot of the duplicative `anchor = anchor` code.
+;   2   We add a `Shape(args, ..., anchor:Anchor = C)` variant to all
+;       so that the user can optional include an `anchor = C` in their
+;       code.
+public defn Capsule (size:Dims -- anchor:Anchor = C):
+  Capsule(anchor, x(size), y(size))
+
+public defn Rectangle (size:Dims -- anchor:Anchor = C):
+  Rectangle(anchor, x(size), y(size))
+
+public defn RoundedRectangle (size:Dims, r:Double -- anchor:Anchor = C):
+  RoundedRectangle(anchor, x(size), y(size), r)
+
+public defn ChamferedRectangle (size:Dims, r:Double -- anchor:Anchor = C):
+  ChamferedRectangle(anchor, x(size), y(size), r)
+
+public defn DShape (size:Dims, r:Double -- anchor:Anchor = C):
+  DShape(anchor, x(size), y(size), r)
+
+public defn GeneralRoundedRectangle (size:Dims, r:Double, m:CornerModifier -- anchor:Anchor = C) :
+  GeneralRoundedRectangle(anchor, x(size), y(size), r, m)
+
+public defn GeneralRoundedRectangle (size:Dims, r:Tuple<Double> -- anchor:Anchor = C) :
+  GeneralRoundedRectangle(anchor, x(size), y(size), r)
+
+public defn GeneralChamferedRectangle (size:Dims, r:Double, m:CornerModifier -- anchor:Anchor = C) :
+  GeneralChamferedRectangle(anchor, x(size), y(size), r, m)
+
+public defn GeneralChamferedRectangle (size:Dims, r:Tuple<Double> -- anchor:Anchor = C) :
+  GeneralChamferedRectangle(anchor, x(size), y(size), r)
+
+; TODO - this conflicts with the circle definition
+;   in `esir.stanza`
+
+; public defn Circle (radius:Double -- anchor:Anchor = C):
+;   Circle(anchor, radius)
+
+public defn to-radius (diam:Double) -> Double : diam / 2.0
+

@@ -1,0 +1,57 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/QFP:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/quad
+
+
+public defn make-qfp-landpattern (
+  num-pins:Int,
+  pitch:Double,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-size: Toleranced,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,
+  corner-pads?:False|[Pad, Pad] = false,
+  thermal-pad?: Shape|False = false
+  ):
+  val lead-type = BigGullWingLeads when pitch >= 0.0625 else SmallGullWingLeads
+  make-quad-landpattern(
+    num-pins, pitch,
+    lead-length, lead-width,
+    package-size, ; lead-span
+    lead-type,
+    package-size,
+    density-level = density-level,
+    corner-pads? = corner-pads?
+    thermal-pad? = thermal-pad?
+  )
+
+public pcb-landpattern qfp-landpattern (
+  num-pins:Int,
+  pitch:Double,
+  ; Lead Parameters
+  lead-length: Toleranced,
+  lead-width: Toleranced,
+  ; Pkg Parameters
+  package-size: Toleranced,
+  --
+  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
+  corner-pads?:False|[Pad, Pad] = false, ; corner pads
+  thermal-pad?: Shape|False = false
+  ):
+  name = to-string("QFP%_X%_" % [package-size, package-size])
+  make-qfp-landpattern(
+    num-pins, pitch,
+    lead-length, lead-width,
+    package-size,
+    density-level = density-level,
+    corner-pads? = corner-pads?,
+    thermal-pad? = thermal-pad?
+  )

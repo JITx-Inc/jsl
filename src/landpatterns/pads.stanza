@@ -1,0 +1,754 @@
+; TODO - we need to rename the pad generators in this file and have a
+;   standard naming convention
+; <shape>-[pth|npth]-<shape>-pad
+;   Example:
+;    oval-pth-oval-pad
+;
+; If there is no hole (ie, just SMD):
+;    oval-smd-pad()
+;    rounded-rect-smd-pad()
+;
+; TODO - Capsule vs Oval
+;    why are we calling this two different things.
+;
+; TODO - I think `apply-soldermask` is the right want to manage
+;    layers in pad. Using the `inside pcb-pad` seems like a very
+;    general purpose way to add this functionality to a user's pad
+;    definition.
+;  For example - maybe we have `apply-pastemask` and it allows for
+;    a mask shape and a `shrink` to undersize (as opposed to expand
+;    for the soldermask)
+;    It would be great if we could also have something like:
+;     if the pad is larger than X
+;     Apply solder paste to no more than 60% of the pad.
+;     if the pad is larger than Y
+;     Apply solder paste to no more than 50% of the pad.
+;
+; TODO - I think the methods for creating pads should accept
+;   arguments that are not `Shape` objects because it seems that
+;   all `Shape` objects have a pose. When defining a pad -
+;   there should be no pose unless the anchor gives it something
+;   different.
+
+doc: \<DOC>
+@brief Tools for creating pads of different types.
+@title Pad Generators
+
+@description
+
+This package contains the implementation of various utilities for creating
+`pcb-pad` types. The functions in this package are organized with the
+following function names:
+
+All of the functions in this package use millimeters for units.
+
+# Plated Holes:
+
+Functions will have names in the following format:
+
+```
+defn <HOLE>-[pth|npth]-<LAND>-pad (...)
+```
+
+Where:
+
+*  `<HOLE>` (String) = The shape of the drilled hole
+*  `[pth|npth]` = User can select either plated or non-plated through hole.
+*  `<LAND>` (String) = The shape of the pad (copper)
+
+The `HOLE` string can be one of:
+
+* `oval` - Capsule
+* `circle` - Circle
+
+The `LAND` string can be one of:
+
+* `oval` - Capsule
+* `circle` - Circle
+* `rect` - Rectangle
+* `round-rect` - Rectangle with radial rounded corners
+* `cham-rect` - Rectangle with chamfered corner edges
+* `dshape` - a `D` shaped pad with one set of corners rounded.
+* `general-round-rect` - Generalized Rounded Rectangle
+* `general-cham-rect` - Generalized Chamfered Rectangle
+
+Each function also accepts a `mask` and `paste` overriding value. This
+value can be either a parameterization of the pad shape for that function or
+a completely different shape.
+
+# SMD Pads
+
+The surface mount pad functions come in the form:
+
+```
+defn <SHAPE>-smd-pad (...)
+```
+
+Where the `<SHAPE>` string can be one of:
+
+* `oval` - Capsule
+* `circle` - Circle
+* `rect` - Rectangle
+* `round-rect` - Rectangle with radial rounded corners
+* `cham-rect` - Rectangle with chamfered corner edges
+* `dshape` - a `D` shaped pad with one set of corners rounded.
+* `general-round-rect` - Generalized Rounded Rectangle
+* `general-cham-rect` - Generalized Chamfered Rectangle
+
+Each function also accepts a `mask` and `paste` overriding value. This
+value can be either a parameterization of the pad shape for that function or
+a completely different shape.
+
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/pads:
+  import core
+  import jitx
+  import jitx/commands with:
+    prefix(pad) => def-
+
+  import jsl/landpatterns/helpers
+  import jsl/geometry/basics
+  import jsl/errors
+
+doc: \<DOC>
+Generator to apply a soldermask shape to a `pcb-pad`
+
+This generator must be called from within a `pcb-pad` definition.
+
+@param mask-shape Creates an opening of this shape in the soldermask layer
+  of the pad. If the pad is though-hole, then the soldermask shape is
+  applied to bot top and bottom soldermask layers.
+<DOC>
+public defn apply-soldermask (mask-shape:Shape) :
+  inside pcb-pad:
+    layer(SolderMask(Top)) = mask-shape
+    if pad-type(self) == TH:
+      layer(SolderMask(Bottom)) = mask-shape
+
+defn get-default-soldermask-amount () -> Double :
+  clearance(current-rules(), SolderMaskRegistration)
+
+doc: \<DOC>
+Generator to apply a soldermask by expansion of the current pad shape.
+
+This generator must be called from within a `pcb-pad` definition.
+
+TODO - Need a diagram here showing the expansion characteristics for
+different shapes - specifically rectangle and non-convex pad shapes
+
+@param amount The soldermask opening will be created with a shape that
+  is an expansion of the current shape in all directions by `amount`.
+  By default, the {@link SolderMaskRegistration} rule setting is used to set
+  the default expansion amount.
+<DOC>
+public defn apply-soldermask (amount:Double = get-default-soldermask-amount()) :
+  val mask-shape =
+    match(pad-shape(self)) :
+      (s:Rectangle|Circle|RoundedRectangle|Capsule|DShape|ChamferedRectangle) :
+        expand(s, amount)
+      (s:Shape) :
+        ; FIXME: for other shapes we need an implementation of offset
+        s
+
+  inside pcb-landpattern:
+    apply-soldermask(mask-shape)
+
+; A "solder mask defined pad" is one where the soldermask opening is smaller than
+; the pad shape. This method takes a pad as an argument and converts it into a
+; soldermask-defined version based on its soldermask layer, if it exists, or the
+; pad shape if it does not.
+doc: \<DOC>
+Create a new `pcb-pad` definition with soldermask-defined pad opening.
+
+
+TODO - Need a diagram here showing the geometry of the created pad for
+  different shapes
+
+@param p Originating pad with or without soldermask. The copper shape of
+  the pad will be offset by `shrink` amount in all directions
+@param shrink Amount to shrink the copper pad to create the soldermask
+  defined opening. By default the {@link SolderMaskRegistration} rule is used
+  to define the amount of shrinkage.
+@return Newly created pad definition with soldermask reduced to create a
+  soldermask defined pad opening.
+  If the passed pad already has a soldermask shape defined that is smaller
+  than the copper pad shape, then this function **does not** create a new
+  pad definition. The originating pad definition is returned without
+  modification.
+<DOC>
+public defn soldermask-defined (
+  p:Pad,
+  shrink:Double = get-default-soldermask-amount()
+  ) :
+  ; extract the pad data before conversion
+  val mask?   = find({specifier(_) is SolderMask}, layers(p))
+  ; special case: the mask is smaller than the shape already
+  if (mask? is-not False) and
+     (min-width([pad-shape(p)]) > min-width([shape $ (mask? as LayerShape)])) :
+    p
+  else :
+    pcb-pad SMD-p:
+      name  = to-string("%_, SMD" % [name(p)])
+      type  = pad-type(p)
+      shape = offset(pad-shape(p), shrink)
+      apply-soldermask(pad-shape(p))
+      for layer_ in filter({specifier(_) is-not SolderMask}, layers(p)) do:
+        layer(specifier(layer_)) = shape(layer_)
+    SMD-p
+
+; Convert a landpattern to solder mask defined. Geoms will be ignored.
+doc: \<DOC>
+Create a new `pcb-landpattern` with all soldermask defined pads.
+
+This function will not handle any `geom` statements in the passed
+landpattern. They will effectively be stripped from the returned
+landpattern definition.
+
+@param lp Landpattern that we will inspect for pads and then
+for each pad in the landpattern `soldermask-defined` will be
+applied.
+@param shrink Amount to shrink the copper pad to create the soldermask
+defined opening. By default the {@link SolderMaskRegistration} rule is used
+to define the amount of shrinkage.
+@return New `pcb-landpattern` definition with pads replaced.
+<DOC>
+public defn soldermask-defined (
+  lp:LandPattern,
+  shrink:Double = get-default-soldermask-amount()
+  ) :
+  pcb-landpattern SMD-l:
+    ; TODO - this does not seem to respect `model3d`, `external-names`, `description`
+    name = to-string("%_, soldermask defined" % [name(lp)])
+    ; TODO - check that this handles pad arrays
+    for pad_ in pads(lp) do:
+      pad (ref(pad_)) : soldermask-defined(def-pad(pad_), shrink) at pose(pad_)
+    for layer_ in layers(lp) do:
+      layer(specifier(layer_)) = shape(layer_)
+
+  SMD-l
+
+doc: \<DOC>
+PCB Pad Definition for SMD device
+
+TODO - Create a diagram here for the pad definition
+
+@param copper Defines the shape of the copper layer for this
+  pad.
+@param mask Defines the shape fo the soldermask opening for this pad.
+  If this value is `false` then the soldermask will be created using
+  default expansion rules as applied by {@link apply-soldermask}
+@param paste Defines the shape of the pastemask opening for this pad.
+  If this value is `false` then the `copper` shape is applied as the
+  default pastemask opening.
+<DOC>
+public pcb-pad smd-pad (
+  copper:Shape,
+  mask:Shape|False = false,
+  paste:Shape|False = copper
+  ) :
+  name  = "SMD Pad"
+  type  = SMD
+  shape = copper
+  match(paste):
+    (mask:Shape): layer(Paste(Top)) = mask
+    (x:False): false
+  match(mask) :
+    (m:False) :
+      apply-soldermask()
+    (m:Shape) :
+      layer(SolderMask(Top)) = m
+
+
+; TODO - Is this necessary - we should have a `rectangle-smd-pad` function
+;   right ?
+doc: \<DOC>
+Create a Rectangular PCB Pad Definition
+@param width X dimension of the pad shape
+@param height Y dimension of the pad shape
+@param anchor Origin of the pad definition. By default this function
+uses the pad center as its anchor.
+<DOC>
+public defn smd-pad (width:Double, height:Double -- anchor:Anchor = C) :
+  smd-pad(Rectangle(anchor, width, height))
+
+; Create a rectangular SMD pad
+public defn smd-pad (d:Dims -- anchor:Anchor = C) :
+  smd-pad(Rectangle(anchor, x(d), y(d)))
+
+; Create a BGA pad, with circular SMD
+; TODO - Remove this - the BGA landpatterns define their own pad structure
+public defn bga-pad (diameter:Double -- anchor:Anchor = C) :
+  smd-pad(Circle(anchor, to-radius(diameter)))
+
+; Create a soldermask-defined BGA pad
+; TODO - Remove this - the BGA landpatterns define their own pad structure
+public pcb-pad soldermask-defined-bga-pad (
+  soldermask-opening-diameter:Double ; the diameter of the soldermask opening
+  overlap:Double                     ; the amount the soldermask overlaps the pad beneath
+) :
+  val mask-shape = Circle(to-radius(soldermask-opening-diameter))
+  name  = "SMD BGA Pad"
+  shape = offset(mask-shape, -1. * overlap) as Circle
+  type = SMD
+  layer(SolderMask(Top)) = mask-shape
+  layer(Paste(Top)) = mask-shape
+
+; Create an arbitrary testpoint pad
+public pcb-pad testpoint-pad (testpoint-shape:Shape) :
+  name = "TestPoint-Pad"
+  shape = testpoint-shape
+  type = SMD
+  apply-soldermask()
+
+; Create a circular test point pad
+public defn testpoint-pad (diameter:Double -- anchor:Anchor = C) :
+  testpoint-pad(Circle(anchor, to-radius(diameter)))
+
+; TODO - should a plated through hole have a paste layer ?
+;   Altium doesn't do this by default.
+;   Does KiCad ?
+;   Seems like there are special cases where you might do this
+;    for cost saving measures. Needs MFR support.
+doc: \<DOC>
+Create a Plated Through-Hole (PTH) Pad Definition
+
+TODO - Create a diagram here for the pad definition
+
+@param hole Plated Through-Hole shape for this pad.
+@param copper Shape of the copper land surrounding the hole.
+This shape is applied to both the top and bottom layers but
+not to the internal layers if any.
+@param mask Defines the shape fo the soldermask opening for this pad.
+If this value is `false` then the soldermask will be created using
+default expansion rules as applied by {@link apply-soldermask}.
+This soldermask shape will be applied to both the top and bottom
+layers.
+@param paste Defines the shape of the pastemask opening for this pad.
+If this value is `false` then no pastemask opening is created.
+The default value is `false` meaning **no** pastemask opening is applied.
+<DOC>
+public pcb-pad pth-pad (
+  hole:Shape,
+  copper:Shape,
+  mask:Shape|False = false,
+  paste:Shape|False = false
+  ) :
+  name = "PTH-Pad"
+  shape = copper
+  type = TH
+  layer(Cutout()) = hole
+  if paste is Shape: ; Enables paste-in-pad
+    layer(Paste(Top)) = paste as Shape
+  match(mask) :
+    (m:False) :
+      apply-soldermask()
+    (m:Shape) :
+      layer(SolderMask(Top)) = m
+      layer(SolderMask(Bottom)) = m
+
+defn get-min-pad-expansion () :
+  val r = clearance(current-rules(), MinThPadExpandOuter) as Double
+  2.0 * r
+
+defn get-default-pad-diam (hole-diam:Double) -> Double :
+  hole-diam + get-min-pad-expansion()
+
+doc: \<DOC>
+Create a circular Plated Through-Hole (PTH) Pad
+
+This function uses the default soldermask and pastemask
+definitions as defined by the {@link pth-pad} generator.
+
+@param hole-diam Diameter of the hole for the PTH pad.
+@param pad-diam Diameter of the plated copper around the hole.
+@param anchor Origin of the pad definition. By default this function
+uses the pad center as its anchor.
+@throws ValueError When the `pad-diam` is smaller than the `hole-diam`.
+In this case, the user should use `npth-pad`.
+<DOC>
+public defn pth-pad (
+  hole-diam:Double,
+  pad-diam:Double = get-default-pad-diam(hole-diam)
+  --
+  anchor:Anchor = C
+  ) :
+  if pad-diam <= hole-diam:
+    throw $ ValueError(
+      "Invalid Pad Diameter - Must be greater than hole size: %_ > %_" % [pad-diam, hole-diam]
+      )
+  pth-pad(
+    Circle(anchor, to-radius(hole-diam)),
+    Circle(anchor, to-radius(pad-diam))
+  )
+
+
+; non-plated TH pad
+; TODO - what happens if I make an electrical connections to a pad of
+;   this type?
+;   Does it assume electrical contact with the bottom layer ?
+doc: \<DOC>
+Create a Non-Plated Through-Hole (NPTH) pad
+
+No copper pad is created surrounding this hole and
+
+@param hole Shape for the non-plated hole of this pad.
+@param mask Defines the shape fo the soldermask opening for this npth pad.
+If this value is `false` then the soldermask will be created using
+default expansion rules from the passed `hole` shape.
+<DOC>
+public pcb-pad npth-pad (
+  hole:Shape,
+  mask:Shape|False = false
+  ) :
+  name = "NPTH-Pad"
+  shape = hole
+  type = TH
+  layer(Cutout()) = hole
+  val sm = match(mask) :
+    (m:False) :
+      ; @NOTE - this was broken in OCDB
+      val amount = get-default-soldermask-amount()
+      expand(hole, amount)
+    (m:Shape) : m
+  layer(SolderMask(Top)) = sm
+  layer(SolderMask(Bottom)) = sm
+
+doc: \<DOC>
+Create a circular NPTH pad
+
+@param hole-diam Create a circular hole with this diameter.
+@param anchor Origin of the pad definition. By default this function
+uses the pad center as its anchor.
+<DOC>
+public defn circle-npth-pad (hole-diam:Double -- anchor:Anchor = C) :
+  npth-pad(Circle(anchor, to-radius(hole-diam)))
+
+public defn oval-npth-pad (hole-size:Dims -- anchor:Anchor = C) :
+  npth-pad(Capsule(hole-size, anchor = anchor))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Pad Shapes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+defn to-capsule? (size:Dims|Shape|False, anchor:Anchor) -> Shape|False :
+  match(size):
+    (x:Dims): Capsule(x, anchor = anchor)
+    (x:Shape|False): x
+
+defn to-circle? (diam:Double|Shape|False, anchor:Anchor) -> Shape|False :
+  match(diam):
+    (x:Double): Circle(anchor, to-radius(x))
+    (x:Shape|False): x
+
+public defn circle-pth-circle-pad (
+  hole-diam:Double, pad-diam:Double
+  --
+  mask:Double|Shape|False = false,
+  paste:Double|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  pth-pad(
+    Circle(anchor, to-radius(hole-diam)),
+    Circle(anchor, to-radius(pad-diam)),
+    to-circle?(mask, anchor),
+    to-circle?(paste, anchor),
+  )
+
+
+public defn oval-pth-circle-pad (
+  hole-size:Dims, pad-diam:Double
+  --
+  mask:Double|Shape|False = false,
+  paste:Double|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  pth-pad(
+    Capsule(hole-size, anchor = anchor),
+    Circle(anchor, to-radius(pad-diam)),
+    to-circle?(mask, anchor),
+    to-circle?(paste, anchor),
+  )
+
+public defn oval-pth-oval-pad (
+  hole-size:Dims, pad-size:Dims
+  --
+  mask:Dims|Shape|False = false,
+  paste:Dims|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  pth-pad(
+    Capsule(hole-size, anchor = anchor),
+    Capsule(pad-size, anchor = anchor),
+    to-capsule?(mask, anchor),
+    to-capsule?(paste, anchor),
+  )
+
+public defn circle-pth-oval-pad (
+  hole-diam:Double, pad-size:Dims
+  --
+  mask:Dims|Shape|False = false,
+  paste:Dims|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  pth-pad(
+    Circle(anchor, to-radius(hole-diam)),
+    Capsule(pad-size, anchor = anchor),
+    to-capsule?(mask, anchor),
+    to-capsule?(paste, anchor),
+  )
+
+; TODO - I want to use a `#for` loop to create
+;   the oval and rectangles
+public defn oval-smd-pad (
+  pad-size:Dims
+  --
+  mask:Dims|Shape|False = false,
+  paste:Dims|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  smd-pad(
+    Capsule(pad-size, anchor = anchor)
+    to-capsule?(mask, anchor),
+    to-capsule?(paste, anchor)
+  )
+
+public defn circle-smd-pad (
+  pad-diam:Double
+  --
+  mask:Double|Shape|False = false,
+  paste:Double|Shape|False = false,
+  anchor:Anchor = C
+  ):
+  smd-pad(
+    Circle(anchor, to-radius(pad-diam))
+    to-circle?(mask, anchor),
+    to-circle?(paste, anchor)
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Rectangle-like Pad Shapes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+#for (
+    ShapeType in [DShape, ChamferedRectangle, RoundedRectangle]
+    to-shape-helper in [to-dshape?, to-cham-rect?, to-round-rect?]
+    oval-pth-func in [oval-pth-dshape-pad, oval-pth-cham-rect-pad, oval-pth-round-rect-pad]
+    circle-pth-func in [circle-pth-dshape-pad, circle-pth-cham-rect-pad, circle-pth-round-rect-pad]
+    smd-func in [dshape-smd-pad, cham-rect-smd-pad, round-rect-smd-pad]
+  ):
+
+  defn to-shape-helper (size:Dims|Shape|False, r:Double|False, anchor:Anchor = C) -> Shape|False :
+    match(size, r):
+      (x:Dims, y:Double): ShapeType(x, y, anchor = anchor)
+      (x:Shape|False, y:?): x
+      (x, y): throw(ArgumentError("Invalid Combination of Args: %_, %_" % [size, r]))
+
+  public defn oval-pth-func (
+    hole-size:Dims, pad-rect:Dims, pad-r:Double
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Capsule(hole-size, anchor = anchor),
+      ShapeType(pad-rect, pad-r, anchor = anchor),
+      to-shape-helper(mask, pad-r, anchor),
+      to-shape-helper(paste, pad-r, anchor),
+    )
+
+  public defn circle-pth-func (
+    hole-diam:Double, pad-rect:Dims, pad-r:Double
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Circle(anchor, to-radius(hole-diam)),
+      ShapeType(pad-rect, pad-r, anchor = anchor),
+      to-shape-helper(mask, pad-r, anchor),
+      to-shape-helper(paste, pad-r, anchor),
+    )
+
+  public defn smd-func (
+    pad-rect:Dims, pad-r:Double
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    smd-pad(
+      ShapeType(pad-rect, pad-r, anchor = anchor)
+      to-shape-helper(mask, pad-r, anchor),
+      to-shape-helper(paste, pad-r, anchor)
+    )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; General Rounded Rectangle &
+; General Chamfered Rectangle
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#for (
+  ShapeType in [GeneralRoundedRectangle, GeneralChamferedRectangle]
+  to-shape-func in [to-general-round-rect?, to-general-cham-rect?]
+  oval-pth-func in [oval-pth-general-round-rect-pad, oval-pth-general-cham-rect-pad]
+  circle-pth-func in [circle-pth-general-round-rect-pad, circle-pth-general-cham-rect-pad]
+  smd-func in [general-round-rect-smd-pad, general-cham-rect-smd-pad]
+  ):
+
+  defn to-shape-func (size:Dims|Shape|False, r:Double, m:CornerModifier, anchor:Anchor = C) -> Shape|False :
+    match(size, r):
+      (x:Dims, y:Double): ShapeType(x, y, m, anchor = anchor)
+      (x:Shape|False, y:?): x
+      (x, y): throw(ArgumentError("Invalid Combination of Args: %_, %_" % [size, r]))
+
+  defn to-shape-func (size:Dims|Shape|False, r:Tuple<Double>, anchor:Anchor = C) -> Shape|False :
+    match(size, r):
+      (x:Dims, y:Tuple<Double>): ShapeType(x, y, anchor = anchor)
+      (x:Shape|False, y:?): x
+      (x, y): throw(ArgumentError("Invalid Combination of Args: %_, %_" % [size, r]))
+
+  doc: \<DOC>
+  Create a oval-shaped plated through-hole with ShapeType pad.
+  <DOC>
+  public defn oval-pth-func (
+    hole-size:Dims, pad-rect:Dims, pad-rs:Tuple<Double>
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Capsule(hole-size, anchor = anchor),
+      ShapeType(pad-rect, pad-rs, anchor = anchor),
+      to-shape-func(mask, pad-rs, anchor),
+      to-shape-func(paste, pad-rs, anchor),
+    )
+
+  public defn circle-pth-func (
+    hole-diam:Double, pad-rect:Dims, pad-rs:Tuple<Double>
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Circle(anchor, to-radius(hole-diam)),
+      ShapeType(pad-rect, pad-rs, anchor = anchor),
+      to-shape-func(mask, pad-rs, anchor),
+      to-shape-func(paste, pad-rs, anchor),
+    )
+
+  public defn oval-pth-func (
+    hole-size:Dims, pad-rect:Dims, pad-r:Double, m:CornerModifier
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Capsule(hole-size, anchor = anchor),
+      ShapeType(pad-rect, pad-r, m, anchor = anchor),
+      to-shape-func(mask, pad-r, m, anchor),
+      to-shape-func(paste, pad-r, m, anchor),
+    )
+
+  public defn circle-pth-func (
+    hole-diam:Double, pad-rect:Dims, pad-r:Double, m:CornerModifier
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    pth-pad(
+      Circle(anchor, to-radius(hole-diam)),
+      ShapeType(pad-rect, pad-r, m, anchor = anchor),
+      to-shape-func(mask, pad-r, m, anchor),
+      to-shape-func(paste, pad-r, m, anchor),
+    )
+
+  public defn smd-func (
+    pad-rect:Dims, pad-rs:Tuple<Double>
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    smd-pad(
+      ShapeType(pad-rect, pad-rs, anchor = anchor),
+      to-shape-func(mask, pad-rs, anchor),
+      to-shape-func(paste, pad-rs, anchor),
+    )
+
+  public defn smd-func (
+    pad-rect:Dims, pad-r:Double, m:CornerModifier
+    --
+    mask:Dims|Shape|False = false,
+    paste:Dims|Shape|False = false,
+    anchor:Anchor = C
+    ):
+    smd-pad(
+      ShapeType(pad-rect, pad-r, m, anchor = anchor),
+      to-shape-func(mask, pad-r, m, anchor),
+      to-shape-func(paste, pad-r, m, anchor),
+    )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; TODO - Add paste mask subdivision to
+;   keep paste mask coverage below some threshold.
+
+doc: \<DOC>
+Generate a Thermal Pad for a Package
+
+The thermal pad will be created at loc(0.0, 0.0) in the
+landpattern's frame of reference.
+
+@param shape? Shape for the thermal pad that will be created by
+  this generator. If false, no thermal pad is generated.
+@param num-pins Number of pins in the package. The thermal pad will
+  be added as pad number `num-pins+1`
+<DOC>
+public defn make-thermal-pad (shape?:False|Shape, num-pins:Int) :
+  ensure-positive!(num-pins, "make-thermal-pad")
+  match(shape?:Shape) :
+    inside pcb-landpattern:
+      pad p[num-pins + 1]: smd-pad(shape?) at loc(0.0, 0.0)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+; TODO - I don't think this should be here - I think this needs to be
+;   moved somewhere else.
+;   Seems to only be used with the mounting holes - so we probably should
+;   move it there.
+
+; Create a non-plated hole of arbitrary shape for hole and mask
+public pcb-landpattern non-plated-hole-landpattern (hole:Shape, mask:Shape) :
+  layer(Cutout())           = hole
+  layer(SolderMask(Top))    = mask
+  layer(SolderMask(Bottom)) = mask
+  val d = dims(hole)
+  layer(Courtyard(Top))    = Rectangle(x(d), y(d))
+  layer(Courtyard(Bottom)) = Rectangle(x(d), y(d))
+  name = "NPTH"
+
+; Create a non-plated hole landpattern with a hole shape
+public defn non-plated-hole-landpattern (hole:Shape) :
+  val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
+  non-plated-hole-landpattern(hole, offset(hole,  solder-mask-registration))
+
+; TODO - Fix Radius -> Diameter
+; Create a circular non-plated hole landpattern with given drill radius and mask radius
+public defn non-plated-hole-landpattern (drill-r:Double, mask-r:Double) :
+  non-plated-hole-landpattern(Circle(drill-r), Circle(mask-r))
+
+; TODO - Fix Radius -> Diameter
+; Create a non-plated hole landpattern with a given drill radius.
+public defn non-plated-hole-landpattern (drill-r:Double) :
+  non-plated-hole-landpattern(drill-r, drill-r)

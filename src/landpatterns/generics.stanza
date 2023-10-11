@@ -1,0 +1,110 @@
+; TODO - I don't think any of this is actually being used
+;   Should we purge ?
+
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/generics:
+  import core
+  import jitx
+  import jsl/errors
+
+public pcb-struct jsl/landpatterns/generics/PinPadMapping:
+  pad-name:  Ref,  ; the name of the pad
+  ; TODO - rename to instance - this isn't the shape ?
+  pad-shape: JITXDef, ; the corresponding pcb-pad
+  pose:      Pose,    ; the pose of the pad
+
+; A generic landpattern created from a sequence of PinPadMappings
+public defn make-generic-landpattern (pads:Seqable<PinPadMapping>) :
+  inside pcb-landpattern:
+    name = "generic-landpattern"
+    for p in pads do:
+      pad (pad-name(p)) : (pad-shape(p) as Pad) at pose(p)
+
+; Create a generic landpattern with a uniform pad
+public defn make-generic-landpattern (pad-names:Seqable<Ref>,
+                                      poses:Seqable<Pose>,
+                                      pad-shape:JITXDef) :
+  val pads =
+    for (pn in pad-names, pp in poses) seq:
+      PinPadMapping(pn, pad-shape, pp)
+  make-generic-landpattern(to-tuple(pads))
+
+; Create a two-column landpattern
+public defn make-two-column-landpattern (count: Int,    ; number of pads in the column
+                                         pitch: Double, ; pitch of the column
+                                         naming-convention: (Int, Int) -> Ref, ; naming convention
+                                         pad-convention: (Int, Int) -> JITXDef,
+                                         spacing:Double) :
+  val locs = grid-locs(count, 2, spacing, pitch)
+  val rcs  =
+    for row in 0 to count seq-cat:
+      for col in 0 to 2 seq:
+        [row, col]
+
+  val mapping = to-tuple $
+    for (pose in locs, rc in rcs) seq:
+      val [row, col] = rc
+      PinPadMapping(naming-convention(row, col), pad-convention(row, col), pose)
+
+  make-generic-landpattern(mapping)
+
+public defn make-grid-landpattern (num-rows:Int,
+                                   num-cols:Int,
+                                   row-pitch:Double,
+                                   col-pitch:Double,
+                                   naming-convention: (Int, Int) -> Ref,
+                                   pad-convention: (Int, Int) -> JITXDef) :
+  make-grid-landpattern(num-rows, num-cols, row-pitch, col-pitch, naming-convention, pad-convention, fn (r, c) : true)
+
+; Create a grid landpattern
+public defn make-grid-landpattern (num-rows:Int,
+                                   num-cols:Int,
+                                   row-pitch:Double,
+                                   col-pitch:Double,
+                                   naming-convention: (Int, Int) -> Ref,
+                                   pad-convention: (Int, Int) -> JITXDef,
+                                   ignore?: (Int, Int) -> True|False) :
+  val rcs =
+    for r in 0 to num-rows seq-cat:
+      for c in 0 to num-cols seq:
+        [r, c]
+  val mapping = to-tuple $
+    for (coord in rcs, pose in grid-locs(num-rows, num-cols, row-pitch, col-pitch)) seq?:
+      val [c, r] = coord
+      if not ignore?(r, c) :
+        One(PinPadMapping(naming-convention(r, c), pad-convention(r, c), pose))
+      else:
+        None()
+  make-generic-landpattern(mapping)
+
+; 2D array of pins
+; NOTE - This seems to be for making grids that are not DIP style naming.
+public defn make-pin-grid (n-pin:Int, n-row:Int, pin-pitch:Double, row-pitch:Double, pad-ref, offset-x:Double, offset-y:Double) :
+  defn normalize (i:Int) :
+    0.5 * to-double(i - 1)
+
+  inside pcb-landpattern:
+    name = "pin-grid"
+    ; TODO - this is broken - there is no way to detect and throw an
+    ;  error here in the case that `n-pin` is odd or `n-pin` is not divisible by `n-row`
+    val n-col  = to-int(ceil(to-double(n-pin) / to-double(n-row)))
+    val origin = loc(offset-x, offset-y) * loc(
+      (normalize(2 - n-row) * pin-pitch), ; x
+      (normalize(n-col) * pin-pitch)  ; y
+    )
+
+    for i in 0 to n-col do :
+      for j in 0 to n-row do :
+        val idx = n-row * i + j + 1
+        val x = to-double(j) * row-pitch
+        val y = -1.0 * to-double(i) * pin-pitch
+        pad p[idx] : pad-ref at origin * loc(x, y)
+
+public defn make-pin-grid (n-pin:Int, n-row:Int, pin-pitch:Double, row-pitch:Double, pad-ref:JITXDef) :
+  make-pin-grid(n-pin, n-row, pin-pitch, row-pitch, pad-ref, 0.0, 0.0)
+
+public defn make-pin-grid (n-pin:Int, n-row:Int, pin-pitch:Double, row-pitch:Double) :
+  make-pin-grid(n-pin, n-row, pin-pitch, row-pitch, pth-pad(0.5), 0.0, 0.0)
+
+public defn make-pin-grid (n-pin:Int) :
+  make-pin-grid(n-pin, 1, 2.54, 2.54, pth-pad(0.5), 0.0, 0.0)

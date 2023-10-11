@@ -1,0 +1,62 @@
+doc: \<DOC>
+SOIC Landpattern Generator
+
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/SOIC:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/dual-row
+
+;  @see https://www.nxp.com/docs/en/application-note/AN2409.pdf
+;  @see https://eesemi.com/soic.htm
+;  @see JEDEC standard MS-012
+
+; TODO - we need a diagram that explains the resultant geometry.
+;   or at the very least reference JEDEC MS012
+;
+
+defn default-lead-type (pitch:Double) -> LandProtrusionType :
+  if pitch > 0.0625 : BigGullWingLeads
+  else:               SmallGullWingLeads
+
+public defn make-soic-landpattern (
+  num-pins:        Int,
+  lead-span:       Toleranced,
+  package-length:  Toleranced,
+  package-width:   Toleranced,
+  ; These values were taking from JEDEC MS-012
+  ;  Note that for larger SOIC packages (32+ pins), the pitch
+  ;  reduces to 0.65mm
+  pitch:           Double = 0.127,
+  lead-length:     Toleranced = min-max(0.4, 1.27),
+  lead-width:      Toleranced = min-max(0.31, 0.51),
+  lead-type:       LandProtrusionType = default-lead-type(pitch),
+  --
+  density-level:       DensityLevel = DENSITY-LEVEL,
+  with-pol-marker?:    True|False = true,
+  thermal-pad?:        False|Shape = false
+):
+  make-dual-row-smd-landpattern(
+    num-pins,
+    pitch,
+    lead-length,
+    lead-width,
+    lead-span,
+    lead-type,
+    package-length,
+    package-width,
+    density-level = density-level,
+    with-pol-marker? = with-pol-marker?
+    thermal-pad? = thermal-pad?
+  )
+
+
+; TODO - pcb-landpattern
+

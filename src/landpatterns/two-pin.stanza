@@ -1,0 +1,679 @@
+doc: \<DOC>
+@title Two-Pin Landpatterns
+@brief Generators & Landpatterns for Two-Pin Components
+@desc
+  This package contains generators and `pcb-landpattern` definitions for
+generic two-pin components like resistors, capacitors, etc.
+
+Entities in this package are typically defined in matching pairs:
+1.  `make-*-landpattern` - This is a generator that can be run from within a `pcb-landpattern` definition
+2.  `*-landpattern` - A landpattern definition that makes use of the associated generator `make-*-landpattern`.
+
+All units for the functions in this package are in millimeters.
+
+## Component Case Sizes
+
+The IPC two-pin SMT component landpatterns can be specified using
+a case name. Below are the available case names:
+
+TODO - table with 3 columns:
+  Imperial
+  Metric
+  Wide Variants
+
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin:
+  import core
+  import math
+
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/IPC
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SMT Landpatterns
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; TODO - Create an enum for this ?
+;   What happens when we have new types
+;     Should the user be able to add custom two-pin sizes ?
+val PKG-RECTANGLE = ["009005", "0301m", "01005", "0402m", "0201", "0603m", "0202", "0606m", "0204", "0510m", "Wide 0402", "0306",
+           "0816m", "Wide 0603", "0402", "1005m", "0505", "1414m", "0508", "1220m", "Wide 0805", "0603", "1608m", "0612",
+           "1632m", "Wide 1206", "0805", "2012m", "1111", "2828m", "1206", "3216m", "1210", "3225m", "1218", "3246m",
+           "Wide 1812", "1225", "3263m", "Wide 2512", "1530", "3876m", "Wide 3015", "1808", "4520m", "1812", "4532m", "1825",
+           "4564m", "1835", "4589", "Wide 3518", "5020m", "2010", "5025m", "2043", "Wide 4320", "2220", "5750m", "2225",
+           "5763m", "2312", "6032m", "2512", "6331m", "2725", "7142m", "2728", "7142m", "Wide 2827", "2816", "2817",
+           "7142m", "2953", "Wide 5929", "3920", "1052m"]
+
+; TODO - Used in `db-parts.stanza` - probably needs to move with it.
+;   If db-parts.stanza goes to JITX standard - then the PKG-RECTANGLE definition method
+;   must live there and support backend interaction.
+; QUESTION - Does the backend also check a list like this ?
+public defn check-valid-rectangle-pkg-list (pkg: String) -> True|False :
+  contains?(PKG-RECTANGLE, pkg)
+
+; TODO - Used in `db-parts.stanza` and `symbols.stanza`
+public pcb-landpattern dummy-landpattern (n:Int, courtyard:[Double, Double]) :
+  val r = (max(courtyard[0], courtyard[1]) - 0.2) / 2.0
+  for i in 0 to n do :
+    var theta = (2.0 * PI / to-double(n)) * to-double(i) + PI
+    pad p[i + 1] : bga-pad(0.05) at loc(r * cos(theta), r * sin(theta))
+
+  layer(Courtyard(Top)) = Rectangle(courtyard[0], courtyard[1])
+  layer(Silkscreen("f-silk", Top)) = LineRectangle(courtyard[0], courtyard[1])
+  ref-label()
+  name = to-string("DUMMY-%_" % [n])
+
+; TODO - Make this table be defined in CSV or excel
+;  This table is hard to maintain in code. Formatting gets thrown off, etc.
+;  it is difficult to update this table - code like this is not excel.
+;  Proposal:
+;    1.  We move this to another file, like a CSV or an excel file.
+;    2.  We have a pre-build step that compiles the CSV/Excel document into stanza
+;    3.  We feed the pre-build file to the JSL build and create this function programmatically.
+;    4.  [Optional] You could also consider making a macro/syntax that parses CSV to
+;        extract
+
+; TODO - Why are we not creating a 3D model here ?
+
+doc: \<DOC>
+Generator for creating two-pin SMT Landpatterns by Name
+
+@param part-name Name of the SMT case size for this landpattern, for example "0603, "2012m", etc.
+@param height Z-axis dimension of the package case.
+By default this is set to 0.4mm TYP.
+@param courtyard? Create a courtyard pattern around the landpattern or not.
+By default, this is true.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a, c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+@throws ValueError When `part-name` does not match a known size
+<DOC>
+public defn make-ipc-two-pin-landpattern (
+  part-name:String,
+  --
+  ; TODO - This doesn't seem like a great idea
+  ;   I'm not sure what the real solution is
+  height:Toleranced = min-max(0.39, 0.41),
+  courtyard?:True|False = true,
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false) :
+  inside pcb-landpattern :
+    val                 [    length,                        width,                         lead-length,                      lead-width] = switch contains?{_, part-name} :
+      ;imperial, metric
+      ["009005", "0301m"] : [tol(0.3, 0.01),                tol(0.15, 0.01),                 tol(0.11, 0.01),                tol(0.15, 0.01)]
+      ["01005", "0402m"]  : [tol(0.4, 0.02),                tol(0.2, 0.02),                  tol(0.1, 0.03),                 tol(0.2, 0.02)]
+      ["0201", "0603m"]   : [min-typ-max(0.57, 0.60, 0.63), min-typ-max(0.27, 0.30, 0.33),   min-typ-max(0.10, 0.15, 0.20),  min-typ-max(0.27, 0.30, 0.33)]
+      ["0202", "0606m"]   : [min-typ-max(0.57, 0.60, 0.63), min-typ-max(0.57, 0.60, 0.63),   min-typ-max(0.10, 0.15, 0.20),  min-typ-max(0.57, 0.60, 0.63)]
+      ["0204",
+       "0510m",
+       "Wide 0402"]       : [min-typ-max(0.40, 0.50, 0.60), min-typ-max(0.90, 1.00, 1.10),   min-typ-max(0.10, 0.25, 0.40),  min-typ-max(0.90, 1.00, 1.10)]
+      ["0306",
+       "0816m",
+       "Wide 0603"]       : [min-typ-max(0.65, 0.80, 0.95), min-typ-max(1.45, 1.60, 1.75),   min-typ-max(0.20, 0.35, 0.50),  min-typ-max(1.45, 1.60, 1.75)]
+      ["0402", "1005m"]   : [min-typ-max(0.90, 1.00, 1.10), min-typ-max(0.40, 0.50, 0.60),   min-typ-max(0.10, 0.25, 0.40),  min-typ-max(0.40, 0.50, 0.60)]
+      ["0505", "1414m"]   : [min-typ-max(1.02, 1.40, 1.78), min-typ-max(1.02, 1.40, 1.78),   min-typ-max(0.05, 0.10, 0.20),  min-typ-max(1.02, 1.40, 1.78)]
+      ["0508",
+      "1220m",
+      "Wide 0805"]        : [min-typ-max(1.02, 1.27, 1.52), min-typ-max(1.75, 2.00, 2.25),   min-typ-max(0.10, 0.13, 0.16),  min-typ-max(1.75, 2.00, 2.25)]
+      ["0603", "1608m"] : [min-typ-max(1.45, 1.60, 1.75), min-typ-max(0.65, 0.80, 0.95), min-typ-max(0.20, 0.35, 0.50),  min-typ-max(0.65, 0.80, 0.95)]
+      ["0612", "1632m", "Wide 1206"] : [min-typ-max(1.40, 1.60, 1.80), min-typ-max(3.00, 3.20, 3.40), min-typ-max(0.10, 0.13, 0.16), min-typ-max(3.00, 3.20, 3.40)]
+      ["0805", "2012m"] : [min-typ-max(1.80, 2.00, 2.20), min-typ-max(1.10, 1.20, 1.30), min-typ-max(0.20, 0.50, 0.80), min-typ-max(1.10, 1.20, 1.30)]
+      ["1111", "2828m"] : [tol(2.79, 0.38),                tol(2.79, 0.38),               tol(0.38, 0.25),               tol(2.79, 0.38)]
+      ["1206", "3216m"] : [min-typ-max(3.00, 3.20, 3.40), min-typ-max(1.40, 1.60, 1.80), min-typ-max(0.25, 0.50, 0.75), min-typ-max(1.40, 1.60, 1.80)]
+      ["1210", "3225m"] : [min-typ-max(3.00, 3.20, 3.40), min-typ-max(2.30, 2.50, 2.70), min-typ-max(0.25, 0.50, 0.75), min-typ-max(2.30, 2.50, 2.70)]
+      ["1218", "3246m", "Wide 1812"] : [min-typ-max(3.0, 3.2, 3.3), tol(4.6, 0.15),                tol(0.45, 0.2),                 tol(4.6, 0.15)]
+      ["1225", "3263m", "Wide 2512"] : [tol(3.2, 0.2),      tol(6.3, 0.2),                  tol(0.8, 0.2),                 tol(6.3, 0.2)]
+      ["1530", "3876m", "Wide 3015"] : [tol(3.8, 0.2),      tol(7.6, 0.2),                  min-typ-max(0.6, 0.60, 1.35), tol(7.6, 0.2)]
+      ["1808", "4520m"] : [tol(4.5, 0.4),                  tol(2.0, 0.2),                  tol(0.25, 0.5),                 tol(2.0, 0.2)]
+      ["1812", "4532m"] : [min-typ-max(4.20, 4.50, 4.80), min-typ-max(2.90, 3.20, 3.50), min-typ-max(0.25, 0.60, 0.95), min-typ-max(2.90, 3.20, 3.50)]
+      ["1825", "4564m"] : [min-typ-max(4.20, 4.50, 4.80), min-typ-max(6.00, 6.40, 6.80), min-typ-max(0.25, 0.60, 0.95), min-typ-max(6.00, 6.40, 6.80)]
+      ["1835", "4589", "Wide 3518"] : [tol(4.5, 0.2),       tol(8.9, 0.2),                  min-typ-max(0.7, 0.70, 1.6),   tol(8.9, 0.2)]
+      [        "5020m"] : [tol(5.0, 0.2),                  tol(2.0, 0.2),                  min-typ-max(0.3, 0.50, 1.5),   tol(2.0, 0.2)]
+      ["2010", "5025m"] : [tol(5.08, 0.254),               tol(2.54, 0.254),               min-typ-max(0.254, 0.508, 1.72), tol(2.54, 0.254)]
+      ["2043",        "Wide 4320"] : [tol(5.0, 0.2),       tol(11.0, 0.2),                 min-typ-max(0.8, 0.80, 1.6),   tol(11.0, 0.2)]
+      ["2220", "5750m"] : [tol(5.7, 0.2),                  tol(5.0, 0.2),                  tol(0.25, 0.5),                 tol(5.0, 0.2)]
+      ["2225", "5763m"] : [tol(5.7, 0.2),                  tol(6.35, 0.22),                tol(0.25, 0.5),                 tol(6.35, 0.25)]
+      ["2312", "6032m"] : [tol(6.0, 0.25),                 tol(3.2, 0.25),                 tol(1.3, 0.3),                  tol(3.2, 0.25)]
+      ["2512", "6331m"] : [tol(6.35, 0.25),                tol(3.18, 0.25),                tol(2.0, 0.5),                  tol(3.18, 0.25)]
+      ["2725", "7142m"] : [tol(6.81, 0.25),                tol(6.45, 0.25),                tol(2.0, 0.5),                  tol(6.45, 0.25)]
+      ["2728", "7142m", "Wide 2827"] : [tol(6.71, 0.25),   tol(7.19, 0.25),                tol(1.5, 0.5),                  tol(7.19, 0.25)]
+      ["2816", "2817", "7142m"] : [tol(7.1, 0.3),          tol(4.2, 0.3),                  tol(2.0, 0.5),                  tol(4.2, 0.3)]
+      ["2953",        "Wide 5929"] : [tol(7.5, 0.2),       tol(15.0, 0.2),                 tol(1.10, 0.1),                 tol(15.0, 0.2)]
+      ["3920", "1052m"] : [tol(10.0, 0.3),                 tol(5.2, 0.3),                  min-typ-max(1.1, 2.0, 2.5),      tol(5.2, 0.3)]
+      else :
+        throw $ ValueError(
+          "No default land-pattern dimensions in make-ipc-two-pin-landpattern for package code %_ " % [part-name]
+        )
+
+    make-two-pin-chip-landpattern(
+      length, width, height,
+      lead-length, lead-width,
+      --
+      density-level = density-level,
+      polarized? = polarized?
+    )
+    external-names = ([part-name])
+    name = part-name
+
+
+
+
+doc: \<DOC>
+Two-Pin SMT Landpattern Definition
+
+@param part-name Name of the SMT case size for this landpattern, for example "0603, "2012m", etc.
+@param height Z-axis dimension of the package case.
+By default this is set to 0.4mm TYP.
+@param courtyard? Create a courtyard pattern around the landpattern or not.
+By default, this is true.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+@throws ValueError When `part-name` does not match a known size
+<DOC>
+public pcb-landpattern ipc-two-pin-landpattern (
+  part-name:String,
+  --
+  height:Toleranced = min-max(0.39, 0.41),
+  courtyard?:True|False = true,
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false) :
+
+  make-ipc-two-pin-landpattern(
+    part-name,
+    height = height,
+    courtyard? = courtyard?
+    density-level = density-level
+    polarized? = polarized?
+    )
+
+
+; Helper function for two-pin through hole components, controlling where they get placed
+defn place-pads (polarized?:True|False, lead-spacing:Double, pad-def:Pad) :
+  inside pcb-landpattern:
+    val y1 = 0.5 * lead-spacing
+    val y2 = (- y1)
+    if polarized?:
+      pad c: pad-def at loc(0.0, y1)
+      pad a: pad-def at loc(0.0, y2)
+    else:
+      pad p[1]: pad-def at loc(0.0, y1)
+      pad p[2]: pad-def at loc(0.0, y2)
+
+
+; TODO - Why are we not creating a 3D model here ?
+doc: \<DOC>
+Generate a 2-pin IPC compliant landpattern for SMT chip components
+@param length The vertical dimension of the package
+@param width The horizontal dimension of the package
+@pararm height The Z-axis dimension of the package (perpendicular to the board surface).
+@param lead-length Length of the conductors/leads of the package.
+@param lead-width? Width of the conductors/leads of the package. If `False`, then
+  the lead width is assumed to be the same as the package `width`.
+@param density-level Board Density Level Setting for this component. By default, the
+  design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Adds polarization markings in the silkscreen and changes the pad names
+  from `p[1 through 2]` to `c, a` (cathode, anode), respectively. By default this is set to false.
+<DOC>
+public defn make-two-pin-chip-landpattern (
+  length:Toleranced,
+  width:Toleranced,
+  height:Toleranced,
+  lead-length:Toleranced,
+  lead-width?:False|Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false
+  ) :
+  inside pcb-landpattern:
+    ; compute the solder fillets based on the protrusion type
+    ; if > 16xx (1.6mm), use big rectangular leads
+    val land-protrusion-type = BigRectangularLeads when typ-value(width) > 0.8 else SmallRectangularLeads
+    val lead-fillets = lead-fillets(land-protrusion-type, density-level)
+
+    ; compute the base dimensions of the lands
+    ; val ipc = ipc-formula(
+    ;   length, lead-length, width when lead-width? is False else lead-width? as Toleranced,
+    ;   lead-fillets
+    ; )
+    val W = match(lead-width?):
+      (x:False): width
+      (x:Toleranced): x
+
+    val [Jt-table, Jh, Js, _] = to-tuple(lead-fillets)
+    var Jt = Jt-table
+    if land-protrusion-type == BigRectangularLeads :
+      if density-level == DensityLevelB :
+        Jt = min(0.5, (0.25 * typ-value(height)) )
+    else :
+      if density-level == DensityLevelA :
+        Jt = typ-value(height)
+      if density-level == DensityLevelB :
+        Jt = 0.5 * typ-value(height)
+      if density-level == DensityLevelC :
+        Jt = 0.25 * typ-value(height)
+    val Lmax = max-value(length)
+    val Lmin = min-value(length)
+    val Wmin = min-value(W)
+    val Tmin = min-value(lead-length)
+    val Smax = Lmax - 2.0 * Tmin
+    val C_L  = tolerance-range(length)
+    val C_W  = tolerance-range(W)
+    val C_T  = tolerance-range(lead-length)
+    val C_S  = sqrt(C_L * C_L + C_T * C_T)
+    val Zmax = Lmin + 2.0 * Jt + C_L ; the distance from edge of land to edge of land on the exterior of the land pattern
+    val Gmin = Smax - 2.0 * Jh - C_S ; the distance from edge of land to edge of land on the interior of the land pattern
+    val Xmin = Wmin + 2.0 * Js + C_W ; the size of the land in the dimension orthogonal to Z and G.
+    val ipc = IpcResults(Zmax, Gmin, Xmin)
+
+    ; ----------------------------------------------------
+    ; place the pads
+    val pad-sz = transpose(pad-size(ipc))
+    val lead-spacing = Gmin + y(pad-sz)
+    val pad-def = smd-pad(Rectangle(pad-sz)) ; pass in solder-mask-defined?
+    place-pads(polarized?, lead-spacing, pad-def)
+
+    ; ----------------------------------------------------
+    ; compute the courtyard
+    val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
+    val lp-sz   = enlarge(Dims(x(pad-sz), Zmax), 2.0 * solder-mask-registration)
+    val part-sz = Dims(max-value(width), max-value(length))
+    val cy-sz   = enlarge(max(lp-sz, part-sz), 2.0 * courtyard-excess(lead-fillets))
+    layer(Courtyard(Top)) = Rectangle(cy-sz)
+
+    ; ----------------------------------------------------
+    ; draw the polarity marker
+    if polarized?:
+      val min-silk-width = clearance(current-rules(), MinSilkscreenWidth)
+      ; the formula for placing the polarity marker is:
+      ;   for marker line M:
+      ;
+      ;   M is placed a distance M_dist away from the land pattern
+      ;   in the top-level corner, which is the corner of the land pattern
+      ;   closest to p[1]/a.
+      ;
+      ;   - M_length = 3.0 * min-silk-width
+      ;   - M_width  = min-silk-width
+      ;
+      ;   M_dist = solder-mask-registration + silk-solder-mask-clearance + min-silk-width * 0.5 + 0.01
+      ;
+      ; assumptions:
+      ;   - the pad dimensions are outside the bounds of the part. This is guaranteed by the computation above.
+      ;   - the land pattern is centered about the origin
+      ;   - the pad corresponding to p[1] or a is centered about its origin.
+      ;
+      val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
+      val silk-solder-mask-clearance = clearance(current-rules(), MinSilkSolderMaskSpace)
+      val line = Line(min-silk-width, [Point(min-silk-width * 0.5, 0.0),
+                                       Point(3.5 * min-silk-width, 0.0)])
+      val dist = solder-mask-registration + silk-solder-mask-clearance + min-silk-width * 0.5 + 0.01
+      val pol-x = -0.5 * max(x(lp-sz), x(part-sz))
+      val pol-y =  0.5 * max(y(lp-sz), y(part-sz)) + dist
+      layer(Silkscreen("pol", Top)) = loc(pol-x, pol-y) * line
+
+    val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
+    val text-x = 0.5 * (x(cy-sz) + min-silkscreen-text-height)
+    ref-label(loc(text-x, 0.0, -90.0), C)
+
+
+
+doc: \<DOC>
+Landpattern Definition for a 2-pin IPC compliant
+@param length The vertical dimension of the package
+@param width The horizontal dimension of the package
+@pararm height The Z-axis dimension of the package (perpendicular to the board surface).
+@param lead-length Length of the conductors/leads of the package.
+@param lead-width? Width of the conductors/leads of the package. If `False`, then
+  the lead width is assumed to be the same as the package `width`.
+@param density-level Board Density Level Setting for this component. By default, the
+  design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Adds polarization markings in the silkscreen. By default this is set to false.
+<DOC>
+public pcb-landpattern two-pin-chip-landpattern (
+  length:Toleranced,
+  width:Toleranced,
+  height:Toleranced,
+  lead-length:Toleranced,
+  lead-width?:False|Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false,
+  ):
+  name = to-string("TWOPIN-L%_-W%_" % [typ-value(length), typ-value(width)])
+
+  make-two-pin-chip-landpattern(
+    length, width, height, lead-length, lead-width?,
+    density-level = density-level,
+    polarized? = polarized?
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Through-Hole Landpatterns
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Helper function to compute the pad and hole size of through hoel components
+defn pth-pad-sizes (lead-diameter:Toleranced, density-level:DensityLevel) :
+  val min-outer-layer-pad-size = MIN-OUTER-LAYER-PAD-SIZE
+  val max-hole-size-tolerance  = MAX-HOLE-SIZE-TOLERANCE
+  val min-hole-size-tolerance  = MIN-HOLE-SIZE-TOLERANCE
+  val hole-position-tolerance  = HOLE-POSITION-TOLERANCE
+
+  ; Lookup the max/min hole to lead diameter
+  ; TODO - where do these numbers come from ?
+  val [max-h2l, min-h2l] = switch(density-level) :
+    DensityLevelA: [0.70, 0.25]
+    DensityLevelB: [0.70, 0.20]
+    DensityLevelC: [0.60, 0.15]
+
+  ; Compute the hole size. This will be the average of the maximum
+  ; and minimum possible hole sizes given the design rules.
+  val max-hole-diam = min-value(lead-diameter) - max-hole-size-tolerance + max-h2l
+  val min-hole-diam = max-value(lead-diameter) + min-hole-size-tolerance + min-h2l
+  val hole-diameter = 0.5 * (max-hole-diam + min-hole-diam)
+
+  ; Compute the pad diameter
+  val pad-diameter = hole-diameter + maximum([
+      max-hole-size-tolerance + 0.5,
+      max-hole-size-tolerance + hole-position-tolerance + 50.0e-6
+      min-outer-layer-pad-size,
+  ])
+  [pad-diameter, hole-diameter]
+
+; Helper function for two-pin through-hole components, to place the polarity marker
+; TODO - why does this not use `PlusSymbol`
+defn two-pin-th-polarity-marker (cmp-sz:Dims, pad-diameter:Double, lead-spacing:Double) :
+  inside pcb-landpattern:
+    val min-silk-width = clearance(current-rules(), MinSilkscreenWidth)
+    val min-silk-solder-mask-space = clearance(current-rules(), MinSilkSolderMaskSpace)
+    val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
+
+    val line-length = 3.0 * min-silk-width
+    val line = Line(min-silk-width, [Point(0.0, 0.0),
+                                     Point(line-length, 0.0)])
+    val dist = solder-mask-registration + min-silk-solder-mask-space + min-silk-width * 0.5 + 0.01
+    val pad-x = -0.5 * pad-diameter
+    val pad-y =  0.5 * pad-diameter + 0.5 * lead-spacing
+    val cmp-x = -0.5 * x(cmp-sz)
+    val cmp-y =  0.5 * y(cmp-sz)
+
+    val pol-x = min(pad-x, cmp-x)
+    val pol-y = max(pad-y, cmp-y) + dist
+    layer(Silkscreen("pol", Top)) = loc(pol-x, pol-y) * line
+    val pol-x-2 = pol-x - line-length * 0.5 + 1.5 * min-silk-width
+    layer(Silkscreen("pol", Top)) = loc(pol-x-2, pol-y, -90.0) * line
+
+
+; Generate a land pattern for a two-pin radial through hole component
+; TODO - Length and Width here are reversed from the SMT variant according
+;   to the comment.
+; TODO - why does this not have a `height` ? Even just an envelop height ?
+;    ideally a diameter so that we can create a 3D model ?
+; TODO - Why no 3d model here ?
+doc: \<DOC>
+Generator for creating two-pin Radial Landpatterns
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+@param length
+@param width
+@param lead-spacing Center-To-Center distance between the leads of the component.
+@param lead-diameter Diameter of the electrical leads of the device.
+Both leads are assumed to be the same size.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public defn make-two-pin-radial-landpattern (
+  length:Toleranced, ; the length of the component (x direction)
+  width:Toleranced,  ; the width of the component (y direction)
+  lead-spacing:Double,
+  lead-diameter:Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  polarized?:True|False = false,
+  ) :
+  inside pcb-landpattern:
+    ;------------------------------------------------------------
+    ; Compute the pad definition
+    val [pad-diameter, hole-diameter] = pth-pad-sizes(lead-diameter, density-level)
+    val pad-def = pth-pad(hole-diameter, pad-diameter)
+
+    ;------------------------------------------------------------
+    ; Place the pads
+    ; TODO - Use square pad for positive pad in a polarized
+    ;   component (capacitor)
+    place-pads(polarized?, lead-spacing, pad-def)
+
+    ;------------------------------------------------------------
+    ; Compute the courtyard
+    val courtyard-excess = 0.75
+    val max-envelope = Dims(max-value(length), max-value(width))
+    val cy-sz = enlarge{_, courtyard-excess} $ max-envelope
+
+    layer(Courtyard(Top))    = Rectangle(cy-sz)
+    layer(Courtyard(Bottom)) = Rectangle(cy-sz)
+    val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
+    ref-label(loc(0.5 * x(cy-sz) + min-silkscreen-text-height, 0.0, 270.0))
+
+    ; place the polarity marker, if necessary
+    if polarized?:
+      two-pin-th-polarity-marker(max-envelope, pad-diameter, lead-spacing)
+
+doc: \<DOC>
+Generate a land pattern for a two-pin radial through-hole component
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+@param diameter Diameter of a radially-symmetric component body.
+@param lead-spacing Center-To-Center distance between the leads of the component.
+@param lead-diameter Diameter of the electrical leads of the device.
+Both leads are assumed to be the same size.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public defn make-two-pin-radial-landpattern (
+  diameter:Toleranced,
+  lead-spacing:Double,
+  lead-diameter:Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  polarized?:True|False = false,
+  ) :
+  make-two-pin-radial-landpattern(
+    diameter, diameter,
+    lead-spacing, lead-diameter,
+    polarized? = polarized?
+    density-level = density-level
+  )
+
+doc: \<DOC>
+Two-pin Radial Landpattern Definition
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+@param length
+@param width
+@param lead-spacing Center-To-Center distance between the leads of the component.
+@param lead-diameter Diameter of the electrical leads of the device.
+Both leads are assumed to be the same size.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public pcb-landpattern two-pin-radial-landpattern (
+  length:Toleranced,
+  width:Toleranced,
+  lead-length:Toleranced,
+  lead-diameter:Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false
+  ):
+  name = to-string("RADIAL-L%_-W%_-P%_" % [typ-value(length), typ-value(width), typ-value(lead-length)])
+
+  make-two-pin-radial-landpattern(
+    length, width,
+    lead-length, lead-diameter,
+    density-level = density-level,
+    polarized? = polarized?,
+  )
+
+doc: \<DOC>
+Two-pin radial landpattern definition
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+@param diameter Diameter of a radially-symmetric component body.
+@param lead-spacing Center-To-Center distance between the leads of the component.
+@param lead-diameter Diameter of the electrical leads of the device.
+Both leads are assumed to be the same size.
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public pcb-landpattern two-pin-radial-landpattern (
+  diameter:Toleranced,
+  lead-length:Toleranced,
+  lead-diameter:Toleranced,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL,
+  polarized?:True|False = false
+  ):
+  name = to-string("RADIAL-L%_-W%_-P%_" % [typ-value(length), typ-value(width), typ-value(lead-length)])
+
+  make-two-pin-radial-landpattern(
+    diameter,
+    lead-length, lead-diameter,
+    density-level = density-level,
+    polarized? = polarized?,
+  )
+
+doc: \<DOC>
+@see IPC-A-610 Section 7.1.2, Table 7-1 Lead Bend Radius
+<DOC>
+defn compute-default-bend-radius (lead-diameter:Toleranced) -> Double:
+  val diam = typ-value(lead-diameter)
+  if diam < 0.8:
+    diam
+  else if diam < 1.2:
+    1.5 * diam
+  else:
+    2.0 * diam
+
+; Default Weld Bead Offset on Axial Lead Components.
+;   I'm assuming that most components don't have this by default.
+val DEF-WELD-OFFSET = 0.0
+; Default Bend Length - this the distance from either the
+;   component body or the weld bead where the bend will start.
+val DEF-BEND-LENGTH = 1.0 ; mm
+
+doc: \<DOC>
+Generate a horizontal land pattern for a two-pin axial through-hole component
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+TODO - We need to differentiate between horizontal and the perpendicular method of placing
+   axial components. (See IPC2221 Figure 8-26)
+@param body-length Length of the axial component's body (ie, not including the leads)
+@param body-diameter Diameter of the axial component's body.
+@param lead-diameter Diameter of the electrical leads on either side of the body.
+@param weld Distance from the component body to the weld-bead on the electrical lead.
+  By default, this value is 0.0 and assumes that the component does not have a weld-bead.
+@param bend-length Length from the body or weld-bead where the bend will be started.
+@param bend-radius Radius of curvature applied to the lead. The default value is computed
+  according to IPC-A-610, Section 7.1.2. Value is in mm
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `a/c` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public defn make-two-pin-axial-landpattern (
+  body-length:Toleranced,   ; The length of the component
+  body-diameter:Toleranced, ; The diameter of the component
+  lead-diameter:Toleranced, ; the diameter of the leads of the component
+  weld-offset:Double = DEF-WELD-OFFSET,     ; the distance away from the body the leads are bent
+  bend-length:Double = DEF-BEND-LENGTH, ; the length of the bend in the leads
+  bend-radius:Double = compute-default-bend-radius(lead-diameter), ; the radius of the bend in the leads (mm, not %)
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  polarized?:True|False = false,
+  ) :
+  inside pcb-landpattern:
+    ;------------------------------------------------------------
+    ; Compute the pad definition
+    val [pad-diameter, hole-diameter] = pth-pad-sizes(lead-diameter, density-level)
+      val pad-def = pth-pad(hole-diameter, pad-diameter)
+    val lead-spacing = typ-value(body-length) + 2.0 * (weld-offset + bend-length + bend-radius)
+
+    ;------------------------------------------------------------
+    ; Place the pads
+    place-pads(polarized?, lead-spacing, pad-def)
+
+    ;------------------------------------------------------------
+    ; Compute the courtyard
+    val courtyard-excess = 0.75
+    val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
+    val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
+
+    val max-x-dim = max(
+      max-value(body-diameter),
+      pad-diameter + 2.0 * solder-mask-registration
+    )
+    val max-y-dim = max(
+      max-value(body-length)
+      pad-diameter + 2.0 * solder-mask-registration + lead-spacing
+    )
+    val max-dims = Dims(max-x-dim, max-y-dim)
+    val cy-sz = enlarge(max-dims, courtyard-excess)
+    layer(Courtyard(Top))    = Rectangle(cy-sz)
+    layer(Courtyard(Bottom)) = Rectangle(cy-sz)
+    ref-label(loc(0.5 * x(cy-sz) + min-silkscreen-text-height, 0.0, 270.0))
+
+    ; place the polarity label, if necessary
+    if polarized?:
+      two-pin-th-polarity-marker(Dims(max-value(body-diameter), max-value(body-length)),
+                                 pad-diameter, lead-spacing)
+
+doc: \<DOC>
+Two-pin Axial Landpattern Definition
+TODO - Create Mechanical Drawing for the dimensions as an SVG
+TODO - We need to differentiate between horizontal and the perpendicular method of placing
+   axial components. (See IPC2221 Figure 8-26)
+@param body-length Length of the axial component's body (ie, not including the leads)
+@param body-diameter Diameter of the axial component's body.
+@param lead-diameter Diameter of the electrical leads on either side of the body.
+@param weld Distance from the component body to the weld-bead on the electrical lead.
+  By default, this value is 0.0 and assumes that the component does not have a weld-bead.
+@param bend-length Length from the body or weld-bead where the bend will be started.
+@param bend-radius Radius of curvature applied to the lead. The default value is computed
+  according to IPC-A-610, Section 7.1.2. Value is in mm
+@param density-level Board Density Level Setting for this component. By default, the
+design level {@link DENSITY-LEVEL} value is used.
+@param polarized? Draw polarity markings and use the `c,a` pin
+nomenclature instead of `p[1 through 2]`. By default this is false.
+<DOC>
+public pcb-landpattern two-pin-axial-landpattern (
+  body-length:Toleranced,
+  body-diameter:Toleranced,
+  lead-diameter:Toleranced,
+  weld-offset:Double = DEF-WELD-OFFSET,
+  bend-length:Double = DEF-BEND-LENGTH,
+  bend-radius:Double = compute-default-bend-radius(lead-diameter),
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  polarized?:True|False = false,
+  ) :
+  name = to-string("AXIAL-L%_-D%_-P%_" % [typ-value(body-length), typ-value(body-diameter), typ-value(lead-length)])
+
+  make-two-pin-axial-landpattern(
+    body-length, body-diameter,
+    lead-diameter, weld-offset,
+    bend-length, bend-radius,
+    density-level = density-level,
+    polarized? = polarized?
+  )

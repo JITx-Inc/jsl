@@ -1,0 +1,30 @@
+#use-added-syntax(jitx)
+defpackage jsl/errors:
+  import core
+  import jitx
+
+doc: \<DOC>
+Value Error
+This exception is intended to be thrown when checking
+for values that don't meet pre-/post- conditions for a
+function. This may include invalid values for a particular
+application.
+<DOC>
+public defstruct ValueError <: Exception:
+  msg:String
+
+public defn ValueError (msg:Printable) -> ValueError:
+  ValueError(to-string(msg))
+
+public defmethod print (o:OutputStream, e:ValueError):
+  print(o, "ValueError: %_" % [msg(e)])
+
+
+public defstruct ArgumentError <: Exception:
+  msg:String
+
+public defn ArgumentError (msg:Printable) -> ArgumentError:
+  ArgumentError(to-string(msg))
+
+public defmethod print (o:OutputStream, e:ArgumentError):
+  print(o, "ArgumentError: %_" % [msg(e)])
