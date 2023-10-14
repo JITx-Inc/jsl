@@ -11,8 +11,13 @@ defpackage jsl/landpatterns/leads:
 ;  - OSCCC (table 3-19)
 ;  - CGA/LGA (table 3-21)
 
-; LandProtrusionType is a helper enum for various kinds of leads and terminations on
-; components. It is used to configure their generated land patterns.
+doc: \<DOC>
+Land Protrusion Types for SMT components
+
+This enum is for describing the different types of
+SMT contacts that are possible. We use this to generate the
+different pad shapes required for SMT components
+<DOC>
 public pcb-enum jsl/landpatterns/leads/LandProtrusionType:
   SmallFlatRibbonLLeads,  ; Flat ribbon L leads for pitch less than 0.0625mm
   SmallGullWingLeads,     ; Gull wing leads with pitch less than 0.0625mm
@@ -37,6 +42,114 @@ public pcb-enum jsl/landpatterns/leads/LandProtrusionType:
   ShortAluminumElectrolyticLeads, ; electrolytic capacitor shorter than 10mm
   TallTwoPinCrystalLeads,         ; two pin crystal components 10mm or taller
   TallAluminumElectrolyticLeads,  ; electrolytic capacitor 10mm or taller
+
+
+
+doc: \<DOC>
+Pin or Electrical contact of a component package
+
+The leads of a device are the electrical contact of the
+internal semiconductor to the outside world.
+
+These come in a variety of styles:
+-  For through hole components, the leads are typically cylindrical
+   pieces of metal extending from the ends (axial) or the bottom (radial)
+-  For surface mount components, the leads are typically embedded into
+   the body of the package.
+<DOC>
+public defstruct Lead <: Hashable & Equalable :
+  doc: \<DOC>
+  Dimension of the lead that is normal to the edge of the package body
+
+  Examples:
+  -  For through-hole components, the lead length is the overall length
+    of the cylindrical copper.
+  -  For SOP/SOIC/QFP, the lead length is typically the length of
+    mate-able surface between the lead contact and the PCB. It typically
+    does not include any bends in the lead to reach the mating surface.
+  -  For SMT chip resistors (0603, etc), the length is the termination
+    (typically labeled `b` in drawings)
+    TODO - need a figure here.
+  <DOC>
+  length:Toleranced
+  doc: \<DOC>
+  Dimension of the lead that is parallel to the edge of the package body.
+
+  Examples:
+  -  For through-hole components, the lead width is typically the
+    diameter of the cylindrical lead.
+  -  For SOP/SOIC/QFP, the lead width is measured parallel to the body
+    and must be strictly smaller than the pitch of the pins.
+  -  For SMT chip resistors, the lead width is typically the entire width
+    of the package body.
+  <DOC>
+  width:Toleranced
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
+doc: \<DOC>
+Surface Mount Component Lead
+
+This type is for describing leads from SMT packages
+such as SOIC, SOP, QFN, etc.
+<DOC>
+public defstruct SMT-Lead <: Lead :
+  doc: \<DOC>
+  The lead type defines the physical nature of the lead.
+  <DOC>
+  lead-type:jsl/landpatterns/leads/LandProtrusionType
+  doc: \<DOC>
+  Length of the surface contact for the electrical lead of an SMT package.
+
+  This is the length of the lead that will be mateable to the pad. This
+  length does not include any bends in the lead to reach the mating surface
+  from the body of the package.
+
+  This is typically identified with the letter `L` in mechanical drawings
+  of a component datasheet.
+
+  TODO - add figure here.
+  <DOC>
+  length:Toleranced with: (as-method => true)
+  doc: \<DOC>
+  Width of the electrical lead of an SMT package.
+
+  This is typically identified with the letter `b` in mechanical drawings
+  of a component datasheet.
+
+  TODO - add figure here.
+  <DOC>
+  width:Toleranced with: (as-method => true)
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
+doc: \<DOC>
+Through-hole Component Lead
+
+This type is for describing the leads from a Through-hole
+package such as a Radial Capacitor, or an Axial Resistor.
+<DOC>
+public defstruct TH-Lead <: Lead :
+  doc: \<DOC>
+  The length of the lead describes the total length of the
+  metal contact. This is not describing the pad placement
+  in anyway.
+  <DOC>
+  length:Toleranced with: (as-method => true)
+  doc: \<DOC>
+  The width of the lead is typically describing the diameter
+  of a cylindrical lead.
+  <DOC>
+  width:Toleranced with: (as-method => true)
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
 
 ; LeadFillets are extra spacing along the sides of a lead when generating a land for
 ; a component's leads.

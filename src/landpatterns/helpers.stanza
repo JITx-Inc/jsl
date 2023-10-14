@@ -13,14 +13,29 @@ defpackage jsl/landpatterns/helpers:
 ; ====== Argument constraint Helpers ===========================================
 ; Ensure that a value is even and positive.
 
-public defn ensure-positive! (value: Int|Long|Double|Float, name:String) :
+public defn ensure-positive! (typeName:String) -> ((String, ?) -> ?) :
+  ensure-positive!{_0, _1, typeName = typeName}
+
+public defn ensure-positive! (
+  field:String,
+  value: Int|Long|Double|Float|Toleranced
+  --
+  typeName:String = "") :
   val fail = match(value):
     (x:Int): x <= 0
     (x:Long): x <= 0L
     (x:Double): x <= 0.0
     (x:Float): x <= 0.0F
+    (t:Toleranced):
+      min-value(t) <= 0.0
   if fail:
-    throw $ ValueError("%_: Expects Positive Number: %_" % [name, value])
+    throw $ ValueError("%_:%_: Expects Positive Number: %_" % [typeName, field, value])
+
+public defn ensure-positive! (
+  value: Int|Long|Double|Float|Toleranced
+  name:String
+  ):
+  ensure-positive!(name, value)
 
 doc: \<DOC>
 Check for dual-row components to ensure proper number of pins.
@@ -31,6 +46,16 @@ Check for dual-row components to ensure proper number of pins.
 public defn ensure-even-positive! (value: Int, name: String) :
   if value < 2 or value % 2 == 1:
     throw $ ValueError("%_: only supports a positive even number of pins." % [name])
+
+public defn ensure-even-positive! (
+  field:String, value:Int
+  --
+  typeName:String = ""
+  ) :
+  ensure-even-positive!(value, string-join([typeName, field], ":"))
+
+public defn ensure-even-positive! (typeName:String):
+  ensure-even-positive!{_0, _1, typeName = typeName}
 
 doc: \<DOC>
 Check for multi-sided components to ensure proper number of pins.

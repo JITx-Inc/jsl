@@ -1,0 +1,161 @@
+doc: \<DOC>
+@title Packages & Landpatterns
+@brief Interface definitions for Landpatterns
+@desc
+
+This package contains the definition of some abstract types for
+defining the landpatterns of various components.
+
+The goal of these definitions is to provide a consistent interface
+across all landpattern definitions. This promotes re-use and
+correctness.
+
+All of the entities in this package use millimeters as their standard unit.
+
+TODO - Diagram here discussing the concept for landpatterns & component packages.
+  We should include examples of various packages and use the right nomenclature
+  to describe things.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/packages:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns/helpers
+  import jsl/design/settings
+
+doc: \<DOC>
+Physical body of the Component (also called the Lead Carrier or just Carrier)
+
+For Through-hole resistors - this is the ceramic cylinder, not the leads
+For SMT resistors, the body is basically the whole chip resistor.
+
+For QFNs, the body is the entire package
+For QFPs, the body is the ceramic or plastic but not the leads.
+
+TODO - Figure here
+<DOC>
+public defstruct PackageBody <: Hashable & Equalable :
+  doc: \<DOC>
+  Measure of the package body in the X dimension.
+
+  Examples:
+  - Typically for SOP/SOIC/DFN/SON, this dimension is in the same direction as the lead-span
+  - For non-square QFN/QFP/BGA packages, this is typically the shorter of the two
+  dimensions.
+  - For axial through-hole components, the width is typically the diameter of
+  the device cylinder and orthogonal to the axial leads.
+  - For radial through-hole components:
+    -  For cylindrical components, the width is equal to the length
+    -  For non-cylindrical components, the width is typically the shorter of the two dimensions and approximately orthogonal to the plane of the leads.
+  <DOC>
+  width:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+  doc: \<DOC>
+  Measure of the package body in the Y dimension.
+
+  Examples:
+  - Typically for SOP/SOIC/DFN/SON, this dimension is orthogonal to the lead-span.
+  - For non-square QFN/QFP/BGA packages, this is typically the longer of the two
+  dimensions.
+  - For axial through-hole components, the length is typically parallel to the
+  axial leads of the device.
+  - For radial through-hole components:
+    -  For cylindrical components, the length is equal to the width.
+    -  For non-cylindrical components, the length is typically the longer dimension and parallel to the leads of the device.
+  <DOC>
+  length:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+  doc: \<DOC>
+  Measure of the package body in the Z dimension
+
+  This dimension of the package body is the nominal distance that
+  the component will stand off the surface of the PCB. This
+  dimension will typically not effect the layout and routing of the
+  PCB from an electrical perspective but will likely effect the
+  mechanical integration of the component.
+  <DOC>
+  height:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+
+  doc: \<DOC>
+  Origin Position of the Package Body
+  <DOC>
+  anchor:Anchor with: (
+    default => C
+  )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
+
+doc: \<DOC>
+Every component has a representation for a
+package
+<DOC>
+public deftype Package <: Equalable & Hashable
+
+doc: \<DOC>
+IPC7351 compliant name for the package generated
+by this instance.
+<DOC>
+public defmulti name (x:Package) -> String
+doc: \<DOC>
+Package Body provides the physical envelope for
+the package's body.
+<DOC>
+public defmulti package-body (x:Package) -> PackageBody
+
+doc: \<DOC>
+Generator for creating this landpattern
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the necessary pads and geometry associated
+with that component's landpattern.
+<DOC>
+public defmulti make-landpattern (
+  pkg
+  --
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Create a `Landpattern` definition
+
+This function uses the generator `make-landpattern` to create
+a landpattern definition.
+
+Example:
+```
+  val lp = create-landpattern(pkg)
+
+  ; Is equivalent to:
+
+  pcb-pattern lp:
+    name = ...
+    description = ...
+    make-landpattern(pkg)
+```
+<DOC>
+public defmulti create-landpattern (
+  x:Package
+  --
+  density-level:DensityLevel = ?
+  ) -> LandPattern
+
+doc: \<DOC>
+Default Implementation of `create-landpattern`
+<DOC>
+public defmethod create-landpattern (
+  pkg:Package
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> LandPattern :
+  pcb-landpattern lp:
+    name = name(pkg)
+    make-landpattern(pkg)
+  lp
+
+
+
+
