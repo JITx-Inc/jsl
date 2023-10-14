@@ -1,6 +1,31 @@
 doc: \<DOC>
-SOIC Landpattern Generator
+@title SOIC
+@brief SOIC Package Definition
 
+@desc
+
+The SOIC package is a dual-row SMT package with a
+typical pitch of 1.27mm.
+
+Unless otherwise specified, the dimensions in this package are in millimeters.
+
+@see JEDEC MS-012
+
+@snippet Example
+
+TODO - Do we make these all keyword value arguments -
+  Feels like it would be easier to read and understand.
+```stanza
+public pcb-component LM324:
+  port p : pin[[1 through 14]]
+
+  val lp = create-landpattern(SOIC-N(
+    num-pins = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = min-max(8.55, 8.75),
+  ))
+  assign-landpattern = lp(p[1] => lp.p[1], ...)
+```
 
 <DOC>
 #use-added-syntax(jitx)
@@ -14,49 +39,207 @@ defpackage jsl/landpatterns/SOIC:
   import jsl/landpatterns/helpers
   import jsl/landpatterns/dual-row
 
-;  @see https://www.nxp.com/docs/en/application-note/AN2409.pdf
-;  @see https://eesemi.com/soic.htm
-;  @see JEDEC standard MS-012
+  import jsl/landpatterns/packages
 
-; TODO - we need a diagram that explains the resultant geometry.
-;   or at the very least reference JEDEC MS012
-;
 
-defn default-lead-type (pitch:Double) -> LandProtrusionType :
-  if pitch > 0.0625 : BigGullWingLeads
-  else:               SmallGullWingLeads
+doc: \<DOC>
+SOIC Lead Definition
 
-public defn make-soic-landpattern (
-  num-pins:        Int,
-  lead-span:       Toleranced,
-  package-length:  Toleranced,
-  package-width:   Toleranced,
-  ; These values were taking from JEDEC MS-012
-  ;  Note that for larger SOIC packages (32+ pins), the pitch
-  ;  reduces to 0.65mm
-  pitch:           Double = 0.127,
-  lead-length:     Toleranced = min-max(0.4, 1.27),
-  lead-width:      Toleranced = min-max(0.31, 0.51),
-  lead-type:       LandProtrusionType = default-lead-type(pitch),
+The default definitions for the SOIC leads are
+taken from JEDEX MS-012.
+<DOC>
+public defstruct SOIC-Lead <: SMT-Lead:
+  doc: \<DOC>
+  Style of lead protrusion.
+
+  Default style is {@link BigGullWingLeads}. This is
+  suitable for pitches > 0.625mm. Below 0.625mm,
+  the lead-type {@link SmallGullWingLeads} should be
+  considered.
+  <DOC>
+  lead-type:jsl/landpatterns/leads/LandProtrusionType with: (
+      as-method => true,
+      default => BigGullWingLeads,
+    )
+  length:Toleranced with: (
+    as-method => true,
+    default => min-max(0.4, 1.27),
+    ensure => ensure-positive!("SOIC-Lead")
+    )
+  width:Toleranced with: (
+    as-method => true,
+    default => min-max(0.31, 0.51),
+    ensure => ensure-positive!("SOIC-Lead")
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
+doc: \<DOC>
+Create a Narrow SOIC PackageBody
+@param length Length of the package body - typically
+labeled `D` in the mechanical drawings of most
+datasheets.
+@param width Width of the package body - typically
+labeled `E1` in the mechanical drawings of most
+datasheets. The default is `min-max(3.8, 4.0)`
+@param height Height of the package body above
+the board surface. This is typically labeled `A`
+in the mechanical drawings of most datasheets.
+The default value is `min-max(1.35, 1.75)`.
+<DOC>
+public defn make-SOIC-narrow-body (
+  length:Toleranced
   --
-  density-level:       DensityLevel = DENSITY-LEVEL,
-  with-pol-marker?:    True|False = true,
-  thermal-pad?:        False|Shape = false
-):
-  make-dual-row-smd-landpattern(
-    num-pins,
-    pitch,
-    lead-length,
-    lead-width,
-    lead-span,
-    lead-type,
-    package-length,
-    package-width,
-    density-level = density-level,
-    with-pol-marker? = with-pol-marker?
-    thermal-pad? = thermal-pad?
+  width:Toleranced = min-max(3.8, 4.0),
+  height:Toleranced = min-max(1.35, 1.75),
+  anchor:Anchor = C
+  ) -> PackageBody :
+  PackageBody(width, length, height, anchor)
+
+doc: \<DOC>
+Create a Wide SOIC PackageBody
+@param length Length of the package body - typically
+labeled `D` in the mechanical drawings of most
+datasheets.
+@param width Width of the package body - typically
+labeled `E1` in the mechanical drawings of most
+datasheets. The default is `min-max(7.4, 7.6)`
+@param height Height of the package body above
+the board surface. This dimension is typically labeled `A`
+in the mechanical drawings of most datasheets.
+The default value is `min-max(2.35, 2.65)`.
+<DOC>
+public defn make-SOIC-wide-body (
+  length:Toleranced
+  --
+  width:Toleranced = min-max(7.4, 7.6),
+  height:Toleranced = min-max(2.35, 2.65)
+  anchor:Anchor = C
+  ) -> PackageBody :
+  PackageBody(width, length, height, anchor)
+
+doc: \<DOC>
+SOIC Standard Package Type
+
+This type defines the physical features of an SOIC
+package. Instances of this type can be used to create
+a landpattern using the {@link make-landpattern}
+interface.
+<DOC>
+public defstruct SOIC <: Package :
+  doc: \<DOC>
+  Total Number of Pins - excluding the thermal pad.
+  <DOC>
+  num-pins: Int with: (
+    ensure => ensure-even-positive!("SOIC")
   )
+  doc: \<DOC>
+  Lead Span is the measure from the external edge of the leads
+  on one side of the package to the external edge of the leads
+  on the opposite side of the package. In the mechanical drawing
+  of most datasheets, this dimension is labeled `E`
+  <DOC>
+  lead-span:Toleranced with: (
+    ensure => ensure-positive!("SOIC")
+  )
+  doc: \<DOC>
+  Specify the presence and shape of the exposed thermal lead (pad)
+  on the bottom side of the package body.
+  If `false` - then no thermal pad is created.
+  <DOC>
+  thermal-lead?:False|Shape
+  doc: \<DOC>
+  The center-to-center distance between leads of the package on
+  one side. In the mechanical drawings of most datasheets, this
+  dimension is labeled `e`.
+  <DOC>
+  pitch:Double with: (
+    ensure => ensure-positive!("SOIC")
+  )
+  doc: \<DOC>
+  Lead Structure for this Package
+  By default the `SOIC-Lead()` default implementation
+  is used.
+  <DOC>
+  lead:SMT-Lead with: (
+    default => SOIC-Lead()
+  )
+  doc: \<DOC>
+  Package Body for the SOIC.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+with:
+  equalable => true
+  hashable => true
+  printer => true
 
+public defmethod name (x:SOIC) -> String :
+  ; TODO fix me
+  val p = to-int $ (100.0 * pitch(x))
+  val l = to-int $ (100.0 * (typ $ lead-span(x)))
+  val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
+  to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-pins(x)])
 
-; TODO - pcb-landpattern
+doc: \<DOC>
+Create a Narrow Body SOIC Package
+@see {@link SOIC}
+<DOC>
+public defn SOIC-N (
+  --
+  num-pins: Int,
+  lead-span:Toleranced,
+  package-length:Toleranced,
+  thermal-lead?:False|Shape = false,
+  pitch:Double = 1.27,
+  lead:SOIC-Lead = SOIC-Lead(),
+  package-body:PackageBody = make-SOIC-narrow-body(package-length)
+  ) -> SOIC :
+  SOIC(num-pins, lead-span, thermal-lead?, pitch, lead, package-body)
+
+doc: \<DOC>
+Create a Wide Body SOIC Package
+@see {@link SOIC}
+<DOC>
+public defn SOIC-W (
+  --
+  num-pins: Int,
+  lead-span:Toleranced,
+  package-length:Toleranced,
+  thermal-lead?:False|Shape = false,
+  pitch:Double = 1.27,
+  lead:SOIC-Lead = SOIC-Lead(),
+  package-body:PackageBody = make-SOIC-wide-body(package-length)
+  ) -> SOIC:
+  SOIC(num-pins, lead-span, thermal-lead?, pitch, lead, package-body)
+
+doc: \<DOC>
+Generator for Creating SOIC LandPatterns
+@param pkg SOIC Package Definition
+@param density-level Defines the compactness of the symbol created. By default,
+  the design density-level will be selected.
+<DOC>
+public defmethod make-landpattern (
+  pkg:SOIC
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) :
+  inside pcb-landpattern:
+    val lead = lead(pkg)
+    val body = package-body(pkg)
+    make-dual-row-smd-landpattern(
+      num-pins(pkg),
+      pitch(pkg),
+      length(lead),
+      width(lead),
+      lead-span(pkg),
+      lead-type(lead),
+      length(body),
+      width(body),
+      density-level = density-level,
+      with-pol-marker? = true
+      thermal-pad? = thermal-lead?(pkg)
+    )
+
 

@@ -1,5 +1,6 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns :
+  forward jsl/landpatterns/packages
   forward jsl/landpatterns/BGA
   forward jsl/landpatterns/QFN
   forward jsl/landpatterns/QFP
