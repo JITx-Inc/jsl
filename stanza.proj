@@ -6,6 +6,7 @@ packages jsl/tests/landpatterns/* defined-in "./tests/landpatterns/"
 build-test tests:
   inputs:
     jsl/tests/landpatterns/packages
+    jsl/tests/landpatterns/pad-oracle
     jsl/tests/landpatterns/SOIC
 
   pkg: "test-pkgs"
