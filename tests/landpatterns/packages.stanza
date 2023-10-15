@@ -1,0 +1,44 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/packages:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/landpatterns/packages
+
+deftest(packages) test-basic:
+
+  val a = PackageBody(min-max(1.0, 2.0), min-max(2.0, 3.0), min-max(4.0, 5.0))
+
+  #EXPECT(width(a) is Toleranced)
+  #EXPECT(length(a) is Toleranced)
+  #EXPECT(height(a) is Toleranced)
+
+  #EXPECT((typ $ width(a)) == 1.5)
+  #EXPECT((typ $ length(a)) == 2.5)
+  #EXPECT((typ $ height(a)) == 4.5)
+
+  #EXPECT(anchor(a) == C)
+
+  val b = PackageBody(typ(1.0), typ(2.0), typ(3.0), E )
+
+  #EXPECT(anchor(b) == E)
+
+deftest(packages) test-ensures:
+  val test-vecs = [
+    [min-max(-0.1, 2.0), typ(1.0), typ(2.0)],
+    [min-max(0.0, 2.0), typ(1.0), typ(2.0)],
+    [typ(1.0), min-max(-0.1, 0.1), typ(2.0)],
+    [typ(1.0), min-max(0.0, 0.1), typ(2.0)],
+    [typ(1.0), typ(2.0), min-max(-0.1, 1.0)],
+    [typ(1.0), typ(2.0), min-max(0.0, 1.0)],
+  ]
+  for test-vec in test-vecs do:
+    val [w,l,h] = test-vec
+
+    val obs = expect-throw(
+      {PackageBody(w, l, h)}
+    )
+
+    #EXPECT(obs is-not None)

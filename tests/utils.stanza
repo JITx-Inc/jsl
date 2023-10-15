@@ -1,0 +1,38 @@
+#use-added-syntax(jitx)
+defpackage jsl/tests/utils:
+  import core
+  import jitx/commands
+
+#if-defined(TESTING) :
+  public defn expect-throw (f) -> Maybe<String>:
+    try :
+      val unexpected = f()
+      None()
+    catch (e:Exception) :
+      val msg = to-string("%~" % [e])
+      One(msg)
+
+  ; Setup default rules for the unit tests
+  ;  When attempting to extract the ESIR for a definition
+  ;  this needs to be set.
+  public pcb-rules default-rules :
+    min-copper-width = 0.13 ; 5mil
+    min-copper-copper-space = 0.2 ;
+    min-copper-hole-space = 0.2032 ; 8mil
+    min-copper-edge-space = 0.381 ; 10mil outer, but 15mil inner
+    min-annular-ring = 0.1524 ; 6mil
+    min-drill-diameter = 0.254 ; 10mil
+    min-silkscreen-width = 0.0762 ; 3mil
+    min-pitch-leaded = 0.35 ; guess
+    min-pitch-bga = 0.35 ; guess
+    max-board-width = 457.2 ; 18in
+    max-board-height = 609.6 ; 24in
+    solder-mask-registration = 0.15
+    min-silk-solder-mask-space = 0.15
+    min-silkscreen-text-height = 0.762
+    min-th-pad-expand-outer = 0.15
+    min-soldermask-opening = 0.152
+    min-soldermask-bridge = 0.102
+    min-hole-to-hole = 0.254
+    min-pth-pin-solder-clearance = 3.0
+  set-default-rules(default-rules)
