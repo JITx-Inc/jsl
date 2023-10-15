@@ -1,0 +1,86 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/SOIC:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/landpatterns/SOIC
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/leads
+
+deftest(SOIC) test-lead:
+
+  val a = SOIC-Lead()
+  val b = SOIC-Lead(SmallGullWingLeads)
+
+  #EXPECT( a != b )
+
+  #EXPECT( lead-type(a) == BigGullWingLeads )
+  #EXPECT( in-range?( min-max(0.5, 1.2),  typ $ length(a)) )
+  #EXPECT( in-range?( min-max(0.35, 0.5),  typ $ width(a)) )
+
+  #EXPECT( lead-type(b) == SmallGullWingLeads )
+
+  ; Check Ensures
+  val test-vecs = [
+    [min-max(-0.1, 0.1), typ(2.0)],
+    [min-max(0.0, 0.1), typ(2.0)],
+    [typ(2.0), min-max(-0.1, 0.1)],
+    [typ(2.0), min-max(0.0, 0.1)],
+  ]
+
+  for test-vec in test-vecs do:
+    val [l, w] = test-vec
+    val obs = expect-throw(
+      {SOIC-Lead(BigGullWingLeads, l, w)}
+    )
+    #EXPECT( obs is-not None )
+
+
+deftest(SOIC) test-body:
+
+  val N-SOIC = make-SOIC-narrow-body(min-max(8.5, 8.7))
+
+  #EXPECT(in-range?(min-max(8.5, 8.7), typ(length(N-SOIC))))
+  #EXPECT(in-range?(min-max(3.85, 3.95), typ(width(N-SOIC))))
+  #EXPECT(in-range?(min-max(1.4, 1.7), typ(height(N-SOIC))))
+
+  val W-SOIC = make-SOIC-wide-body(min-max(10.2, 10.4))
+
+  #EXPECT(in-range?(min-max(10.25, 10.35), typ(length(W-SOIC))))
+  #EXPECT(in-range?(min-max(7.45, 7.55), typ(width(W-SOIC))))
+  #EXPECT(in-range?(min-max(2.4, 2.6), typ(height(W-SOIC))))
+
+
+deftest(SOIC) test-package:
+
+  val N14 = SOIC-N(
+    num-pins = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = min-max(8.55, 8.75)
+  )
+  #EXPECT(name(N14) == "SOIC127P600X155-14")
+
+  val W14 = SOIC-W(
+    num-pins = 14,
+    lead-span = min-max(10.01, 10.64),
+    package-length = min-max(8.788, 9.195)
+  )
+  #EXPECT(name(W14) == "SOIC127P1032X250-14")
+
+  val N14-lp = create-landpattern(N14)
+  val W14-lp = create-landpattern(W14)
+
+  val N14-str = get-def-string(N14-lp)
+  val W14-str = get-def-string(W14-lp)
+  ; TODO - analyze the ESIR output and check for:
+  ;   -  14 pads on the Top Layer
+  ;   -  Ideally we detect the positions of those pads and confirm
+  ;       that there are no overlaps.
+  ; TODO - Likely need a regex dependency here.
+  #EXPECT(index-of-chars(N14-str, "pad") is-not False)
+  #EXPECT(index-of-chars(W14-str, "pad") is-not False)
+
+  ; TODO - 8, 16, 20 pin packages
+  ; TODO - 32 pin package with smaller pitch (0.65mm)
