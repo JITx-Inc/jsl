@@ -1,0 +1,191 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/pad-oracle:
+  import core
+  import jitx
+
+  import jsl/landpatterns/pad-oracle
+
+deftest(pad-oracle) test-basic:
+
+  ; Rectangle Oracle is very simple - all pads are
+  ;  active and it returns rectangles for all pads.
+  val o = RectangleOracle
+
+  for r in 0 to 5 do:
+    for c in 0 to 10 do:
+      #EXPECT( active?(o, r, c) )
+
+  val func? = shape-generator(o, 0, 0)
+
+  match(func?):
+    (func:(Dims -> Shape)):
+      val sh = func(Dims(10.0, 5.0))
+      match(sh):
+        (rect:Rectangle):
+          #EXPECT(width(rect) == 10.0)
+          #EXPECT(height(rect) == 5.0)
+          val p = pose(rect)
+          #EXPECT(center(p) == Point(0.0, 0.0))
+          #EXPECT(angle(p) == 0.0)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+deftest(pad-oracle) test-rounded:
+
+  val o = RoundedRectangleOracle(0.1)
+
+  for r in 0 to 3 do:
+    for c in 0 to 60 do:
+      #EXPECT( active?(o, r, c) )
+
+  val func? = shape-generator(o, 4, 3)
+
+  match(func?):
+    (func:(Dims -> Shape)):
+      val sh = func(Dims(11.0, 4.0))
+      match(sh):
+        (rect:RoundedRectangle):
+          #EXPECT(width(rect) == 11.0)
+          #EXPECT(height(rect) == 4.0)
+          #EXPECT(radius(rect) == 0.1)
+          val p = pose(rect)
+          #EXPECT(center(p) == Point(0.0, 0.0))
+          #EXPECT(angle(p) == 0.0)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+deftest(pad-oracle) test-pin1-oracle :
+
+  val o = Pin1-Oracle(rect-shaper, round-rect-shaper(0.2))
+
+  for r in 0 to 4 do:
+    for c in 0 to 20 do:
+      #EXPECT( active?(o, r, c) )
+
+  ; First Pin is a Rectangle
+  val func? = shape-generator(o, 0, 0)
+
+  match(func?):
+    (func:(Dims -> Shape)):
+      val sh = func(Dims(4.0, 2.0))
+      match(sh):
+        (rect:Rectangle):
+          #EXPECT(width(rect) == 4.0)
+          #EXPECT(height(rect) == 2.0)
+          val p = pose(rect)
+          #EXPECT(center(p) == Point(0.0, 0.0))
+          #EXPECT(angle(p) == 0.0)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+  ; Rest of the pins are rounded
+
+  defn check-non-rect (func?) :
+    match(func?):
+      (func:(Dims -> Shape)):
+        val sh = func(Dims(11.0, 4.0))
+        match(sh):
+          (rect:RoundedRectangle):
+            #EXPECT(width(rect) == 11.0)
+            #EXPECT(height(rect) == 4.0)
+            #EXPECT(radius(rect) == 0.2)
+            val p = pose(rect)
+            #EXPECT(center(p) == Point(0.0, 0.0))
+            #EXPECT(angle(p) == 0.0)
+          (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+      (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+
+  val f01 = shape-generator(o, 0, 1)
+  check-non-rect(f01)
+
+  val f10 = shape-generator(o, 1, 0)
+  check-non-rect(f10)
+
+#if-defined(TESTING):
+  public defstruct FunkyQuadOracle <: Pin1-Oracle :
+    pin1-shaper:(Dims -> Shape) with: (as-method => true)
+    shaper:(Dims -> Shape) with: (as-method => true)
+
+  public defmethod active? (x:FunkyQuadOracle, row:Int, column:Int) -> True|False:
+    if row == 1 or row == 3:
+      (column % 2) == 0
+    else: true
+
+deftest(pad-oracle) test-funky-oracle :
+  ; This test is going to assume that we have a oddly constructed
+  ;   quad style package that we want to build. I'm labeling
+  ;   the sides of the QFN pack as:
+  ;
+  ;  Side  |  Row Index
+  ;  West  |  0
+  ;  South |  1
+  ;  East  |  2
+  ;  North |  3
+  ;
+  ;  For this package the North and South edges have every
+  ;  other pin non-stuffed. Ie, in this example, the N/S edges
+  ;  have half as many pins as E/W
+  ;
+  ; We're also going to combine this with `Pin1Oracle` to demonstrate
+  ;  the composability of this structure.
+
+
+  val o = FunkyQuadOracle(rect-shaper, round-rect-shaper(0.2))
+
+  for c in 0 to 20 do:
+    #EXPECT( active?(o, 0, c) )
+
+  for c in 0 to 20 do:
+    val a = if (c % 2 == 0): active?(o, 1, c)
+    else: not active?(o, 1, c)
+    #EXPECT( a )
+
+    ; First Pin is a Rectangle
+  val func? = shape-generator(o, 0, 0)
+
+  match(func?):
+    (func:(Dims -> Shape)):
+      val sh = func(Dims(4.0, 2.0))
+      match(sh):
+        (rect:Rectangle):
+          #EXPECT(width(rect) == 4.0)
+          #EXPECT(height(rect) == 2.0)
+          val p = pose(rect)
+          #EXPECT(center(p) == Point(0.0, 0.0))
+          #EXPECT(angle(p) == 0.0)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+  ; Rest of the pins are rounded
+
+  defn check-non-rect (func?) :
+    match(func?):
+      (func:(Dims -> Shape)):
+        val sh = func(Dims(11.0, 4.0))
+        match(sh):
+          (rect:RoundedRectangle):
+            #EXPECT(width(rect) == 11.0)
+            #EXPECT(height(rect) == 4.0)
+            #EXPECT(radius(rect) == 0.2)
+            val p = pose(rect)
+            #EXPECT(center(p) == Point(0.0, 0.0))
+            #EXPECT(angle(p) == 0.0)
+          (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+      (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+
+  val f01 = shape-generator(o, 0, 1)
+  check-non-rect(f01)
+
+  val f10 = shape-generator(o, 1, 0)
+  check-non-rect(f10)
+
+  val f11 = shape-generator(o, 1, 1)
+  #EXPECT(f11 is False)
