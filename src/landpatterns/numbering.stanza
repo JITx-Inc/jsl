@@ -1,0 +1,143 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/numbering:
+  import core
+  import jitx
+  import jsl/landpatterns/helpers
+  import jsl/errors
+
+doc: \<DOC>
+Numbering Scheme for a Set of Pads
+
+The landpattern generators typically use a 2D grid to generate
+the pads related to a component. This grid is a zero-index
+row and column setup.
+
+-  For DIP style components (SOP, SOIC, DFN/SON, etc ), there are typically
+  2 columns and `N / 2` rows (where `N` is the number of pins).
+-  For Quad style components (QFP, QFN, etc), there are typically
+  4 columns and `N / 4` rows (where `N` is the number of pins).
+-  For BGA style components, there are typically N pins and X columns by Y rows
+  where X * Y = N (for a Full Matrix). This is only example to demonstrate the
+  typical row and column configurations. More complex arrangements are possible.
+
+Note that this numbering scheme does not consider the exposed thermal lead/pad
+to be part of the pin numbering sequence.
+
+<DOC>
+public deftype Numbering
+
+doc: \<DOC>
+Convert the row and column indices into a pad number or reference
+
+@param x Self
+@param row Zero-based row offset into the pad grid
+@param column Zero-based column offset into the pad grid.
+@return Either an Int or a {@link Ref} that determines the
+  pad identifier or name.
+<DOC>
+public defmulti to-pad-id (x:Numbering, row:Int, column:Int) -> Int|Ref
+
+; Default for Std IC Numbering
+val DUAL-ROW-COLS = 2
+
+doc: \<DOC>
+Standard IC Numbering
+
+TODO: Figure here
+
+@param num-pads Total number of pads of the grid assuming that all
+  of the grid placements are active. This function assumes that the
+  device has only two columns and an equal number of rows in each
+  column.
+<DOC>
+public defstruct Std-IC-Numbering <: Numbering :
+  num-pads:Int with: (ensure => ensure-even-positive!("Std-IC-Numbering"))
+
+defn check-valid-rc (rows:Int, r:Int, c:Int) :
+  if (r < 0 or c < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [r,c])
+
+  if not (r < rows):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [r, rows])
+
+  if not (c < DUAL-ROW-COLS):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [c, DUAL-ROW-COLS])
+
+public defmethod to-pad-id (x:Std-IC-Numbering, row:Int, column:Int) -> Int|Ref :
+  val rows = num-pads(x) / DUAL-ROW-COLS
+  check-valid-rc(rows, row, column)
+
+  if column == 0:
+    row + 1
+  else:
+    num-pads(x) - row
+
+doc: \<DOC>
+Row Major Pad Numbering
+
+Example for 2-column grid:
+```
+    1    2
+    3    4
+    5    6
+    ...
+```
+@param num-pads Total number of pads of the grid assuming that all
+  of the grid placements are active. This function assumes that all
+  rows have an equal number of columns.
+@param num-rows Total number of rows of pads in the grid.
+TODO: `num-pads` must be evenly divisible by `num-rows`
+<DOC>
+public defstruct RowMajorNumbering <: Numbering :
+  num-pads:Int with: (ensure => ensure-positive!("RowMajorNumbering"))
+  num-rows:Int with: (ensure => ensure-positive!("RowMajorNumbering"))
+
+public defmethod to-pad-id (x:RowMajorNumbering, row:Int, column:Int) -> Int|Ref :
+  val rows = num-rows(x)
+  val cols = num-pads(x) / rows
+
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  if not (row < rows):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, rows])
+
+  if not (column < cols):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
+
+  (row * cols) + column + 1
+
+doc: \<DOC>
+Column Major Pad Numbering
+
+Example for 2-column grid:
+  ```
+    1   5
+    2   6
+    3   7
+    4   8
+  ```
+@param num-pads Total number of pads of the grid assuming that all
+  of the grid placements are active. This function assumes that all
+  columns have an equal number of rows.
+@param num-columns Total number of columns in the grid.
+TODO: `num-pads` must be evenly divisible by `num-columns`
+<DOC>
+public defstruct ColumnMajorNumbering <: Numbering :
+  num-pads:Int with: (ensure => ensure-positive!("ColumnMajorNumbering"))
+  num-columns:Int with: (ensure => ensure-positive!("ColumnMajorNumbering"))
+
+public defmethod to-pad-id (x:ColumnMajorNumbering, row:Int, column:Int) -> Int|Ref :
+  val cols = num-columns(x)
+  val rows = num-pads(x) / cols
+
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  if not (row < rows):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, rows])
+
+  if not (column < cols):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
+
+  (column * rows) + row + 1

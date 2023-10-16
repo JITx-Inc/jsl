@@ -1,0 +1,83 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/numbering:
+  import core
+  import jitx
+
+  import jsl/landpatterns/numbering
+  import jsl/tests/utils
+
+deftest(numbering) test-std-ic:
+
+  val uut = Std-IC-Numbering(10)
+
+  val obs = to-tuple $ for c in 0 to 2 seq-cat:
+    for r in 0 to 5 seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [1,2,3,4,5,10,9,8,7,6]
+
+  #EXPECT(obs == exp)
+
+
+  expect-throw({Std-IC-Numbering(0)})
+  expect-throw({Std-IC-Numbering(-1)})
+  expect-throw({Std-IC-Numbering(7)})
+
+  expect-throw({to-pad-id(uut, -1, 0)})
+  expect-throw({to-pad-id(uut, 0, -1)})
+  expect-throw({to-pad-id(uut, -1, -1)})
+
+  expect-throw({to-pad-id(uut, 0, 2)})
+  expect-throw({to-pad-id(uut, 6, 0)})
+  expect-throw({to-pad-id(uut, 6, 2)})
+  expect-throw({to-pad-id(uut, 0, 10)})
+
+deftest(numbering) test-row-major:
+  val uut = RowMajorNumbering(21, 3)
+
+  val obs = to-tuple $ for c in 0 to 7 seq-cat:
+    for r in 0 to 3 seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [1, 8, 15, 2, 9, 16, 3, 10, 17, 4, 11, 18, 5, 12, 19, 6, 13, 20, 7, 14, 21]
+  #EXPECT(obs == exp)
+
+  expect-throw({RowMajorNumbering(0, 1)})
+  expect-throw({RowMajorNumbering(1, 0)})
+  expect-throw({RowMajorNumbering(0, -1)})
+  expect-throw({RowMajorNumbering(-1, 0)})
+
+
+  expect-throw({to-pad-id(uut, -1, 0)})
+  expect-throw({to-pad-id(uut, 0, -1)})
+  expect-throw({to-pad-id(uut, -1, -1)})
+
+  expect-throw({to-pad-id(uut, 0, 8)})
+  expect-throw({to-pad-id(uut, 6, 0)})
+  expect-throw({to-pad-id(uut, 6, 8)})
+  expect-throw({to-pad-id(uut, 0, 10)})
+
+deftest(numbering) test-column-major:
+  val uut = ColumnMajorNumbering(18, 6)
+
+  val obs = to-tuple $ for r in 0 to 3 seq-cat:
+    for c in 0 to 6 seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [1, 4, 7, 10, 13, 16, 2, 5, 8, 11, 14, 17, 3, 6, 9, 12, 15, 18]
+  #EXPECT(obs == exp)
+
+  expect-throw({RowMajorNumbering(0, 1)})
+  expect-throw({RowMajorNumbering(1, 0)})
+  expect-throw({RowMajorNumbering(0, -1)})
+  expect-throw({RowMajorNumbering(-1, 0)})
+
+
+  expect-throw({to-pad-id(uut, -1, 0)})
+  expect-throw({to-pad-id(uut, 0, -1)})
+  expect-throw({to-pad-id(uut, -1, -1)})
+
+  expect-throw({to-pad-id(uut, 0, 8)})
+  expect-throw({to-pad-id(uut, 6, 0)})
+  expect-throw({to-pad-id(uut, 6, 8)})
+  expect-throw({to-pad-id(uut, 0, 10)})
