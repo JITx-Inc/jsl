@@ -4,6 +4,8 @@ defpackage jsl/landpatterns/leads:
   import jitx
 
   import jsl/design/settings
+  import jsl/landpatterns/IPC
+
 
 ;TODO:
 ;  - BGA (table 3-17)
@@ -126,6 +128,35 @@ with:
   equalable => true
   hashable => true
   printer => true
+
+doc: \<DOC>
+Compute the IPC-compliant Pad Constraints for this SMT Lead
+This result provides the necessary dimensions for computing
+the pad size and position in a landpattern.
+
+@param x self
+@param lead-span
+@param density-level
+<DOC>
+public defmulti pad-constraints (
+  x:SMT-Lead,
+  lead-span:Toleranced
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> IpcResults
+
+doc: \<DOC>
+Default Implementation for `pad-constraints`
+<DOC>
+public defmethod pad-constraints (
+  x:SMT-Lead
+  lead-span:Toleranced
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> IpcResults :
+  val fillets = lead-fillets(lead-type(x), density-level)
+  ipc-formula(lead-span, length(x), width(x), fillets)
+
 
 doc: \<DOC>
 Through-hole Component Lead
