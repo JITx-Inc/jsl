@@ -195,7 +195,7 @@ public defn make-quad-landpattern (
     val text-y = 0.5 * (y(cy-sz) + min-silkscreen-text-height)
     ref-label(loc(0.0, text-y))
 
-    make-thermal-pad(thermal-pad?, pin-count)
+    make-thermal-pad(thermal-pad?, pin-count + 1)
 
 doc: \<DOC>
 Quad Package Landpattern Generator

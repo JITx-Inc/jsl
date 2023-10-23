@@ -99,6 +99,9 @@ Each function also accepts a `mask` and `paste` overriding value. This
 value can be either a parameterization of the pad shape for that function or
 a completely different shape.
 
+TODO: I want a function that will create a silkscreen outline of a shape
+but not draw silkscreen over any pads and keep enough clearance around
+the soldermask as to not generate any warnings.
 
 <DOC>
 #use-added-syntax(jitx)
@@ -702,23 +705,27 @@ public defn circle-smd-pad (
 ; TODO - Add paste mask subdivision to
 ;   keep paste mask coverage below some threshold.
 
+
 doc: \<DOC>
 Generate a Thermal Pad for a Package
 
-The thermal pad will be created at loc(0.0, 0.0) in the
-landpattern's frame of reference.
-
 @param shape? Shape for the thermal pad that will be created by
   this generator. If false, no thermal pad is generated.
-@param num-pins Number of pins in the package. The thermal pad will
-  be added as pad number `num-pins+1`
+TODO - we should make this also accept a `Ref` type.
+@param pad-num Pad Index that will be used to create the
+  thermal pad for the package.
+@param location Optional pose for the landpattern. The default
+  location will be at (0,0) in the landpatterns frame of reference.
 <DOC>
-public defn make-thermal-pad (shape?:False|Shape, num-pins:Int) :
-  ensure-positive!("make-thermal-pad:num-pins", num-pins)
+public defn make-thermal-pad (
+  shape?:False|Shape, pad-num:Int
+  --
+  location:Pose = loc(0.0, 0.0)
+  ) :
+  ensure-positive!("make-thermal-pad:pad-num", pad-num)
   match(shape?:Shape) :
     inside pcb-landpattern:
-      pad p[num-pins + 1]: smd-pad(shape?) at loc(0.0, 0.0)
-
+      pad p[pad-num]: smd-pad(shape?) at location
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
