@@ -108,7 +108,7 @@ public defn make-dual-row-smd-landpattern (
     if with-pol-marker? :
       draw-pol-marker(locs, part-sz, pad-sz)
 
-    make-thermal-pad(thermal-pad?, length(locs))
+    make-thermal-pad(thermal-pad?, length(locs) + 1)
 
     val text-y = 0.5 * (y(cy-sz) + clearance(MinSilkscreenTextHeight))
     ref-label(loc(0.0, text-y))
