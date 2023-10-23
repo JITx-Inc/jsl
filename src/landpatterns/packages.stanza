@@ -88,6 +88,14 @@ with:
   hashable => true
   printer => true
 
+doc: \<DOC>
+Physical Envelope of the package body.
+<DOC>
+public defmulti envelope (x:PackageBody) -> Dims
+
+public defmethod envelope (x:PackageBody) -> Dims :
+  Dims(max-value(width(x)), max-value(length(x)))
+
 
 doc: \<DOC>
 Every component has a representation for a
