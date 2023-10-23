@@ -299,10 +299,10 @@ public defn make-bga-landpattern (
   mirrored?:True|False = false,
   density-level:DensityLevel = DENSITY-LEVEL
   ) :
-  ensure-positive!(num-rows, "make-bga:num-rows")
-  ensure-positive!(num-cols, "make-bga:num-cols")
-  ensure-positive!(pitch, "make-bga:pitch")
-  ensure-positive!(ball-diameter, "make-bga:ball-diameter")
+  ensure-positive!("make-bga:num-rows", num-rows)
+  ensure-positive!("make-bga:num-cols", num-cols)
+  ensure-positive!("make-bga:pitch", pitch)
+  ensure-positive!("make-bga:ball-diameter", ball-diameter)
 
   inside pcb-landpattern:
     ;-------------------------------------------------------------

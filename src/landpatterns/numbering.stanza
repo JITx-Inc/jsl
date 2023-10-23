@@ -51,7 +51,7 @@ TODO: Figure here
   column.
 <DOC>
 public defstruct Std-IC-Numbering <: Numbering :
-  num-pads:Int with: (ensure => ensure-even-positive!("Std-IC-Numbering"))
+  num-pads:Int with: (ensure => ensure-even-positive!)
 
 defn check-valid-rc (rows:Int, r:Int, c:Int) :
   if (r < 0 or c < 0):
@@ -89,8 +89,8 @@ Example for 2-column grid:
 TODO: `num-pads` must be evenly divisible by `num-rows`
 <DOC>
 public defstruct RowMajorNumbering <: Numbering :
-  num-pads:Int with: (ensure => ensure-positive!("RowMajorNumbering"))
-  num-rows:Int with: (ensure => ensure-positive!("RowMajorNumbering"))
+  num-pads:Int with: (ensure => ensure-positive!)
+  num-rows:Int with: (ensure => ensure-positive!)
 
 public defmethod to-pad-id (x:RowMajorNumbering, row:Int, column:Int) -> Int|Ref :
   val rows = num-rows(x)
@@ -124,8 +124,8 @@ Example for 2-column grid:
 TODO: `num-pads` must be evenly divisible by `num-columns`
 <DOC>
 public defstruct ColumnMajorNumbering <: Numbering :
-  num-pads:Int with: (ensure => ensure-positive!("ColumnMajorNumbering"))
-  num-columns:Int with: (ensure => ensure-positive!("ColumnMajorNumbering"))
+  num-pads:Int with: (ensure => ensure-positive!)
+  num-columns:Int with: (ensure => ensure-positive!)
 
 public defmethod to-pad-id (x:ColumnMajorNumbering, row:Int, column:Int) -> Int|Ref :
   val cols = num-columns(x)

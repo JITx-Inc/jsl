@@ -7,20 +7,10 @@ defpackage jsl/landpatterns/helpers:
   import jitx/commands
   import jsl/errors
 
-;==============================================================================
-;============================== Helpers =======================================
-;==============================================================================
-; ====== Argument constraint Helpers ===========================================
-; Ensure that a value is even and positive.
-
-public defn ensure-positive! (typeName:String) -> ((String, ?) -> ?) :
-  ensure-positive!{_0, _1, typeName = typeName}
-
 public defn ensure-positive! (
   field:String,
   value: Int|Long|Double|Float|Toleranced
-  --
-  typeName:String = "") :
+  ) :
   val fail = match(value):
     (x:Int): x <= 0
     (x:Long): x <= 0L
@@ -29,34 +19,21 @@ public defn ensure-positive! (
     (t:Toleranced):
       min-value(t) <= 0.0
   if fail:
-    throw $ ValueError("%_:%_: Expects Positive Number: %_" % [typeName, field, value])
-
-public defn ensure-positive! (
-  value: Int|Long|Double|Float|Toleranced
-  name:String
-  ):
-  ensure-positive!(name, value)
+    throw $ ValueError("%_: Expects Positive Number: %_" % [field, value])
 
 doc: \<DOC>
-Check for dual-row components to ensure proper number of pins.
+Check if the passed value is both positive and even
 @throws ValueError when the passed value is not even or positive
+@param field Name of the package we are checking
 @param value Number to check, typically the number of pins for a particular package.
-@param name Name of the package we are checking
 <DOC>
-public defn ensure-even-positive! (value: Int, name: String) :
-  if value < 2 or value % 2 == 1:
-    throw $ ValueError("%_: only supports a positive even number of pins." % [name])
-
 public defn ensure-even-positive! (
   field:String, value:Int
-  --
-  typeName:String = ""
   ) :
-  ensure-even-positive!(value, string-join([typeName, field], ":"))
+  if value < 2 or value % 2 > 0:
+    throw $ ValueError("%_: only supports a positive even number of pins: %_" % [field, value])
 
-public defn ensure-even-positive! (typeName:String):
-  ensure-even-positive!{_0, _1, typeName = typeName}
-
+; TODO - does not work with `defstruct` ensure
 doc: \<DOC>
 Check for multi-sided components to ensure proper number of pins.
 @throws ValueError when the passed value is not divible.
@@ -83,63 +60,6 @@ public defn ref-label (pose:Pose = loc(0.0, 0.0) -- anchor:Anchor = C) :
     val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
     layer(Silkscreen("values", Top)) = Text(">REF", min-silkscreen-text-height, anchor, pose)
 
-; TODO - I think the `normalize-to-point`, normalize-rotation, `normalize-loc`
-;   needs to be removed.
-;   Normalize-to-point is not needed because the shapes all have a variant
-;     that accepts `anchor` now.
-;   Normalize-rotation seems confusing - Seems like it may also cause errors with
-;     import from other sources.
-
-doc: \<DOC>
-Normalize Anchor Alignment as a Basis Vector (Point)
-Given an anchor that describes the alignment of a piece of text or other
-object, convert this alignment into a basis vector.
-
-@snippet Anchor to Basis
-```stanza
-val pt = normalize-to-point(NW)
-```
-<DOC>
-defn normalize-to-point (anchor:Anchor) -> Point:
-  val [v, h] = components(anchor)
-  ; TODO - W = Positive, E = Negative
-  ;  this is used to generate a transformation vector for
-  ;  the pose of a pad in most cases.
-  val dx = match(h) :
-    (hr:W) :  1.0
-    (hr:C) :  0.0
-    (hr:E) : -1.0
-  val dy = match(v) :
-    ; TODO - BUG ?
-    ;  It seems like one of S or N should be negative.
-    ; OK - This function doesn't ever seem to be invoked with
-    ;   anything other than `C` as the anchor so I'm pretty sure
-    ;   this is just a bug.
-    (vt:S) : 1.0
-    (vt:C) : 0.0
-    (vt:N) : 1.0 ; based on esir.stanza - I think this should be -1.0
-  Point(dx, dy)
-
-; TODO - why are we not using `Pose` here.
-; Helper function to convert an x/y width to length and width (by convention: longer side
-; is on x axis and shorter side is on y)
-defn normalize-rotation (width:Double, height:Double) -> [Double, Double, Double]:
-  val rot = 90.0 when height > width else 0.0
-  [max(width, height), min(width, height), rot]
-
-; TODO - This needs to move to `esir.stanza` before release
-;   will require a modification to OCDB as well.
-defn times (p:Point, d:Dims) -> Point:
-  Point(x(p) * x(d), y(p) * y(d))
-
-; Normalize the position of a shape given an anchor and rotation.
-defn normalize-loc (s:Shape, anchor:Anchor, rot:Double) :
-  val pose = Pose((0.5 * normalize-to-point(anchor)) * dims(s), rot, false)
-  ; TODO - `esir.stanza` line 2226 - there is a message about
-  ;   the 'times<?T> (a:Pose, b:Shape&?T) -> T' function definition
-  ;   and a desire to remove it. Is this still valid ?
-  pose * s
-
 doc: \<DOC>
 Create a plus symbol shape
 @param center Center coordinate for the plus symbol
@@ -161,20 +81,6 @@ Create a plus symbol shape
 <DOC>
 public defn PlusSymbol (xc:Double, yc:Double, l:Double = 1.0) -> Shape:
   PlusSymbol(Point(xc, yc))
-
-
-doc: \<DOC>
-Create a pad reference for a Dual-Inline Package
-; TODO - not used in OCDB ?
-<DOC>
-public defn DIP-naming-convention (row:Int, column:Int, num-pins:Int) -> Ref:
-  val valid-columns = to-hashset<Int>([0, 1])
-  if not get(valid-columns, column):
-    throw(ValueError("Max 2 Columns for Dual In-Line Package: column = %_" % [column]))
-  switch(column) :
-    0: IndexRef(Ref("p"), row + 1)
-    1: IndexRef(Ref("p"), num-pins - row)
-
 
 public defn l2-norm (p:Point) -> Double:
     sqrt((x(p) * x(p)) + (y(p) * y(p)))

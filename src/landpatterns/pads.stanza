@@ -714,7 +714,7 @@ landpattern's frame of reference.
   be added as pad number `num-pins+1`
 <DOC>
 public defn make-thermal-pad (shape?:False|Shape, num-pins:Int) :
-  ensure-positive!(num-pins, "make-thermal-pad")
+  ensure-positive!("make-thermal-pad:num-pins", num-pins)
   match(shape?:Shape) :
     inside pcb-landpattern:
       pad p[num-pins + 1]: smd-pad(shape?) at loc(0.0, 0.0)
