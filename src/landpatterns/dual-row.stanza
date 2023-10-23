@@ -79,8 +79,8 @@ public defn make-dual-row-smd-landpattern (
   with-pol-marker?:    True|False = true,
   thermal-pad?:        False|Shape = false
   ) :
-  ensure-positive!(primary-pin-pitch, "make-dual-row:primary-pitch")
-  ensure-positive!(secondary-pin-pitch, "make-dual-row:sec-pitch")
+  ensure-positive!("make-dual-row:primary-pitch", primary-pin-pitch)
+  ensure-positive!("make-dual-row:sec-pitch", secondary-pin-pitch)
 
   inside pcb-landpattern :
     val fillets = lead-fillets(lead-type, density-level)

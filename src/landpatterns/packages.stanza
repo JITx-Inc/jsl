@@ -51,7 +51,7 @@ public defstruct PackageBody <: Hashable & Equalable :
     -  For cylindrical components, the width is equal to the length
     -  For non-cylindrical components, the width is typically the shorter of the two dimensions and approximately orthogonal to the plane of the leads.
   <DOC>
-  width:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+  width:Toleranced with: (ensure => ensure-positive!)
   doc: \<DOC>
   Measure of the package body in the Y dimension.
 
@@ -65,7 +65,7 @@ public defstruct PackageBody <: Hashable & Equalable :
     -  For cylindrical components, the length is equal to the width.
     -  For non-cylindrical components, the length is typically the longer dimension and parallel to the leads of the device.
   <DOC>
-  length:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+  length:Toleranced with: (ensure => ensure-positive!)
   doc: \<DOC>
   Measure of the package body in the Z dimension
 
@@ -75,7 +75,7 @@ public defstruct PackageBody <: Hashable & Equalable :
   PCB from an electrical perspective but will likely effect the
   mechanical integration of the component.
   <DOC>
-  height:Toleranced with: (ensure => ensure-positive!("PackageBody"))
+  height:Toleranced with: (ensure => ensure-positive!)
 
   doc: \<DOC>
   Origin Position of the Package Body

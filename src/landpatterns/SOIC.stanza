@@ -64,12 +64,12 @@ public defstruct SOIC-Lead <: SMT-Lead:
   length:Toleranced with: (
     as-method => true,
     default => min-max(0.4, 1.27),
-    ensure => ensure-positive!("SOIC-Lead")
+    ensure => ensure-positive!
     )
   width:Toleranced with: (
     as-method => true,
     default => min-max(0.31, 0.51),
-    ensure => ensure-positive!("SOIC-Lead")
+    ensure => ensure-positive!
     )
 with:
   equalable => true
@@ -133,7 +133,7 @@ public defstruct SOIC <: Package :
   Total Number of Pins - excluding the thermal pad.
   <DOC>
   num-pins: Int with: (
-    ensure => ensure-even-positive!("SOIC")
+    ensure => ensure-even-positive!
   )
   doc: \<DOC>
   Lead Span is the measure from the external edge of the leads
@@ -142,7 +142,7 @@ public defstruct SOIC <: Package :
   of most datasheets, this dimension is labeled `E`
   <DOC>
   lead-span:Toleranced with: (
-    ensure => ensure-positive!("SOIC")
+    ensure => ensure-positive!
   )
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
@@ -156,7 +156,7 @@ public defstruct SOIC <: Package :
   dimension is labeled `e`.
   <DOC>
   pitch:Double with: (
-    ensure => ensure-positive!("SOIC")
+    ensure => ensure-positive!
   )
   doc: \<DOC>
   Lead Structure for this Package
