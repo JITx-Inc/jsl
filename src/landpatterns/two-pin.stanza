@@ -35,7 +35,10 @@ defpackage jsl/landpatterns/two-pin:
   import jsl/landpatterns/helpers
   import jsl/landpatterns/pads
   import jsl/landpatterns/IPC
-
+  import jsl/landpatterns/leads
+  import jsl/geometry/LineRectangle
+  import jsl/errors
+  import jsl/landpatterns/leads
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; SMT Landpatterns
@@ -157,7 +160,6 @@ public defn make-ipc-two-pin-landpattern (
     make-two-pin-chip-landpattern(
       length, width, height,
       lead-length, lead-width,
-      --
       density-level = density-level,
       polarized? = polarized?
     )
