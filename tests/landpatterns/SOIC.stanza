@@ -56,20 +56,20 @@ deftest(SOIC) test-body:
 deftest(SOIC) test-package:
 
   val N14 = SOIC-N(
-    num-pins = 14,
+    num-leads = 14,
     lead-span = min-max(5.8, 6.2),
     package-length = min-max(8.55, 8.75)
   )
   #EXPECT(name(N14) == "SOIC127P600X155-14")
 
   val W14 = SOIC-W(
-    num-pins = 14,
+    num-leads = 14,
     lead-span = min-max(10.01, 10.64),
     package-length = min-max(8.788, 9.195)
   )
   #EXPECT(name(W14) == "SOIC127P1032X250-14")
 
-  val N14-lp = create-landpattern(N14)
+  val N14-lp = create-landpattern(N14, )
   val W14-lp = create-landpattern(W14)
 
   val N14-str = get-def-string(N14-lp)
