@@ -13,17 +13,15 @@ Unless otherwise specified, the dimensions in this package are in millimeters.
 
 @snippet Example
 
-TODO - Do we make these all keyword value arguments -
-  Feels like it would be easier to read and understand.
 ```stanza
 public pcb-component LM324:
   port p : pin[[1 through 14]]
 
-  val lp = create-landpattern(SOIC-N(
-    num-pins = 14,
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 14,
     lead-span = min-max(5.8, 6.2),
     package-length = min-max(8.55, 8.75),
-  ))
+  )
   assign-landpattern = lp(p[1] => lp.p[1], ...)
 ```
 
@@ -38,9 +36,12 @@ defpackage jsl/landpatterns/SOIC:
   import jsl/landpatterns/leads
   import jsl/landpatterns/helpers
   import jsl/landpatterns/dual-row
-
+  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/numbering
   import jsl/landpatterns/packages
 
+
+val SOIC-DEF-PITCH = 1.27
 
 doc: \<DOC>
 SOIC Lead Definition
@@ -130,10 +131,11 @@ interface.
 <DOC>
 public defstruct SOIC <: Package :
   doc: \<DOC>
-  Total Number of Pins - excluding the thermal pad.
+  Total Number of Leads - excluding the thermal pad.
   <DOC>
-  num-pins: Int with: (
-    ensure => ensure-even-positive!
+  num-leads: Int with: (
+    ensure => ensure-even-positive!,
+    as-method => true
   )
   doc: \<DOC>
   Lead Span is the measure from the external edge of the leads
@@ -170,17 +172,56 @@ public defstruct SOIC <: Package :
   Package Body for the SOIC.
   <DOC>
   package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Oracle for the SOIC package
+
+  This provides a default pad oracle that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-oracle:PadOracle with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the SOIC Package
+
+  This provides a numbering scheme for the leads of the SOIC
+  package. By default, it uses {@link Std-IC-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
 with:
-  equalable => true
   hashable => true
   printer => true
+  constructor => #SOIC
 
 public defmethod name (x:SOIC) -> String :
-  ; TODO fix me
   val p = to-int $ (100.0 * pitch(x))
   val l = to-int $ (100.0 * (typ $ lead-span(x)))
   val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
-  to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-pins(x)])
+  to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-leads(x)])
+
+val SOIC-DEF-PAD-ORACLE = RectangleOracle
+
+doc: \<DOC>
+Create a SOIC Package
+<DOC>
+public defn SOIC (
+  --
+  num-leads:Int,
+  lead-span:Toleranced,
+  package-body:PackageBody,
+  pitch:Double                   = SOIC-DEF-PITCH,
+  lead:SMT-Lead,                 = SOIC-Lead(),
+  thermal-lead?:False|Shape      = false,
+  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  ) -> SOIC :
+  #SOIC(
+    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    pad-oracle, num-scheme
+    )
 
 doc: \<DOC>
 Create a Narrow Body SOIC Package
@@ -188,15 +229,20 @@ Create a Narrow Body SOIC Package
 <DOC>
 public defn SOIC-N (
   --
-  num-pins: Int,
+  num-leads: Int,
   lead-span:Toleranced,
   package-length:Toleranced,
-  thermal-lead?:False|Shape = false,
-  pitch:Double = 1.27,
-  lead:SOIC-Lead = SOIC-Lead(),
-  package-body:PackageBody = make-SOIC-narrow-body(package-length)
+  package-body:PackageBody       = make-SOIC-narrow-body(package-length),
+  pitch:Double                   = SOIC-DEF-PITCH,
+  lead:SOIC-Lead                 = SOIC-Lead(),
+  thermal-lead?:False|Shape      = false,
+  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   ) -> SOIC :
-  SOIC(num-pins, lead-span, thermal-lead?, pitch, lead, package-body)
+  #SOIC(
+    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    pad-oracle, num-scheme
+    )
 
 doc: \<DOC>
 Create a Wide Body SOIC Package
@@ -204,15 +250,20 @@ Create a Wide Body SOIC Package
 <DOC>
 public defn SOIC-W (
   --
-  num-pins: Int,
+  num-leads: Int,
   lead-span:Toleranced,
   package-length:Toleranced,
-  thermal-lead?:False|Shape = false,
-  pitch:Double = 1.27,
-  lead:SOIC-Lead = SOIC-Lead(),
-  package-body:PackageBody = make-SOIC-wide-body(package-length)
+  package-body:PackageBody       = make-SOIC-wide-body(package-length)
+  pitch:Double                   = SOIC-DEF-PITCH,
+  lead:SOIC-Lead                 = SOIC-Lead(),
+  thermal-lead?:False|Shape      = false,
+  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   ) -> SOIC:
-  SOIC(num-pins, lead-span, thermal-lead?, pitch, lead, package-body)
+  #SOIC(
+    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    pad-oracle, num-scheme
+    )
 
 doc: \<DOC>
 Generator for Creating SOIC LandPatterns
@@ -223,23 +274,20 @@ Generator for Creating SOIC LandPatterns
 public defmethod make-landpattern (
   pkg:SOIC
   --
-  density-level:DensityLevel = DENSITY-LEVEL
+  density-level:DensityLevel = DENSITY-LEVEL,
   ) :
   inside pcb-landpattern:
-    val lead = lead(pkg)
-    val body = package-body(pkg)
     make-dual-row-smd-landpattern(
-      num-pins(pkg),
+      num-leads(pkg),
       pitch(pkg),
-      length(lead),
-      width(lead),
+      lead(pkg),
       lead-span(pkg),
-      lead-type(lead),
-      length(body),
-      width(body),
+      package-body(pkg),
+      pad-oracle = pad-oracle(pkg),
+      num-scheme = lead-numbering(pkg),
       density-level = density-level,
       with-pol-marker? = true
-      thermal-pad? = thermal-lead?(pkg)
+      thermal-lead? = thermal-lead?(pkg)
     )
 
 

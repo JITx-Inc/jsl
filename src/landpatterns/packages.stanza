@@ -25,6 +25,8 @@ defpackage jsl/landpatterns/packages:
 
   import jsl/landpatterns/helpers
   import jsl/design/settings
+  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/numbering
 
 doc: \<DOC>
 Physical body of the Component (also called the Lead Carrier or just Carrier)
@@ -101,13 +103,25 @@ doc: \<DOC>
 Every component has a representation for a
 package
 <DOC>
-public deftype Package <: Equalable & Hashable
+public deftype Package <: Hashable
 
 doc: \<DOC>
 IPC7351 compliant name for the package generated
 by this instance.
 <DOC>
 public defmulti name (x:Package) -> String
+
+doc: \<DOC>
+Number of Total Lead Mounts on this Package
+
+This number should include all possible standard lead
+locations on this package.
+
+1.  The user should not substract the pins that are marked absent.
+2.  The user should not include the thermal lead if any.
+<DOC>
+public defmulti num-leads (x:Package) -> Int
+
 doc: \<DOC>
 Package Body provides the physical envelope for
 the package's body.
@@ -115,18 +129,35 @@ the package's body.
 public defmulti package-body (x:Package) -> PackageBody
 
 doc: \<DOC>
+Pad Oracle for this Package
+<DOC>
+public defmulti pad-oracle (x:Package) -> PadOracle
+
+doc: \<DOC>
+Lead Numbering Scheme for this Package
+<DOC>
+public defmulti lead-numbering (x:Package) -> Numbering
+
+doc: \<DOC>
 Generator for creating this landpattern
 
 This generator is typically called within a `pcb-landpattern`
 definition to create the necessary pads and geometry associated
 with that component's landpattern.
+
+@param pkg IC Package for which we are creating a landpattern
+@param density-level Density Level for this LandPattern definition.
+  See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-landpattern (
-  pkg
+  pkg:Package
   --
   density-level:DensityLevel = ?
   )
 
+; TODO - here is where we may want to add the parameterization
+;   for the creation of silkscreen, courtyard, pin-1 identifier
+;   etc.
 doc: \<DOC>
 Create a `Landpattern` definition
 
@@ -146,7 +177,7 @@ Example:
 ```
 <DOC>
 public defmulti create-landpattern (
-  x:Package
+  pkg:Package
   --
   density-level:DensityLevel = ?
   ) -> LandPattern
@@ -161,7 +192,10 @@ public defmethod create-landpattern (
   ) -> LandPattern :
   pcb-landpattern lp:
     name = name(pkg)
-    make-landpattern(pkg)
+    make-landpattern(
+      pkg,
+      density-level = density-level
+      )
   lp
 
 
