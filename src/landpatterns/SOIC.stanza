@@ -36,7 +36,7 @@ defpackage jsl/landpatterns/SOIC:
   import jsl/landpatterns/leads
   import jsl/landpatterns/helpers
   import jsl/landpatterns/dual-row
-  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
   import jsl/landpatterns/packages
 
@@ -174,14 +174,14 @@ public defstruct SOIC <: Package :
   package-body:PackageBody with: (as-method => true)
 
   doc: \<DOC>
-  Pad Oracle for the SOIC package
+  Pad Planner for the SOIC package
 
-  This provides a default pad oracle that assumes that all lead
+  This provides a default pad planner that assumes that all lead
   positions are active and provides a rectangle shaped pad for
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-oracle:PadOracle with: (as-method => true)
+  pad-planner:PadPlanner with: (as-method => true)
 
   doc: \<DOC>
   Lead Numbering Scheme for the SOIC Package
@@ -202,7 +202,7 @@ public defmethod name (x:SOIC) -> String :
   val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
   to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-leads(x)])
 
-val SOIC-DEF-PAD-ORACLE = RectangleOracle
+val SOIC-DEF-PAD-PLANNER = RectanglePadPlanner
 
 doc: \<DOC>
 Create a SOIC Package
@@ -215,12 +215,12 @@ public defn SOIC (
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SMT-Lead,                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
-  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   ) -> SOIC :
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-oracle, num-scheme
+    pad-planner, num-scheme
     )
 
 doc: \<DOC>
@@ -236,12 +236,12 @@ public defn SOIC-N (
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
-  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   ) -> SOIC :
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-oracle, num-scheme
+    pad-planner, num-scheme
     )
 
 doc: \<DOC>
@@ -257,12 +257,12 @@ public defn SOIC-W (
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
-  pad-oracle:PadOracle           = SOIC-DEF-PAD-ORACLE,
+  pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   ) -> SOIC:
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-oracle, num-scheme
+    pad-planner, num-scheme
     )
 
 doc: \<DOC>
@@ -283,7 +283,7 @@ public defmethod make-landpattern (
       lead(pkg),
       lead-span(pkg),
       package-body(pkg),
-      pad-oracle = pad-oracle(pkg),
+      pad-planner = pad-planner(pkg),
       num-scheme = lead-numbering(pkg),
       density-level = density-level,
       with-pol-marker? = true

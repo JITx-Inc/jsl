@@ -9,7 +9,7 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/packages
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pads
-  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/pad-planner
   import jsl/landpatterns/leads
   import jsl/landpatterns/IPC
 
@@ -37,10 +37,9 @@ public defn draw-pol-marker (locs:Tuple<Pose>,
 
 
 defstruct PadInfo :
-  pad-num:Int|Ref
-  shape:Shape
+  pad-id:Int|Ref
+  pad-def:Pad
   loc:Pose
-
 
 doc: \<DOC>
 Generator for a dual-row SMD Landpattern
@@ -58,7 +57,7 @@ public defn make-dual-row-smd-landpattern (
   lead-span:Toleranced,
   pkg-body:PackageBody,
   --
-  pad-oracle:PadOracle           = RectangleOracle
+  pad-planner:PadPlanner           = RectanglePadPlanner
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL,
   with-pol-marker?:True|False    = true,
@@ -78,21 +77,21 @@ public defn make-dual-row-smd-landpattern (
     val grid = to-seq $ grid-locs(rows, DUAL-ROW-COLS, x(delta), y(delta), false)
     for c in 0 to DUAL-ROW-COLS seq-cat:
       for (r in 0 to rows, pos in grid) seq?:
-        val pad-num = to-pad-id(num-scheme, r, c)
-        val shaper? = shape-generator(pad-oracle, r, c)
-        match(shaper?):
-          (shaper:False): None()
-          (shaper):
-            One $ PadInfo(pad-num, shaper(pad-size), pos)
+        val pad-id = to-pad-id(num-scheme, r, c)
+        val pad-gen? = pad-generator(pad-planner, r, c)
+        match(pad-gen?):
+          (_:False): None()
+          (pad-gen):
+            One $ PadInfo(pad-id, pad-gen(pad-size), pos)
 
   inside pcb-landpattern :
 
     for p in gen-pad-info() do:
-      match(pad-num(p)):
+      match(pad-id(p)):
         (i:Int):
-          pad p[i] : smd-pad(shape(p)) at loc(p)
+          pad p[i] : pad-def(p) at loc(p)
         (x:Ref):
-          pad x : smd-pad(shape(p)) at loc(p)
+          pad x : pad-def(p) at loc(p)
 
     ; TODO Move this to a different function so that this can be composable?
     ;  - `make-courtyard`
