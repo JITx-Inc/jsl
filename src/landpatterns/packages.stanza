@@ -25,7 +25,7 @@ defpackage jsl/landpatterns/packages:
 
   import jsl/landpatterns/helpers
   import jsl/design/settings
-  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
 
 doc: \<DOC>
@@ -129,9 +129,9 @@ the package's body.
 public defmulti package-body (x:Package) -> PackageBody
 
 doc: \<DOC>
-Pad Oracle for this Package
+Pad Planner for this Package
 <DOC>
-public defmulti pad-oracle (x:Package) -> PadOracle
+public defmulti pad-planner (x:Package) -> PadPlanner
 
 doc: \<DOC>
 Lead Numbering Scheme for this Package

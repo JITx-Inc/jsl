@@ -1,15 +1,15 @@
 #use-added-syntax(jitx, tests)
-defpackage jsl/tests/landpatterns/pad-oracle:
+defpackage jsl/tests/landpatterns/pad-planner:
   import core
   import jitx
 
-  import jsl/landpatterns/pad-oracle
+  import jsl/landpatterns/pad-planner
 
-deftest(pad-oracle) test-basic:
+deftest(pad-planner) test-basic:
 
-  ; Rectangle Oracle is very simple - all pads are
+  ; Rectangle Planner is very simple - all pads are
   ;  active and it returns rectangles for all pads.
-  val o = RectangleOracle
+  val o = RectanglePadPlanner
 
   for r in 0 to 5 do:
     for c in 0 to 10 do:
@@ -31,9 +31,9 @@ deftest(pad-oracle) test-basic:
 
     (x:False): #EXPECT(x == "Invalid Function Type Returned")
 
-deftest(pad-oracle) test-rounded:
+deftest(pad-planner) test-rounded:
 
-  val o = RoundedRectangleOracle(0.1)
+  val o = RoundedRectanglePadPlanner(0.1)
 
   for r in 0 to 3 do:
     for c in 0 to 60 do:
@@ -56,9 +56,9 @@ deftest(pad-oracle) test-rounded:
 
     (x:False): #EXPECT(x == "Invalid Function Type Returned")
 
-deftest(pad-oracle) test-pin1-oracle :
+deftest(pad-planner) test-pin1-planner :
 
-  val o = Pin1-Oracle(rect-shaper, round-rect-shaper(0.2))
+  val o = Pin1-PadPlanner(rect-shaper, round-rect-shaper(0.2))
 
   for r in 0 to 4 do:
     for c in 0 to 20 do:
@@ -107,16 +107,16 @@ deftest(pad-oracle) test-pin1-oracle :
   check-non-rect(f10)
 
 #if-defined(TESTING):
-  public defstruct FunkyQuadOracle <: Pin1-Oracle :
+  public defstruct FunkyQuadPadPlanner <: Pin1-PadPlanner :
     pin1-shaper:(Dims -> Shape) with: (as-method => true)
     shaper:(Dims -> Shape) with: (as-method => true)
 
-  public defmethod active? (x:FunkyQuadOracle, row:Int, column:Int) -> True|False:
+  public defmethod active? (x:FunkyQuadPadPlanner, row:Int, column:Int) -> True|False:
     if row == 1 or row == 3:
       (column % 2) == 0
     else: true
 
-deftest(pad-oracle) test-funky-oracle :
+deftest(pad-planner) test-funky-planner :
   ; This test is going to assume that we have a oddly constructed
   ;   quad style package that we want to build. I'm labeling
   ;   the sides of the QFN pack as:
@@ -131,11 +131,11 @@ deftest(pad-oracle) test-funky-oracle :
   ;  other pin non-stuffed. Ie, in this example, the N/S edges
   ;  have half as many pins as E/W
   ;
-  ; We're also going to combine this with `Pin1Oracle` to demonstrate
+  ; We're also going to combine this with `Pin1-PadPlanner` to demonstrate
   ;  the composability of this structure.
 
 
-  val o = FunkyQuadOracle(rect-shaper, round-rect-shaper(0.2))
+  val o = FunkyQuadPadPlanner(rect-shaper, round-rect-shaper(0.2))
 
   for c in 0 to 20 do:
     #EXPECT( active?(o, 0, c) )

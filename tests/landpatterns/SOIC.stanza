@@ -52,7 +52,6 @@ deftest(SOIC) test-body:
   #EXPECT(in-range?(min-max(7.45, 7.55), typ(width(W-SOIC))))
   #EXPECT(in-range?(min-max(2.4, 2.6), typ(height(W-SOIC))))
 
-
 deftest(SOIC) test-package:
 
   val N14 = SOIC-N(
@@ -69,7 +68,7 @@ deftest(SOIC) test-package:
   )
   #EXPECT(name(W14) == "SOIC127P1032X250-14")
 
-  val N14-lp = create-landpattern(N14, )
+  val N14-lp = create-landpattern(N14)
   val W14-lp = create-landpattern(W14)
 
   val N14-str = get-def-string(N14-lp)
