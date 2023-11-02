@@ -103,10 +103,10 @@ Retrieve the ordered column of Pads by column index
 @return The pads in this column are sorted in ascending ordered by
 the Y coordinate of the pad
 <DOC>
-public defn get-column (x:PadGrid, column:Int) -> Vector<LandPatternPad> :
-  val colX = to-vector<Double>(keys(columns(x)))
+public defn get-column (pg:PadGrid, column:Int) -> Vector<LandPatternPad> :
+  val colX = to-vector<Double>(keys(columns(pg)))
   qsort!(colX)
-  val colPads = to-vector<LandPatternPad>(columns(x)[colX[column]])
+  val colPads = to-vector<LandPatternPad>(columns(pg)[colX[column]])
   qsort!({y $ center $ pose(_)}, colPads)
   colPads
 
@@ -117,10 +117,10 @@ Retrieve the ordered row of Pads by row index
 @return The pads in this row are sorted in ascending ordered by
 the X coordinate of the pad
 <DOC>
-public defn get-row (x:PadGrid, row:Int) -> Vector<LandPatternPad> :
-  val rowY = to-vector<Double>(keys(rows(x)))
+public defn get-row (pg:PadGrid, row:Int) -> Vector<LandPatternPad> :
+  val rowY = to-vector<Double>(keys(rows(pg)))
   qsort!(rowY)
-  val rowPads = to-vector<LandPatternPad>(rows(x)[rowY[row]])
+  val rowPads = to-vector<LandPatternPad>(rows(pg)[rowY[row]])
   qsort!({x $ center $ pose(_)}, rowPads)
   rowPads
 
