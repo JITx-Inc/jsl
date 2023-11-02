@@ -1,10 +1,13 @@
 #use-added-syntax(jitx, tests)
 defpackage jsl/tests/landpatterns/SOIC:
   import core
+  import collections
   import jitx
   import jitx/commands
 
   import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
   import jsl/landpatterns/SOIC
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads
@@ -52,34 +55,225 @@ deftest(SOIC) test-body:
   #EXPECT(in-range?(min-max(7.45, 7.55), typ(width(W-SOIC))))
   #EXPECT(in-range?(min-max(2.4, 2.6), typ(height(W-SOIC))))
 
-deftest(SOIC) test-package:
+deftest(SOIC) test-SOIC-N:
+  for num-pins in [8, 14, 20] do:
+    val N = SOIC-N(
+      num-leads = num-pins,
+      lead-span = min-max(5.8, 6.2),
+      package-length = min-max(8.55, 8.75)
+    )
+    val expName = to-string("SOIC127P600X155-%_" % [num-pins])
+    #EXPECT(name(N) == expName)
 
-  val N14 = SOIC-N(
-    num-leads = 14,
-    lead-span = min-max(5.8, 6.2),
-    package-length = min-max(8.55, 8.75)
-  )
-  #EXPECT(name(N14) == "SOIC127P600X155-14")
+    val N-lp = create-landpattern(N)
 
-  val W14 = SOIC-W(
-    num-leads = 14,
-    lead-span = min-max(10.01, 10.64),
-    package-length = min-max(8.788, 9.195)
-  )
-  #EXPECT(name(W14) == "SOIC127P1032X250-14")
+    val exp-Pitch-X = tol%(5.2, (1 %))
+    val exp-Pitch-Y = tol%(1.27, (1 %))
 
-  val N14-lp = create-landpattern(N14)
-  val W14-lp = create-landpattern(W14)
+    val grid = PadGrid(N-lp)
 
-  val N14-str = get-def-string(N14-lp)
-  val W14-str = get-def-string(W14-lp)
-  ; TODO - analyze the ESIR output and check for:
-  ;   -  14 pads on the Top Layer
-  ;   -  Ideally we detect the positions of those pads and confirm
-  ;       that there are no overlaps.
-  ; TODO - Likely need a regex dependency here.
-  #EXPECT(index-of-chars(N14-str, "pad") is-not False)
-  #EXPECT(index-of-chars(W14-str, "pad") is-not False)
+    #EXPECT(length(rows(grid)) == num-pins / 2)
+    #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+    #EXPECT(check-column-pitch(grid, exp-Pitch-X))
 
-  ; TODO - 8, 16, 20 pin packages
-  ; TODO - 32 pin package with smaller pitch (0.65mm)
+    for row in values(rows(grid)) do:
+      #EXPECT(length(row) == 2)
+      for lp-pad in row do:
+        val pd = pad(lp-pad)
+        val shape = pad-shape(pd)
+        #EXPECT(shape is Rectangle)
+
+deftest(SOIC) test-SOIC-W:
+  for num-pins in [8, 14, 20] do:
+    val W = SOIC-W(
+      num-leads = num-pins,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195)
+    )
+
+    val expName = to-string("SOIC127P1032X250-%_" % [num-pins])
+    #EXPECT(name(W) == expName)
+
+    val W-lp = create-landpattern(W)
+
+    val exp-Pitch-X = tol%(9.6, (1 %))
+    val exp-Pitch-Y = tol%(1.27, (1 %))
+
+    val grid = PadGrid(W-lp)
+
+    #EXPECT(length(rows(grid)) == num-pins / 2)
+    #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+    #EXPECT(check-column-pitch(grid, exp-Pitch-X))
+
+    for row in values(rows(grid)) do:
+      #EXPECT(length(row) == 2)
+      for lp-pad in row do:
+        val pd = pad(lp-pad)
+        val shape = pad-shape(pd)
+        #EXPECT(shape is Rectangle)
+
+deftest(SOIC) test-fine-pitch:
+    val num-pins = 32
+    val W-fp = SOIC-W(
+      num-leads = num-pins,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195)
+      pitch = 0.65
+    )
+
+    val expName = to-string("SOIC65P1032X250-%_" % [num-pins])
+    #EXPECT(name(W-fp) == expName)
+
+    val W-lp = create-landpattern(W-fp)
+
+    val exp-Pitch-X = tol%(9.6, (1 %))
+    val exp-Pitch-Y = tol%(0.65, (1 %))
+
+    val grid = PadGrid(W-lp)
+
+    #EXPECT(length(rows(grid)) == num-pins / 2)
+    #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+    #EXPECT(check-column-pitch(grid, exp-Pitch-X))
+
+    for row in values(rows(grid)) do:
+      #EXPECT(length(row) == 2)
+      for lp-pad in row do:
+        val pd = pad(lp-pad)
+        val shape = pad-shape(pd)
+        #EXPECT(shape is Rectangle)
+
+deftest(SOIC) test-thermal-lead:
+  val num-pins = 8
+  val W = SOIC-W(
+      num-leads = num-pins,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195),
+      thermal-lead? = RoundedRectangle(3.0, 3.0, 0.2)
+    )
+
+    val expName = to-string("SOIC127P1032X250-%_" % [num-pins])
+    #EXPECT(name(W) == expName)
+
+    val W-lp = create-landpattern(W)
+
+    val grid = PadGrid(W-lp)
+
+    #EXPECT(length(rows(grid)) == (num-pins / 2) + 1)
+    #EXPECT(length(columns(grid)) == 2 + 1)
+
+    val thermPad? = find-pad-by-ref(W-lp, 9)
+    #EXPECT(thermPad? is-not False)
+    val thermPad = thermPad? as LandPatternPad
+    #EXPECT(pad-shape(pad(thermPad)) is RoundedRectangle)
+
+deftest(SOIC) test-pad-numbering:
+  val num-pins = 8
+  val W = SOIC-W(
+      num-leads = num-pins,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195),
+    )
+  val W-lp = create-landpattern(W)
+
+  val grid = PadGrid(W-lp)
+
+  val half = num-pins / 2
+
+  #EXPECT(length(rows(grid)) == half)
+  #EXPECT(length(columns(grid)) == 2)
+
+  ; NOTE - `get-column` returns pads in ascending
+  ;   Y order. This is the opposite of how we think
+  ;   of pad ordering so we must reverse the first
+  ;   column but the second column is fine.
+
+  val col0 = get-column(grid, 0)
+  #EXPECT(length(col0) == half)
+  for (p in in-reverse(col0), i in 1 through half) do:
+    val expRef = IndexRef(Ref(`p), i)
+    #EXPECT(ref(p) == expRef)
+
+  val col1 = get-column(grid, 1)
+  #EXPECT(length(col1) == half)
+  for (p in col1, i in (half + 1) through num-pins) do:
+    val expRef = IndexRef(Ref(`p), i)
+    #EXPECT(ref(p) == expRef)
+
+deftest(SOIC) test-error-handling:
+
+  val num-pin-vecs = [
+    0,
+    -1,
+    -10,
+    13,
+    1,
+    3
+  ]
+  for num-pin-vec in num-pin-vecs do:
+    var res = expect-throw({SOIC-N(
+      num-leads = num-pin-vec,
+      lead-span = min-max(7.01, 7.64),
+      package-length = min-max(8.788, 9.195)
+      )})
+    #EXPECT(res is-not None)
+    res = expect-throw({SOIC-W(
+      num-leads = num-pin-vec,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195)
+      )})
+    #EXPECT(res is-not None)
+
+  val neg-vecs = [
+    min-max(-0.1, 3.0),
+    min-max(-1.0, -0.9),
+    min-max(-10.64, -10.01),
+  ]
+
+  for neg-vec in neg-vecs do:
+    ; lead-span
+    var res = expect-throw({SOIC-N(
+      num-leads = 8,
+      lead-span = neg-vec,
+      package-length = min-max(8.788, 9.195)
+      )})
+    #EXPECT(res is-not None)
+    res = expect-throw({SOIC-W(
+      num-leads = 8,
+      lead-span = neg-vec,
+      package-length = min-max(8.788, 9.195)
+      )})
+    #EXPECT(res is-not None)
+    ; pkg-len
+    res = expect-throw({SOIC-N(
+      num-leads = 8,
+      lead-span = min-max(8.788, 9.195),
+      package-length = neg-vec
+      )})
+    #EXPECT(res is-not None)
+    res = expect-throw({SOIC-W(
+      num-leads = 8,
+      lead-span = min-max(8.788, 9.195),
+      package-length = neg-vec
+      )})
+    #EXPECT(res is-not None)
+
+  val pitch-vecs = [
+    0.0,
+    -0.1,
+    -1.3
+  ]
+  for pitch-vec in pitch-vecs do:
+    var res = expect-throw({SOIC-N(
+      num-leads = 8,
+      lead-span = min-max(8.788, 9.195),
+      package-length = min-max(8.788, 9.195),
+      pitch = pitch-vec
+      )})
+    #EXPECT(res is-not None)
+    res = expect-throw({SOIC-W(
+      num-leads = 8,
+      lead-span = min-max(8.788, 9.195),
+      package-length = min-max(8.788, 9.195),
+      pitch = pitch-vec
+      )})
+    #EXPECT(res is-not None)
