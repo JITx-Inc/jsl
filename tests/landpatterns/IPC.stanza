@@ -1,0 +1,58 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/IPC:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/IPC
+  import jsl/landpatterns/leads
+
+  import jsl/tests/utils
+
+deftest(IPC) test-basic:
+  ; TI -  D0008A - 8-pin SOIC
+  val lead-span = min-max(5.8, 6.19)
+  val lead-length = min-max(0.41, 1.27)
+  val lead-width = min-max(0.31, 0.51)
+
+  var res = ipc-formula(
+    lead-span,
+    lead-length,
+    lead-width,
+    lead-fillets(BigGullWingLeads, DensityLevelA)
+  )
+
+  var exp-Zmax = tol%(7.3, (1 %))
+  #EXPECT(in-range?(exp-Zmax, Zmax(res)))
+  var exp-Gmin = tol%(3.5, (1 %))
+  #EXPECT(in-range?(exp-Gmin, Gmin(res)))
+  var exp-Xmin = tol%(0.61, (1 %))
+  #EXPECT(in-range?(exp-Xmin, Xmin(res)))
+
+  res = ipc-formula(
+    lead-span,
+    lead-length,
+    lead-width,
+    lead-fillets(BigGullWingLeads, DensityLevelB)
+  )
+
+  exp-Zmax = tol%(6.9, (1 %))
+  #EXPECT(in-range?(exp-Zmax, Zmax(res)))
+  exp-Gmin = tol%(3.7, (1 %))
+  #EXPECT(in-range?(exp-Gmin, Gmin(res)))
+  exp-Xmin = tol%(0.57, (1 %))
+  #EXPECT(in-range?(exp-Xmin, Xmin(res)))
+
+  res = ipc-formula(
+    lead-span,
+    lead-length,
+    lead-width,
+    lead-fillets(BigGullWingLeads, DensityLevelC)
+  )
+
+  exp-Zmax = tol%(6.5, (1 %))
+  #EXPECT(in-range?(exp-Zmax, Zmax(res)))
+  exp-Gmin = tol%(3.89, (1 %))
+  #EXPECT(in-range?(exp-Gmin, Gmin(res)))
+  exp-Xmin = tol%(0.53, (1 %))
+  #EXPECT(in-range?(exp-Xmin, Xmin(res)))
