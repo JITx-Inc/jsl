@@ -88,11 +88,11 @@ Example for 2-column grid:
 @param num-rows Total number of rows of pads in the grid.
 TODO: `num-pads` must be evenly divisible by `num-rows`
 <DOC>
-public defstruct RowMajorNumbering <: Numbering :
+public defstruct Row-Major-Numbering <: Numbering :
   num-pads:Int with: (ensure => ensure-positive!)
   num-rows:Int with: (ensure => ensure-positive!)
 
-public defmethod to-pad-id (x:RowMajorNumbering, row:Int, column:Int) -> Int|Ref :
+public defmethod to-pad-id (x:Row-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val rows = num-rows(x)
   val cols = num-pads(x) / rows
 
@@ -123,11 +123,11 @@ Example for 2-column grid:
 @param num-columns Total number of columns in the grid.
 TODO: `num-pads` must be evenly divisible by `num-columns`
 <DOC>
-public defstruct ColumnMajorNumbering <: Numbering :
+public defstruct Column-Major-Numbering <: Numbering :
   num-pads:Int with: (ensure => ensure-positive!)
   num-columns:Int with: (ensure => ensure-positive!)
 
-public defmethod to-pad-id (x:ColumnMajorNumbering, row:Int, column:Int) -> Int|Ref :
+public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val cols = num-columns(x)
   val rows = num-pads(x) / cols
 
