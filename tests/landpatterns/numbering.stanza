@@ -47,6 +47,10 @@ deftest(numbering) test-row-major:
   expect-throw({Row-Major-Numbering(0, -1)})
   expect-throw({Row-Major-Numbering(-1, 0)})
 
+  expect-throw({Row-Major-Numbering(2, 4)})
+  expect-throw({Row-Major-Numbering(3, 4)})
+  expect-throw({Row-Major-Numbering(6, 4)})
+  expect-throw({Row-Major-Numbering(10, 4)})
 
   expect-throw({to-pad-id(uut, -1, 0)})
   expect-throw({to-pad-id(uut, 0, -1)})
@@ -72,6 +76,9 @@ deftest(numbering) test-column-major:
   expect-throw({Column-Major-Numbering(0, -1)})
   expect-throw({Column-Major-Numbering(-1, 0)})
 
+  expect-throw({Column-Major-Numbering(3, 7)})
+  expect-throw({Column-Major-Numbering(3, 2)})
+  expect-throw({Column-Major-Numbering(6, 4)})
 
   expect-throw({to-pad-id(uut, -1, 0)})
   expect-throw({to-pad-id(uut, 0, -1)})
