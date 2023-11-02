@@ -1,0 +1,137 @@
+#use-added-syntax(jitx)
+defpackage jsl/tests/landpatterns/defchecks:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+  import jsl/errors
+
+doc: \<DOC>
+Pad Grid - Tool for Checking Landpatterns
+This type provides a means of using the introspection
+tools to discover the generated pads and check
+that they are correct.
+<DOC>
+public defstruct PadGrid :
+  rows:HashTable<Double, Tuple<LandPatternPad>>
+  columns:HashTable<Double, Tuple<LandPatternPad>>
+
+defn update (rows:HashTable<Double, Tuple<LandPatternPad>>, y-pos:Double, pd:LandPatternPad) :
+  val res = get?(rows, y-pos, [])
+  val newPads = to-tuple $ cat(res, [pd])
+  set(rows, y-pos, newPads)
+
+public defn PadGrid (lp-def:LandPattern) -> PadGrid:
+  val rows = HashTable<Double, Tuple<LandPatternPad>>()
+  val cols = HashTable<Double, Tuple<LandPatternPad>>()
+  for lp-pad in pads(lp-def) do:
+    val l = pose(lp-pad)
+    val pos = center(l)
+    update(rows, y(pos), lp-pad)
+    update(cols, x(pos), lp-pad)
+  PadGrid(rows, cols)
+
+
+doc: \<DOC>
+Diff the elements of a series
+This function assumes that the values in `x` are sorted in
+ascending order.
+<DOC>
+public defn diff-series (x:Seqable<Double>) -> Seqable<Double> :
+  val x* = to-tuple(x)
+  for i in 0 to length(x*) seq?:
+    if i == 0:
+      None()
+    else:
+      One(x*[i] - x*[i - 1])
+
+doc: \<DOC>
+Extract the pitch between the sequence of pad rows
+@return Ordered sequence of distance from one pad row to the next.
+If `x` is length N, the returned sequence will be N-1 in length.
+@throws ValueError If there are less than 2 rows in the found grid.
+<DOC>
+public defn row-pitch (x:PadGrid) -> Seqable<Double> :
+  val ys = to-vector<Double>(keys(rows(x)))
+  if length(ys) < 2:
+    throw $ ValueError("Invalid Grid for Pitch Check: # rows = %_" % [length(ys)])
+
+  qsort! $ ys
+  diff-series(ys)
+
+doc: \<DOC>
+Check if all row pitches match the passed tolerance range.
+<DOC>
+public defn check-row-pitch (x:PadGrid, exp-Pitch:Toleranced) -> True|False :
+  val pitches = to-tuple $ row-pitch(x)
+  val ret = for pitch in pitches all?:
+    in-range?(exp-Pitch, pitch)
+  if not ret:
+    println("Row Pitches: %," % [pitches])
+  ret
+
+doc: \<DOC>
+Extract the pitch between the sequence of pad columns
+@return Ordered sequence of distance from one pad column to the next.
+If `x` is length N, the returned sequence will be N-1 in length.
+@throws ValueError If there are less than 2 columns in the found grid.
+<DOC>
+public defn column-pitch (x:PadGrid) -> Seqable<Double> :
+  val xs = to-vector<Double>(keys(columns(x)))
+  if length(xs) < 2:
+    throw $ ValueError("Invalid Grid for Pitch Check: # columns = %_" % [length(xs)])
+
+  qsort! $ xs
+  diff-series(xs)
+
+doc: \<DOC>
+Check if all column pitches match the passed tolerance range.
+<DOC>
+public defn check-column-pitch (x:PadGrid, exp-Pitch:Toleranced) -> True|False :
+  val pitches = to-tuple $ column-pitch(x)
+  val ret = for pitch in pitches all?:
+    in-range?(exp-Pitch, pitch)
+
+  if not ret:
+    println("Column Pitches: %," % [pitches])
+  ret
+
+doc: \<DOC>
+Retrieve the ordered column of Pads by column index
+@param x (Self)
+@param column Which column of pads to extract.
+@return The pads in this column are sorted in ascending ordered by
+the Y coordinate of the pad
+<DOC>
+public defn get-column (x:PadGrid, column:Int) -> Vector<LandPatternPad> :
+  val colX = to-vector<Double>(keys(columns(x)))
+  qsort!(colX)
+  val colPads = to-vector<LandPatternPad>(columns(x)[colX[column]])
+  qsort!({y $ center $ pose(_)}, colPads)
+  colPads
+
+doc: \<DOC>
+Retrieve the ordered row of Pads by row index
+@param x (Self)
+@param row Which row of pads to extract.
+@return The pads in this row are sorted in ascending ordered by
+the X coordinate of the pad
+<DOC>
+public defn get-row (x:PadGrid, row:Int) -> Vector<LandPatternPad> :
+  val rowY = to-vector<Double>(keys(rows(x)))
+  qsort!(rowY)
+  val rowPads = to-vector<LandPatternPad>(rows(x)[rowY[row]])
+  qsort!({x $ center $ pose(_)}, rowPads)
+  rowPads
+
+doc: \<DOC>
+Find a Pad in a Landpattern by Reference or Pin Number
+<DOC>
+public defn find-pad-by-ref (lp-def:LandPattern, pin-id:Int|Ref) -> LandPatternPad|False :
+  val r = match(pin-id):
+    (pinNum:Int): IndexRef(Ref(`p), pinNum)
+    (y): y
+  for p in pads(lp-def) find:
+    ref(p) == r
+
+
