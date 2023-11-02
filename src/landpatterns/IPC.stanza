@@ -8,8 +8,12 @@ defpackage jsl/landpatterns/IPC:
   import jsl/landpatterns/leads with:
     only => (LeadFillets, to-tuple)
 
-; Helper struct to contain the results of the IPC formula in section 3 of
-; 7351-B
+doc: \<DOC>
+IPC Formula Results from Section 3 of IPC 7351B
+
+TODO: Add Diagram here
+
+<DOC>
 public defstruct IpcResults:
   Zmax:Double,
   Gmin:Double,
@@ -18,15 +22,29 @@ public defstruct IpcResults:
 public defmethod print (o:OutputStream, i:IpcResults) :
   print(o, "IpcResults(Zmax:%_, Gmin:%_, Xmin:%_" % [Zmax(i), Gmin(i), Xmin(i)])
 
-; Helper to compute the pad size from the formula results
+doc: \<DOC>
+Compute the Pad Size from the IPC Formula Results
+@return Dimension of the Pad. The `x` dimension is
+the length of the pad in the `lead-span` direction.
+The `y` dimension is the width of the pad in the lead-width direction.
+<DOC>
 public defn pad-size (i:IpcResults) -> Dims:
   Dims(0.5 * (Zmax(i) - Gmin(i)), Xmin(i))
 
-; the IPC formula
+doc: \<DOC>
+Compute Pad Geometry According to IPC Rules
+@param L Lead-Span or edge-of-lead to edge-of-lead distance for an IC package.
+@param T Lead Length, length of the exposed contact in the same dimension as `L`
+@param W Lead Width, width of the exposed contact in the dimension orthogonal to `L`
+@param fillets Specifications for the solder fillets created when soldering the
+lead to the land-pattern pad. These parameters define extra spacing around the lead
+dimension to form these fillets.
+@return
+<DOC>
 public defn ipc-formula (L:Toleranced, ; the distance from edge-of-lead to edge-of-lead on the exterior of the land pattern
                   T:Toleranced, ; the nominal size of the leads, in the same dimension as L
                   W:Toleranced, ; the nominal size of the leads, in the dimension orthogonal to L
-                  fillets:LeadFillets) : ; looked up using lead-fillets(lead-type, density-level)
+                  fillets:LeadFillets) -> IpcResults : ; looked up using lead-fillets(lead-type, density-level)
   ; compute root-mean-squared of a sequence of numbers
   val [Jt, Jh, Js, _] = to-tuple(fillets)
   val Lmax = max-value(L)

@@ -9,6 +9,6 @@ build-test tests:
     jsl/tests/landpatterns/packages
     jsl/tests/landpatterns/pad-planner
     jsl/tests/landpatterns/SOIC
-
+    jsl/tests/landpatterns/IPC
   pkg: "test-pkgs"
   o: "jsl-tests"
