@@ -86,11 +86,17 @@ Example for 2-column grid:
   of the grid placements are active. This function assumes that all
   rows have an equal number of columns.
 @param num-rows Total number of rows of pads in the grid.
-TODO: `num-pads` must be evenly divisible by `num-rows`
+@throws ValueError If num-pads is not divisible by num-rows.
 <DOC>
 public defstruct Row-Major-Numbering <: Numbering :
   num-pads:Int with: (ensure => ensure-positive!)
   num-rows:Int with: (ensure => ensure-positive!)
+with:
+  constructor => #Row-Major-Numbering
+
+public defn Row-Major-Numbering (num-pads:Int, num-rows:Int) -> Row-Major-Numbering :
+  ensure-divisible!(num-pads, num-rows, "Row-Major-Numbering")
+  #Row-Major-Numbering(num-pads, num-rows)
 
 public defmethod to-pad-id (x:Row-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val rows = num-rows(x)
@@ -121,11 +127,17 @@ Example for 2-column grid:
   of the grid placements are active. This function assumes that all
   columns have an equal number of rows.
 @param num-columns Total number of columns in the grid.
-TODO: `num-pads` must be evenly divisible by `num-columns`
+@throws ValueError If num-pads is not divisible by num-columns.
 <DOC>
 public defstruct Column-Major-Numbering <: Numbering :
   num-pads:Int with: (ensure => ensure-positive!)
   num-columns:Int with: (ensure => ensure-positive!)
+with:
+  constructor => #Column-Major-Numbering
+
+public defn Column-Major-Numbering (num-pads:Int, num-columns:Int) -> Column-Major-Numbering :
+  ensure-divisible!(num-pads, num-columns, "Column-Major-Numbering")
+  #Column-Major-Numbering(num-pads, num-columns)
 
 public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val cols = num-columns(x)
