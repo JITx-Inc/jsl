@@ -33,7 +33,6 @@ public defn ensure-even-positive! (
   if value < 2 or value % 2 > 0:
     throw $ ValueError("%_: only supports a positive even number of pins: %_" % [field, value])
 
-; TODO - does not work with `defstruct` ensure
 doc: \<DOC>
 Check for multi-sided components to ensure proper number of pins.
 @throws ValueError when the passed value is not divible.
@@ -42,10 +41,12 @@ Check for multi-sided components to ensure proper number of pins.
 @param name Name of the package we are checking
 <DOC>
 public defn ensure-divisible! (value:Int, divisor:Int, name: String) :
-  if divisor < 2:
-    throw $ ValueError("%_ must be > 2" % [value])
-  if (value < divisor) or (value % 2 != 0) :
-    throw $ ValueError("%_ must be positive and divisible by %_." % [value])
+  if not (value > 0):
+    throw $ ValueError("%_: Value must be positive: %_" % [name, value])
+  if not (divisor > 0):
+    throw $ ValueError("%_: Divisor must be positive: %_" % [name, divisor])
+  if ((value % divisor) != 0) :
+    throw $ ValueError("%_: %_ must be divisible by %_." % [name, value, divisor])
 
 doc: \<DOC>
 Reference Label Generator
