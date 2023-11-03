@@ -37,8 +37,4 @@ deftest(packages) test-ensures:
   for test-vec in test-vecs do:
     val [w,l,h] = test-vec
 
-    val obs = expect-throw(
-      {PackageBody(w, l, h)}
-    )
-
-    #EXPECT(obs is-not None)
+    expect-throw({PackageBody(w, l, h)})

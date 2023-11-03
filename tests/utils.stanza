@@ -1,16 +1,18 @@
-#use-added-syntax(jitx)
+#use-added-syntax(jitx, tests)
 defpackage jsl/tests/utils:
   import core
   import jitx/commands
 
 #if-defined(TESTING) :
   public defn expect-throw (f) -> Maybe<String>:
-    try :
+    val res = try :
       val unexpected = f()
       None()
     catch (e:Exception) :
       val msg = to-string("%~" % [e])
       One(msg)
+    #EXPECT(res is-not None)
+    res
 
   ; Setup default rules for the unit tests
   ;  When attempting to extract the ESIR for a definition
