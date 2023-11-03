@@ -153,3 +153,140 @@ public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> In
     throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
 
   (column * rows) + row + 1
+
+val DEF-ROW-OMITS = "IOQSXZ"
+
+doc: \<DOC>
+Create pad Ref sequence for a 2-axis Grid (eg for BGAs)
+The created references use a {@link IndexRef} consisting of
+a letter for the row indicator and a number index for the column.
+For example:
+  row=1, column=1 =>  `A[1]`
+  row=2, column=7 =>  `B[7]`
+  row=21, column=3 => `AA[3]`
+
+Note that the final example assumes the default omit character
+  sequence.
+
+The `start-row` and `start-col` parameters are used to
+offset the numbering generation. For example - lets say you
+wanted to have a 5x5 grid but start with row 'C' and column 5,
+Setting `start-row = 2` and `start-col = 4` (zero-indexed).
+This results in a grid with rows C, D, E, F, G and columns
+5, 6, 7, 8, 9.
+<DOC>
+public defstruct Grid-Numbering <: Numbering :
+  doc: \<DOC>
+  Number of Rows in the Grid
+  <DOC>
+  rows:Int
+  doc: \<DOC>
+  Number of Columns in the Grid
+  <DOC>
+  columns:Int
+  doc: \<DOC>
+  Set the starting row offset.
+  Default is 0, which is typically maps to 'A' unless
+  the `omit-rows` contains 'A'.
+  <DOC>
+  start-row:Int
+  doc: \<DOC>
+  Set the starting column offset/
+  Default is 0, which is typically the first column index.
+  <DOC>
+  start-col:Int
+  doc: \<DOC>
+  List of letters to not uses as the row id in the generated
+  pad reference. By default this is set to "IOQSXZ" by IPC7351B.
+  For example, this means that the row sequence will consist of:
+    ... G, H, J ...
+  Where `I` is absent
+  <DOC>
+  omit-rows:String
+  doc: \<DOC>
+  Lookup table for converting row/column indices to a Ref.
+  This lookup is pre-computed based on the `rows/columns/etc`
+  <DOC>
+  pad-lookup:Tuple<Ref>
+with:
+  constructor => #Grid-Numbering
+
+public defn Grid-Numbering (
+  rows:Int,
+  columns:Int,
+  start-row:Int = 0,
+  start-col:Int = 0,
+  omit-rows:String = DEF-ROW-OMITS
+  ) -> Grid-Numbering:
+
+  ensure-positive!("Grid-Numbering:rows", rows)
+  ensure-positive!("Grid-Numbering:columns", columns)
+  ensure-non-negative!("Grid-Numbering:start-row", start-row)
+  ensure-non-negative!("Grid-Numbering:start-col", start-col)
+
+  val pad-names = create-pad-lookup(rows, columns, start-row, start-col, omit-rows)
+
+  #Grid-Numbering(rows, columns, start-row, start-col, omit-rows, pad-names)
+
+public defmethod to-pad-id (g:Grid-Numbering, row:Int, column:Int) -> Int|Ref :
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  if not (row < rows(g)):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, rows(g)])
+
+  val cols = columns(g)
+  if not (column < cols):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
+
+  val index = ( (row * cols) + column)
+  pad-lookup(g)[index]
+
+defn create-pad-lookup (
+  rows:Int,
+  columns:Int,
+  start-row:Int = 0,
+  start-col:Int = 0,
+  omit-rows:String = DEF-ROW-OMITS
+  ) -> Tuple<Ref> :
+  val omits = upper-case $ omit-rows
+  val letters = to-tuple $
+    for ch in make-letter-seq('A', 'Z') filter:
+      not contains?(omits, ch)
+  ; Pre-compute the lookup table for the
+  ;  grid of references.
+  val pad-names = to-tuple $
+  for (row in start-row to (start-row + rows)) seq-cat:
+    val row-name = Ref(lookup-row-name(row, letters))
+    for col in start-col to (start-col + columns) seq:
+      row-name[col + 1]
+  pad-names
+
+doc: \<DOC>
+Returns the name of a row given its index and a list of omitted
+characters.
+
+The algorithm is a realization of this description from JEDEC JC-11:
+
+> When a package is viewed ... with the A1 corner in the upper left position,
+> terminal rows are lettered from top to bottom starting with A and
+> terminal columns are numbered from left to right starting with 1.
+> ... For packages with greater than 20 rows (i.e.,  following rows W and Y),
+> the 21st row is designated AA and subsequent rows are designated AB, AC, etc.
+
+The modification is we abstract over the omitted characters to support non-
+standard naming conventions.
+
+@param idx This index value is 0-based
+@param table Available characters from which we can select
+row character reference prefixes.
+<DOC>
+defn lookup-row-name (idx:Int, table:Tuple<Char>) -> String:
+  val buffer = StringBuffer()
+  let loop (i:Int = idx) :
+    val rem = i / length(table)
+    val char-index = i % length(table)
+    loop(rem - 1) when rem > 0
+    print(buffer, table[char-index])
+  to-string(buffer)
+
