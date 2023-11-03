@@ -49,6 +49,44 @@ public defn ensure-divisible! (value:Int, divisor:Int, name: String) :
     throw $ ValueError("%_: %_ must be divisible by %_." % [name, value, divisor])
 
 doc: \<DOC>
+Check if the value is non-negative (ie, zero or greater)
+<DOC>
+public defn ensure-non-negative! (field:String, value:Int|Long|Double|Float|Toleranced):
+  val fail = match(value):
+    (x:Int): x < 0
+    (x:Long): x < 0L
+    (x:Double): x < 0.0
+    (x:Float): x < 0.0F
+    (t:Toleranced):
+      min-value(t) < 0.0
+  if fail:
+    throw $ ValueError("%_: Expects Non-Negative Number: %_" % [field, value])
+
+doc: \<DOC>
+Create a letter sequence from `start` to `end`
+@param start Starting character in the sequence
+@param end Inclusive ending character in the sequence.
+
+@snippet Example
+
+```stanza
+val result = make-letter-seq('B', 'G')
+println(result)
+; Generates:
+; "BCDEFG"
+```
+<DOC>
+public defn make-letter-seq (start:Char, end:Char) -> String :
+  val sb = to-int(start)
+  val eb = to-int(end)
+  if not (eb > sb):
+    throw $ ValueError("Invalid Start/End Letters: '%_' [%_] < '%_' [%_]" % [start, sb, end, eb])
+
+  string-join $ for i in sb through eb seq:
+    to-char(i)
+
+
+doc: \<DOC>
 Reference Label Generator
 This tool inserts a reference label into the current landpattern context.
 @param pose Pose in the current landpattern frame of reference. By default,
