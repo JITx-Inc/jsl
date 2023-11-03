@@ -4,6 +4,7 @@ defpackage jsl/tests/landpatterns/numbering:
   import jitx
 
   import jsl/landpatterns/numbering
+  import jsl/landpatterns/helpers
   import jsl/tests/utils
 
 deftest(numbering) test-std-ic:
@@ -88,3 +89,116 @@ deftest(numbering) test-column-major:
   expect-throw({to-pad-id(uut, 6, 0)})
   expect-throw({to-pad-id(uut, 6, 8)})
   expect-throw({to-pad-id(uut, 0, 10)})
+
+
+deftest(numbering) test-grid-numbering:
+  val rows = 3
+  val columns = 3
+  val uut = Grid-Numbering(rows, columns)
+
+  val obs = to-tuple $ for r in 0 to rows seq-cat:
+    for c in 0 to columns seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [
+    IndexRef(Ref("A"), 1),
+    IndexRef(Ref("A"), 2),
+    IndexRef(Ref("A"), 3),
+    IndexRef(Ref("B"), 1),
+    IndexRef(Ref("B"), 2),
+    IndexRef(Ref("B"), 3),
+    IndexRef(Ref("C"), 1),
+    IndexRef(Ref("C"), 2),
+    IndexRef(Ref("C"), 3),
+  ]
+
+  #EXPECT(obs == exp)
+
+  expect-throw({to-pad-id(uut, -1, 0)})
+  expect-throw({to-pad-id(uut, 0, -1)})
+  expect-throw({to-pad-id(uut, -1, -1)})
+
+  expect-throw({to-pad-id(uut, 0, 8)})
+  expect-throw({to-pad-id(uut, 3, 0)})
+  expect-throw({to-pad-id(uut, 6, 3)})
+  expect-throw({to-pad-id(uut, 0, 10)})
+
+  expect-throw({Grid-Numbering(0, 1)})
+  expect-throw({Grid-Numbering(1, 0)})
+  expect-throw({Grid-Numbering(0, -1)})
+  expect-throw({Grid-Numbering(-1, 0)})
+
+deftest(numbering) test-offset-grid-numbering:
+  val rows = 3
+  val columns = 3
+  val start-row = 2 ; C
+  val start-col = 3 ; 4
+  val uut = Grid-Numbering(rows, columns, start-row, start-col)
+
+  val obs = to-tuple $ for r in 0 to rows seq-cat:
+    for c in 0 to columns seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [
+    IndexRef(Ref("C"), 4),
+    IndexRef(Ref("C"), 5),
+    IndexRef(Ref("C"), 6),
+    IndexRef(Ref("D"), 4),
+    IndexRef(Ref("D"), 5),
+    IndexRef(Ref("D"), 6),
+    IndexRef(Ref("E"), 4),
+    IndexRef(Ref("E"), 5),
+    IndexRef(Ref("E"), 6),
+  ]
+
+  #EXPECT(obs == exp)
+
+deftest(numbering) test-omits-grid-numbering:
+
+  val rows = 3
+  val columns = 3
+  val uut = Grid-Numbering(rows, columns, 0, 0, "ABC")
+
+  val obs = to-tuple $ for r in 0 to rows seq-cat:
+    for c in 0 to columns seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [
+    IndexRef(Ref("D"), 1),
+    IndexRef(Ref("D"), 2),
+    IndexRef(Ref("D"), 3),
+    IndexRef(Ref("E"), 1),
+    IndexRef(Ref("E"), 2),
+    IndexRef(Ref("E"), 3),
+    IndexRef(Ref("F"), 1),
+    IndexRef(Ref("F"), 2),
+    IndexRef(Ref("F"), 3),
+  ]
+
+  #EXPECT(obs == exp)
+
+deftest(numbering) test-row-rollover-grid-numbering:
+
+  val rows = 5
+  val columns = 2
+  val omits = make-letter-seq('D', 'Z')
+  val uut = Grid-Numbering(rows, columns, 0, 0, omits)
+
+  val obs = to-tuple $ for r in 0 to rows seq-cat:
+    for c in 0 to columns seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [
+    IndexRef(Ref("A"), 1),
+    IndexRef(Ref("A"), 2),
+    IndexRef(Ref("B"), 1),
+    IndexRef(Ref("B"), 2),
+    IndexRef(Ref("C"), 1),
+    IndexRef(Ref("C"), 2),
+    IndexRef(Ref("AA"), 1),
+    IndexRef(Ref("AA"), 2),
+    IndexRef(Ref("AB"), 1),
+    IndexRef(Ref("AB"), 2),
+  ]
+
+  #EXPECT(obs == exp)
