@@ -35,10 +35,9 @@ deftest(SOIC) test-lead:
 
   for test-vec in test-vecs do:
     val [l, w] = test-vec
-    val obs = expect-throw(
+    expect-throw(
       {SOIC-Lead(BigGullWingLeads, l, w)}
     )
-    #EXPECT( obs is-not None )
 
 
 deftest(SOIC) test-body:
@@ -210,18 +209,16 @@ deftest(SOIC) test-error-handling:
     3
   ]
   for num-pin-vec in num-pin-vecs do:
-    var res = expect-throw({SOIC-N(
+    expect-throw({SOIC-N(
       num-leads = num-pin-vec,
       lead-span = min-max(7.01, 7.64),
       package-length = min-max(8.788, 9.195)
       )})
-    #EXPECT(res is-not None)
-    res = expect-throw({SOIC-W(
+    expect-throw({SOIC-W(
       num-leads = num-pin-vec,
       lead-span = min-max(10.01, 10.64),
       package-length = min-max(8.788, 9.195)
       )})
-    #EXPECT(res is-not None)
 
   val neg-vecs = [
     min-max(-0.1, 3.0),
@@ -231,31 +228,27 @@ deftest(SOIC) test-error-handling:
 
   for neg-vec in neg-vecs do:
     ; lead-span
-    var res = expect-throw({SOIC-N(
+    expect-throw({SOIC-N(
       num-leads = 8,
       lead-span = neg-vec,
       package-length = min-max(8.788, 9.195)
       )})
-    #EXPECT(res is-not None)
-    res = expect-throw({SOIC-W(
+    expect-throw({SOIC-W(
       num-leads = 8,
       lead-span = neg-vec,
       package-length = min-max(8.788, 9.195)
       )})
-    #EXPECT(res is-not None)
     ; pkg-len
-    res = expect-throw({SOIC-N(
+    expect-throw({SOIC-N(
       num-leads = 8,
       lead-span = min-max(8.788, 9.195),
       package-length = neg-vec
       )})
-    #EXPECT(res is-not None)
-    res = expect-throw({SOIC-W(
+    expect-throw({SOIC-W(
       num-leads = 8,
       lead-span = min-max(8.788, 9.195),
       package-length = neg-vec
       )})
-    #EXPECT(res is-not None)
 
   val pitch-vecs = [
     0.0,
@@ -263,17 +256,15 @@ deftest(SOIC) test-error-handling:
     -1.3
   ]
   for pitch-vec in pitch-vecs do:
-    var res = expect-throw({SOIC-N(
+    expect-throw({SOIC-N(
       num-leads = 8,
       lead-span = min-max(8.788, 9.195),
       package-length = min-max(8.788, 9.195),
       pitch = pitch-vec
       )})
-    #EXPECT(res is-not None)
-    res = expect-throw({SOIC-W(
+    expect-throw({SOIC-W(
       num-leads = 8,
       lead-span = min-max(8.788, 9.195),
       package-length = min-max(8.788, 9.195),
       pitch = pitch-vec
       )})
-    #EXPECT(res is-not None)
