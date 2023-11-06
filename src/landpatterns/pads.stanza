@@ -280,24 +280,6 @@ public defn smd-pad (width:Double, height:Double -- anchor:Anchor = C) :
 public defn smd-pad (d:Dims -- anchor:Anchor = C) :
   smd-pad(Rectangle(anchor, x(d), y(d)))
 
-; Create a BGA pad, with circular SMD
-; TODO - Remove this - the BGA landpatterns define their own pad structure
-public defn bga-pad (diameter:Double -- anchor:Anchor = C) :
-  smd-pad(Circle(anchor, to-radius(diameter)))
-
-; Create a soldermask-defined BGA pad
-; TODO - Remove this - the BGA landpatterns define their own pad structure
-public pcb-pad soldermask-defined-bga-pad (
-  soldermask-opening-diameter:Double ; the diameter of the soldermask opening
-  overlap:Double                     ; the amount the soldermask overlaps the pad beneath
-) :
-  val mask-shape = Circle(to-radius(soldermask-opening-diameter))
-  name  = "SMD BGA Pad"
-  shape = offset(mask-shape, -1. * overlap) as Circle
-  type = SMD
-  layer(SolderMask(Top)) = mask-shape
-  layer(Paste(Top)) = mask-shape
-
 ; Create an arbitrary testpoint pad
 public pcb-pad testpoint-pad (testpoint-shape:Shape) :
   name = "TestPoint-Pad"

@@ -67,7 +67,7 @@ public pcb-landpattern dummy-landpattern (n:Int, courtyard:[Double, Double]) :
   val r = (max(courtyard[0], courtyard[1]) - 0.2) / 2.0
   for i in 0 to n do :
     var theta = (2.0 * PI / to-double(n)) * to-double(i) + PI
-    pad p[i + 1] : bga-pad(0.05) at loc(r * cos(theta), r * sin(theta))
+    pad p[i + 1] : smd-pad(Circle(to-radius $ 0.05)) at loc(r * cos(theta), r * sin(theta))
 
   layer(Courtyard(Top)) = Rectangle(courtyard[0], courtyard[1])
   layer(Silkscreen("f-silk", Top)) = LineRectangle(courtyard[0], courtyard[1])
