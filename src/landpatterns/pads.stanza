@@ -172,28 +172,29 @@ TODO - Create a diagram here for the pad definition
 @param copper Defines the shape of the copper layer for this
   pad.
 @param mask Defines the shape fo the soldermask opening for this pad.
-  If this value is `false` then the soldermask will be created using
-  default expansion rules as applied by {@link apply-soldermask}
+  If this value is `false` then no soldermask opening will be created.
+  By default, the soldermask will be created using the `copper` shape
+  applying the default expansion rules.
 @param paste Defines the shape of the pastemask opening for this pad.
-  If this value is `false` then the `copper` shape is applied as the
-  default pastemask opening.
+  If this value is `false` then no pastemask opening is created.
+  By default, the pastemask opening is 1:1 with the copper shape.
+  TODO - add a rule for default pastemask contraction rules?
 <DOC>
 public pcb-pad smd-pad (
   copper:Shape,
-  mask:Shape|False = false,
+  mask:Shape|False = expand(copper, get-default-soldermask-amount()),
   paste:Shape|False = copper
   ) :
   name  = "SMD Pad"
   type  = SMD
   shape = copper
   match(paste):
-    (mask:Shape): layer(Paste(Top)) = mask
+    (m:Shape): make-pastemask(m)
     (x:False): false
   match(mask) :
-    (m:False) :
-      apply-soldermask()
-    (m:Shape) :
-      layer(SolderMask(Top)) = m
+    (m:Shape) : make-soldermask(m)
+    (m:False) : false
+
 
 
 ; TODO - Is this necessary - we should have a `rectangle-smd-pad` function
