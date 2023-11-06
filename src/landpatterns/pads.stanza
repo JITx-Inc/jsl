@@ -11,19 +11,6 @@
 ; TODO - Capsule vs Oval
 ;    why are we calling this two different things.
 ;
-; TODO - I think `apply-soldermask` is the right want to manage
-;    layers in pad. Using the `inside pcb-pad` seems like a very
-;    general purpose way to add this functionality to a user's pad
-;    definition.
-;  For example - maybe we have `apply-pastemask` and it allows for
-;    a mask shape and a `shrink` to undersize (as opposed to expand
-;    for the soldermask)
-;    It would be great if we could also have something like:
-;     if the pad is larger than X
-;     Apply solder paste to no more than 60% of the pad.
-;     if the pad is larger than Y
-;     Apply solder paste to no more than 50% of the pad.
-;
 ; TODO - I think the methods for creating pads should accept
 ;   arguments that are not `Shape` objects because it seems that
 ;   all `Shape` objects have a pose. When defining a pad -
@@ -123,8 +110,9 @@ This generator must be called from within a `pcb-pad` definition.
 @param mask-shape Creates an opening of this shape in the soldermask layer
   of the pad. If the pad is though-hole, then the soldermask shape is
   applied to bot top and bottom soldermask layers.
+
 <DOC>
-public defn apply-soldermask (mask-shape:Shape) :
+public defn make-soldermask (mask-shape:Shape) :
   inside pcb-pad:
     layer(SolderMask(Top)) = mask-shape
     if pad-type(self) == TH:
@@ -146,91 +134,35 @@ different shapes - specifically rectangle and non-convex pad shapes
   By default, the {@link SolderMaskRegistration} rule setting is used to set
   the default expansion amount.
 <DOC>
-public defn apply-soldermask (amount:Double = get-default-soldermask-amount()) :
-  val mask-shape =
-    match(pad-shape(self)) :
-      (s:Rectangle|Circle|RoundedRectangle|Capsule|DShape|ChamferedRectangle) :
-        expand(s, amount)
-      (s:Shape) :
-        ; FIXME: for other shapes we need an implementation of offset
-        s
+public defn make-soldermask (amount:Double = get-default-soldermask-amount()) :
+  inside pcb-pad:
+    val mask-shape = expand(pad-shape(self), amount)
+    make-soldermask(mask-shape)
 
-  inside pcb-landpattern:
-    apply-soldermask(mask-shape)
 
-; A "solder mask defined pad" is one where the soldermask opening is smaller than
-; the pad shape. This method takes a pad as an argument and converts it into a
-; soldermask-defined version based on its soldermask layer, if it exists, or the
-; pad shape if it does not.
 doc: \<DOC>
-Create a new `pcb-pad` definition with soldermask-defined pad opening.
-
-
-TODO - Need a diagram here showing the geometry of the created pad for
-  different shapes
-
-@param p Originating pad with or without soldermask. The copper shape of
-  the pad will be offset by `shrink` amount in all directions
-@param shrink Amount to shrink the copper pad to create the soldermask
-  defined opening. By default the {@link SolderMaskRegistration} rule is used
-  to define the amount of shrinkage.
-@return Newly created pad definition with soldermask reduced to create a
-  soldermask defined pad opening.
-  If the passed pad already has a soldermask shape defined that is smaller
-  than the copper pad shape, then this function **does not** create a new
-  pad definition. The originating pad definition is returned without
-  modification.
+Generate a paste mask opening by using this explicit shape.
+@param mask-shape Shape for the pastemask opening.
+@param side Which side of the board to apply the paste mask opening. By
+  default this is the top-side (convention).
 <DOC>
-public defn soldermask-defined (
-  p:Pad,
-  shrink:Double = get-default-soldermask-amount()
-  ) :
-  ; extract the pad data before conversion
-  val mask?   = find({specifier(_) is SolderMask}, layers(p))
-  ; special case: the mask is smaller than the shape already
-  if (mask? is-not False) and
-     (min-width([pad-shape(p)]) > min-width([shape $ (mask? as LayerShape)])) :
-    p
-  else :
-    pcb-pad SMD-p:
-      name  = to-string("%_, SMD" % [name(p)])
-      type  = pad-type(p)
-      shape = offset(pad-shape(p), shrink)
-      apply-soldermask(pad-shape(p))
-      for layer_ in filter({specifier(_) is-not SolderMask}, layers(p)) do:
-        layer(specifier(layer_)) = shape(layer_)
-    SMD-p
+public defn make-pastemask (mask-shape:Shape, side:Side = Top) :
+  inside pcb-pad:
+    layer(Paste(side)) = mask-shape
 
-; Convert a landpattern to solder mask defined. Geoms will be ignored.
 doc: \<DOC>
-Create a new `pcb-landpattern` with all soldermask defined pads.
-
-This function will not handle any `geom` statements in the passed
-landpattern. They will effectively be stripped from the returned
-landpattern definition.
-
-@param lp Landpattern that we will inspect for pads and then
-for each pad in the landpattern `soldermask-defined` will be
-applied.
-@param shrink Amount to shrink the copper pad to create the soldermask
-defined opening. By default the {@link SolderMaskRegistration} rule is used
-to define the amount of shrinkage.
-@return New `pcb-landpattern` definition with pads replaced.
+Generate a paste mask opening by expanding/shrinking the copper shape.
+@param amount Amount in mm to expand/shrink the current copper pad shape to
+generate the paste mask opening. If this value is positive, then the
+paste mask opening is expanded. If this value is negative, then the
+paste mask opening is shrunk.
+@param side Which side of the board to apply the paste mask opening. By
+default this is the top-side (convention when constructing pads).
 <DOC>
-public defn soldermask-defined (
-  lp:LandPattern,
-  shrink:Double = get-default-soldermask-amount()
-  ) :
-  pcb-landpattern SMD-l:
-    ; TODO - this does not seem to respect `model3d`, `external-names`, `description`
-    name = to-string("%_, soldermask defined" % [name(lp)])
-    ; TODO - check that this handles pad arrays
-    for pad_ in pads(lp) do:
-      pad (ref(pad_)) : soldermask-defined(def-pad(pad_), shrink) at pose(pad_)
-    for layer_ in layers(lp) do:
-      layer(specifier(layer_)) = shape(layer_)
-
-  SMD-l
+public defn make-pastemask (amount:Double, side:Side = Top) :
+  inside pcb-pad:
+    val mask-shape = expand(pad-shape(self), amount)
+    make-pastemask(mask-shape, side)
 
 doc: \<DOC>
 PCB Pad Definition for SMD device
@@ -285,7 +217,7 @@ public pcb-pad testpoint-pad (testpoint-shape:Shape) :
   name = "TestPoint-Pad"
   shape = testpoint-shape
   type = SMD
-  apply-soldermask()
+  make-soldermask()
 
 ; Create a circular test point pad
 public defn testpoint-pad (diameter:Double -- anchor:Anchor = C) :
@@ -305,9 +237,11 @@ TODO - Create a diagram here for the pad definition
 @param copper Shape of the copper land surrounding the hole.
 This shape is applied to both the top and bottom layers but
 not to the internal layers if any.
+
+TODO- make the same as smd-pad
 @param mask Defines the shape fo the soldermask opening for this pad.
 If this value is `false` then the soldermask will be created using
-default expansion rules as applied by {@link apply-soldermask}.
+default expansion rules as applied by {@link make-soldermask}.
 This soldermask shape will be applied to both the top and bottom
 layers.
 @param paste Defines the shape of the pastemask opening for this pad.
@@ -328,7 +262,7 @@ public pcb-pad pth-pad (
     layer(Paste(Top)) = paste as Shape
   match(mask) :
     (m:False) :
-      apply-soldermask()
+      make-soldermask()
     (m:Shape) :
       layer(SolderMask(Top)) = m
       layer(SolderMask(Bottom)) = m
