@@ -133,3 +133,11 @@ public defn max-distance (p1:Point, p2:Point) -> Point:
     p1
   else:
     p2
+
+doc: \<DOC>
+Helper Struct for Constructing Landpatterns
+<DOC>
+public defstruct PadInfo :
+  pad-id:Int|Ref
+  pad-def:Pad
+  loc:Pose

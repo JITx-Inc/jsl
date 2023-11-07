@@ -36,11 +36,6 @@ public defn draw-pol-marker (locs:Tuple<Pose>,
     layer(Silkscreen("pol", Top)) = loc(pol-x, pol-y + dist) * line
 
 
-defstruct PadInfo :
-  pad-id:Int|Ref
-  pad-def:Pad
-  loc:Pose
-
 doc: \<DOC>
 Generator for a dual-row SMD Landpattern
 
