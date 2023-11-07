@@ -1,6 +1,7 @@
 #use-added-syntax(jitx, tests)
 defpackage jsl/tests/utils:
   import core
+  import jitx
   import jitx/commands
 
 #if-defined(TESTING) :
@@ -38,3 +39,32 @@ defpackage jsl/tests/utils:
     min-hole-to-hole = 0.254
     min-pth-pin-solder-clearance = 3.0
   set-default-rules(default-rules)
+
+  val DEF-EPS = 1.0e-6
+
+  public defn almost-equal? (a:Double, b:Double, eps = DEF-EPS) -> True|False :
+    abs(a - b) < eps
+
+  public defn almost-equal? (A:Seqable<Double>, B:Seqable<Double>, eps = DEF-EPS) -> True|False :
+    label<True|False> return:
+      val A* = to-tuple(A)
+      val B* = to-tuple(B)
+      if length(A*) != length(A*):
+        return(false)
+      return $ for (a in A*, b in B*) all? :
+        almost-equal?(a, b, eps)
+
+  public defn almost-equal? (a:Point, b:Point, eps = DEF-EPS) -> True|False :
+    val checks = [
+      almost-equal?(x(a), x(b), eps),
+      almost-equal?(y(a), y(b), eps)
+    ]
+    all?({_}, checks)
+
+  public defn almost-equal? (a:Pose, b:Pose, eps = DEF-EPS) -> True|False :
+    val checks = [
+      almost-equal?(center(a), center(b), eps),
+      almost-equal?(angle(a), angle(b), eps),
+      flip-x?(a) == flip-x?(b)
+    ]
+    all?({_}, checks)
