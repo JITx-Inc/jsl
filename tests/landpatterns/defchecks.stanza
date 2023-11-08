@@ -46,17 +46,24 @@ public defn diff-series (x:Seqable<Double>) -> Seqable<Double> :
       One(x*[i] - x*[i - 1])
 
 doc: \<DOC>
+Retrieve the Y coordinates of all the rows [Sorted]
+<DOC>
+public defn row-Ys (x:PadGrid) -> Vector<Double> :
+  val ys = to-vector<Double>(keys(rows(x)))
+  qsort!(ys)
+  ys
+
+doc: \<DOC>
 Extract the pitch between the sequence of pad rows
 @return Ordered sequence of distance from one pad row to the next.
 If `x` is length N, the returned sequence will be N-1 in length.
 @throws ValueError If there are less than 2 rows in the found grid.
 <DOC>
 public defn row-pitch (x:PadGrid) -> Seqable<Double> :
-  val ys = to-vector<Double>(keys(rows(x)))
+  val ys = row-Ys(x)
   if length(ys) < 2:
     throw $ ValueError("Invalid Grid for Pitch Check: # rows = %_" % [length(ys)])
 
-  qsort! $ ys
   diff-series(ys)
 
 doc: \<DOC>
@@ -71,17 +78,24 @@ public defn check-row-pitch (x:PadGrid, exp-Pitch:Toleranced) -> True|False :
   ret
 
 doc: \<DOC>
+Retrieve the X coordinates of all the columns [Sorted]
+<DOC>
+public defn column-Xs (x:PadGrid) -> Vector<Double>:
+  val xs = to-vector<Double>(keys(columns(x)))
+  qsort!(xs)
+  xs
+
+doc: \<DOC>
 Extract the pitch between the sequence of pad columns
 @return Ordered sequence of distance from one pad column to the next.
 If `x` is length N, the returned sequence will be N-1 in length.
 @throws ValueError If there are less than 2 columns in the found grid.
 <DOC>
 public defn column-pitch (x:PadGrid) -> Seqable<Double> :
-  val xs = to-vector<Double>(keys(columns(x)))
+  val xs = column-Xs(x)
   if length(xs) < 2:
     throw $ ValueError("Invalid Grid for Pitch Check: # columns = %_" % [length(xs)])
 
-  qsort! $ xs
   diff-series(xs)
 
 doc: \<DOC>
