@@ -1,0 +1,210 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/BGA/pads:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/BGA
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+
+deftest(BGA) test-bga-pad:
+
+  val cfg = PadConfig-R(
+    copper-R-adj = (5 %),
+    mask-R-adj = (-1 %)
+    )
+
+  val pad-def = build-bga-pad(Circle(0.5), cfg)
+
+  pcb-landpattern padtest:
+    pad p[1] : pad-def at loc(0.0, 0.0)
+
+
+  val grid = PadGrid(padtest)
+
+  #EXPECT(length(rows(grid)) == 1)
+  #EXPECT(length(columns(grid)) == 1)
+
+  val padrows = to-tuple $ values(rows(grid))
+  val row = padrows[0]
+  val lp-pad = row[0]
+
+  val p = pad(lp-pad)
+  val shape = pad-shape(p) as Circle
+  #EXPECT(almost-equal?(radius(shape), 0.525))
+  val pad-pose = pose(lp-pad)
+  #EXPECT(center(pad-pose) == Point(0.0, 0.0))
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(p, not-empty)
+
+  var shapes = layer(p, SolderMask(Top))
+  #EXPECT(length(shapes) == 1)
+  val smShape = shapes[0] as Circle
+
+  #EXPECT(almost-equal?(radius(smShape), 0.495))
+  #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+  shapes = layer(p, Paste(Top))
+  #EXPECT(length(shapes) == 1)
+  val pShape = shapes[0] as Circle
+
+  ; NOTE - the pastemask here expands to
+  ;  be the same size at the soldermask opening
+  ;  not to the copper.
+  #EXPECT(almost-equal?(radius(pShape), 0.495))
+  #EXPECT(center(pShape) == Point(0.0, 0.0))
+
+
+deftest(BGA) test-bga-pad-no-paste:
+  val cfg = PadConfig-R(
+    copper-R-adj = (5 %),
+    mask-R-adj = (-1 %),
+    paste-R-adj = NoPasteMask
+    )
+
+  val pad-def = build-bga-pad(Circle(0.5), cfg)
+
+  pcb-landpattern padtest:
+    pad p[1] : pad-def at loc(0.0, 0.0)
+
+
+  val grid = PadGrid(padtest)
+
+  #EXPECT(length(rows(grid)) == 1)
+  #EXPECT(length(columns(grid)) == 1)
+
+  val padrows = to-tuple $ values(rows(grid))
+  val row = padrows[0]
+  val lp-pad = row[0]
+
+  val p = pad(lp-pad)
+  val shape = pad-shape(p) as Circle
+  #EXPECT(almost-equal?(radius(shape), 0.525))
+  val pad-pose = pose(lp-pad)
+  #EXPECT(center(pad-pose) == Point(0.0, 0.0))
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+  ])
+
+  expect-empty-others(p, not-empty)
+
+  var shapes = layer(p, SolderMask(Top))
+  #EXPECT(length(shapes) == 1)
+  val smShape = shapes[0] as Circle
+
+  #EXPECT(almost-equal?(radius(smShape), 0.495))
+  #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+
+deftest(BGA) test-bga-pad-explicit-paste:
+  val cfg = PadConfig-R(
+    copper-R-adj = (5 %),
+    mask-R-adj = (-1 %),
+    paste-R-adj = (-3 %)
+    )
+
+  val pad-def = build-bga-pad(Circle(0.5), cfg)
+
+  pcb-landpattern padtest:
+    pad p[1] : pad-def at loc(0.0, 0.0)
+
+
+  val grid = PadGrid(padtest)
+
+  #EXPECT(length(rows(grid)) == 1)
+  #EXPECT(length(columns(grid)) == 1)
+
+  val padrows = to-tuple $ values(rows(grid))
+  val row = padrows[0]
+  val lp-pad = row[0]
+
+  val p = pad(lp-pad)
+  val shape = pad-shape(p) as Circle
+  #EXPECT(almost-equal?(radius(shape), 0.525))
+  val pad-pose = pose(lp-pad)
+  #EXPECT(center(pad-pose) == Point(0.0, 0.0))
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(p, not-empty)
+
+  var shapes = layer(p, SolderMask(Top))
+  #EXPECT(length(shapes) == 1)
+  val smShape = shapes[0] as Circle
+
+  #EXPECT(almost-equal?(radius(smShape), 0.495))
+  #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+  shapes = layer(p, Paste(Top))
+  #EXPECT(length(shapes) == 1)
+  val pShape = shapes[0] as Circle
+
+  #EXPECT(almost-equal?(radius(pShape), 0.485))
+  #EXPECT(center(pShape) == Point(0.0, 0.0))
+
+
+deftest(BGA) test-bga-nsmd-pad:
+
+  val cfg = PadConfig-R(
+    copper-R-adj = (-5 %),
+    mask-R-adj = (5 %)
+    )
+
+  val pad-def = build-bga-pad(Circle(0.5), cfg)
+
+  pcb-landpattern padtest:
+    pad p[1] : pad-def at loc(0.0, 0.0)
+
+
+  val grid = PadGrid(padtest)
+
+  #EXPECT(length(rows(grid)) == 1)
+  #EXPECT(length(columns(grid)) == 1)
+
+  val padrows = to-tuple $ values(rows(grid))
+  val row = padrows[0]
+  val lp-pad = row[0]
+
+  val p = pad(lp-pad)
+  val shape = pad-shape(p) as Circle
+  #EXPECT(almost-equal?(radius(shape), 0.475))
+  val pad-pose = pose(lp-pad)
+  #EXPECT(center(pad-pose) == Point(0.0, 0.0))
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(p, not-empty)
+
+  var shapes = layer(p, SolderMask(Top))
+  #EXPECT(length(shapes) == 1)
+  val smShape = shapes[0] as Circle
+
+  #EXPECT(almost-equal?(radius(smShape), 0.525))
+  #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+  shapes = layer(p, Paste(Top))
+  #EXPECT(length(shapes) == 1)
+  val pShape = shapes[0] as Circle
+
+  ; NOTE - NSMD the pastemask here expands to
+  ;  be the same size at the copper pad - not to
+  ;  the soldermask opening
+  #EXPECT(almost-equal?(radius(pShape), 0.475))
+  #EXPECT(center(pShape) == Point(0.0, 0.0))

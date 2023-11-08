@@ -1,0 +1,259 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/BGA/planner:
+  import core
+  import math
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns/BGA/pads
+  import jsl/landpatterns/pad-planner
+  import jsl/geometry/basics
+  import jsl/errors
+
+
+val DEF-PAD-CONFIG = PadConfig-R()
+
+doc: \<DOC>
+Default BGA Pad Planner
+This pad planner will create circular pads for each BGA
+ball location. The user can use the `pad-config` to
+modify the construction of each pad including the soldermask
+and pastemask openings.
+<DOC>
+public defstruct BGA-PadPlanner <: PadPlanner :
+  pad-config:PadConfig with: (default => DEF-PAD-CONFIG)
+
+doc: \<DOC>
+Generate the grid sequence for the BGA Pad Planner
+For the BGA pad planners, there is often a particular
+grid geometry required to generate the pads in question.
+This function can be overriden to create a pad grid that
+is customized to the planner.
+
+Grid is assumed to be in `row-major` order.
+
+@param pitch Spacing between pads. If this value is a `Double` then
+the same pitch is used for rows and columns.
+If this is a `Dims` type, then the `width` is the column pitch and
+the `height` is the row pitch.
+<DOC>
+public defmulti grid (x:BGA-PadPlanner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose>
+
+doc: \<DOC>
+Default grid sequence is a standard square cell grid in row-major form
+<DOC>
+public defmethod grid (bga:BGA-PadPlanner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose> :
+  to-seq $ match(pitch):
+    (p:Double):
+      grid-locs(rows, columns, p, p)
+    (pa:Dims):
+      grid-locs(rows, columns, y(pa), x(pa))
+
+doc: \<DOC>
+Default Pad Shaper for BGA packages.
+This accepts a `Dims` object and will convert
+it to a `Circle` using the `x` dimension of the `Dims`.
+<DOC>
+public defn BGA-Pad-Shaper (s:Dims) -> Shape :
+  Circle(to-radius $ x(s))
+
+public defmethod shape-generator (bga:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False :
+  if not active?(bga, row, column): false
+  else: BGA-Pad-Shaper
+
+public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Pad)|False :
+  val func? = shape-generator(x, row, column)
+  match(func?):
+    (x:False): false
+    (f): build-bga-pad{f(_0) as Circle, pad-config(x)}
+    ;  pcb-struct is broken - so I work around with a closure.
+    ;      jsl/landpatterns/BGA/pads/bga-pad{f(_0), pad-config(x)}
+
+
+doc: \<DOC>
+Full Matrix - All Pads in the grid are active
+<DOC>
+public defstruct Full-Matrix-Planner <: BGA-PadPlanner :
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+
+public defmethod active? (x:Full-Matrix-Planner, row:Int, column:Int) -> True|False:
+  true
+
+public defenum StaggerPhase :
+  Even-Phase
+  Odd-Phase
+
+doc: \<DOC>
+Staggered Matrix - Every other pad is in-active.
+
+TODO - Diagram here
+
+This pad planner assumes that the grid is structured
+as
+
+<DOC>
+public defstruct Staggered-Matrix-Planner <: BGA-PadPlanner :
+  doc: \<DOC>
+  Phase indicates whether the first row pad 0 is empty or populated.
+  This is used to differentiate between the two pattern cases:
+
+  Pattern #1 - `Odd-Phase` :
+
+  ```
+    X | O | X  ...
+    O | X | O  ...
+    ...
+  ```
+
+  Pattern #2 - `Even-Phase` :
+
+  ```
+    O | X | O  ...
+    X | O | X  ...
+    ...
+  ```
+
+  By default this function uses `Even-Phase`
+  <DOC>
+  phase:StaggerPhase with: (default => Even-Phase)
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+
+public defmethod active? (x:Staggered-Matrix-Planner, row:Int, column:Int) -> True|False:
+  val row-offset = 1 when phase(x) == Even-Phase else 0
+  ((row + row-offset) % 2) == (column % 2)
+
+doc: \<DOC>
+Equilateral Triangle Matrix - Similar to Staggered but all pads are equidistant.
+
+TODO - Diagram
+
+<DOC>
+public defstruct EquilateralTriangle-Matrix-Planner <: Staggered-Matrix-Planner :
+  doc: \<DOC>
+  See Staggered Matrix
+  <DOC>
+  phase:StaggerPhase with: (
+    as-method => true,
+    default => Even-Phase
+  )
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+
+public defmethod grid (x:EquilateralTriangle-Matrix-Planner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose> :
+  to-seq $ match(pitch):
+    (p:Double):
+      val vertical   = sqrt(3.0) * 0.5 * p
+      val horizontal = 0.5 * p
+      grid-locs(rows, columns, horizontal, vertical)
+    (pa:Dims):
+      throw $ ValueError("Asymmetric Grid Pitch Not-Allowed for Equilateral Triangle Matrix - Try Staggered-Matrix-Planner Instead")
+
+doc: \<DOC>
+Define a contiguous region of pads in a BGA matrix
+This allows us to define regions where the pads are
+either active or inactive.
+<DOC>
+public defstruct PadIsland :
+  rows:Range, ; the range of rows to depopulate
+  columns:Range, ; the range of columns to depopulate
+
+doc: \<DOC>
+Check if a row, column in the grid is a member of the Pad Island.
+<DOC>
+public defn in-range? (p:PadIsland, row:Int, column:Int) -> True|False :
+  ; defn in-range? (x:Int, r:Range) -> True|False:
+  ;   label<True|False> return:
+  ;     if x < start(r):
+  ;       return(false)
+  ;     if x >= end(r):
+  ;       return(inclusive?(r))
+  ;     return(true)
+  ;in-range?(row, rows(p)) and in-range?(column, columns(p))
+  ; This seems really inefficent to check this way, especially for
+  ; larger BGAs - but the `Range` object is not trivial to check
+  ; for `in-range?`
+  contains?(rows(p), row) and contains?(columns(p), column)
+
+doc: \<DOC>
+Perimeter Matrix - Full matrix with an island of pads in-active.
+
+TODO - Diagram
+<DOC>
+public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
+  doc: \<DOC>
+  Island of Pads that will be marked inactive.
+  Typically, this will be an interior region near
+  the center of the device.
+  This argument can be either a single `PadIsland` or a
+  `Tuple<PadIsland>`. In the `Tuple` case, the union of
+  all `PadIsland`s in the tuple forms the inactive region.
+  <DOC>
+  inactive:PadIsland|Tuple<PadIsland>
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+
+defn not-inactive? (inactive:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
+  match(inactive):
+    (island:PadIsland):
+      not in-range?(island, row, column)
+    (islands:Tuple<PadIsland>):
+      for island in islands all?:
+        not in-range?(island, row, column)
+
+public defmethod active? (p:Perimeter-Matrix-Planner, row:Int, column:Int) -> True|False :
+  not-inactive?(inactive(p), row, column)
+
+doc: \<DOC>
+Thermally Enhanced Matrix
+
+TODO - Diagram
+
+<DOC>
+public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
+  doc: \<DOC>
+  Island of Pads that will be marked inactive.
+  Typically, this will be an interior region near
+  the center of the device.
+  This argument can be either a single `PadIsland` or a
+  `Tuple<PadIsland>`. In the `Tuple` case, the union of
+  all `PadIsland`s in the tuple forms the inactive region.
+  <DOC>
+  inactive:PadIsland|Tuple<PadIsland> with: (as-method => true)
+  doc: \<DOC>
+  Island of Pads that will be marked active.
+  This island will override the `inactive` island.
+  This region is typically an interior region near
+  the center of the device and enclosed by the `inactive` island.
+
+  This argument can be either a single `PadIsland` or a
+  `Tuple<PadIsland>`. In the `Tuple` case, the union of
+  all `PadIsland`s in the tuple forms the active center region.
+  <DOC>
+  active:PadIsland|Tuple<PadIsland>
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+
+defn is-active? (active:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
+  match(active):
+    (island:PadIsland):
+      in-range?(island, row, column)
+    (islands:Tuple<PadIsland>):
+      for island in islands any?:
+        in-range?(island, row, column)
+
+public defmethod active? (p:ThermallyEnhanced-Matrix-Planner, row:Int, column:Int) -> True|False :
+  is-active?(active(p), row, column) or
+    not-inactive?(inactive(p), row, column)
+

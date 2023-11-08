@@ -1,0 +1,224 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/BGA/package:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/pad-planner
+  import jsl/geometry/basics
+  import jsl/landpatterns/BGA
+  import jsl/landpatterns/packages
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+deftest(BGA) test-full-simple :
+  ; This test is based on the TI, TXB0104NMN
+  ; Datasheet:
+  ;  https://www.ti.com/lit/ds/symlink/txb0104.pdf
+  ;
+  ; NSMD variant of the recommended land pattern
+
+  val planner = Full-Matrix-Planner(
+    PadConfig-D(
+      copper-D-adj = -0.05,
+      mask-D-adj = 0.0,
+    )
+  )
+
+  val body = PackageBody(
+    2.5 +/- 0.1,
+    2.0 +/- 0.1,
+    1.0 +/- 0.1
+  )
+
+  val pkg = BGA(
+    num-leads = 12,
+    rows = 3,
+    columns = 4,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner
+  )
+
+  val n = name(pkg)
+  #EXPECT(n == "BGA12N50P4X3_250X200X100")
+
+  val lp = create-landpattern(pkg)
+
+  val exp-Pitch = 0.5 +/- (1 %)
+
+  val grid = PadGrid(lp)
+
+  #EXPECT(length(rows(grid)) == 3)
+  #EXPECT(length(columns(grid)) == 4)
+
+  #EXPECT(check-row-pitch(grid, exp-Pitch))
+  #EXPECT(check-column-pitch(grid, exp-Pitch))
+
+  ; High Level Check on the landpattern
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(lp, not-empty)
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-0.5, 0.0, 0.5]))
+
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [-0.75, -0.25, 0.25, 0.75]))
+
+  for row in rows(grid) do:
+    val lp-pads = value(row)
+    #EXPECT(length(lp-pads) == 4)
+
+    for lp-pad in lp-pads do:
+      ; Here I'm checking that the created pads are
+      ;  the right shape and size.
+      val pd = pad(lp-pad)
+
+      ; Copper
+      val shape = pad-shape(pd) as Circle
+      #EXPECT(almost-equal?(radius(shape), to-radius(0.25)))
+
+      ; Soldermask
+      var shapes = layer(pd, SolderMask(Top))
+      #EXPECT(length(shapes) == 1)
+      val smShape = shapes[0] as Circle
+      #EXPECT(almost-equal?(radius(smShape), to-radius(0.3)))
+      #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+      ; Pastemask
+      shapes = layer(pd, Paste(Top))
+      #EXPECT(length(shapes) == 1)
+      val pShape = shapes[0] as Circle
+
+      ; NOTE - the pastemask here expands to
+      ;  be the same size at the copper
+      #EXPECT(almost-equal?(radius(pShape), to-radius(0.25)))
+      #EXPECT(center(pShape) == Point(0.0, 0.0))
+
+deftest(BGA) test-perimeter-simple :
+  ; This test is based on the TI, TPA6203A1GQVR
+  ; Datasheet:
+  ;  https://www.ti.com/lit/ds/symlink/tpa6203a1.pdf
+  ;
+  ; Drawing:
+  ;  https://www.ti.com/lit/ml/mpbg144c/mpbg144c.pdf
+  ;
+  ; NSMD
+
+  val planner = Perimeter-Matrix-Planner(
+    ; Pad A2 is not present
+    PadIsland(
+      0 through 0 ; Row A
+      1 through 1 ; Pin 2
+    )
+    PadConfig-D(
+      copper-D-adj = ipc-bga-copper(
+        NonSolderMaskDefined,
+        density-level = DensityLevelC
+        ),
+      mask-D-adj = 0.0,
+    )
+  )
+
+  val body = PackageBody(
+    2.0 +/- 0.1,
+    2.0 +/- 0.1,
+    0.71 +/- [0.06, 0.0]
+  )
+
+  val pkg = BGA(
+    num-leads = 9,
+    rows = 3,
+    columns = 3,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner
+  )
+
+  val n = name(pkg)
+  #EXPECT(n == "BGA9N50P3X3_200X200X71")
+
+  val lp = create-landpattern(pkg)
+
+  val exp-Pitch = 0.5 +/- (1 %)
+
+  val grid = PadGrid(lp)
+
+  #EXPECT(length(rows(grid)) == 3)
+  #EXPECT(length(columns(grid)) == 3)
+
+  #EXPECT(check-row-pitch(grid, exp-Pitch))
+  #EXPECT(check-column-pitch(grid, exp-Pitch))
+
+  ; High Level Check on the landpattern
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(lp, not-empty)
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-0.5, 0.0, 0.5]))
+
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [-0.5, 0.0, 0.5]))
+
+  ; This pad should not be present
+  val missing = find-pad-by-ref(lp, Ref("A2"))
+  #EXPECT(missing == false)
+
+  ; The rows get sorted in ascending order
+  ;  so the last row is `0.5mm` and corresponds
+  ;  with row A
+  val abnormal-row = get-row(grid, 2)
+  #EXPECT(length(abnormal-row) == 2)
+
+  defn get-X (v:LandPatternPad) -> Double :
+    x $ center $ pose(v)
+  val X-pos = map<Double>(get-X, abnormal-row)
+  #EXPECT(almost-equal?(X-pos, [-0.5, 0.5]))
+
+  var normal-row = get-row(grid, 1)
+  #EXPECT(length(normal-row) == 3)
+  normal-row = get-row(grid, 0)
+  #EXPECT(length(normal-row) == 3)
+
+
+  for (row in rows(grid), i in 0 to false) do:
+    val lp-pads = value(row)
+
+    for lp-pad in lp-pads do:
+
+      ; Here I'm checking that the created pads are
+      ;  the right shape and size.
+      val pd = pad(lp-pad)
+
+      ; Copper
+      val shape = pad-shape(pd) as Circle
+      #EXPECT(almost-equal?(radius(shape), to-radius(0.255)))
+
+      ; Soldermask
+      var shapes = layer(pd, SolderMask(Top))
+      #EXPECT(length(shapes) == 1)
+      val smShape = shapes[0] as Circle
+      #EXPECT(almost-equal?(radius(smShape), to-radius(0.3)))
+      #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+      ; Pastemask
+      shapes = layer(pd, Paste(Top))
+      #EXPECT(length(shapes) == 1)
+      val pShape = shapes[0] as Circle
+
+      ; NOTE - the pastemask here expands to
+      ;  be the same size at the copper
+      #EXPECT(almost-equal?(radius(pShape), to-radius(0.255)))
+      #EXPECT(center(pShape) == Point(0.0, 0.0))
