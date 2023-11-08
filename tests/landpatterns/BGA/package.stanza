@@ -28,9 +28,9 @@ deftest(BGA) test-full-simple :
   )
 
   val body = PackageBody(
-    2.5 +/- 0.1,
-    2.0 +/- 0.1,
-    1.0 +/- 0.1
+    width = 2.5 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 1.0 +/- 0.1
   )
 
   val pkg = BGA(
@@ -128,9 +128,9 @@ deftest(BGA) test-perimeter-simple :
   )
 
   val body = PackageBody(
-    2.0 +/- 0.1,
-    2.0 +/- 0.1,
-    0.71 +/- [0.06, 0.0]
+    width = 2.0 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 0.71 +/- [0.06, 0.0]
   )
 
   val pkg = BGA(

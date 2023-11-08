@@ -9,7 +9,11 @@ defpackage jsl/tests/landpatterns/packages:
 
 deftest(packages) test-basic:
 
-  val a = PackageBody(min-max(1.0, 2.0), min-max(2.0, 3.0), min-max(4.0, 5.0))
+  val a = PackageBody(
+    width = min-max(1.0, 2.0),
+    length = min-max(2.0, 3.0),
+    height = min-max(4.0, 5.0)
+    )
 
   #EXPECT(width(a) is Toleranced)
   #EXPECT(length(a) is Toleranced)
@@ -21,7 +25,12 @@ deftest(packages) test-basic:
 
   #EXPECT(anchor(a) == C)
 
-  val b = PackageBody(typ(1.0), typ(2.0), typ(3.0), E )
+  val b = PackageBody(
+    width = typ(1.0),
+    length = typ(2.0),
+    height = typ(3.0),
+    anchor = E
+    )
 
   #EXPECT(anchor(b) == E)
 
@@ -37,4 +46,6 @@ deftest(packages) test-ensures:
   for test-vec in test-vecs do:
     val [w,l,h] = test-vec
 
-    expect-throw({PackageBody(w, l, h)})
+    expect-throw(
+      {PackageBody(width = w, length = l, height = h)}
+      )
