@@ -89,6 +89,19 @@ with:
   equalable => true
   hashable => true
   printer => true
+  constructor => #PackageBody
+
+doc: \<DOC>
+Create a Package Body as a rectangular cuboid.
+<DOC>
+public defn PackageBody (
+  --
+  width:Toleranced,
+  length:Toleranced,
+  height:Toleranced,
+  anchor:Anchor = C
+  ):
+  #PackageBody(width, length, height, anchor)
 
 doc: \<DOC>
 Physical Envelope of the package body.

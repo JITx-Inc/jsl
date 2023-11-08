@@ -97,7 +97,7 @@ public defn make-SOIC-narrow-body (
   height:Toleranced = min-max(1.35, 1.75),
   anchor:Anchor = C
   ) -> PackageBody :
-  PackageBody(width, length, height, anchor)
+  #PackageBody(width, length, height, anchor)
 
 doc: \<DOC>
 Create a Wide SOIC PackageBody
@@ -119,7 +119,7 @@ public defn make-SOIC-wide-body (
   height:Toleranced = min-max(2.35, 2.65)
   anchor:Anchor = C
   ) -> PackageBody :
-  PackageBody(width, length, height, anchor)
+  #PackageBody(width, length, height, anchor)
 
 doc: \<DOC>
 SOIC Standard Package Type
