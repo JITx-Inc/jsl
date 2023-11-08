@@ -86,7 +86,7 @@ public defn make-dual-row-smd-landpattern (
         (i:Int):
           pad p[i] : pad-def(p) at loc(p)
         (x:Ref):
-          pad x : pad-def(p) at loc(p)
+          pad (x) : pad-def(p) at loc(p)
 
     ; TODO Move this to a different function so that this can be composable?
     ;  - `make-courtyard`
