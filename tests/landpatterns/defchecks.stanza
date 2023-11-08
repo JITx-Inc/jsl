@@ -1,4 +1,4 @@
-#use-added-syntax(jitx)
+#use-added-syntax(jitx, tests)
 defpackage jsl/tests/landpatterns/defchecks:
   import core
   import collections
@@ -135,3 +135,111 @@ public defn find-pad-by-ref (lp-def:LandPattern, pin-id:Int|Ref) -> LandPatternP
     ref(p) == r
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Layer Check Tools
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; These tools are used to verify the layer output
+;  of a pad or landpattern matches expectations.
+
+#if-defined(TESTING):
+  ; This bit of tom foolery is to work around the way that certain layers
+  ;   are defined.
+  ; Because `Silkscreen(...)` is defined with a string name - I can't just
+  ;  add `Silkscreen` to a set. I have to add a special identifier that
+  ;  I can handle differently. Here I add that custom specifier to the
+  ;  `LayerSpecifier` type.
+  ;
+  ; The user can then pass `TopSilkscreen()` as an expected layer and
+  ;  these functions will not cause a failure if silkscreen on the top
+  ;  layer is encountered in a pad/landpattern definition.
+  #for (FakeType in [TopSilkscreen, BottomSilkscreen, AnyForbidCopper]):
+
+    public defstruct FakeType <: LayerSpecifier :
+      ; Hackity Hack
+      ;  I evidently can't create an empty `defstruct`
+      dummy:Int
+    with:
+      hashable => true
+      equalable => true
+      printer => true
+
+    public defn FakeType () -> FakeType :
+      FakeType(1)
+
+
+  val all-layers = to-hashset<LayerSpecifier>([
+    Courtyard(Top)
+    Courtyard(Bottom)
+    Cutout()
+    SolderMask(Top)
+    SolderMask(Bottom)
+    Paste(Top)
+    Paste(Bottom)
+    Glue(Top)
+    Glue(Bottom)
+    Finish(Top)
+    Finish(Bottom)
+    TopSilkscreen()
+    BottomSilkscreen()
+    ; Not possible to fully enumerate
+    ; Silkscreen("MyGraphics", Top)
+    ; Silkscreen("MyGraphics", Bottom)
+    BoardEdge()
+    ForbidVia()
+    ; Not possible to fully enumerate
+    ; ForbidCopper()
+    AnyForbidCopper()
+    ])
+
+  defn minus<?T> (a:HashSet<?T>, b:HashSet<T>) -> HashSet<T> :
+    to-hashset<T> $ for elem in a seq? :
+      None() when get(b, elem) else One(elem)
+
+  doc: \<DOC>
+  Check for unexpected Layers
+  This function is used to check if a {@link Landpattern} or
+  {@link Pad} has any content on layers where we don't expect to
+  see content.
+
+  This function calls `#EXPECT` to fail a unit test if unexpected
+  content is found.
+
+  @param lp Definition that we are trying to inspect.
+  @param not-empty Set of layers that we expect to see content on. All
+    other layers will be checked for content. Think of this argument as a
+    white-list of layers that are allowed to have content.
+  @return Tuple of the layers that had unexpected content.
+  <DOC>
+  public defn expect-empty-others (lp:LandPattern|Pad, not-empty:HashSet<LayerSpecifier>) -> Tuple<LayerSpecifier> :
+    val exp-empty = all-layers - not-empty
+
+    val layShapes = layers(lp)
+
+    ; Handle Normal Layer Specifiers - Normal here means
+    ;   layer specifiers that don't have a random string
+    ;   or layer number that can't be known ahead of time.
+    val unexpected-normal = for layShape in layShapes seq? :
+      val ls = specifier(layShape)
+      val fail = get(exp-empty, ls)
+      One(ls) when fail else None()
+
+    ; Abnormal layers include unguessable strings in them
+    ;   that can't be handled with a blacklist set.
+    val unexpected-abnormal = for layShape in layShapes seq? :
+        match(specifier(layShape)):
+          (x:Silkscreen):
+            if get(exp-empty, TopSilkscreen()) and side(x) == Top:
+              One(x)
+            else if get(exp-empty, BottomSilkscreen()) and side(x) == Bottom:
+              One(x)
+            else:
+              None()
+          (x:ForbidCopper):
+            One(x) when get(exp-empty, AnyForbidCopper()) else None()
+          (x):
+            ; Ignore all others because they are handled in the
+            ;  `Normal` unexpected for loop.
+            None()
+    val ret = to-tuple $ cat(unexpected-normal, unexpected-abnormal)
+    #EXPECT(ret == [])
+    ret
