@@ -150,6 +150,18 @@ public defn make-pastemask (mask-shape:Shape, side:Side = Top) :
   inside pcb-pad:
     layer(Paste(side)) = mask-shape
 
+
+doc: \<DOC>
+Paste Mask Opening Style
+This enum provides flags that can indicate the style of
+pastemask to generate. This can often be useful for
+generating a pastemask layer that conforms to certain
+norms.
+<DOC>
+public defenum PasteMaskStyle:
+  NominalPasteMask
+  NoPasteMask
+
 doc: \<DOC>
 Generate a paste mask opening by expanding/shrinking the copper shape.
 @param amount Amount in mm to expand/shrink the current copper pad shape to

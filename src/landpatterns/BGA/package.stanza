@@ -1,0 +1,179 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/BGA/package:
+  import core
+  import math
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/geometry/basics
+  import jsl/landpatterns/helpers
+  import jsl/errors
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/BGA/planner
+
+doc: \<DOC>
+Ball Grid Array Package
+The BGA package use a 2-D grid of rows (letters) and
+columns (integers). The grid is typically delineated
+in row-major order.
+<DOC>
+public defstruct BGA <: Package :
+  doc: \<DOC>
+  Total number of leads for the BGA Grid
+  <DOC>
+  num-leads:Int with: (
+    ensure => ensure-positive!,
+    as-method => true
+  )
+  doc: \<DOC>
+  Number of Rows of leads on this package
+  <DOC>
+  rows:Int with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Number of Columns of leads on this package
+  <DOC>
+  columns:Int with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  BGA Ball Lead Diameter in mm
+  <DOC>
+  lead-diam:Double with: (
+    ensure => ensure-positive!,
+  )
+  doc: \<DOC>
+  BGA Ball Spacing in mm
+
+  The ball spacing can either be:
+
+  1.  Same pitch between rows and columns.
+    1.  This is indicated with a `Double` value.
+  2.  Different pitch between rows from between columns.
+    1.  This is indicated with a `Dims` value
+    2.  The width is interpretted as the column pitch
+    3.  The height is interpretted as the row pitch
+  <DOC>
+  pitch:Double|Dims with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Package Body for the BGA.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Planner for the BGA package
+  The planner determines which pads will be created in the
+  grid. See {@link PadPlanner} for more info.
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the BGA Package
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
+with:
+  hashable => true
+  printer => true
+  constructor => #BGA
+
+doc: \<DOC>
+BGA Package Constructor
+@param rows Number of rows of ball leads (Y dimension)
+@param columns Number of columns of ball leads (X dimension)
+@param num-leads Total number of lead placements assuming
+all leads are present.
+@param lead-diam Size of the BGA ball lead.
+@param pitch Ball Spacing
+@param package-body Component body physical representation.
+@param pad-planner Pad Planner that decides which pads will
+be populated in the resultant footprints. The default is
+a {@link Full-Matrix-Planner} which populates all lead
+locations with a circular pad based on its default configs.
+@param lead-numbering Lead numbering generator that determines
+what `Ref`s are applied to each pad. By default, this function
+uses a {@link Grid-Numbering} which creates `A1`, `B7`, etc
+style references using `1-based` indexing (ie, no `C0`).
+<DOC>
+public defn BGA (
+  --
+  rows:Int,
+  columns:Int,
+  num-leads:Int,
+  lead-diam:Double,
+  pitch:Double|Dims,
+  package-body:PackageBody,
+  pad-planner:BGA-PadPlanner = Full-Matrix-Planner(),
+  lead-numbering:Numbering = Grid-Numbering(rows, columns)
+) -> BGA :
+  #BGA(
+    num-leads, rows, columns,
+    lead-diam, pitch,
+    package-body,
+    pad-planner,
+    lead-numbering
+  )
+
+public defmethod name (bga:BGA) -> String:
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+
+  val pitchStr = match(pitch(bga)):
+    (p:Double): to-deci(p)
+    (pa:Dims):
+      val px = to-deci $ x(pa)
+      val py = to-deci $ y(pa)
+      to-string("%_X%_" % [px, py])
+
+  val ballGrid = to-string("%_X%_" % [columns(bga), rows(bga)])
+
+  val b = package-body(bga)
+
+  to-string("BGA%_N%_P%__%_X%_X%_" % [
+    num-leads(bga),
+    pitchStr,
+    ballGrid,
+    to-deci $ typ $ width(b),
+    to-deci $ typ $ length(b),
+    to-deci $ typ $ height(b),
+  ])
+
+public defmethod make-landpattern (
+  x:BGA
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  ; For the BGA - we size the pad according to the
+  ;  ball diameter and allow the `PadConfig` object to
+  ;  drive the pad sizing.
+  val pad-size = Dims(lead-diam(x), lead-diam(x))
+  ; Generate the grid
+  val planner = pad-planner(x) as BGA-PadPlanner
+  defn gen-pad-info () -> Seq<PadInfo> :
+    val grid = grid(planner, rows(x), columns(x), pitch(x))
+    for r in 0 to rows(x) seq-cat:
+      for (c in 0 to columns(x), pos in grid) seq? :
+        val pad-id = to-pad-id(lead-numbering(x), r, c)
+        val pad-gen? = pad-generator(planner, r, c)
+        match(pad-gen?):
+          (_:False): None()
+          (pad-gen):
+            One $ PadInfo(pad-id, pad-gen(pad-size), pos)
+
+  inside pcb-landpattern:
+
+    for p in gen-pad-info() do:
+      match(pad-id(p)):
+        (i:Int):
+          pad p[i] : pad-def(p) at loc(p)
+        (x:Ref):
+          pad (x) : pad-def(p) at loc(p)
+

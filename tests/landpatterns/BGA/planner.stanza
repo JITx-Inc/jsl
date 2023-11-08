@@ -1,0 +1,226 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/BGA/planner:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns/pad-planner
+
+  import jsl/landpatterns/BGA
+  import jsl/tests/utils
+
+#if-defined(TESTING):
+  defn build-locs (x:BGA-PadPlanner, rows:Int, cols:Int, pitch:Double|Dims) -> Seq<Pose>:
+    val grid = grid(x, rows, cols, pitch)
+    for r in 0 to rows seq-cat:
+      for (c in 0 to cols, pos in grid) seq?:
+        if active?(x, r, c): One(pos)
+        else: None()
+
+deftest(BGA) test-full-matrix:
+  val uut = Full-Matrix-Planner()
+
+  val obs = to-tuple $ build-locs(uut, 3, 3, 1.0)
+
+  #EXPECT(length(obs) == 9)
+
+  val exp = [
+    loc(-1.0, 1.0),
+    loc(0.0, 1.0),
+    loc(1.0, 1.0),
+    loc(-1.0, 0.0),
+    loc(0.0, 0.0),
+    loc(1.0, 0.0),
+    loc(-1.0, -1.0),
+    loc(0.0, -1.0),
+    loc(1.0, -1.0),
+  ]
+
+  #EXPECT(obs == exp)
+
+deftest(BGA) test-stagger-even-matrix:
+  val uut = Staggered-Matrix-Planner()
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-1.0, 2.0),
+    loc(1.0, 2.0),
+    loc(-2.0, 1.0),
+    loc(0.0, 1.0),
+    loc(2.0, 1.0),
+    loc(-1.0, 0.0),
+    loc(1.0, 0.0),
+    loc(-2.0, -1.0),
+    loc(0.0, -1.0),
+    loc(2.0, -1.0),
+    loc(-1.0, -2.0),
+    loc(1.0, -2.0),
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  #EXPECT(obs == exp)
+
+deftest(BGA) test-stagger-odd-matrix:
+  val uut = Staggered-Matrix-Planner(
+    Odd-Phase
+  )
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-2.0, 2.0),
+    loc(0.0, 2.0),
+    loc(2.0, 2.0),
+    loc(-1.0, 1.0),
+    loc(1.0, 1.0),
+    loc(-2.0, 0.0),
+    loc(0.0, 0.0),
+    loc(2.0, 0.0),
+    loc(-1.0, -1.0),
+    loc(1.0, -1.0),
+    loc(-2.0, -2.0),
+    loc(0.0, -2.0),
+    loc(2.0, -2.0),
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  #EXPECT(obs == exp)
+
+deftest(BGA) test-equilat-tri-even-matrix:
+
+  val uut = EquilateralTriangle-Matrix-Planner()
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-0.5, 1.7320508),
+    loc(0.5, 1.7320508),
+    loc(-1.0, 0.8660254)
+    loc(0.0, 0.8660254)
+    loc(1.0, 0.8660254)
+    loc(-0.5, 0.0),
+    loc(0.5, 0.0),
+    loc(-1.0, -0.8660254)
+    loc(0.0, -0.8660254)
+    loc(1.0, -0.8660254)
+    loc(-0.5, -1.7320508),
+    loc(0.5, -1.7320508),
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  for (exp-p in exp, i in 0 to false) do:
+    #EXPECT(almost-equal?(exp-p, obs[i]))
+
+deftest(BGA) test-equilat-tri-odd-matrix:
+
+  val uut = EquilateralTriangle-Matrix-Planner(
+    Odd-Phase
+  )
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-1.0, 1.7320508)
+    loc(0.0, 1.7320508)
+    loc(1.0, 1.7320508)
+    loc(-0.5, 0.8660254),
+    loc(0.5, 0.8660254),
+    loc(-1.0, 0.0)
+    loc(0.0, 0.0)
+    loc(1.0, 0.0)
+    loc(-0.5, -0.8660254),
+    loc(0.5, -0.8660254),
+    loc(-1.0, -1.7320508)
+    loc(0.0, -1.7320508)
+    loc(1.0, -1.7320508)
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  for (exp-p in exp, i in 0 to false) do:
+    #EXPECT(almost-equal?(exp-p, obs[i]))
+
+
+deftest(BGA) test-perim-matrix :
+  val uut = Perimeter-Matrix-Planner(
+    PadIsland(
+      1 through 3,
+      2 through 2,
+    )
+  )
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-2.0, 2.0),
+    loc(-1.0, 2.0),
+    loc(0.0, 2.0),
+    loc(1.0, 2.0),
+    loc(2.0, 2.0),
+
+    loc(-2.0, 1.0),
+    loc(-1.0, 1.0),
+    loc(1.0, 1.0),
+    loc(2.0, 1.0),
+
+    loc(-2.0, 0.0),
+    loc(-1.0, 0.0),
+    loc(1.0, 0.0),
+    loc(2.0, 0.0),
+
+    loc(-2.0, -1.0),
+    loc(-1.0, -1.0),
+    loc(1.0, -1.0),
+    loc(2.0, -1.0),
+
+    loc(-2.0, -2.0),
+    loc(-1.0, -2.0),
+    loc(0.0, -2.0),
+    loc(1.0, -2.0),
+    loc(2.0, -2.0),
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  #EXPECT(obs == exp)
+
+
+deftest(BGA) test-therm-enh-matrix :
+  val uut = ThermallyEnhanced-Matrix-Planner(
+    PadIsland(
+      1 through 3,
+      1 through 3,
+    ),
+    PadIsland(
+      2 through 2,
+      2 through 2,
+    )
+  )
+
+  val obs = to-tuple $ build-locs(uut, 5, 5, 1.0)
+
+  val exp = [
+    loc(-2.0, 2.0),
+    loc(-1.0, 2.0),
+    loc(0.0, 2.0),
+    loc(1.0, 2.0),
+    loc(2.0, 2.0),
+
+    loc(-2.0, 1.0),
+    loc(2.0, 1.0),
+
+    loc(-2.0, 0.0),
+    loc(0.0, 0.0),
+    loc(2.0, 0.0),
+
+    loc(-2.0, -1.0),
+    loc(2.0, -1.0),
+
+    loc(-2.0, -2.0),
+    loc(-1.0, -2.0),
+    loc(0.0, -2.0),
+    loc(1.0, -2.0),
+    loc(2.0, -2.0),
+  ]
+
+  #EXPECT(length(obs) == length(exp) )
+  #EXPECT(obs == exp)
