@@ -86,10 +86,10 @@ with:
 
 doc: \<DOC>
 BGA Package Constructor
-@param rows Number of rows of ball leads (Y dimension)
-@param columns Number of columns of ball leads (X dimension)
 @param num-leads Total number of lead placements assuming
 all leads are present.
+@param rows Number of rows of ball leads (Y dimension)
+@param columns Number of columns of ball leads (X dimension)
 @param lead-diam Size of the BGA ball lead.
 @param pitch Ball Spacing
 @param package-body Component body physical representation.
@@ -104,9 +104,9 @@ style references using `1-based` indexing (ie, no `C0`).
 <DOC>
 public defn BGA (
   --
+  num-leads:Int,
   rows:Int,
   columns:Int,
-  num-leads:Int,
   lead-diam:Double,
   pitch:Double|Dims,
   package-body:PackageBody,
