@@ -1,0 +1,50 @@
+defpackage tabgen/csv:
+  import core
+
+public defstruct CSV :
+  headers : Tuple<String>
+  rows : Tuple<Tuple<String>>
+
+public defn CSV () -> CSV :
+  CSV([], [])
+
+public defn read-to-lines (fpath:String) -> Seqable<String> :
+  val content = slurp(fpath)
+  for line in split(content, "\n") seq?:
+    val line* = trim $ line
+    if length(line) > 0:
+      One(line)
+    else:
+      None()
+
+public defn extract-header (line:String) -> Tuple<String> :
+  to-tuple $ split(line, ",")
+
+public defn pre-process (v:String) -> String:
+  v $> trim
+
+public defn extract-rows (lines:Tuple<String>, exp-length:Int) -> Tuple<Tuple<String>> :
+  to-tuple $ for line in lines seq:
+    val comps = to-tuple $ split(line, ",")
+    val comps* = map(pre-process, comps)
+    val num-cols = length(comps*)
+    val diff = exp-length - num-cols
+    val numEmpty = max(diff, 0)
+    to-tuple $ cat(comps*, repeat("", numEmpty))
+
+public defn extract-csv (fpath:String) -> CSV :
+  label<CSV> return:
+    val lines = to-tuple $ read-to-lines(fpath)
+
+    if length(lines) == 0 :
+      return(CSV())
+
+    val s = to-seq(lines)
+    val headLine = next(s)
+    val rowLines = to-tuple(s)
+
+    val headers = extract-header(headLine)
+    val rows = extract-rows(rowLines, length(headers))
+
+    return(CSV(headers, rows))
+

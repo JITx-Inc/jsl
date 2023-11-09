@@ -1,0 +1,7 @@
+packages tabgen/* defined-in "./src/"
+
+build main:
+  inputs:
+    tabgen/main
+  pkg: "pkgs"
+  o: "tabgen"

@@ -1,0 +1,22 @@
+defpackage tabgen/main:
+  import core
+  import collections
+  import arg-parser
+  import tabgen/dump
+  import tabgen/generate
+
+val CMDS = Vector<Command>()
+
+defn main () :
+
+  add(CMDS, setup-dump-cmd())
+  add(CMDS, setup-generate-cmd())
+
+  simple-command-line-cli(
+    description = "tabgen - Table Generator",
+    commands = to-tuple(CMDS),
+    default-command = false,
+    help? = true
+  )
+
+main()
