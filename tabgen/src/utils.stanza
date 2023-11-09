@@ -1,0 +1,5 @@
+defpackage tabgen/utils:
+  import core
+
+public defn eprint (msg:String|Printable) :
+  println(current-error-stream(), msg)
