@@ -11,5 +11,7 @@ build-test tests:
     jsl/tests/landpatterns/SOIC
     jsl/tests/landpatterns/IPC
     jsl/tests/landpatterns/BGA
+    jsl/tests/landpatterns/protrusions
+
   pkg: "test-pkgs"
   o: "jsl-tests"

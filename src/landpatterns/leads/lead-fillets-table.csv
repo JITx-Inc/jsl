@@ -1,0 +1,93 @@
+"Name", "Density", "Toe", "Heel", "Side", "Courtyard Excess"
+"SmallFlatRibbonLLeads", "A", 0.55, 0.45, 0.01, 0.5
+"SmallFlatRibbonLLeads", "B", 0.35, 0.35, -0.02, 0.25
+"SmallFlatRibbonLLeads", "C", 0.15, 0.25, -0.04, 0.1
+
+"BigFlatRibbonLLeads", "A", 0.55, 0.45, 0.05, 0.5
+"BigFlatRibbonLLeads", "B", 0.35, 0.35, 0.03, 0.25
+"BigFlatRibbonLLeads", "C", 0.15, 0.25, 0.01, 0.1
+
+"SmallGullWingLeads", "A", 0.55, 0.45, 0.01, 0.5
+"SmallGullWingLeads", "B", 0.35, 0.35, -0.02, 0.25
+"SmallGullWingLeads", "C", 0.15, 0.25, -0.04, 0.1
+
+"BigGullWingLeads", "A", 0.55, 0.45, 0.05, 0.5
+"BigGullWingLeads", "B", 0.35, 0.35, 0.03, 0.25
+"BigGullWingLeads", "C", 0.15, 0.25, 0.01, 0.1
+
+"JLeads", "A", 0.55, 0.10, 0.05, 0.5
+"JLeads", "B", 0.35, 0.00, 0.03, 0.25
+"JLeads", "C", 0.15, -0.10, 0.01, 0.1
+
+"BigRectangularLeads", "A", 0.55, 0.00, 0.05, 0.5
+"BigRectangularLeads", "B", 0.35, 0.00, 0.00, 0.25
+"BigRectangularLeads", "C", 0.15, 0.00, -0.05, 0.1
+
+"SmallRectangularLeads", "A", 0.30, 0.00, 0.05, 0.2
+"SmallRectangularLeads", "B", 0.20, 0.00, 0.00, 0.15
+"SmallRectangularLeads", "C", 0.10, 0.00, -0.05, 0.1
+
+"LeadlessConcaveCastellated", "A", 0.25, 0.65, 0.05, 0.5
+"LeadlessConcaveCastellated", "B", 0.15, 0.45, 0.00, 0.25
+"LeadlessConcaveCastellated", "C", 0.05, 0.45, 0.00, 0.1
+
+"CylindricalLeads", "A", 0.60, 0.2, 0.1, 0.5
+"CylindricalLeads", "B", 0.4, 0.1, 0.05, 0.25
+"CylindricalLeads", "C", 0.2, 0.02, 0.01, 0.1
+
+"LeadlessChipCarrierLeads", "A", 0.65, 0.25, 0.05, 0.5
+"LeadlessChipCarrierLeads", "B", 0.55, 0.15, -0.05, 0.25
+"LeadlessChipCarrierLeads", "C", 0.45, 0.05, -0.15, 0.1
+
+"ConcaveChipArrayLeads", "A", 0.55, -0.05, -0.05, 0.5
+"ConcaveChipArrayLeads", "B", 0.45, -0.07, -0.07, 0.25
+"ConcaveChipArrayLeads", "C", 0.35, -0.20, -0.10, 0.1
+
+"ConvexChipArrayLeads", "A", 0.55, -0.05, -0.05, 0.5
+"ConvexChipArrayLeads", "B", 0.45, -0.07, -0.07, 0.25
+"ConvexChipArrayLeads", "C", 0.35, -0.20, -0.10, 0.1
+
+"FlatChipArrayLeads", "A", 0.55, -0.05, -0.05, 0.5
+"FlatChipArrayLeads", "B", 0.45, -0.07, -0.07, 0.25
+"FlatChipArrayLeads", "C", 0.35, -0.20, -0.10, 0.1
+
+"ButtJointLeads", "A", 1.0, 1.0, 0.3, 1.5
+"ButtJointLeads", "B", 0.8, 0.8, 0.2, 0.8
+"ButtJointLeads", "C", 0.6, 0.6, 0.1, 0.2
+
+"InwardFlatRibbonLLeads", "A", 0.25, 0.8, 0.01, 0.5
+"InwardFlatRibbonLLeads", "B", 0.15, 0.5, -0.05, 0.25
+"InwardFlatRibbonLLeads", "C", 0.07, 0.2, -0.10, 0.1
+
+"FlatLugLeads", "A", 0.55, 0.45, 0.05, 0.5
+"FlatLugLeads", "B", 0.35, 0.35, 0.03, 0.25
+"FlatLugLeads", "C", 0.15, 0.25, 0.01, 0.1
+
+"QuadFlatNoLeads", "A", 0.4, 0.00, -0.04, 0.5
+"QuadFlatNoLeads", "B", 0.3, 0.00, -0.04, 0.25
+"QuadFlatNoLeads", "C", 0.2, 0.00, -0.04, 0.1
+
+"SmallOutlineNoLeads", "A", 0.3, 0.00, 0.05, 0.2
+"SmallOutlineNoLeads", "B", 0.2, 0.00, 0.00, 0.15
+"SmallOutlineNoLeads", "C", 0.1, 0.00, -0.05, 0.1
+
+"SmallOutlineFlatLeads", "A", 0.3, 0.00, 0.05, 0.2
+"SmallOutlineFlatLeads", "B", 0.2, 0.00, 0.00, 0.15
+"SmallOutlineFlatLeads", "C", 0.1, 0.00, -0.05, 0.1
+
+"ShortTwoPinCrystalLeads", "A", 0.7, 0.00, 0.5, 1.0
+"ShortTwoPinCrystalLeads", "B", 0.5, -0.10, 0.4, 0.5
+"ShortTwoPinCrystalLeads", "C", 0.3, -0.20, 0.3, 0.25
+
+"ShortAluminumElectrolyticLeads", "A", 0.7, 0.00, 0.5, 1.0
+"ShortAluminumElectrolyticLeads", "B", 0.5, -0.10, 0.4, 0.5
+"ShortAluminumElectrolyticLeads", "C", 0.3, -0.20, 0.3, 0.25
+
+"TallTwoPinCrystalLeads", "A", 1.0, 0.00, 0.6, 1.0
+"TallTwoPinCrystalLeads", "B", 0.7, -0.05, 0.5, 0.5
+"TallTwoPinCrystalLeads", "C", 0.4, -0.10, 0.4, 0.25
+
+"TallAluminumElectrolyticLeads", "A", 1.0, 0.00, 0.6, 1.0
+"TallAluminumElectrolyticLeads", "B", 0.7, -0.05, 0.5, 0.5
+"TallAluminumElectrolyticLeads", "C", 0.4, -0.10, 0.4, 0.25
+

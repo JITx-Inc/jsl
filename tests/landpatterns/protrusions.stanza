@@ -1,0 +1,96 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/protrusions:
+  import core
+  import collections
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/IPC
+  import jsl/landpatterns/leads/protrusions
+
+  import jsl/tests/utils
+
+; @NOTE - `HashSet` and `HashTable` are not Equalable and so do not
+;  implement `==` as of yet.
+defn expect-equal? (a:HashSet<DensityLevel>, b:HashSet<DensityLevel>) -> True|False :
+  #EXPECT(length(a) == length(b))
+  for v in a do:
+    #EXPECT(get(b, v))
+
+deftest(leads) test-protrusion-table:
+
+  val small = protrusion-table["SmallFlatRibbonLLeads"]
+
+  #EXPECT(name(small) == "SmallFlatRibbonLLeads")
+
+  var fls = fillets(small)
+  #EXPECT(length(fls) == 3)
+
+  var densities = to-hashset<DensityLevel> $ keys(fls)
+  val expDensities = to-hashset<DensityLevel> $ DensityLevels
+  expect-equal?(densities, expDensities)
+  ; #EXPECT(densities == expDensities)
+
+  val big = protrusion-table["BigFlatRibbonLLeads"]
+  #EXPECT(name(big) == "BigFlatRibbonLLeads")
+
+  fls = fillets(big)
+  #EXPECT(length(fls) == 3)
+
+  densities = to-hashset<DensityLevel> $ keys(fls)
+  expect-equal?(densities, expDensities)
+  ; #EXPECT(densities == expDensities)
+
+
+deftest(leads) test-protrusion-types:
+  ; Test that we have full density settings for
+  ;   all expected protrusion types
+  val protTypes = [
+    SmallFlatRibbonLLeads,
+    BigFlatRibbonLLeads,
+    SmallGullWingLeads,
+    BigGullWingLeads,
+    JLeads,
+    BigRectangularLeads,
+    SmallRectangularLeads,
+    LeadlessConcaveCastellated,
+    CylindricalLeads,
+    LeadlessChipCarrierLeads,
+    ConcaveChipArrayLeads,
+    ConvexChipArrayLeads,
+    FlatChipArrayLeads,
+    ButtJointLeads,
+    InwardFlatRibbonLLeads,
+    FlatLugLeads,
+    QuadFlatNoLeads,
+    SmallOutlineNoLeads,
+    SmallOutlineFlatLeads,
+    ShortTwoPinCrystalLeads,
+    TallTwoPinCrystalLeads,
+    ShortAluminumElectrolyticLeads,
+    TallAluminumElectrolyticLeads,
+  ]
+
+  ; Here I'm double checking that all the code paths work
+  ;  and that we have full densities for all
+  for protType in protTypes do:
+    val pt = protType()
+    #EXPECT(length(name(pt)) != 0 )
+    #EXPECT( pt == pt )
+    val h = hash(pt)
+    #EXPECT(h != 0) ; Hack
+    for dl in DensityLevels do:
+      val flts = lead-fillets(pt, density-level = dl)
+      #EXPECT(courtyard-excess(flts) > 0.0)
+
+deftest(leads) test-protrusion-spot-check:
+  ; Spot check a couple values
+  val a = SmallFlatRibbonLLeads()
+  val exp-A = LeadFillets(0.55,   0.45,    0.01,    0.5)
+  val obs-A = lead-fillets(a, density-level = DensityLevelA)
+  #EXPECT(almost-equal?(to-tuple(exp-A), to-tuple(obs-A)))
+
+  val b = ShortTwoPinCrystalLeads()
+  val exp-B = LeadFillets(0.5, -0.10, 0.4, 0.5)
+  val obs-B = lead-fillets(b, density-level = DensityLevelB)
+  #EXPECT(almost-equal?(to-tuple(exp-B), to-tuple(obs-B)))
