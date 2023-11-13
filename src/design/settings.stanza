@@ -9,6 +9,9 @@ public pcb-enum ocdb/utils/design-vars/DensityLevel:
   DensityLevelB
   DensityLevelC
 
+public val DensityLevels = to-tuple $ for i in 0 to DensityLevel-length seq:
+  DensityLevel(i)
+
 public var OPERATING-TEMPERATURE : Toleranced
 OPERATING-TEMPERATURE = min-max(0.0 25.0)
 
