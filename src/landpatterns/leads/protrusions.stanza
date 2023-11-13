@@ -1,0 +1,222 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/leads/protrusions:
+  import core
+  import collections
+  import jitx
+
+  import jsl/landpatterns/leads/lead-fillets-table with:
+    prefix => #FILLETS-
+
+  import jsl/design/settings
+  import jsl/errors
+  import jsl/landpatterns/helpers
+
+doc: \<DOC>
+Electrical Lead Fillets
+This type encapsulates the specifications for the solder fillets
+on the leads of an electrical component
+
+TODO - Diagram Here for Toe, heel, and side fillet locations.
+
+@see IPC7351
+<DOC>
+public defstruct LeadFillets <: Hashable & Equalable:
+  doc: \<DOC>
+  Toe Fillet
+  The toe fillet is solder fillet that forms in the direction
+  away from the component body.
+  <DOC>
+  toe:Double
+  doc: \<DOC>
+  Heel Fillet
+  The heel fillet is the solder fillet that forms in the direction
+  underneath the component towards the center of the component
+  body.
+  <DOC>
+  heel:Double
+  doc: \<DOC>
+  Side Fillet
+  The side fillets are the solder fillets on either side of the lead.
+  <DOC>
+  side:Double
+  doc: \<DOC>
+  Courtyard Margin around the component
+  <DOC>
+  courtyard-excess:Double with: (ensure => ensure-positive!)
+
+with:
+  equalable => true
+  hashable => true
+  printer => true
+
+; Only for internal use because it is easy to get the ordering wrong.
+;  This is primarily just a convenience for extracting the table.
+defn LeadFillets (x:Tuple) -> LeadFillets :
+  LeadFillets(x[0], x[1], x[2], x[3])
+
+public defn to-tuple (x:LeadFillets) -> [Double, Double, Double, Double] :
+  [toe(x), heel(x), side(x), courtyard-excess(x)]
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   Protrusion Table
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+doc: \<DOC>
+Helper Struct for importing the lead fillets table.
+<DOC>
+public defstruct Lead-Fillet-Row :
+  name:String
+  density:DensityLevel
+  fillets:LeadFillets
+
+defn Lead-Fillet-Row (row:Tuple) -> Lead-Fillet-Row:
+  val name = row[0]
+  val density = switch(row[1]):
+    "A": DensityLevelA
+    "B": DensityLevelB
+    "C": DensityLevelC
+    else:
+      throw $ ValueError("Fillets Table Contains Invalid Density: %_" % [row[1]])
+
+  val lf = LeadFillets(row[2 through 5])
+  Lead-Fillet-Row(name, density, lf)
+
+defn extract-fillets-table (rows:Tuple) -> Tuple<Lead-Fillet-Row> :
+  val fillet-defs = to-tuple $ for (row in rows, i in 1 to false) seq:
+    try:
+      One $ Lead-Fillet-Row(row)
+    catch (e:Exception):
+      println("Failed to extract Fillet Table Row '%_': %~" % [i, e])
+      None()
+
+  val numErrors = for fillet-def in fillet-defs count:
+    fillet-def is None
+
+  if numErrors > 0:
+    throw $ ValueError("Failed to Extract the Fillet Definitions Table with %_ Errors" % [numErrors])
+  ; Filter out the `None()/One` and just give `Tuple<Lead-Fillet-Row>`
+  to-tuple $ seq?({_}, fillet-defs)
+
+val fillets-table:Tuple<Lead-Fillet-Row> = extract-fillets-table(#FILLETS-rows)
+
+public defstruct Protrusion-Def :
+  name:String
+  fillets:HashTable<DensityLevel, LeadFillets>
+
+defn build-fillet-cfgs (fname:String, table:Tuple<Lead-Fillet-Row>) -> HashTable<DensityLevel, LeadFillets> :
+  val cfgs = for row in table filter:
+    name(row) == fname
+  to-hashtable<DensityLevel, LeadFillets> $ for cfg in cfgs seq:
+      density(cfg) => fillets(cfg)
+
+public defn extract-protrusion-table (table:Tuple<Lead-Fillet-Row>) -> HashTable<String, Protrusion-Def> :
+  val names = unique $ map(name, table)
+  to-hashtable<String, Protrusion-Def> $ for name in names seq:
+    val fillet-cfgs = build-fillet-cfgs(name, table)
+    name => Protrusion-Def(name, fillet-cfgs)
+
+public val protrusion-table:HashTable<String, Protrusion-Def> = extract-protrusion-table(fillets-table)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   Protrusion Types
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+Lead Protrusion Base Type
+The lead protrusion is type for describing the number types of leads
+and how they interface to the land pattern pads of a PCB.
+<DOC>
+public deftype LeadProtrusion <: Equalable & Hashable
+
+doc: \<DOC>
+Name of the Lead Protrusion
+<DOC>
+public defmulti name (x:LeadProtrusion) -> String
+
+doc: \<DOC>
+Lead Fillets Accessor
+This method will return the lead fillet specifications for this
+land protrusion based on the current {@link DensityLevel} specification
+of the design.
+<DOC>
+public defmulti lead-fillets (x:LeadProtrusion -- density-level:DensityLevel = ?) -> LeadFillets
+
+; This is a bit of a hack - I can't use the keys of `protrusion-table` here
+;  as the symbols because they can created at runtime - where as the symbols
+;  in the #for binding must be static.
+; TODO - we may need to expand tabgen so that I can pass a template and have
+;  it generate the `#for` statement to a file programmatically.
+; TODO - Documentation for these types is going to near impossible.
+;  we need to consider whether this is the appropriate way to generate this
+;  or if a `tabgen` expansion will be need to be done.
+#for (typeSymbol in [
+    SmallFlatRibbonLLeads,
+    BigFlatRibbonLLeads,
+    SmallGullWingLeads,
+    BigGullWingLeads,
+    JLeads,
+    BigRectangularLeads,
+    SmallRectangularLeads,
+    LeadlessConcaveCastellated,
+    CylindricalLeads,
+    LeadlessChipCarrierLeads,
+    ConcaveChipArrayLeads,
+    ConvexChipArrayLeads,
+    FlatChipArrayLeads,
+    ButtJointLeads,
+    InwardFlatRibbonLLeads,
+    FlatLugLeads,
+    QuadFlatNoLeads,
+    SmallOutlineNoLeads,
+    SmallOutlineFlatLeads,
+    ShortTwoPinCrystalLeads,
+    TallTwoPinCrystalLeads,
+    ShortAluminumElectrolyticLeads,
+    TallAluminumElectrolyticLeads,
+  ],
+  typeName in [
+    "SmallFlatRibbonLLeads",
+    "BigFlatRibbonLLeads",
+    "SmallGullWingLeads",
+    "BigGullWingLeads",
+    "JLeads",
+    "BigRectangularLeads",
+    "SmallRectangularLeads",
+    "LeadlessConcaveCastellated",
+    "CylindricalLeads",
+    "LeadlessChipCarrierLeads",
+    "ConcaveChipArrayLeads",
+    "ConvexChipArrayLeads",
+    "FlatChipArrayLeads",
+    "ButtJointLeads",
+    "InwardFlatRibbonLLeads",
+    "FlatLugLeads",
+    "QuadFlatNoLeads",
+    "SmallOutlineNoLeads",
+    "SmallOutlineFlatLeads",
+    "ShortTwoPinCrystalLeads",
+    "TallTwoPinCrystalLeads",
+    "ShortAluminumElectrolyticLeads",
+    "TallAluminumElectrolyticLeads",
+  ]):
+  public deftype typeSymbol <: LeadProtrusion
+  public defn typeSymbol () -> typeSymbol :
+    val defs = protrusion-table[typeName]
+    new typeSymbol:
+      defmethod name (this) : name(defs)
+      defmethod lead-fillets (this -- density-level:DensityLevel = DENSITY-LEVEL) :
+        fillets(defs)[density-level]
+
+  defmethod equal? (a:typeSymbol, b:typeSymbol) -> True|False :
+    val eqFillets = for dl in DensityLevels all?:
+      lead-fillets(a, density-level = dl) == lead-fillets(b, density-level = dl)
+    name(a) == name(b) and eqFillets
+
+  defmethod hash (a:typeSymbol) -> Int :
+    val hFillets = sum $ for dl in DensityLevels seq:
+      hash(lead-fillets(a, density-level = dl))
+    hash(name(a)) + hFillets
+
+
