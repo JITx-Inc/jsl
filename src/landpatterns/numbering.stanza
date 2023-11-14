@@ -290,3 +290,24 @@ defn lookup-row-name (idx:Int, table:Tuple<Char>) -> String:
     print(buffer, table[char-index])
   to-string(buffer)
 
+doc: \<DOC>
+Cathode/Anode Numbering Scheme
+
+This numbering scheme is used for any two-pin component with
+polarity. This allows us to differentiate the positive (`c`) from the
+negative (`a`) terminals.
+<DOC>
+public deftype C-A-Numbering <: Numbering
+
+public defn C-A-Numbering () -> C-A-Numbering :
+  new C-A-Numbering
+
+public defmethod to-pad-id (x:C-A-Numbering, row:Int, column:Int) -> Int|Ref :
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  if (row > 1 or column > 0):
+    throw $ ValueError("Invalid Row or Column Index: r=%_ in [0,1] or c=%_ in [0]" % [row, column])
+
+  if row == 0: Ref("c")
+  else: Ref("a")
