@@ -189,3 +189,37 @@ deftest(pad-planner) test-funky-planner :
 
   val f11 = shape-generator(o, 1, 1)
   #EXPECT(f11 is False)
+
+deftest(pad-planner) test-pth-planner :
+
+  val o = PthPadPlanner()
+
+  for r in 0 to 4 do:
+    for c in 0 to 5 do:
+      #EXPECT( active?(o, r, c) )
+
+  val func? = shape-generator(o, 4, 3)
+
+  match(func?):
+    (func:(Dims -> Shape)):
+      val sh = func(Dims(11.0, 4.0))
+      match(sh):
+        (c:Capsule):
+          #EXPECT(width(c) == 11.0)
+          #EXPECT(height(c) == 4.0)
+          val p = pose(c)
+          #EXPECT(center(p) == Point(0.0, 0.0))
+          #EXPECT(angle(p) == 0.0)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
+
+  val hole-func? = hole-generator(o, 2, 1)
+  match(hole-func?):
+    (hole-func:(Dims -> Shape)):
+      val hole-shape = hole-func(Dims(1.0, 1.0))
+      match(hole-shape):
+        (c:Circle):
+          #EXPECT(radius(c) == 0.5)
+        (y): #EXPECT(y == "Invalid Shape Type Returned")
+    (x:False): #EXPECT(x == "Invalid Function Type Returned")
