@@ -50,8 +50,10 @@ have a common understanding between the generator and the planner:
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/pad-planner:
   import core
-  import jitx
+  import jitx with:
+    prefix(Rectangle) => jitx-
   import jsl/landpatterns/pads
+  import jsl/geometry/basics
 
 doc: \<DOC>
 Pad Planner Base Type
@@ -122,6 +124,83 @@ public defmethod pad-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> P
     (x:False): false
     (f): smd-pad{f(_0)}
 
+
+doc: \<DOC>
+Through-hole Pad Generator
+This function is an alternate to the `pad-generator` function. This
+function is used to generate through-hole pads where the `pad-generator`
+is for SMT pads.
+
+@param x Pad Planner (self)
+@param row Zero-based Index into the grid of a package's pad positions.
+@param column Zero-based Index into the grid of a package's pad positions.
+@return Pad Generator function with declared signature. This function
+will accept the following arguments:
+
+-  hole:Dims - Size of the plated-through hole (not accounting for plating)
+-  copper:Dims - Size of the pad annulus for the hole.
+
+This function will return a `pcb-pad` definition which uses the
+shape provided by `shape-generator` and the hole provided by `hole-generator`.
+<DOC>
+public defmulti th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims, Dims) -> Pad )|False
+
+doc: \<DOC>
+Default Through-Hole Pad Generator
+The default implementation will generate either plated or non-plated holes
+depending on whether the `shape-generator` returns true or false.
+For non-plated holes - the `copper:Dims` argument will be ignored.
+
+If the user tries to use `th-pad-generator` when `hole-generator`
+returns false - then no pad is created.
+<DOC>
+public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims, Dims) -> Pad )|False :
+  val shape-gen = shape-generator(x, row, column)
+  val hole-gen = hole-generator(x, row, column)
+
+
+  match(active?(x, row, column), shape-gen, hole-gen):
+    (a:False, f, h): false
+    (a:True, f:(Dims -> Shape), h:(Dims -> Shape)):
+      pth-pad{h(_0), f(_1)}
+    (a:True, f:False, h:(Dims -> Shape)):
+      defn npth-gen (hole:Dims, copper:Dims) -> Pad :
+        npth-pad(h(hole))
+      npth-gen
+    (a:True, f, h):
+      ; TODO - Log Warning Here ?
+      ; this is a exceptional case but I'm not sure it is an error
+      false
+
+doc: \<DOC>
+Hole Shape for Pad
+This function provides the user with the ability to create a
+plated through-hole pad instead of an SMT pad.
+
+@param x Pad Planner (self)
+@param row Zero-based Index into the grid of a package's pad positions.
+@param column Zero-based Index into the grid of a package's pad positions.
+
+@return If this function returns `false` then no hole is created.
+Otherwise, if a the function returns a shape, then holes of that
+shape will be created. Note - that you can pass any shape here but
+your fabricator may have limitations on what shapes it can create.
+
+TODO - Should we make this return `Circle|Capsule` instead of `Shape` ?
+  Holes in the board generally speaking are very expensive to make in
+  other shapes but I don't necessarily want to limit things here.
+  Perhaps with make non-Circle/Capsule shaped holes a check that is
+  disable-able so that the user can override.
+<DOC>
+public defmulti hole-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False
+
+doc: \<DOC>
+Default `hole-shape` - No Holes Created.
+@return Always `false`
+<DOC>
+public defmethod hole-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False :
+  false
+
 doc: \<DOC>
 Pad Planner that always returns a Shape Converter
 
@@ -171,3 +250,39 @@ public defmethod shape-generator (x:Pin1-PadPlanner, row:Int, column:Int) -> (Di
 ; TODO - Corner Pin Shapers
 ;  Make different pad shapes (possibly with pose offsets)
 ;  in the corner pads of say a QFN or QFP
+
+
+doc: \<DOC>
+Plated Through-Hole Pad Planner
+
+Basic Pad Planner for PTH pads. This asssumes the hole size
+is the same for all grid locations.
+<DOC>
+public defstruct PthPadPlanner <: ShapePadPlanner:
+  doc: \<DOC>
+  Copper pad shape
+  Both top and bottom copper for the PTH will
+  have the same shape.
+  <DOC>
+  shaper:(Dims -> Shape) with: (as-method => true)
+
+doc: \<DOC>
+Shape generator for Circle/Capsule
+
+For through-holes, the most common shapes are circles and
+slots. This is a helper function for creating those patterns
+in the PthPadPlanner
+<DOC>
+public defn to-CircleOrCapsule (d:Dims) -> Shape :
+  ; TODO - we may need to be more careful here
+  ;  comparison between doubles isn't always a good check
+  if x(d) != y(d):
+    Capsule(d)
+  else:
+    Circle(to-radius $ x(d))
+
+public defmethod hole-generator (x:PthPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
+  to-CircleOrCapsule
+
+public defn PthPadPlanner () -> PthPadPlanner :
+  PthPadPlanner(to-CircleOrCapsule)
