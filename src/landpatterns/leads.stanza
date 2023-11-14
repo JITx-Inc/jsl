@@ -169,6 +169,9 @@ public defstruct TH-Lead <: Lead :
   The length of the lead describes the total length of the
   metal contact. This is not describing the pad placement
   in anyway.
+  For components where the lead lengths are different (for example,
+  with electrolytic capacitors), this length describes the minimum
+  common length.
   <DOC>
   length:Toleranced with: (as-method => true)
   doc: \<DOC>
@@ -180,7 +183,17 @@ with:
   equalable => true
   hashable => true
   printer => true
+  constructor => #TH-Lead
 
+doc: \<DOC>
+Through-Hole Lead Constructor
+<DOC>
+public defn TH-Lead (
+  --
+  length:Toleranced,
+  width:Toleranced,
+  ):
+  #TH-Lead(length, width)
 
 ; LeadFillets are extra spacing along the sides of a lead when generating a land for
 ; a component's leads.
