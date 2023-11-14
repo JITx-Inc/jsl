@@ -9,6 +9,7 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jsl/landpatterns/helpers
   import jsl/landpatterns/two-pin/SMT-table with:
     prefix => #SMT-
+  import jsl/landpatterns/two-pin/utils
 
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads
@@ -189,13 +190,6 @@ public defmethod package-body (x:SMT-Chip) -> PackageBody :
     length = length $ def(x),
     height = height(x)
   )
-
-
-public val STD-SMT-CHIP-NUMBERING = Column-Major-Numbering(2,1)
-
-defn select-numbering (polarized?:True|False) -> Numbering :
-  if polarized? : C-A-Numbering()
-  else: STD-SMT-CHIP-NUMBERING
 
 defn select-protrusion (chip-def:SMT-Chip-Def) -> jsl/landpatterns/leads/LandProtrusionType :
   if typ(width(chip-def)) > 0.8: BigRectangularLeads
