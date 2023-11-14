@@ -1,0 +1,120 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin/radial:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/two-pin/utils
+
+; TODO - Consider adding an angle here that
+;   rotates the two pins around the Z axis.
+;   This will help support components where the
+;   two pads are not located directly on the Y axis.
+public defstruct Radial-2pin <: Package :
+  doc: \<DOC>
+  Center-to-Center Distance between Leads
+  <DOC>
+  lead-spacing:Toleranced
+  doc: \<DOC>
+  Lead Construction Type
+  <DOC>
+  lead:TH-Lead
+  doc: \<DOC>
+  Component is Polarized and Requires C/A Pad Names
+  <DOC>
+  polarized?:True|False
+  doc: \<DOC>
+  Package Body
+  Typically a cylinder but other shapes work as well.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+  doc: \<DOC>
+  Pad Planner
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+  doc: \<DOC>
+  Lead numbering scheme
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+with:
+  constructor => #Radial-2pin
+
+doc: \<DOC>
+Constructor for Radial 2-pin Components
+
+@param lead-spacing Center to Center distance between radial leads.
+@param lead Through-hole lead specifications.
+@param polarized? Indicates whether this component requires C/A style
+pads or standard `p[1]/p[2]` style pads. By default we use standard pads.
+@param package-body Component body specifications.
+@param pad-planner Pad planner - default is a through-hole pad planner
+with holes sized for the provided lead dimensions. User can override
+this with a pad planner of their choosing.
+@param lead-numbering Lead Numbering scheme - by default this function
+will choose either standard or C/A numbering based on `polarized?`. User
+can override with their own selection here.
+<DOC>
+public defn Radial-2pin (
+  --
+  lead-spacing:Toleranced,
+  lead:TH-Lead,
+  polarized?:True|False = false,
+  package-body:PackageBody,
+  pad-planner:PadPlanner = PthPadPlanner(),
+  lead-numbering:Numbering = select-numbering(polarized?)
+  ) -> Radial-2pin:
+  #Radial-2pin(lead-spacing, lead, polarized?, package-body, pad-planner, lead-numbering)
+
+public defmethod name (pkg:Radial-2pin) -> String:
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+
+  val body = package-body(pkg)
+
+  to-string $ "Radial-L%_-D%_-P%_" % [
+    to-deci $ typ $ length(body),
+    to-deci $ typ $ width(body),
+    to-deci $ typ $ length $ lead $ pkg
+    ]
+
+public defmethod make-landpattern (pkg:Radial-2pin -- density-level:DensityLevel = DENSITY-LEVEL) :
+
+  val lead-diam = width $ lead $ pkg
+  val hole-diam = compute-hole-diam(lead-diam, density-level)
+  val pad-diam = compute-pad-diam(hole-diam, density-level)
+
+  val hole-sz = Dims(hole-diam, hole-diam)
+  val pad-sz = Dims(pad-diam, pad-diam)
+
+  val lead-spacing = typ $ lead-spacing(pkg)
+
+  val planner = pad-planner(pkg)
+  val num-scheme = lead-numbering(pkg)
+
+  defn gen-pad-info () -> Seq<PadInfo> :
+    ; Column Major
+    val num-cols = 1
+    val num-rows = 2
+    val grid = grid-locs(num-rows, num-cols, 0.0, lead-spacing, false)
+    for (r in 0 to num-rows, pos in grid) seq? :
+      val pad-id = to-pad-id(num-scheme, r, 0)
+      val th-pad-gen? = th-pad-generator(planner, r, 0)
+      match(th-pad-gen?):
+        (_:False): None()
+        (th-pad-gen):
+          One $ PadInfo(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+
+  inside pcb-landpattern:
+
+    for p in gen-pad-info() do:
+      match(pad-id(p)):
+        (i:Int):
+          pad p[i] : pad-def(p) at loc(p)
+        (x:Ref):
+          pad (x) : pad-def(p) at loc(p)

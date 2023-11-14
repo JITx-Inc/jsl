@@ -1,0 +1,97 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/two-pin/axial:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/axial
+
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+
+deftest(two-pin) test-basic-axial:
+  ; Example from Cornell Dublier, 107TTA025M:
+  ;  https://www.cde.com/resources/catalogs/TTA.pdf
+  ;
+  ; 25V, 100uF -  6.3 x 13 mm Cylinder
+  ; 8mm Diameter Package x 11.5mm length
+
+  val cyl = PackageBody(
+    length = 13.0 +/- [1.5, 0.0],
+    width = 6.3 +/- [0.5, 0.0],
+    height = 6.3 +/- [0.5, 0.0],
+  )
+
+  val cap = Axial-2pin(
+    lead = TH-Lead-WeldBead(length = min-typ(35.0, 35.0), width = typ(0.5)),
+    polarized? = true,
+    package-body = cyl,
+  )
+
+  val pkgName = name(cap)
+  #EXPECT(prefix?(pkgName, "Axial"))
+
+  val lp-B = create-landpattern(cap, density-level = DensityLevelB)
+
+  var grid = PadGrid(lp-B)
+
+  val exp-Pitch-B = 16.0 +/- (1 %)
+  #EXPECT(length(rows(grid)) == 2)
+  #EXPECT(length(columns(grid)) == 1)
+  #EXPECT(check-row-pitch(grid, exp-Pitch-B))
+
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    SolderMask(Bottom)
+    Cutout()
+  ])
+
+  val padcols = to-tuple $ values(columns(grid))
+  for col in padcols do:
+    for (lp-pad in col, i in 0 to false) do:
+      val p = pad(lp-pad)
+      val pt = pad-type(p)
+      #EXPECT(pt == TH)
+      val shape = pad-shape(p) as Circle
+      #EXPECT(almost-equal?(radius(shape), 0.7504))
+
+      val pos = center $ pose(lp-pad)
+      #EXPECT(almost-equal?(x(pos), 0.0))
+
+      val r = ref(lp-pad)
+      if i == 0:
+        #EXPECT(r == Ref("c"))
+        #EXPECT(almost-equal?(y(pos), 8.0))
+      else:
+        #EXPECT(r == Ref("a"))
+        #EXPECT(almost-equal?(y(pos), -8.0))
+
+      expect-empty-others(p, not-empty)
+
+      val exp-sm-radius = 0.9004
+      var shapes = layer(p, SolderMask(Top))
+      #EXPECT(length(shapes) == 1)
+      var smShape = shapes[0] as Circle
+
+      #EXPECT(almost-equal?(radius(smShape), exp-sm-radius))
+      #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+      shapes = layer(p, SolderMask(Bottom))
+      #EXPECT(length(shapes) == 1)
+      smShape = shapes[0] as Circle
+
+      #EXPECT(almost-equal?(radius(smShape), exp-sm-radius))
+      #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+
+      shapes = layer(p, Cutout())
+      #EXPECT(length(shapes) == 1)
+      val hole = shapes[0] as Circle
+
+      #EXPECT(almost-equal?(radius(hole), 0.475))
+      #EXPECT(center(hole) == Point(0.0, 0.0))

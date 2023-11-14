@@ -1,0 +1,215 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin/axial:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/geometry/basics
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/two-pin/utils
+
+doc: \<DOC>
+Through-hole Lead with Optional Weld-Bead
+<DOC>
+public defstruct TH-Lead-WeldBead <: TH-Lead :
+  doc: \<DOC>
+  The length of the lead describes the total length of the
+  metal contact. This is not describing the pad placement
+  in anyway.
+  <DOC>
+  length:Toleranced with: (as-method => true)
+  doc: \<DOC>
+  The width of the lead is typically describing the diameter
+  of a cylindrical lead.
+  <DOC>
+  width:Toleranced with: (as-method => true)
+  doc: \<DOC>
+  Distance from the component body to the weld-bead on the electrical lead.
+  By default, this value is 0.0 and assumes that the component does not have a weld-bead.
+  <DOC>
+  weld-offset:Toleranced with: (default => typ(0.0))
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #TH-Lead-WeldBead
+
+public defn TH-Lead-WeldBead (
+  --
+  length:Toleranced,
+  width:Toleranced,
+  weld-offset:Toleranced = typ(0.0)
+  ):
+  #TH-Lead-WeldBead(length, width, weld-offset)
+
+doc: \<DOC>
+Default Bend Starting Offset
+
+The lead bend is started at an offset from with the
+package body or the weld-bead (if present).
+<DOC>
+public val DEF-BEND-START = 1.0 ; mm
+
+doc: \<DOC>
+Compute default target bend radius.
+
+@see IPC-A-610 Section 7.1.2, Table 7-1 Lead Bend Radius
+<DOC>
+public defn compute-default-bend-radius (lead-diameter:Toleranced) -> Double:
+  val diam = typ-value(lead-diameter)
+  if diam < 0.8:
+    diam
+  else if diam < 1.2:
+    1.5 * diam
+  else:
+    2.0 * diam
+
+doc: \<DOC>
+Axial Mounting Style
+There are generally two ways to mount an axial component
+on a PCB.
+
+1.  Horizontally - this is the typical method where the
+  lead axis is parallel with the board surface.
+2.  Vertically - In this configuration, the lead axis is
+  perpendicular with the board surface, and the lead pointing
+  away from the board surface is bent 180 degrees to mate with
+  the board surface.
+
+TODO - Diagram here.
+<DOC>
+public defenum AxialMounting :
+  Horz-Mount-Axial
+  Vert-Mount-Axial
+
+doc: \<DOC>
+Axial 2-pin Component Package
+<DOC>
+public defstruct Axial-2pin <: Package :
+  doc: \<DOC>
+  Lead Construction Type
+  <DOC>
+  lead:TH-Lead-WeldBead
+  doc: \<DOC>
+  Mount Horz or Vertical
+  <DOC>
+  mounting:AxialMounting
+  doc: \<DOC>
+  Component is Polarized and Requires C/A Pad Names
+  <DOC>
+  polarized?:True|False
+  doc: \<DOC>
+  Bend Starting Offset from Body or Weld Bead
+  <DOC>
+  bend-start:Double with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Target Bend Radius for Leads
+  <DOC>
+  bend-radius:Double with: (ensure => ensure-positive!)
+
+  doc: \<DOC>
+  Package Body
+  Typically a cylinder but other shapes work as well.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+  doc: \<DOC>
+  Pad Planner
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+  doc: \<DOC>
+  Lead numbering scheme
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+with:
+  constructor => #Axial-2pin
+
+doc: \<DOC>
+Constructor for Axial 2-pin Components
+@param lead Lead specifications
+@param mounting Default mounting style is Horizontal.
+@param polarized?
+<DOC>
+public defn Axial-2pin (
+  --
+  lead:TH-Lead-WeldBead,
+  mounting:AxialMounting = Horz-Mount-Axial,
+  polarized?:True|False = false,
+  bend-start:Double = DEF-BEND-START,
+  bend-radius:Double = compute-default-bend-radius(width(lead))
+  package-body:PackageBody,
+  pad-planner:PadPlanner = PthPadPlanner(),
+  lead-numbering:Numbering = select-numbering(polarized?)
+  ):
+  #Axial-2pin(lead, mounting, polarized?, bend-start, bend-radius, package-body, pad-planner, lead-numbering)
+
+public defmethod name (pkg:Axial-2pin) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+
+  val body = package-body(pkg)
+
+  to-string $ "Axial-L%_-D%_-P%_" % [
+    to-deci $ typ $ length(body),
+    to-deci $ typ $ width(body),
+    to-deci $ typ $ length $ lead $ pkg
+    ]
+
+public defmethod make-landpattern (pkg:Axial-2pin -- density-level:DensityLevel = DENSITY-LEVEL) :
+
+  val lead-diam = width $ lead $ pkg
+  val hole-diam = compute-hole-diam(lead-diam, density-level)
+  val pad-diam = compute-pad-diam(hole-diam, density-level)
+
+  val hole-sz = Dims(hole-diam, hole-diam)
+  val pad-sz = Dims(pad-diam, pad-diam)
+
+  val planner = pad-planner(pkg)
+  val num-scheme = lead-numbering(pkg)
+
+  ; TODO - Add check here that indicates whether the bend radius, bend-start,
+  ;  etc is possible given the length of the lead.
+  val lead-spacing:Double = match(mounting(pkg)):
+    (m:Horz-Mount-Axial):
+      ; TODO - For MMC / NMC / LMC density level
+      ;   Change `typ` -> max-value or min-value
+      val base-length = typ $ length $ package-body(pkg)
+      val weld-offset = typ $ weld-offset $ lead(pkg)
+      val bend-length = bend-radius(pkg) + bend-start(pkg) + weld-offset
+      base-length + (2.0 * bend-length)
+    (m:Vert-Mount-Axial):
+      ; We want to use either the radius of the package body cylinder + margin
+      ;  or the bend-radius - which ever is larger.
+      ; TODO - For MMC / NMC / LMC density level
+      val body-radius = to-radius $ typ $ width $ package-body(pkg)
+      val lead-radius = to-radius $ typ $ width $ lead(pkg)
+      ; @TODO - margin value magic number
+      val bend-diam = body-radius + lead-radius + 0.1
+      max(bend-diam / 2.0, bend-radius(pkg))
+
+  defn gen-pad-info () -> Seq<PadInfo> :
+    ; Column Major
+    val num-cols = 1
+    val num-rows = 2
+    val grid = grid-locs(num-rows, num-cols, 0.0, lead-spacing, false)
+    for (r in 0 to num-rows, pos in grid) seq? :
+      val pad-id = to-pad-id(num-scheme, r, 0)
+      val th-pad-gen? = th-pad-generator(planner, r, 0)
+      match(th-pad-gen?):
+        (_:False): None()
+        (th-pad-gen):
+          One $ PadInfo(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+
+  inside pcb-landpattern:
+
+    for p in gen-pad-info() do:
+      match(pad-id(p)):
+        (i:Int):
+          pad p[i] : pad-def(p) at loc(p)
+        (x:Ref):
+          pad (x) : pad-def(p) at loc(p)
+
