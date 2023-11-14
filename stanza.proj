@@ -12,6 +12,6 @@ build-test tests:
     jsl/tests/landpatterns/IPC
     jsl/tests/landpatterns/BGA
     jsl/tests/landpatterns/protrusions
-
+    jsl/tests/landpatterns/two-pin/SMT
   pkg: "test-pkgs"
   o: "jsl-tests"

@@ -1,0 +1,370 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin/SMT:
+  import core
+  import collections
+  import jitx
+
+  import jsl/errors
+  import jsl/design/settings
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/two-pin/SMT-table with:
+    prefix => #SMT-
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/IPC
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/numbering
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;          SMT Size Table
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+SMT Chip Definition Type
+This type encodes the parameters of a chip package such
+as an 0603, 0805, etc.
+<DOC>
+public defstruct SMT-Chip-Def :
+  name: String
+  aliases: Tuple<String>
+
+  length:Toleranced with: (
+    ensure => ensure-positive!
+  )
+  width:Toleranced with: (
+    ensure => ensure-positive!
+  )
+  lead-length:Toleranced with: (
+    ensure => ensure-positive!
+  )
+  lead-width:Toleranced with: (
+    ensure => ensure-positive!
+  )
+
+doc: \<DOC>
+Internal Constructor to create Definitions from Tuples
+<DOC>
+defn SMT-Chip-Def (row:Tuple) -> SMT-Chip-Def :
+
+  defn to-aliases (v:String) -> Tuple<String> :
+    to-tuple $ split(v, "|")
+
+  val name = row[0]
+  val aliases = to-aliases $ row[length(row) - 1]
+  val [L, W, lead-L, lead-W] = row[1 through 4] as [Toleranced,Toleranced,Toleranced,Toleranced]
+  SMT-Chip-Def(name, aliases, L, W, lead-L, lead-W)
+
+doc: \<DOC>
+Extract the SMT Dimension Info from the SMT Table
+This function extracts the information in the programmatically
+generated table in `SMT-Table.csv` into `SMT-Chip` definitions
+<DOC>
+public defn extract-SMT-chips (rows:Tuple) -> HashTable<String, SMT-Chip-Def> :
+  val chip-defs = for row in rows seq:
+    SMT-Chip-Def(row)
+
+  val ret = HashTable<String, SMT-Chip-Def>()
+  for (chip-def in chip-defs, i in 1 to false) do:
+    val names = cat([name(chip-def)], aliases(chip-def))
+
+    for name in names do:
+      if key?(ret, name):
+        throw $ ValueError("SMT-Table:Line %_: Duplicate SMT Chip Name '%_'" % [i, name])
+
+      ret[name] = chip-def
+
+  ret
+
+doc: \<DOC>
+SMT Chip Table
+This value contains a lookup table for the different SMT definitions
+read from the SMT Table. The keys of this table will be in the
+form `0603` or `1608m` where the `m` suffix indicates the metric
+variant. There are also `Wide *` name variants in this table.
+<DOC>
+public val chips:HashTable<String, SMT-Chip-Def> = extract-SMT-chips(#SMT-rows)
+
+doc: \<DOC>
+Check if the passed string is a known chip size - like "0603", "0805", etc
+@param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
+<DOC>
+public defn is-known-chip-pkg (k:String) -> True|False :
+  key?(chips, k)
+
+doc: \<DOC>
+Create a SMT-Chip Package given a chip size string.
+@param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
+@return SMT Chip Package with all default configurations
+<DOC>
+public defn get-chip-pkg (k:String) -> SMT-Chip :
+  val chip-def = chips[k]
+  SMT-Chip(chip-def)
+
+doc: \<DOC>
+Create a Resistor SMT Chip Package of a given size
+@param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
+@return Package with all default configurations
+<DOC>
+public defn get-resistor-pkg (k:String) -> SMT-Resistor :
+  val chip-def = chips[k]
+  SMT-Resistor(chip-def)
+
+doc: \<DOC>
+Create a Capacitor SMT Chip Package of a given size
+@param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
+@return Package with all default configurations
+<DOC>
+public defn get-capacitor-pkg (k:String) -> SMT-Capacitor :
+  val chip-def = chips[k]
+  SMT-Capacitor(chip-def)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;          SMT Size Table
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+SMT 2-pin Chip Package Type
+
+This type is used to define the packages for common
+SMT passive components like resistors, capacitors, etc. These
+packages are typically named `0603`, `0805`, etc.
+
+@param def
+@param polarized? Indicates whether to use the Cathode/Anode
+style pad numbering or standard `p[1]/p[2]` style numbering.
+@param side-fillet Optional excess side fillet. This is useful
+for packages like capacitors where the lead can cover all 5 surfaces
+of the end of the package. If `false`, then no excess side-fillet area
+is added. If this value is not `false`, then this value will be
+added to both sides of the pad. This will increase its total width by `2.0 * side-fillet`
+@param
+
+<DOC>
+public defstruct SMT-Chip <: Package :
+  doc: \<DOC>
+  Defines the Package dimensions
+  <DOC>
+  def:SMT-Chip-Def
+  doc: \<DOC>
+  Indicates whether to use the Cathode/Anode style pad numbering or standard `p[1]/p[2]` style numbering.
+  <DOC>
+  polarized?:True|False
+  doc: \<DOC>
+  Optional excess side fillet area
+  For packages like capacitors where the lead can cover all 5 surfaces
+  of the end of the package, this parameter provides excess pad area to
+  allow the wetted solder to fillet on the side of the contact. This value
+  will be added to both sides of the pad. This will increase its total
+  width by `2.0 * side-fillet`.
+  If `false`, then no excess side-fillet area is added.
+  <DOC>
+  side-fillet:Double|False
+  doc: \<DOC>
+  Z-dimension Height of the Chip Package.
+  <DOC>
+  height:Toleranced with: (ensure => ensure-positive! )
+  doc: \<DOC>
+  Protrusion Type
+  <DOC>
+  protrusion:jsl/landpatterns/leads/LandProtrusionType
+  pad-planner:PadPlanner with: (as-method => true)
+  lead-numbering:Numbering with: (as-method => true)
+with:
+  constructor => #SMT-Chip
+
+doc: \<DOC>
+Non IPC name - Use derived types for proper naming
+<DOC>
+public defmethod name (x:SMT-Chip) -> String :
+  to-string("SMT-%_" % [name(def(x))])
+
+public defmethod num-leads (x:SMT-Chip) -> Int : 2
+
+public defmethod package-body (x:SMT-Chip) -> PackageBody :
+  PackageBody(
+    width = width $ def(x),
+    length = length $ def(x),
+    height = height(x)
+  )
+
+
+public val STD-SMT-CHIP-NUMBERING = Column-Major-Numbering(2,1)
+
+defn select-numbering (polarized?:True|False) -> Numbering :
+  if polarized? : C-A-Numbering()
+  else: STD-SMT-CHIP-NUMBERING
+
+defn select-protrusion (chip-def:SMT-Chip-Def) -> jsl/landpatterns/leads/LandProtrusionType :
+  if typ(width(chip-def)) > 0.8: BigRectangularLeads
+  else: SmallRectangularLeads
+
+doc: \<DOC>
+Constructor
+
+@param chip-def Chip Dimensions
+@param polarized? Default value is `false`
+@param side-fillet Default value is `false`
+@param height Default height is 0.4mm
+@param protrusion The default value depends on the size of the
+package. If the width is greater than 0.8mm, then `BigRectangularLeads` is the
+default. Else `SmallRectangularLeads` is the default.
+@param lead-numbering Numbering Scheme - default depends on the `polarized?`
+flag.
+<DOC>
+public defn SMT-Chip (
+  chip-def:SMT-Chip-Def
+  --
+  polarized?:True|False = false,
+  side-fillet:Double|False = false,
+  ; TODO - this is still broken.
+  height:Toleranced = 0.4 +/- 0.1,
+  ; TODO - refactor for `LeadProtrusion` type
+  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = select-numbering(polarized?)
+  ):
+  #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering)
+
+doc: \<DOC>
+Adjust the size of the toe fillet based on the
+height of the device.
+<DOC>
+public defmethod make-landpattern (
+  pkg:SMT-Chip
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+
+  val lead-fillets = lead-fillets(protrusion(pkg), density-level)
+  val cdef = def(pkg)
+
+  val lead-span = length(cdef)
+  val term-L = lead-length(cdef)
+
+  val term-W = lead-width(cdef)
+  val term-W* = match(side-fillet(pkg)):
+    (_:False): term-W
+    (x:Double): (2.0 * x) + term-W
+
+  val ipc = ipc-formula(lead-span, term-L, term-W*, lead-fillets)
+
+  ; The 2-pin chip is oriented with its length in the Y direction
+  ;  The `pad-size` helper is oriented with the length of the pad in
+  ;  the orthogonal direction - hence the transpose.
+  val pad-sz = transpose(pad-size(ipc))
+  val lead-spacing = Gmin(ipc) + y(pad-sz)
+
+  val planner = pad-planner(pkg)
+  val num-scheme = lead-numbering(pkg)
+
+  defn gen-pad-info () -> Seq<PadInfo> :
+    ; Column Major
+    val num-cols = 1
+    val num-rows = 2
+    val grid = grid-locs(num-rows, num-cols, 0.0, lead-spacing, false)
+    for (r in 0 to num-rows, pos in grid) seq? :
+      val pad-id = to-pad-id(num-scheme, r, 0)
+      val pad-gen? = pad-generator(planner, r, 0)
+      match(pad-gen?):
+        (_:False): None()
+        (pad-gen):
+          One $ PadInfo(pad-id, pad-gen(pad-sz), pos)
+
+  inside pcb-landpattern:
+
+    for p in gen-pad-info() do:
+      match(pad-id(p)):
+        (i:Int):
+          pad p[i] : pad-def(p) at loc(p)
+        (x:Ref):
+          pad (x) : pad-def(p) at loc(p)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   Resistor
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+public defstruct SMT-Resistor <: SMT-Chip :
+  def:SMT-Chip-Def with: (as-method => true)
+  height:Toleranced with: (
+    as-method => true
+    ensure => ensure-positive!
+    )
+  protrusion:jsl/landpatterns/leads/LandProtrusionType with: ( as-method => true )
+  pad-planner:PadPlanner with: (as-method => true)
+  lead-numbering:Numbering with: (as-method => true)
+with:
+  constructor => #SMT-Resistor
+
+public defmethod polarized? (pkg:SMT-Resistor) -> True|False : false
+public defmethod side-fillet (pkg:SMT-Resistor) -> Double|False : false
+
+public defn SMT-Resistor (
+  chip-def:SMT-Chip-Def
+  --
+  ; TODO - this is still broken.
+  height:Toleranced = 0.4 +/- 0.1,
+  ; TODO - refactor for `LeadProtrusion` type
+  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = STD-SMT-CHIP-NUMBERING
+  ):
+  #SMT-Resistor(chip-def, height, protrusion, pad-planner, lead-numbering)
+
+public defmethod name (pkg:SMT-Resistor) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+
+  val d = def(pkg)
+  val LStr = to-deci $ typ $ length(d)
+  val WStr = to-deci $ typ $ width(d)
+  val HStr = to-deci $ typ $ height(pkg)
+  to-string("RESC%_%_X%_" % [LStr, WStr, HStr])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;   Capacitor
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defstruct SMT-Capacitor <: SMT-Chip :
+  def:SMT-Chip-Def with: (as-method => true)
+  polarized?:True|False with: ( as-method => true)
+  side-fillet:Double|False with: ( as-method => true)
+  height:Toleranced with: (
+    as-method => true
+    ensure => ensure-positive!
+    )
+  protrusion:jsl/landpatterns/leads/LandProtrusionType with: ( as-method => true )
+  pad-planner:PadPlanner with: (as-method => true)
+  lead-numbering:Numbering with: (as-method => true)
+with:
+  constructor => #SMT-Capacitor
+
+public defn SMT-Capacitor (
+  chip-def:SMT-Chip-Def
+  --
+  polarized?:True|False = false,
+  side-fillet:Double|False = 0.04,
+  ; TODO - this is still broken.
+  height:Toleranced = 0.4 +/- 0.1,
+  ; TODO - refactor for `LeadProtrusion` type
+  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = select-numbering(polarized?)
+  ):
+  #SMT-Capacitor(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering)
+
+public defmethod name (pkg:SMT-Capacitor) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+
+  val d = def(pkg)
+  val polStr = "P" when polarized?(pkg) else ""
+  val LStr = to-deci $ typ $ length(d)
+  val WStr = to-deci $ typ $ width(d)
+  val HStr = to-deci $ typ $ height(pkg)
+  to-string("CAPC%_%_%_X%_" % [polStr, LStr, WStr, HStr])
