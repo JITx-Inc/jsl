@@ -264,21 +264,22 @@ The default value is `false` meaning **no** pastemask opening is applied.
 public pcb-pad pth-pad (
   hole:Shape,
   copper:Shape,
-  mask:Shape|False = false,
+  mask:Shape|False = expand(copper, get-default-soldermask-amount()),
   paste:Shape|False = false
   ) :
   name = "PTH-Pad"
   shape = copper
   type = TH
   layer(Cutout()) = hole
-  if paste is Shape: ; Enables paste-in-pad
-    layer(Paste(Top)) = paste as Shape
   match(mask) :
-    (m:False) :
-      make-soldermask()
+    (m:False) : false
     (m:Shape) :
       layer(SolderMask(Top)) = m
       layer(SolderMask(Bottom)) = m
+  match(paste):
+    (m:False): false
+    (m:Shape):
+      layer(Paste(Top)) = m
 
 defn get-min-pad-expansion () :
   val r = clearance(current-rules(), MinThPadExpandOuter) as Double
