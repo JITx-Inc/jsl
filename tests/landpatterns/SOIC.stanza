@@ -15,15 +15,15 @@ defpackage jsl/tests/landpatterns/SOIC:
 deftest(SOIC) test-lead:
 
   val a = SOIC-Lead()
-  val b = SOIC-Lead(SmallGullWingLeads)
+  val b = SOIC-Lead(SmallGullWingLeads())
 
   #EXPECT( a != b )
 
-  #EXPECT( lead-type(a) == BigGullWingLeads )
+  #EXPECT( lead-type(a) == BigGullWingLeads() )
   #EXPECT( in-range?( min-max(0.5, 1.2),  typ $ length(a)) )
   #EXPECT( in-range?( min-max(0.35, 0.5),  typ $ width(a)) )
 
-  #EXPECT( lead-type(b) == SmallGullWingLeads )
+  #EXPECT( lead-type(b) == SmallGullWingLeads() )
 
   ; Check Ensures
   val test-vecs = [
@@ -36,7 +36,7 @@ deftest(SOIC) test-lead:
   for test-vec in test-vecs do:
     val [l, w] = test-vec
     expect-throw(
-      {SOIC-Lead(BigGullWingLeads, l, w)}
+      {SOIC-Lead(BigGullWingLeads(), l, w)}
     )
 
 

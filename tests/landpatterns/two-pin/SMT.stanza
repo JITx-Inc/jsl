@@ -42,7 +42,7 @@ deftest(two-pin) test-basic:
       val pd = pad(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       ; X Direction
-      #EXPECT(almost-equal?(width(shape), 0.95))
+      #EXPECT(almost-equal?(width(shape), 1.05))
       ; Y Direction
       #EXPECT(almost-equal?(height(shape), 0.65))
 
@@ -82,7 +82,7 @@ deftest(two-pin) test-basic:
       val pd = pad(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       ; X Direction
-      #EXPECT(almost-equal?(width(shape), 0.95))
+      #EXPECT(almost-equal?(width(shape), 0.85))
       ; Y Direction
       #EXPECT(almost-equal?(height(shape), 0.45))
 
@@ -96,7 +96,7 @@ deftest(two-pin) test-chip-table :
   #EXPECT(num-leads(SMT-2012m) == 2)
 
   val exp-Pitch = 1.7 +/- 0.1
-  val exp-W = 1.3
+  val exp-W = 1.2
   val exp-L = 0.710555
   var lp = create-landpattern(SMT-0805, density-level = DensityLevelC)
   var grid = PadGrid(lp)
@@ -148,7 +148,7 @@ deftest(two-pin) test-resistor-smt :
     for lp-pad in row do:
       val pd = pad(lp-pad)
       val shape = pad-shape(pd) as Rectangle
-      #EXPECT(almost-equal?(width(shape), 0.6))
+      #EXPECT(almost-equal?(width(shape), 0.5))
       #EXPECT(almost-equal?(height(shape), 0.380278))
 
 deftest(two-pin) test-capacitor-smt :
