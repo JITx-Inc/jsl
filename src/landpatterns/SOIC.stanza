@@ -58,9 +58,9 @@ public defstruct SOIC-Lead <: SMT-Lead:
   the lead-type {@link SmallGullWingLeads} should be
   considered.
   <DOC>
-  lead-type:jsl/landpatterns/leads/LandProtrusionType with: (
+  lead-type:LeadProtrusion with: (
       as-method => true,
-      default => BigGullWingLeads,
+      default => BigGullWingLeads(),
     )
   length:Toleranced with: (
     as-method => true,

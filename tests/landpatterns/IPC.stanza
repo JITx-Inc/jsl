@@ -19,7 +19,7 @@ deftest(IPC) test-basic:
     lead-span,
     lead-length,
     lead-width,
-    lead-fillets(BigGullWingLeads, DensityLevelA)
+    lead-fillets(BigGullWingLeads(), density-level = DensityLevelA)
   )
 
   var exp-Zmax = tol%(7.3, (1 %))
@@ -33,7 +33,7 @@ deftest(IPC) test-basic:
     lead-span,
     lead-length,
     lead-width,
-    lead-fillets(BigGullWingLeads, DensityLevelB)
+    lead-fillets(BigGullWingLeads(), density-level = DensityLevelB)
   )
 
   exp-Zmax = tol%(6.9, (1 %))
@@ -47,7 +47,7 @@ deftest(IPC) test-basic:
     lead-span,
     lead-length,
     lead-width,
-    lead-fillets(BigGullWingLeads, DensityLevelC)
+    lead-fillets(BigGullWingLeads(), density-level = DensityLevelC)
   )
 
   exp-Zmax = tol%(6.5, (1 %))

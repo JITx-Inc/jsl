@@ -91,7 +91,7 @@ public defn make-quad-landpattern (
   ; TODO - we refer to NSEW - but then we use X/Y here - why not remain consistent.
   lead-span-x: Toleranced,
   lead-span-y: Toleranced,
-  lead-type: LandProtrusionType,
+  lead-type: LeadProtrusion,
   ; Pkg Parameters
   package-length: Toleranced,
   package-width: Toleranced = package-length,
@@ -100,7 +100,7 @@ public defn make-quad-landpattern (
   corner-pads?:False|[Pad, Pad] = false, ; corner pads
   thermal-pad?: Shape|False = false
   ):
-  val lead-fillets = lead-fillets(lead-type, density-level)
+  val lead-fillets = lead-fillets(lead-type, density-level = density-level)
   inside pcb-landpattern:
     ;----------------------------------------------------------
     ; compute dimensions
@@ -237,7 +237,7 @@ public defn make-quad-landpattern (
   lead-length: Toleranced, ; the dimension of the leads in the x direction on the east/west faces
   lead-width: Toleranced,  ; the dimension of the leads in the y direction on the east/west faces
   lead-span: Toleranced, ; the distance from pad-edge to pad-edge on the exterior of the part in the x direction
-  lead-type: LandProtrusionType, ; the type of the leads
+  lead-type: LeadProtrusion, ; the type of the leads
   ; Pkg Parameters
   package-size: Toleranced,  ; the size of the package in the x direction
   --

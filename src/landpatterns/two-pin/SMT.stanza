@@ -170,7 +170,7 @@ public defstruct SMT-Chip <: Package :
   doc: \<DOC>
   Protrusion Type
   <DOC>
-  protrusion:jsl/landpatterns/leads/LandProtrusionType
+  protrusion:LeadProtrusion
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
 with:
@@ -191,9 +191,9 @@ public defmethod package-body (x:SMT-Chip) -> PackageBody :
     height = height(x)
   )
 
-defn select-protrusion (chip-def:SMT-Chip-Def) -> jsl/landpatterns/leads/LandProtrusionType :
-  if typ(width(chip-def)) > 0.8: BigRectangularLeads
-  else: SmallRectangularLeads
+defn select-protrusion (chip-def:SMT-Chip-Def) -> LeadProtrusion :
+  if typ(width(chip-def)) > 0.8: BigRectangularLeads()
+  else: SmallRectangularLeads()
 
 doc: \<DOC>
 Constructor
@@ -216,7 +216,7 @@ public defn SMT-Chip (
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
   ; TODO - refactor for `LeadProtrusion` type
-  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-numbering(polarized?)
   ):
@@ -232,7 +232,7 @@ public defmethod make-landpattern (
   density-level:DensityLevel = DENSITY-LEVEL
   ):
 
-  val lead-fillets = lead-fillets(protrusion(pkg), density-level)
+  val lead-fillets = lead-fillets(protrusion(pkg), density-level = density-level)
   val cdef = def(pkg)
 
   val lead-span = length(cdef)
@@ -287,7 +287,7 @@ public defstruct SMT-Resistor <: SMT-Chip :
     as-method => true
     ensure => ensure-positive!
     )
-  protrusion:jsl/landpatterns/leads/LandProtrusionType with: ( as-method => true )
+  protrusion:LeadProtrusion with: ( as-method => true )
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
 with:
@@ -302,7 +302,7 @@ public defn SMT-Resistor (
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
   ; TODO - refactor for `LeadProtrusion` type
-  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = STD-SMT-CHIP-NUMBERING
   ):
@@ -331,7 +331,7 @@ public defstruct SMT-Capacitor <: SMT-Chip :
     as-method => true
     ensure => ensure-positive!
     )
-  protrusion:jsl/landpatterns/leads/LandProtrusionType with: ( as-method => true )
+  protrusion:LeadProtrusion with: ( as-method => true )
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
 with:
@@ -345,7 +345,7 @@ public defn SMT-Capacitor (
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
   ; TODO - refactor for `LeadProtrusion` type
-  protrusion:jsl/landpatterns/leads/LandProtrusionType = select-protrusion(chip-def),
+  protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-numbering(polarized?)
   ):
