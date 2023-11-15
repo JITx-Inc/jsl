@@ -11,6 +11,12 @@ defpackage jsl/landpatterns/leads/protrusions:
   import jsl/errors
   import jsl/landpatterns/helpers
 
+;TODO:
+;  - BGA (table 3-17)
+;  - PSON/PQFN/DFN (table 3-18)
+;  - OSCCC (table 3-19)
+;  - CGA/LGA (table 3-21)
+
 doc: \<DOC>
 Electrical Lead Fillets
 This type encapsulates the specifications for the solder fillets
