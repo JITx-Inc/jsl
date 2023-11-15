@@ -172,8 +172,14 @@ deftest(BGA) test-perimeter-simple :
   val Xs = column-Xs(grid)
   #EXPECT(almost-equal?(Xs, [-0.5, 0.0, 0.5]))
 
+  ; Expect the following pads:
+  val expRefs = [IndexRef(Ref("A"), 1), IndexRef(Ref("A"), 3)]
+  for expRef in expRefs do:
+    val obsPad = find-pad-by-ref(lp, expRef)
+    #EXPECT(obsPad is-not False)
+
   ; This pad should not be present
-  val missing = find-pad-by-ref(lp, Ref("A2"))
+  val missing = find-pad-by-ref(lp, IndexRef(Ref("A"), 2))
   #EXPECT(missing == false)
 
   ; The rows get sorted in ascending order
