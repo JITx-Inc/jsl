@@ -274,6 +274,7 @@ Generator for Creating SOIC LandPatterns
 public defmethod make-landpattern (
   pkg:SOIC
   --
+  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL,
   ) :
   inside pcb-landpattern:
@@ -283,6 +284,7 @@ public defmethod make-landpattern (
       lead(pkg),
       lead-span(pkg),
       package-body(pkg),
+      pose = pose,
       pad-planner = pad-planner(pkg),
       num-scheme = lead-numbering(pkg),
       density-level = density-level,

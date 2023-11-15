@@ -152,6 +152,13 @@ Lead Numbering Scheme for this Package
 public defmulti lead-numbering (x:Package) -> Numbering
 
 doc: \<DOC>
+Default Landpattern Generator Pose
+This value should be the default value used for the
+`pose` argument in all `make-landpattern` invokations.
+<DOC>
+public val DEF_LP_POSE = loc(0.0, 0.0)
+
+doc: \<DOC>
 Generator for creating this landpattern
 
 This generator is typically called within a `pcb-landpattern`
@@ -159,12 +166,15 @@ definition to create the necessary pads and geometry associated
 with that component's landpattern.
 
 @param pkg IC Package for which we are creating a landpattern
+@param pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
 @param density-level Density Level for this LandPattern definition.
-  See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-landpattern (
   pkg:Package
   --
+  pose:Pose = ?
   density-level:DensityLevel = ?
   )
 
@@ -176,6 +186,12 @@ Create a `Landpattern` definition
 
 This function uses the generator `make-landpattern` to create
 a landpattern definition.
+
+@param pkg Package to create a landpattern for.
+@param pose Geometry gets created with an offset from the origin
+by `pose`.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 
 Example:
 ```
@@ -192,21 +208,29 @@ Example:
 public defmulti create-landpattern (
   pkg:Package
   --
+  pose:Pose = ?
   density-level:DensityLevel = ?
   ) -> LandPattern
 
 doc: \<DOC>
 Default Implementation of `create-landpattern`
+@param pkg Package to create a landpattern for.
+@param pose Offset of the geometry in the landpattern. Default
+is no offset, ie `loc(0.0, 0.0)`
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmethod create-landpattern (
   pkg:Package
   --
+  pose:Pose = DEF_LP_POSE
   density-level:DensityLevel = DENSITY-LEVEL
   ) -> LandPattern :
   pcb-landpattern lp:
     name = name(pkg)
     make-landpattern(
       pkg,
+      pose = pose,
       density-level = density-level
       )
   lp
