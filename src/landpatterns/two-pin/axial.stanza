@@ -159,7 +159,12 @@ public defmethod name (pkg:Axial-2pin) -> String :
     to-deci $ typ $ length $ lead $ pkg
     ]
 
-public defmethod make-landpattern (pkg:Axial-2pin -- density-level:DensityLevel = DENSITY-LEVEL) :
+public defmethod make-landpattern (
+  pkg:Axial-2pin
+  --
+  pose:Pose = DEF_LP_POSE,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) :
 
   val lead-diam = width $ lead $ pkg
   val hole-diam = compute-hole-diam(lead-diam, density-level)
@@ -206,10 +211,4 @@ public defmethod make-landpattern (pkg:Axial-2pin -- density-level:DensityLevel 
 
   inside pcb-landpattern:
 
-    for p in gen-pad-info() do:
-      match(pad-id(p)):
-        (i:Int):
-          pad p[i] : pad-def(p) at loc(p)
-        (x:Ref):
-          pad (x) : pad-def(p) at loc(p)
-
+    instantiate-pads{_, pose} $ gen-pad-info()

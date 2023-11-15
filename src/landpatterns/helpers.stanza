@@ -135,9 +135,27 @@ public defn max-distance (p1:Point, p2:Point) -> Point:
     p2
 
 doc: \<DOC>
-Helper Struct for Constructing Landpatterns
+Helper Struct for Constructing `LandpatternPad` definitions
 <DOC>
 public defstruct PadInfo :
   pad-id:Int|Ref
   pad-def:Pad
   loc:Pose
+
+doc: \<DOC>
+Instantiate a Sequence of Pads
+
+This is a helper function for converting the generated pad
+sequence into a set of `LandpatternPad` definitions inside
+a `pcb-landpattern` definition.
+
+@param pad-set Sequence of Pads to Generate
+<DOC>
+public defn instantiate-pads (pad-set:Seqable<PadInfo>, offset:Pose) :
+  inside pcb-landpattern:
+    for p in pad-set do:
+      val r = match(pad-id(p)):
+        (i:Int): IndexRef(Ref("p"), i)
+        (x:Ref): x
+
+      pad (r) : pad-def(p) at offset * loc(p)

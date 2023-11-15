@@ -43,6 +43,14 @@ This generator supports components like SOIC, SOP, SOT-23,
 DFN/SON, etc.
 
 @param num-leads Number of leads
+@param pitch
+@param lead
+@param lead-span
+@param pkg-body
+@param pose
+@param pad-planner
+@param num-scheme
+@param density-level
 
 <DOC>
 public defn make-dual-row-smd-landpattern (
@@ -52,7 +60,8 @@ public defn make-dual-row-smd-landpattern (
   lead-span:Toleranced,
   pkg-body:PackageBody,
   --
-  pad-planner:PadPlanner           = RectanglePadPlanner
+  pose:Pose = DEF_LP_POSE,
+  pad-planner:PadPlanner         = RectanglePadPlanner,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL,
   with-pol-marker?:True|False    = true,
@@ -81,12 +90,7 @@ public defn make-dual-row-smd-landpattern (
 
   inside pcb-landpattern :
 
-    for p in gen-pad-info() do:
-      match(pad-id(p)):
-        (i:Int):
-          pad p[i] : pad-def(p) at loc(p)
-        (x:Ref):
-          pad (x) : pad-def(p) at loc(p)
+    instantiate-pads{_, pose} $ gen-pad-info()
 
     ; TODO Move this to a different function so that this can be composable?
     ;  - `make-courtyard`
@@ -108,7 +112,7 @@ public defn make-dual-row-smd-landpattern (
     ; if with-pol-marker? :
     ;   draw-pol-marker(locs, part-sz, pad-size)
 
-    make-thermal-pad(thermal-lead?, num-leads + 1)
+    make-thermal-pad(thermal-lead?, num-leads + 1, location = pose)
 
 
 

@@ -228,3 +228,94 @@ deftest(BGA) test-perimeter-simple :
       ;  be the same size at the copper
       #EXPECT(almost-equal?(radius(pShape), to-radius(0.255)))
       #EXPECT(center(pShape) == Point(0.0, 0.0))
+
+
+deftest(BGA) test-simple-with-pose:
+
+  ; This test is based on the TI, TXB0104NMN
+  ; Datasheet:
+  ;  https://www.ti.com/lit/ds/symlink/txb0104.pdf
+  ;
+  ; NSMD variant of the recommended land pattern
+
+  val planner = Full-Matrix-Planner(
+    PadConfig-D(
+      copper-D-adj = -0.05,
+      mask-D-adj = 0.0,
+    )
+  )
+
+  val body = PackageBody(
+    width = 2.5 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 1.0 +/- 0.1
+  )
+
+  val pkg = BGA(
+    num-leads = 12,
+    rows = 3,
+    columns = 4,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner
+  )
+
+  val n = name(pkg)
+  #EXPECT(n == "BGA12N50P4X3_250X200X100")
+
+  val lp = create-landpattern(pkg, pose = loc(1.2, -1.1))
+
+  val exp-Pitch = 0.5 +/- (1 %)
+
+  val grid = PadGrid(lp)
+
+  #EXPECT(length(rows(grid)) == 3)
+  #EXPECT(length(columns(grid)) == 4)
+
+  #EXPECT(check-row-pitch(grid, exp-Pitch))
+  #EXPECT(check-column-pitch(grid, exp-Pitch))
+
+  ; High Level Check on the landpattern
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(lp, not-empty)
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-1.6, -1.1, -0.6]))
+
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [0.45, 0.95, 1.45, 1.95]))
+
+  for row in rows(grid) do:
+    val lp-pads = value(row)
+    #EXPECT(length(lp-pads) == 4)
+
+    for lp-pad in lp-pads do:
+      ; Here I'm checking that the created pads are
+      ;  the right shape and size.
+      val pd = pad(lp-pad)
+
+      ; Copper
+      val shape = pad-shape(pd) as Circle
+      #EXPECT(almost-equal?(radius(shape), to-radius(0.25)))
+
+      ; Soldermask
+      var shapes = layer(pd, SolderMask(Top))
+      #EXPECT(length(shapes) == 1)
+      val smShape = shapes[0] as Circle
+      #EXPECT(almost-equal?(radius(smShape), to-radius(0.3)))
+      #EXPECT(center(smShape) == Point(0.0, 0.0))
+
+      ; Pastemask
+      shapes = layer(pd, Paste(Top))
+      #EXPECT(length(shapes) == 1)
+      val pShape = shapes[0] as Circle
+
+      ; NOTE - the pastemask here expands to
+      ;  be the same size at the copper
+      #EXPECT(almost-equal?(radius(pShape), to-radius(0.25)))
+      #EXPECT(center(pShape) == Point(0.0, 0.0))

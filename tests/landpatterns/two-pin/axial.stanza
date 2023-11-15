@@ -95,3 +95,48 @@ deftest(two-pin) test-basic-axial:
 
       #EXPECT(almost-equal?(radius(hole), 0.475))
       #EXPECT(center(hole) == Point(0.0, 0.0))
+
+deftest(two-pin) test-axial-with-pose:
+  ; Example from Cornell Dublier, 107TTA025M:
+  ;  https://www.cde.com/resources/catalogs/TTA.pdf
+  ;
+  ; 25V, 100uF -  6.3 x 13 mm Cylinder
+  ; 8mm Diameter Package x 11.5mm length
+
+  val cyl = PackageBody(
+    length = 13.0 +/- [1.5, 0.0],
+    width = 6.3 +/- [0.5, 0.0],
+    height = 6.3 +/- [0.5, 0.0],
+  )
+
+  val cap = Axial-2pin(
+    lead = TH-Lead-WeldBead(length = min-typ(35.0, 35.0), width = typ(0.5)),
+    polarized? = false,
+    package-body = cyl,
+  )
+
+  val pkgName = name(cap)
+  #EXPECT(prefix?(pkgName, "Axial"))
+
+  val lp-B = create-landpattern(cap, pose = loc(0.0, -0.5) density-level = DensityLevelB)
+
+  var grid = PadGrid(lp-B)
+
+  val exp-Pitch-B = 16.0 +/- (1 %)
+  #EXPECT(length(rows(grid)) == 2)
+  #EXPECT(length(columns(grid)) == 1)
+  #EXPECT(check-row-pitch(grid, exp-Pitch-B))
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-8.5, 7.5]))
+
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [0.0]))
+
+  val padcols = to-tuple $ values(columns(grid))
+  for col in padcols do:
+    for (lp-pad in col, i in 1 to false) do:
+
+      val r = ref(lp-pad)
+      val expRef = IndexRef(Ref("p"), i)
+      #EXPECT(r == expRef)
