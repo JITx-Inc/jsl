@@ -149,6 +149,7 @@ public defmethod name (bga:BGA) -> String:
 public defmethod make-landpattern (
   x:BGA
   --
+  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL
   ):
   ; For the BGA - we size the pad according to the
@@ -170,10 +171,4 @@ public defmethod make-landpattern (
 
   inside pcb-landpattern:
 
-    for p in gen-pad-info() do:
-      match(pad-id(p)):
-        (i:Int):
-          pad p[i] : pad-def(p) at loc(p)
-        (x:Ref):
-          pad (x) : pad-def(p) at loc(p)
-
+    instantiate-pads{_, pose} $ gen-pad-info()

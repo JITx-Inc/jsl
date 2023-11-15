@@ -268,3 +268,87 @@ deftest(SOIC) test-error-handling:
       package-length = min-max(8.788, 9.195),
       pitch = pitch-vec
       )})
+
+deftest(SOIC) test-SOIC-with-pose:
+
+  val num-pins = 8
+  val W-fp = SOIC-W(
+    num-leads = num-pins,
+    lead-span = min-max(10.01, 10.64),
+    package-length = min-max(8.788, 9.195)
+  )
+
+  val W-lp = create-landpattern(W-fp, pose = loc(1.0, 0.0))
+
+  val exp-Pitch-X = tol%(9.6, (1 %))
+  val exp-Pitch-Y = tol%(1.27, (1 %))
+
+  val grid = PadGrid(W-lp)
+
+  val rset = rows(grid)
+  #EXPECT(length(rset) == num-pins / 2)
+  #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+  #EXPECT(check-column-pitch(grid, exp-Pitch-X))
+
+  ; The pose moves the pads to the right by 1mm
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [-3.801462, 5.801462]))
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-1.905, -0.635, 0.635, 1.905]))
+
+deftest(SOIC) test-SOIC-with-rotation:
+
+  val num-pins = 8
+  val W-fp = SOIC-W(
+    num-leads = num-pins,
+    lead-span = min-max(10.01, 10.64),
+    package-length = min-max(8.788, 9.195)
+  )
+
+  val W-lp = create-landpattern(W-fp, pose = loc(0.0, 0.0, 90.0))
+
+  val exp-Pitch-Y = tol%(9.6, (1 %))
+  val exp-Pitch-X = tol%(1.27, (1 %))
+
+  val grid = PadGrid(W-lp)
+
+  val rset = rows(grid)
+  #EXPECT(length(rset) == 2)
+  #EXPECT(length(columns(grid)) == num-pins / 2)
+  #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+  #EXPECT(check-column-pitch(grid, exp-Pitch-X))
+
+  ; The pose moves the pads to the right by 1mm
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [-1.905, -0.635, 0.635, 1.905]))
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-4.801462, 4.801462]))
+
+deftest(SOIC) test-thermal-lead-with-pose:
+  val num-pins = 8
+  val W = SOIC-W(
+      num-leads = num-pins,
+      lead-span = min-max(10.01, 10.64),
+      package-length = min-max(8.788, 9.195),
+      thermal-lead? = RoundedRectangle(3.0, 3.0, 0.2)
+    )
+
+    val expName = to-string("SOIC127P1032X250-%_" % [num-pins])
+    #EXPECT(name(W) == expName)
+
+    val W-lp = create-landpattern(W, pose = loc(1.0, 0.0))
+
+    val grid = PadGrid(W-lp)
+
+    #EXPECT(length(rows(grid)) == (num-pins / 2) + 1)
+    #EXPECT(length(columns(grid)) == 2 + 1)
+
+    val thermPad? = find-pad-by-ref(W-lp, 9)
+    #EXPECT(thermPad? is-not False)
+    val thermPad = thermPad? as LandPatternPad
+    #EXPECT(pad-shape(pad(thermPad)) is RoundedRectangle)
+
+    val pos = center $ pose(thermPad)
+    #EXPECT(almost-equal?(pos, Point(1.0, 0.0)))
