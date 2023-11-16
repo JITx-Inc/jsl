@@ -36,7 +36,8 @@ deftest(two-pin) test-basic-radial:
   val pkgName = name(cap)
   #EXPECT(prefix?(pkgName, "Radial"))
 
-  val lp-B = create-landpattern(cap, density-level = DensityLevelB)
+  pcb-landpattern lp-B:
+    make-landpattern(cap, density-level = DensityLevelB)
 
   var grid = PadGrid(lp-B)
 
@@ -50,6 +51,8 @@ deftest(two-pin) test-basic-radial:
       SolderMask(Bottom)
       Cutout()
     ])
+
+  expect-empty-others(lp-B, not-empty)
 
   val padcols = to-tuple $ values(columns(grid))
   for col in padcols do:

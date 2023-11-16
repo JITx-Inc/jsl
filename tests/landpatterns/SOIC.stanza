@@ -64,7 +64,8 @@ deftest(SOIC) test-SOIC-N:
     val expName = to-string("SOIC127P600X155-%_" % [num-pins])
     #EXPECT(name(N) == expName)
 
-    val N-lp = create-landpattern(N)
+    pcb-landpattern N-lp:
+      make-landpattern(N)
 
     val exp-Pitch-X = tol%(5.2, (1 %))
     val exp-Pitch-Y = tol%(1.27, (1 %))
@@ -82,6 +83,14 @@ deftest(SOIC) test-SOIC-N:
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
 
+    val not-empty = to-hashset<LayerSpecifier>([
+      SolderMask(Top)
+      Paste(Top)
+    ])
+
+    expect-empty-others(N-lp, not-empty)
+
+
 deftest(SOIC) test-SOIC-W:
   for num-pins in [8, 14, 20] do:
     val W = SOIC-W(
@@ -93,7 +102,8 @@ deftest(SOIC) test-SOIC-W:
     val expName = to-string("SOIC127P1032X250-%_" % [num-pins])
     #EXPECT(name(W) == expName)
 
-    val W-lp = create-landpattern(W)
+    pcb-landpattern W-lp:
+      make-landpattern(W)
 
     val exp-Pitch-X = tol%(9.6, (1 %))
     val exp-Pitch-Y = tol%(1.27, (1 %))
@@ -110,6 +120,14 @@ deftest(SOIC) test-SOIC-W:
         val pd = pad(lp-pad)
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
+
+    val not-empty = to-hashset<LayerSpecifier>([
+      SolderMask(Top)
+      Paste(Top)
+    ])
+
+    expect-empty-others(W-lp, not-empty)
+
 
 deftest(SOIC) test-fine-pitch:
     val num-pins = 32
