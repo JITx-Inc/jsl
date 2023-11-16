@@ -1,0 +1,74 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/courtyard:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/courtyard
+
+
+deftest(courtyard) test-courtyard-origin :
+
+  pcb-landpattern test-lp:
+    pad p[1] : smd-pad(Circle(0.5)) at loc(2.0, 2.0)
+    pad p[2] : smd-pad(Circle(0.5)) at loc(-2.0, 2.0)
+    pad p[3] : smd-pad(Circle(0.5)) at loc(2.0, -3.0)
+    pad p[4] : smd-pad(Circle(0.5)) at loc(3.0, -1.0)
+
+    make-courtyard-origin()
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+    Courtyard(Top)
+  ])
+
+  expect-empty-others(test-lp, not-empty)
+
+  val cy = layer(test-lp, Courtyard(Top))
+  #EXPECT(length(cy) == 1)
+
+  val outline = dims(cy[0])
+  #EXPECT(almost-equal?(x(outline), 1.0 + DEF_COURTYARD_WIDTH))
+  #EXPECT(almost-equal?(y(outline), 1.0 + DEF_COURTYARD_WIDTH))
+
+  val shapes = shapes(cy[0] as Union)
+  #EXPECT(length(shapes) == 2)
+  for shape in shapes do:
+    #EXPECT(shape is Line)
+
+deftest(courtyard) test-courtyard-boundary:
+
+  val excess = 1.0
+
+  pcb-landpattern test-lp:
+    pad p[1] : smd-pad(Circle(0.5)) at loc(2.0, 2.0)
+    pad p[2] : smd-pad(Circle(0.5)) at loc(-2.0, 2.0)
+    pad p[3] : smd-pad(Circle(0.5)) at loc(2.0, -3.0)
+    pad p[4] : smd-pad(Circle(0.5)) at loc(3.0, -1.0)
+
+    make-courtyard-boundary(excess = excess)
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+    Courtyard(Top)
+  ])
+
+  expect-empty-others(test-lp, not-empty)
+
+  val cy = layer(test-lp, Courtyard(Top))
+  #EXPECT(length(cy) == 1)
+
+  val outline = dims(cy[0])
+  val position-span = (3.0 + 2.0)
+  val pad-diam = 1.0
+  val line-width = 0.2
+  val expWidth = position-span + pad-diam + (2.0 * excess) + DEF_COURTYARD_WIDTH
+  val expHeight = expWidth
+  #EXPECT(almost-equal?(x(outline), expWidth))
+  #EXPECT(almost-equal?(y(outline), expHeight))
