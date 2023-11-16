@@ -27,6 +27,7 @@ defpackage jsl/landpatterns/packages:
   import jsl/design/settings
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
+  import jsl/landpatterns/courtyard
 
 doc: \<DOC>
 Physical body of the Component (also called the Lead Carrier or just Carrier)
@@ -159,10 +160,10 @@ This value should be the default value used for the
 public val DEF_LP_POSE = loc(0.0, 0.0)
 
 doc: \<DOC>
-Generator for creating this landpattern
+Generator for creating the copper pad landpattern
 
 This generator is typically called within a `pcb-landpattern`
-definition to create the necessary pads and geometry associated
+definition to create the necessary pads and copper geometry associated
 with that component's landpattern.
 
 @param pkg IC Package for which we are creating a landpattern
@@ -178,14 +179,258 @@ public defmulti make-landpattern (
   density-level:DensityLevel = ?
   )
 
-; TODO - here is where we may want to add the parameterization
-;   for the creation of silkscreen, courtyard, pin-1 identifier
-;   etc.
 doc: \<DOC>
-Create a `Landpattern` definition
+Generator for creating the silkscreen of a landpattern
 
-This function uses the generator `make-landpattern` to create
-a landpattern definition.
+This generator is typically called within a `pcb-landpattern`
+definition to create the silkscreen outline, pin-1 indicator, or
+any other silkscreen artwork.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti make-silkscreen (
+  pkg:Package
+  --
+  pose:Pose = ?
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Default Silkscreen Implementation - No Silkscreen Artwork Created
+<DOC>
+public defmethod make-silkscreen (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  false
+
+doc: \<DOC>
+Generator for creating courtyard for a landpattern
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the courtyard outline for this component.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti make-courtyard (
+  pkg:Package
+  --
+  pose:Pose = ?
+  density-level:DensityLevel = ?
+  )
+
+public defmethod make-courtyard (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  make-courtyard-origin(pose = pose)
+  ; @TODO - I need some way to extract the courtyard excess specifications
+  ;  from the component
+  make-courtyard-boundary()
+
+doc: \<DOC>
+Generator for creating keep-out constraints for a landpattern
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the keep-out regions for this component.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti make-keep-out (
+  pkg:Package
+  --
+  pose:Pose = ?
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Default `make-keep-out` - No Keep-out Regions Applied.
+<DOC>
+public defmethod make-keep-out (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  false
+
+doc: \<DOC>
+Generator for creating conformal coat masks for a landpattern
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the conformal coat mask regions. This is
+typically useful for connectors or thermal interfaces.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti make-conformal-mask (
+  pkg:Package
+  --
+  pose:Pose = ?
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Default Conformal Coat Generator - No Mask Regions
+<DOC>
+public defmethod make-conformal-mask (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  false
+
+doc: \<DOC>
+Generator for creating adhesive application regions for a landpattern
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the adhesive application regions. This is
+typically useful for complex mechanical parts where we want to add
+additional stability. It can also be useful when creating flat-flex
+design components.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti make-adhesive (
+  pkg:Package
+  --
+  pose:Pose = ?,
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Default `make-adhesive` - No Adhesive Regions
+<DOC>
+public defmethod make-adhesive (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  false
+
+
+
+doc: \<DOC>
+Generator for applying all `Package` generators
+
+This function applies all of the `make-*` generators
+associated with the `Package` type. Generators are applied
+in the following order:
+
+1.  {@link make-landpattern}
+1.  {@link make-silkscreen}
+1.  {@link make-courtyard}
+1.  {@link make-keep-out}
+1.  {@link make-conformal-mask}
+1.  {@link make-adhesive}
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+
+<DOC>
+public defmulti make-all (
+  pkg:Package
+  --
+  pose:Pose = ?
+  density-level:DensityLevel = ?
+  )
+
+doc: \<DOC>
+Default `make-all` generator implementation
+
+This function applies all of the `make-*` generators
+associated with the `Package` type. Generators are applied
+in the following order:
+
+1.  {@link make-landpattern}
+1.  {@link make-silkscreen}
+1.  {@link make-courtyard}
+1.  {@link make-keep-out}
+1.  {@link make-conformal-mask}
+1.  {@link make-adhesive}
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+
+<DOC>
+public defmethod make-all (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  inside pcb-landpattern:
+    make-landpattern(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+    make-silkscreen(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+    make-courtyard(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+    make-keep-out(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+    make-conformal-mask(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+    make-adhesive(
+      pkg,
+      pose = pose,
+      density-level = density-level
+      )
+
+
+doc: \<DOC>
+Create a `LandPattern` definition
+
+This function is used to create a complete landpattern definition
+for this `Package`. Typically this function would use the `make-*`
+generators for this type to construct a `pcb-landpattern` definition
+and return it.
 
 @param pkg Package to create a landpattern for.
 @param pose Geometry gets created with an offset from the origin
@@ -199,21 +444,30 @@ Example:
 
   ; Is equivalent to:
 
-  pcb-pattern lp:
-    name = ...
-    description = ...
+  pcb-landpattern lp:
+    name = "lp"
+    description = ""
     make-landpattern(pkg)
 ```
 <DOC>
 public defmulti create-landpattern (
   pkg:Package
   --
-  pose:Pose = ?
+  pose:Pose = ?,
+  description:String = ?,
   density-level:DensityLevel = ?
   ) -> LandPattern
 
 doc: \<DOC>
 Default Implementation of `create-landpattern`
+
+The default landpattern creator combines all of the
+defined generators for a `Package` (ie, `make-*` functions)
+to generate the complete landpattern for a package.
+
+In more complex packages, you may need to define your own
+`pcb-landpattern` definition with multiple packages
+
 @param pkg Package to create a landpattern for.
 @param pose Offset of the geometry in the landpattern. Default
 is no offset, ie `loc(0.0, 0.0)`
@@ -223,16 +477,13 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmethod create-landpattern (
   pkg:Package
   --
-  pose:Pose = DEF_LP_POSE
+  pose:Pose = DEF_LP_POSE,
+  description:String = "",
   density-level:DensityLevel = DENSITY-LEVEL
   ) -> LandPattern :
   pcb-landpattern lp:
     name = name(pkg)
-    make-landpattern(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
+    make-all(pkg, pose = pose, density-level = density-level)
   lp
 
 

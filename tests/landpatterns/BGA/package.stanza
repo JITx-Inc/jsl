@@ -46,7 +46,8 @@ deftest(BGA) test-full-simple :
   val n = name(pkg)
   #EXPECT(n == "BGA12N50P4X3_250X200X100")
 
-  val lp = create-landpattern(pkg)
+  pcb-landpattern lp:
+    make-landpattern(pkg)
 
   val exp-Pitch = 0.5 +/- (1 %)
 
@@ -146,7 +147,8 @@ deftest(BGA) test-perimeter-simple :
   val n = name(pkg)
   #EXPECT(n == "BGA9N50P3X3_200X200X71")
 
-  val lp = create-landpattern(pkg)
+  pcb-landpattern lp:
+    make-landpattern(pkg)
 
   val exp-Pitch = 0.5 +/- (1 %)
 
@@ -264,7 +266,8 @@ deftest(BGA) test-simple-with-pose:
   val n = name(pkg)
   #EXPECT(n == "BGA12N50P4X3_250X200X100")
 
-  val lp = create-landpattern(pkg, pose = loc(1.2, -1.1))
+  pcb-landpattern lp:
+    make-landpattern(pkg, pose = loc(1.2, -1.1))
 
   val exp-Pitch = 0.5 +/- (1 %)
 
