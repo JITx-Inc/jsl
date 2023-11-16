@@ -103,17 +103,26 @@ public defn ref-label (pose:Pose = loc(0.0, 0.0) -- anchor:Anchor = C) :
     val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
     layer(Silkscreen("values", Top)) = Text(">REF", min-silkscreen-text-height, anchor, pose)
 
+defn default-line-width () -> Double :
+  clearance(current-rules(), MinSilkscreenWidth)
+
 doc: \<DOC>
 Create a plus symbol shape
+@param line-length Length of the horizontal or vertical segments
+@param line-width
 @param center Center coordinate for the plus symbol
-@param l Length of the horizontal or vertical segments
   Default is 1.0mm
 <DOC>
-public defn PlusSymbol (center:Point, l:Double = 1.0) -> Shape:
-  val min-width = clearance(current-rules(), MinSilkscreenWidth)
-  loc(center) *
-    Union([Line(min-width, [Point(-0.5 * l, 0.0), Point(0.5 * l, 0.0)])
-           Line(min-width, [Point(0.0, -0.5 * l), Point(0.0, 0.5 * l)])])
+public defn PlusSymbol (
+  --
+  line-length:Double = 1.0,
+  line-width:Double = default-line-width(),
+  pose:Pose = loc(0.0, 0.0)
+  ) -> Shape:
+  val arm = 0.5 * line-length
+  pose *
+    Union([Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
+           Line(line-width, [Point(0.0,     (- arm)), Point(0.0, arm)])])
 
 doc: \<DOC>
 Create a plus symbol shape
@@ -123,7 +132,7 @@ Create a plus symbol shape
   Default is 1.0mm
 <DOC>
 public defn PlusSymbol (xc:Double, yc:Double, l:Double = 1.0) -> Shape:
-  PlusSymbol(Point(xc, yc))
+  PlusSymbol(line-length = l, pose = loc(xc, yc))
 
 public defn l2-norm (p:Point) -> Double:
     sqrt((x(p) * x(p)) + (y(p) * y(p)))
