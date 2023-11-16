@@ -2,6 +2,7 @@
 defpackage jsl/geometry/basics:
   import core
   import jitx
+  import jitx/commands
 
 ; TODO -
 ;   I want to refactor the shape definitions in esir.stanza:
@@ -42,6 +43,21 @@ public defn GeneralChamferedRectangle (size:Dims, r:Tuple<Double> -- anchor:Anch
 
 ; public defn Circle (radius:Double -- anchor:Anchor = C):
 ;   Circle(anchor, radius)
+
+
+doc: \<DOC>
+Expand for Union shapes
+
+This is provides an implementation that supports `Union` by recursively
+applying the `expand` operation on all shapes in the Union.
+<DOC>
+public defn expand-union (x:Shape|Union, amount:Double) -> Shape:
+  match(x):
+    (U:Union):
+      Union $ for obj in shapes(U) seq:
+        expand-union(obj, amount)
+    (y:Shape): expand(y, amount)
+
 
 public defn to-radius (diam:Double) -> Double : diam / 2.0
 
