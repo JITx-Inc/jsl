@@ -1,0 +1,71 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/courtyard:
+  import core
+  import jitx
+  import jitx/commands
+  import jsl/landpatterns/helpers
+  import jsl/geometry/basics
+
+  ; TODO - This ideally moves to jitx
+  import jsl/geometry/LineRectangle
+
+public val DEF_COURTYARD_WIDTH = 0.2
+
+doc: \<DOC>
+Generator for Courtyard Origin Marker
+
+This function generates a `plus` sign marker
+at the origin of a component landpattern.
+
+@param pose Override the origin location by applying a
+`pose`. This can both rotate and translate the marker position.
+@param side Indicates which side to place the courtyard on. Default
+per convention is the top.
+<DOC>
+public defn make-courtyard-origin (
+  --
+  pose:Pose = loc(0.0, 0.0)
+  side:Side = Top
+  ):
+  inside pcb-landpattern:
+    layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
+
+doc: \<DOC>
+Generator for Courtyard Boundary
+
+The courtyard boundary creates the typical minimum spacing
+expected around a component. The idea is that for soldering/reflow
+we need some space around a component to allow rework - otherwise
+we could damage or de-solder components we don't intend to modify.
+
+This function uses all of the copper pads to define the maximal extent
+of the landpattern. This maximal extent is then padded with the `excess`
+amount on all sides. We then compute the smallest rectangle that
+encapsulates all of these expanded features. This rectangle forms
+the courtyard boundary.
+
+@param excess Additional space to pad the boundary of the
+pads for this component when making the courtyard boundary.
+The default value is 0.5mm
+@param side Which side of the board to draw the courtyard on. By
+default we use the `Top` side as per convention.
+<DOC>
+public defn make-courtyard-boundary (
+  --
+  excess:Double = 0.5
+  side:Side = Top
+  ):
+  ; @NOTE - This is a hack to work around issues with
+  ;  syntax parsing in `pcb-landpattern` contexts. See
+  ;  JITX-7114
+  defn get-pad (x):
+    pad(x)
+
+  inside pcb-landpattern:
+    val unionCopper = Union $ for lp-pad in pads(self) seq:
+      val pd = get-pad(lp-pad)
+      val l = pose(lp-pad)
+      l * pad-shape(pd)
+
+    val outline = dims $ expand-union(unionCopper, excess)
+    layer(Courtyard(side)) = LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
