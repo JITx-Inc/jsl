@@ -4,29 +4,41 @@
 defpackage jsl/geometry/LineRectangle:
   import core
   import jitx
-  import jitx-commands
+  import jitx/commands
 
 defn gen-default-width ():
   clearance(current-rules(), MinSilkscreenWidth)
 
+val DEF_LR_POSE = loc(0.0, 0.0)
+
 doc: \<DOC>
-Rectangle constructed via lines of a specified width.
-This rectangle is anchored in the center of the shape.
-@param w Width of Rectangle (x) not accounting for line width
-@param h Height of the Rectangle (y) not accounting for line width
-@param xc Center X coordinate of rectangle shape
-@param yc Center Y coordinate of rectangle shape
-@param line-w Width of the line segment used to draw all 4 edges
-  of the rectangle. If no width is provided, the default is the
-  minimum silkscreen width from the current design rules.
+Construct a rectangular outline with a `Line` element
+@param d Dimensions of the Rectangle - x = width, y = height
+@param line-width Width of the line in mm
+@param pose Optional transformation for the rectangle. The
+default is `loc(0.0, 0.0)`
+@param anchor Defines the origin of the LineRectangle before
+the `pose` transformation is applied. Default value is `C` or
+center aligned vertically and horizontally.
 <DOC>
 public defn LineRectangle (
-  w:Double, h:Double,
-  xc:Double = 0.0, yc:Double = 0.0,
-  line-w:Double = gen-default-width()) :
-  val w2 = w * 0.5
-  val h2 = h * 0.5
-  Line(line-w, [
+  d:Dims
+  --
+  line-width:Double = gen-default-width(),
+  pose:Pose = DEF_LR_POSE,
+  anchor:Anchor = C
+  ):
+  val [vt, hr] = components(anchor)
+  val xc = match(hr):
+    (hr:W): x(d) / 2.0
+    (hr:C): 0.0
+    (hr:E): x(d) / -2.0
+  val yc = match(vt):
+    (vt:S): y(d) / 2.0
+    (vt:C): 0.0
+    (vt:N): y(d) / -2.0
+  val [w2, h2] = [x(d) / 2.0, y(d) / 2.0]
+  pose * Line(line-width, [
     Point(xc - w2, yc - h2)
     Point(xc + w2, yc - h2)
     Point(xc + w2, yc + h2)
@@ -34,22 +46,33 @@ public defn LineRectangle (
     Point(xc - w2, yc - h2)])
 
 doc: \<DOC>
-Rectangle constructed via lines of a specified width.
-This rectangle is anchored in the center of the shape.
-@param d Width/Height of Rectangle (x/y) not accounting for line width
-@param pt Center coordinate of rectangle shape
-@param line-w Width of the line segment used to draw all 4 edges
-  of the rectangle. If no width is provided, the default is the
-  minimum silkscreen width from the current design rules.
-<DOC>
-public defn LineRectangle (d:Dims, pt:Point = Point(0.0, 0.0), line-w:Double = gen-default-width()):
-  LineRectangle(x(d), y(d), x(pt), y(pt), line-w)
+Construct a rectangular outline with a `Line` element
 
-; Create a rectangle around another shape
-doc: \<DOC>
-Generate a line rectangle that outlines the passed shape.
-@param s Generate the maximum bounding rectangle for this shape
-  and use it to generate a LineRectangle.
+@param width Width (X-dimension) of the generated rectangle
+in the default coordinate frame before the `pose` transformation
+is applied.
+@param height Height (Y-dimension) of the generated rectangle
+in the default coordinate frame before the `pose` transformation
+is applied.
+
+@param line-width Width of the line in mm
+@param pose Optional transformation for the rectangle. The
+default is `loc(0.0, 0.0)`
+@param anchor Defines the origin of the LineRectangle before
+the `pose` transformation is applied. Default value is `C` or
+center aligned vertically and horizontally.
 <DOC>
-public defn outline-bounding-box (s:Shape) :
-  LineRectangle(dims(s))
+public defn LineRectangle (
+  width:Double, height:Double,
+  --
+  line-width:Double = gen-default-width(),
+  pose:Pose = DEF_LR_POSE,
+  anchor:Anchor = C
+  ):
+  LineRectangle(
+    Dims(width, height),
+    line-width = line-width,
+    pose = pose,
+    anchor = anchor
+    )
+
