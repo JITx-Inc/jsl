@@ -5,11 +5,21 @@ defpackage jsl/landpatterns/courtyard:
   import jitx/commands
   import jsl/landpatterns/helpers
   import jsl/geometry/basics
-
+  import jsl/landpatterns/VirtualLP
   ; TODO - This ideally moves to jitx
   import jsl/geometry/LineRectangle
 
 public val DEF_COURTYARD_WIDTH = 0.2
+
+public defn build-courtyard-origin (
+  vp:VirtualLP,
+  --
+  pose:Pose = loc(0.0, 0.0)
+  side:Side = Top
+  ) -> False:
+
+  val shape = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
+  append(vp, Courtyard(side), shape)
 
 doc: \<DOC>
 Generator for Courtyard Origin Marker
@@ -41,7 +51,7 @@ rectangle of.
 @param expand-by Amount to expand the created dimension by.
 <DOC>
 public defn bounds (
-  lp-pads:Seqable<LandPatternPad>
+  lp-pads:Seqable<LandPatternPad|VirtualLPPad>
   --
   layer-spec:LayerSpecifier|False = false
   expand-by:Double = 0.0
@@ -92,3 +102,13 @@ public defn make-courtyard-boundary (
     val outline = bounds(pads(self), expand-by = excess)
     layer(Courtyard(side)) = pose * LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
 
+public defn build-courtyard-boundary (
+  vp:VirtualLP,
+  --
+  excess:Double = 0.5
+  pose:Pose = loc(0.0, 0.0)
+  side:Side = Top
+  ) -> False:
+  val outline = bounds(get-pads(vp), expand-by = excess)
+  val content = pose * LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
+  append(vp, Courtyard(side), content)

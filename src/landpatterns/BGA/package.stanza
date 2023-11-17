@@ -13,6 +13,7 @@ defpackage jsl/landpatterns/BGA/package:
   import jsl/landpatterns/packages
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
+  import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/BGA/planner
 
 doc: \<DOC>
@@ -146,29 +147,28 @@ public defmethod name (bga:BGA) -> String:
     to-deci $ typ $ height(b),
   ])
 
-public defmethod make-landpattern (
-  x:BGA
+public defmethod build-landpattern (
+  pkg:BGA,
+  vp:VirtualLP,
   --
-  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL
-  ):
+  ) -> False :
   ; For the BGA - we size the pad according to the
   ;  ball diameter and allow the `PadConfig` object to
   ;  drive the pad sizing.
-  val pad-size = Dims(lead-diam(x), lead-diam(x))
+  val pad-size = Dims(lead-diam(pkg), lead-diam(pkg))
   ; Generate the grid
-  val planner = pad-planner(x) as BGA-PadPlanner
-  defn gen-pad-info () -> Seq<PadInfo> :
-    val grid = grid(planner, rows(x), columns(x), pitch(x))
-    for r in 0 to rows(x) seq-cat:
-      for (c in 0 to columns(x), pos in grid) seq? :
-        val pad-id = to-pad-id(lead-numbering(x), r, c)
+  val planner = pad-planner(pkg) as BGA-PadPlanner
+  defn gen-pad-info () -> Seq<VirtualPad> :
+    val grid = grid(planner, rows(pkg), columns(pkg), pitch(pkg))
+    for r in 0 to rows(pkg) seq-cat:
+      for (c in 0 to columns(pkg), pos in grid) seq? :
+        val pad-id = to-pad-id(lead-numbering(pkg), r, c)
         val pad-gen? = pad-generator(planner, r, c)
         match(pad-gen?):
           (_:False): None()
           (pad-gen):
-            One $ PadInfo(pad-id, pad-gen(pad-size), pos)
+            One $ VirtualPad(pad-id, pad-gen(pad-size), pos)
 
-  inside pcb-landpattern:
+  append-all(vp, gen-pad-info())
 
-    instantiate-pads{_, pose} $ gen-pad-info()

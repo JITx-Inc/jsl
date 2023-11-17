@@ -28,6 +28,7 @@ defpackage jsl/landpatterns/packages:
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
   import jsl/landpatterns/courtyard
+  import jsl/landpatterns/VirtualLP
 
 doc: \<DOC>
 Physical body of the Component (also called the Lead Carrier or just Carrier)
@@ -159,6 +160,28 @@ This value should be the default value used for the
 <DOC>
 public val DEF_LP_POSE = loc(0.0, 0.0)
 
+
+doc: \<DOC>
+Build the pad/copper in a virtual landpattern
+
+This function is used to build the landpattern's
+pad definitions in a virtual landpattern environment.
+That virtual environment can then be written out to a
+`pcb-landpattern` definition.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti build-landpattern (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = ?
+  ) -> False
+
+
 doc: \<DOC>
 Generator for creating the copper pad landpattern
 
@@ -178,6 +201,52 @@ public defmulti make-landpattern (
   pose:Pose = ?
   density-level:DensityLevel = ?
   )
+
+doc: \<DOC>
+Default Implementation of the Landpattern Copper Generator
+<DOC>
+public defmethod make-landpattern (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-landpattern(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
+
+
+doc: \<DOC>
+Create silkscreen content in virtual landpattern
+
+This function is used to build the landpattern's
+silkscreen artwork in a virtual landpattern environment.
+That virtual environment can then be written out to a
+`pcb-landpattern` definition.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti build-silkscreen (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = ?
+  ) -> False
+
+doc: \<DOC>
+Default silkscreen creator - No Silkscreen Content
+<DOC>
+public defmethod build-silkscreen (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> False:
+  false
 
 doc: \<DOC>
 Generator for creating the silkscreen of a landpattern
@@ -208,7 +277,51 @@ public defmethod make-silkscreen (
   pose:Pose = DEF_LP_POSE
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  false
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-silkscreen(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
+
+
+
+doc: \<DOC>
+Create courtyard content in a virtual landpattern
+
+This function is used to build the landpattern's
+courtyard region in a virtual landpattern environment.
+That virtual environment can then be written out to a
+`pcb-landpattern` definition.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti build-courtyard (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = ?
+  ) -> False
+
+doc: \<DOC>
+Default courtyard creator
+
+This function creates the default courtyard for the component
+by introducing a center mark at the origin and a bounding
+rectangle on the `Courtyard(Top)` layer.
+<DOC>
+public defmethod build-courtyard (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> False:
+  build-courtyard-origin(vp)
+  ; @TODO - I need some way to extract the courtyard excess specifications
+  ;  from the component
+  build-courtyard-boundary(vp)
+
 
 doc: \<DOC>
 Generator for creating courtyard for a landpattern
@@ -232,13 +345,46 @@ public defmulti make-courtyard (
 public defmethod make-courtyard (
   pkg:Package
   --
-  pose:Pose = DEF_LP_POSE,
+  pose:Pose = DEF_LP_POSE
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  make-courtyard-origin(pose = pose)
-  ; @TODO - I need some way to extract the courtyard excess specifications
-  ;  from the component
-  make-courtyard-boundary()
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-courtyard(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
+
+
+doc: \<DOC>
+Create `keep-out` regions in a virtual landpattern
+
+This function is used to build the landpattern's
+keep-out regions in a virtual landpattern environment.
+This may include keep-outs for copper, vias, etc.
+That virtual environment can then be written out to a
+`pcb-landpattern` definition.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti build-keep-out (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = ?
+  ) -> False
+
+doc: \<DOC>
+Default `build-keep-out` - No Keep-out Regions Applied.
+<DOC>
+public defmethod build-keep-out (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> False:
+  false
 
 doc: \<DOC>
 Generator for creating keep-out constraints for a landpattern
@@ -268,6 +414,42 @@ public defmethod make-keep-out (
   pose:Pose = DEF_LP_POSE
   density-level:DensityLevel = DENSITY-LEVEL
   ):
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-keep-out(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
+
+doc: \<DOC>
+Create conformal coat mask regions in a virtual landpattern
+
+This function is used to build the landpattern's
+conformal coat mask regions in a virtual landpattern environment.
+Typically this is used to mark where on this component conformal
+coating should not be applied - like for connector openings, etc.
+That virtual environment can then be written out to a
+`pcb-landpattern` definition.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+<DOC>
+public defmulti build-conformal-mask (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = ?
+  ) -> False
+
+doc: \<DOC>
+Default `build-conformal-mask` - No Conformal Mask Regions Applied.
+<DOC>
+public defmethod build-conformal-mask (
+  pkg:Package,
+  vp:VirtualLP,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> False:
   false
 
 doc: \<DOC>
@@ -291,64 +473,88 @@ public defmulti make-conformal-mask (
   )
 
 doc: \<DOC>
-Default Conformal Coat Generator - No Mask Regions
+Default Conformal Coat Generator
 <DOC>
 public defmethod make-conformal-mask (
   pkg:Package
   --
-  pose:Pose = DEF_LP_POSE,
+  pose:Pose = DEF_LP_POSE
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  false
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-conformal-mask(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
+
 
 doc: \<DOC>
-Generator for creating adhesive application regions for a landpattern
+Apply all `Package` builder functions
 
-This generator is typically called within a `pcb-landpattern`
-definition to create the adhesive application regions. This is
-typically useful for complex mechanical parts where we want to add
-additional stability. It can also be useful when creating flat-flex
-design components.
+This function applies all of the `build-*` functions
+associated with the `Package` type to a virtual landpattern container.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
-by this generator function. By default, no offset is applied.
+@param virt Virtual Landpattern to which content will be written
 @param density-level Density Level for this LandPattern definition.
 See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
-public defmulti make-adhesive (
-  pkg:Package
+public defmulti build-all (
+  pkg:Package,
+  virt:VirtualLP
   --
-  pose:Pose = ?,
   density-level:DensityLevel = ?
-  )
+  ) -> False
 
 doc: \<DOC>
-Default `make-adhesive` - No Adhesive Regions
-<DOC>
-public defmethod make-adhesive (
-  pkg:Package
-  --
-  pose:Pose = DEF_LP_POSE,
-  density-level:DensityLevel = DENSITY-LEVEL
-  ):
-  false
+Default `build-all` implementation
 
+Builders are applied in the following order:
+
+1.  {@link build-landpattern}
+1.  {@link build-courtyard}
+1.  {@link build-silkscreen}
+1.  {@link build-keep-out}
+1.  {@link build-conformal-mask}
+
+<DOC>
+public defmethod build-all (
+  pkg:Package,
+  virt:VirtualLP
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> False :
+  build-landpattern(
+    pkg,
+    virt,
+    density-level = density-level
+    )
+  build-courtyard(
+    pkg,
+    virt,
+    density-level = density-level
+    )
+  build-silkscreen(
+    pkg,
+    virt,
+    density-level = density-level
+    )
+  build-keep-out(
+    pkg,
+    virt,
+    density-level = density-level
+    )
+  build-conformal-mask(
+    pkg,
+    virt,
+    density-level = density-level
+    )
 
 
 doc: \<DOC>
 Generator for applying all `Package` generators
 
 This function applies all of the `make-*` generators
-associated with the `Package` type. Generators are applied
-in the following order:
-
-1.  {@link make-landpattern}
-1.  {@link make-silkscreen}
-1.  {@link make-courtyard}
-1.  {@link make-keep-out}
-1.  {@link make-conformal-mask}
-1.  {@link make-adhesive}
+associated with the `Package` type.
 
 @param pkg IC Package for which we are creating silkscreen artwork
 @param pkg pose Offset to apply to all of the geometry generated
@@ -367,23 +573,11 @@ public defmulti make-all (
 doc: \<DOC>
 Default `make-all` generator implementation
 
-This function applies all of the `make-*` generators
-associated with the `Package` type. Generators are applied
-in the following order:
-
-1.  {@link make-landpattern}
-1.  {@link make-silkscreen}
-1.  {@link make-courtyard}
-1.  {@link make-keep-out}
-1.  {@link make-conformal-mask}
-1.  {@link make-adhesive}
-
 @param pkg IC Package for which we are creating silkscreen artwork
 @param pkg pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
 @param density-level Density Level for this LandPattern definition.
 See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
-
 <DOC>
 public defmethod make-all (
   pkg:Package
@@ -392,37 +586,9 @@ public defmethod make-all (
   density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
-    make-landpattern(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-    make-silkscreen(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-    make-courtyard(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-    make-keep-out(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-    make-conformal-mask(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-    make-adhesive(
-      pkg,
-      pose = pose,
-      density-level = density-level
-      )
-
+    val virt = VirtualLP(pose)
+    build-all(pkg, virt, density-level = density-level)
+    make-landpattern(virt)
 
 doc: \<DOC>
 Create a `LandPattern` definition
