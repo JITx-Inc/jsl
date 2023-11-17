@@ -16,6 +16,7 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jsl/landpatterns/IPC
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
+  import jsl/landpatterns/VirtualLP
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -222,14 +223,10 @@ public defn SMT-Chip (
   ):
   #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering)
 
-doc: \<DOC>
-Adjust the size of the toe fillet based on the
-height of the device.
-<DOC>
-public defmethod make-landpattern (
-  pkg:SMT-Chip
+public defmethod build-landpattern (
+  pkg:SMT-Chip,
+  vp:VirtualLP,
   --
-  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL
   ):
 
@@ -255,7 +252,7 @@ public defmethod make-landpattern (
   val planner = pad-planner(pkg)
   val num-scheme = lead-numbering(pkg)
 
-  defn gen-pad-info () -> Seq<PadInfo> :
+  defn gen-pad-info () -> Seq<VirtualPad> :
     ; Column Major
     val num-cols = 1
     val num-rows = 2
@@ -266,11 +263,10 @@ public defmethod make-landpattern (
       match(pad-gen?):
         (_:False): None()
         (pad-gen):
-          One $ PadInfo(pad-id, pad-gen(pad-sz), pos)
+          One $ VirtualPad(pad-id, pad-gen(pad-sz), pos)
 
-  inside pcb-landpattern:
 
-    instantiate-pads{_, pose} $ gen-pad-info()
+  append-all(vp, gen-pad-info())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   Resistor

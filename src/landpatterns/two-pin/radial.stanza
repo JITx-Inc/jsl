@@ -10,6 +10,7 @@ defpackage jsl/landpatterns/two-pin/radial:
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
   import jsl/landpatterns/two-pin/utils
+  import jsl/landpatterns/VirtualLP
 
 ; TODO - Consider adding an angle here that
 ;   rotates the two pins around the Z axis.
@@ -83,10 +84,10 @@ public defmethod name (pkg:Radial-2pin) -> String:
     to-deci $ typ $ length $ lead $ pkg
     ]
 
-public defmethod make-landpattern (
-  pkg:Radial-2pin
+public defmethod build-landpattern (
+  pkg:Radial-2pin,
+  vp:VirtualLP
   --
-  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL
   ) :
 
@@ -102,7 +103,7 @@ public defmethod make-landpattern (
   val planner = pad-planner(pkg)
   val num-scheme = lead-numbering(pkg)
 
-  defn gen-pad-info () -> Seq<PadInfo> :
+  defn gen-pad-info () -> Seq<VirtualPad> :
     ; Column Major
     val num-cols = 1
     val num-rows = 2
@@ -113,8 +114,6 @@ public defmethod make-landpattern (
       match(th-pad-gen?):
         (_:False): None()
         (th-pad-gen):
-          One $ PadInfo(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
 
-  inside pcb-landpattern:
-
-    instantiate-pads{_, pose} $ gen-pad-info()
+  append-all(vp, gen-pad-info())

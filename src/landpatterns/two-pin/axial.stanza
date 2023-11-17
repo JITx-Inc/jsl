@@ -11,6 +11,7 @@ defpackage jsl/landpatterns/two-pin/axial:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/two-pin/utils
+  import jsl/landpatterns/VirtualLP
 
 doc: \<DOC>
 Through-hole Lead with Optional Weld-Bead
@@ -159,10 +160,10 @@ public defmethod name (pkg:Axial-2pin) -> String :
     to-deci $ typ $ length $ lead $ pkg
     ]
 
-public defmethod make-landpattern (
-  pkg:Axial-2pin
+public defmethod build-landpattern (
+  pkg:Axial-2pin,
+  vp:VirtualLP,
   --
-  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL
   ) :
 
@@ -196,7 +197,7 @@ public defmethod make-landpattern (
       val bend-diam = body-radius + lead-radius + 0.1
       max(bend-diam / 2.0, bend-radius(pkg))
 
-  defn gen-pad-info () -> Seq<PadInfo> :
+  defn gen-pad-info () -> Seq<VirtualPad> :
     ; Column Major
     val num-cols = 1
     val num-rows = 2
@@ -207,8 +208,6 @@ public defmethod make-landpattern (
       match(th-pad-gen?):
         (_:False): None()
         (th-pad-gen):
-          One $ PadInfo(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
 
-  inside pcb-landpattern:
-
-    instantiate-pads{_, pose} $ gen-pad-info()
+  append-all(vp, gen-pad-info())
