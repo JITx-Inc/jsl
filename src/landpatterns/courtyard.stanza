@@ -31,6 +31,37 @@ public defn make-courtyard-origin (
     layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
 
 doc: \<DOC>
+Generate the Bounding Dims of a sequence of pads
+@param lp-pads the pads that we want to create a bounding
+rectangle of.
+@param layer-spec Optional layer specifier that will compute
+  the bounds based on the geometry in a particular layer.
+  If this value is false - we compute the boundary based on the
+  copper pad geometry only.
+@param expand-by Amount to expand the created dimension by.
+<DOC>
+public defn bounds (
+  lp-pads:Seqable<LandPatternPad>
+  --
+  layer-spec:LayerSpecifier|False = false
+  expand-by:Double = 0.0
+  ) -> Dims :
+  val unionAll = Union $ for lp-pad in lp-pads seq:
+    val pd = pad(lp-pad)
+    val l = pose(lp-pad)
+    match(layer-spec):
+      (_:False):
+        l * pad-shape(pd)
+      (ls:LayerSpecifier):
+        val shapes = layer(pd, ls)
+        l * Union(shapes)
+
+  ; NOTE - this is not positioned in any way - it is
+  ;  just the dimensions.
+  ;  Ie - it isn't a `Rectangle` with a pose.
+  dims $ expand-union(unionAll, expand-by)
+
+doc: \<DOC>
 Generator for Courtyard Boundary
 
 The courtyard boundary creates the typical minimum spacing
@@ -49,23 +80,15 @@ pads for this component when making the courtyard boundary.
 The default value is 0.5mm
 @param side Which side of the board to draw the courtyard on. By
 default we use the `Top` side as per convention.
+@param pose Pose offset for this group of features.
 <DOC>
 public defn make-courtyard-boundary (
   --
   excess:Double = 0.5
   side:Side = Top
+  pose:Pose = loc(0.0, 0.0)
   ):
-  ; @NOTE - This is a hack to work around issues with
-  ;  syntax parsing in `pcb-landpattern` contexts. See
-  ;  JITX-7114
-  defn get-pad (x):
-    pad(x)
-
   inside pcb-landpattern:
-    val unionCopper = Union $ for lp-pad in pads(self) seq:
-      val pd = get-pad(lp-pad)
-      val l = pose(lp-pad)
-      l * pad-shape(pd)
+    val outline = bounds(pads(self), expand-by = excess)
+    layer(Courtyard(side)) = pose * LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
 
-    val outline = dims $ expand-union(unionCopper, excess)
-    layer(Courtyard(side)) = LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
