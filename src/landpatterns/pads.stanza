@@ -659,7 +659,6 @@ public defn make-thermal-pad (
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ; TODO - I don't think this should be here - I think this needs to be
 ;   moved somewhere else.
 ;   Seems to only be used with the mounting holes - so we probably should

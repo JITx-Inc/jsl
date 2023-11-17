@@ -39,6 +39,7 @@ defpackage jsl/landpatterns/SOIC:
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
   import jsl/landpatterns/packages
+  import jsl/landpatterns/VirtualLP
 
 
 val SOIC-DEF-PITCH = 1.27
@@ -271,25 +272,24 @@ Generator for Creating SOIC LandPatterns
 @param density-level Defines the compactness of the symbol created. By default,
   the design density-level will be selected.
 <DOC>
-public defmethod make-landpattern (
+public defmethod build-landpattern (
   pkg:SOIC
+  vp:VirtualLP
   --
-  pose:Pose = DEF_LP_POSE,
   density-level:DensityLevel = DENSITY-LEVEL,
   ) :
-  inside pcb-landpattern:
-    make-dual-row-smd-landpattern(
-      num-leads(pkg),
-      pitch(pkg),
-      lead(pkg),
-      lead-span(pkg),
-      package-body(pkg),
-      pose = pose,
-      pad-planner = pad-planner(pkg),
-      num-scheme = lead-numbering(pkg),
-      density-level = density-level,
-      with-pol-marker? = true
-      thermal-lead? = thermal-lead?(pkg)
-    )
+  build-dual-row-smd-landpattern(
+    vp,
+    num-leads(pkg),
+    pitch(pkg),
+    lead(pkg),
+    lead-span(pkg),
+    package-body(pkg),
+    pad-planner = pad-planner(pkg),
+    num-scheme = lead-numbering(pkg),
+    density-level = density-level,
+    with-pol-marker? = true
+    thermal-lead? = thermal-lead?(pkg)
+  )
 
 
