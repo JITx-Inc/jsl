@@ -54,7 +54,7 @@ defpackage jsl/tests/utils:
       return $ for (a in A*, b in B*) all? :
         almost-equal?(a, b, eps)
 
-  public defn almost-equal? (a:Point, b:Point, eps = DEF-EPS) -> True|False :
+  public defn almost-equal? (a:Point|Dims, b:Point|Dims, eps = DEF-EPS) -> True|False :
     val checks = [
       almost-equal?(x(a), x(b), eps),
       almost-equal?(y(a), y(b), eps)

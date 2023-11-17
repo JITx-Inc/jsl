@@ -1,0 +1,63 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/geometry:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/geometry/basics
+
+deftest(geometry) test-expand-dims:
+  val uut = Dims(2.0, 1.0)
+
+  ; Double amount
+  var obs = expand(uut, 1.0)
+  #EXPECT(almost-equal?(obs, Dims(4.0, 3.0)))
+
+  obs = expand(uut, -0.05)
+  #EXPECT(almost-equal?(obs, Dims(1.9, 0.9)))
+
+  obs = expand(uut, 0.0)
+  #EXPECT(almost-equal?(obs, Dims(2.0, 1.0)))
+
+  ; Dims amount
+  obs = expand(uut, Dims(0.5, 0.4))
+  #EXPECT(almost-equal?(obs, Dims(3.0, 1.8)))
+
+  obs = expand(uut, Dims(0.25, -0.1))
+  #EXPECT(almost-equal?(obs, Dims(2.5, 0.8)))
+
+deftest(geometry) test-expand-union:
+
+  val testvecs = [
+    [Rectangle(2.0, 3.0), 0.5, Dims(3.0, 4.0)],
+    [Union([Rectangle(2.0, 3.0)]), 0.5, Dims(3.0, 4.0)]
+    [Union([Rectangle(2.0, 3.0), Circle(1.0, 0.0, 0.5)]), 0.5, Dims(3.5, 4.0)]
+
+  ]
+
+  for testvec in testvecs do:
+    val [uut, amount, exp] = testvec
+
+    val output = expand-union(uut, amount)
+    val obs = dims(output)
+    #EXPECT(almost-equal?(obs, exp))
+
+deftest(geometry) test-bounds-dims:
+
+  val uut = [Dims(2.0, 3.0), Dims(3.0, 2.0)]
+  var obs = bounds(uut)
+
+  #EXPECT(almost-equal?(obs, Dims(3.0, 3.0)))
+
+  obs = bounds(uut, expand-by = 0.5)
+  #EXPECT(almost-equal?(obs, Dims(4.0, 4.0)))
+
+  obs = bounds(uut, expand-by = -0.25)
+  #EXPECT(almost-equal?(obs, Dims(2.5, 2.5)))
+
+deftest(geometry) test-bounds-contains?:
+  val uut = Dims(2.0, 1.0)
+
+  #EXPECT(contains?(uut, Dims(0.5, 0.5)))
+  #EXPECT(not contains?(uut, Dims(1.0, 2.0)))
