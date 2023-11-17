@@ -58,6 +58,54 @@ public defn expand-union (x:Shape|Union, amount:Double) -> Shape:
         expand-union(obj, amount)
     (y:Shape): expand(y, amount)
 
+doc: \<DOC>
+Increase the size of a `Dims` by `amount` on all sides
 
+Effective width and height are larger by `2.0 * amount`
+
+@param d Originating `Dims` instance that this method will expand.
+@param amount quantity for expansion on all sides.
+<DOC>
+public defn expand (d:Dims, amount:Double) -> Dims :
+  val r2 = amount * 2.0
+  Dims(x(d) + r2, y(d) + r2)
+
+doc: \<DOC>
+Increase the size of a `Dims` by different x and y amounts.
+
+@param d Originating `Dims` instance that this method will expand.
+@param amount `Dims` that encodes the expansion amount of the X and Y
+  axis as two different values.
+<DOC>
+public defn expand (d:Dims, amount:Dims) -> Dims :
+  Dims(x(d) + (x(amount) * 2.0), y(d) + (y(amount) * 2.0))
+
+doc: \<DOC>
+Compute the bounding Dims object that encapsulates the sequence of passed Dims.
+
+@param objs The set of objects that will be reviewed.
+@param expand-by Add additional margin on all sides by this amount.
+The resultant `Dims` object will be `2.0 * expand-by` greater than
+the maximum outline
+  Default value is 0.0.
+<DOC>
+public defn bounds (
+  objs:Collection<Dims>
+  --
+  expand-by:Double = 0.0
+  ) -> Dims:
+  val max-X = maximum(x, objs)
+  val max-Y = maximum(y, objs)
+  expand{_, expand-by} $ Dims(x(max-X), y(max-Y))
+
+doc: \<DOC>
+Is B entirely enclosed by A ?
+<DOC>
+public defn contains? (a:Dims, b:Dims) -> True|False :
+  (x(a) > x(b)) and (y(a) > y(b))
+
+doc: \<DOC>
+Diameter to Radius Converter
+<DOC>
 public defn to-radius (diam:Double) -> Double : diam / 2.0
 
