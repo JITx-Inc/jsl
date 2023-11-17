@@ -16,6 +16,7 @@ build-test tests:
     jsl/tests/landpatterns/two-pin/radial
     jsl/tests/landpatterns/two-pin/axial
     jsl/tests/landpatterns/courtyard
+    jsl/tests/landpatterns/VirtualLP
     jsl/tests/geometry
   pkg: "test-pkgs"
   o: "jsl-tests"

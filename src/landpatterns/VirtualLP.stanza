@@ -1,0 +1,322 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/VirtualLP:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+
+doc: \<DOC>
+Helper Struct for Constructing Virtual Landpattern definitions
+<DOC>
+public defstruct VirtualPad :
+  pad-id:Int|Ref
+  pad-def:Pad
+  loc:Pose
+  side:Side with: (default => Top)
+
+doc: \<DOC>
+Generator to create a `pad` statement for this `VirtualPad` instance
+
+@param p Self
+@param offset Extra offset to apply to the pad definition.
+This is often used for translating an entire landpattern.
+<DOC>
+public defn make-pad (p:VirtualPad, offset:Pose) :
+  inside pcb-landpattern:
+    val r = match(pad-id(p)):
+      (i:Int): IndexRef(Ref("p"), i)
+      (x:Ref): x
+
+    pad (r) : pad-def(p) at offset * loc(p) on side(p)
+
+doc: \<DOC>
+Function to mimic `layer` from jitx/commands on `VirtualPad`
+<DOC>
+public defn get-layer (p:VirtualPad, ls:LayerSpecifier) -> Tuple<Shape> :
+  layer{_, ls} $ pad-def(p)
+
+doc: \<DOC>
+Function to mimic `layers` from jitx/commands on `VirtualPad`
+<DOC>
+public defn get-layers (p:VirtualPad) -> Tuple<LayerShape> :
+  layers $ pad-def(p)
+
+doc: \<DOC>
+This is a mimic for the `LandPatternPad` type
+<DOC>
+public defstruct VirtualLPPad :
+  ; @NOTE - This has challenges when used inside `pcb-landpattern
+  ;  definition. See JITX-7114
+  pad:Pad
+  pose:Pose
+  side:Side
+
+public defn VirtualLPPad (p:VirtualPad) -> VirtualLPPad:
+  VirtualLPPad(pad-def(p), loc(p), side(p))
+
+public defstruct VirtualCopper :
+  layer-index:LayerIndex
+  shape:Shape
+
+
+
+doc: \<DOC>
+Virtual LandPattern Node
+
+This type is used to create a virtual landpattern
+model. We use this so that we can modify the landpattern
+elements (pads, artwork, etc) before writing it to the
+ESIR `pcb-landpattern` definition. Once written to ESIR,
+the landpattern cannot be modified.
+
+NOTE: I'm not supporting `copper` statements yet because
+I'm not sure how or why to use them. They don't seem
+particularly useful
+
+<DOC>
+public defstruct VirtualLP :
+  doc: \<DOC>
+  Optional Parent node. If `None` then this node
+  is the root of the tree.
+  <DOC>
+  parent:Maybe<VirtualLP> with: (
+    setter => set-parent
+  )
+  doc: \<DOC>
+  Child nodes of this landpattern
+  <DOC>
+  children:Vector<VirtualLP>
+
+  doc: \<DOC>
+  Pads to be placed in this virtual landpattern frame of reference
+  <DOC>
+  lands:Vector<VirtualPad>
+  doc: \<DOC>
+  Layer Artwork to be placed in this virtual landpattern frame of reference.
+  <DOC>
+  artwork:HashTable<LayerSpecifier, Vector<Shape>>
+
+  doc: \<DOC>
+  Virtual `copper` statements as placced in the virtual landpattern
+  frame of reference.
+  <DOC>
+  metal:Vector<VirtualCopper>
+
+  doc: \<DOC>
+  Kinematic transform of this node of the virtual landpattern tree.
+
+  This pose will be applied to the reference frame of this node.
+  This means that all geometry in this node will experience this
+  transformation. Additionally, all children node's frames of
+  reference will be transformed by this pose.
+  <DOC>
+  pose:Pose with: (
+    setter => set-pose
+  )
+with:
+  constructor => #VirtualLP
+
+val DEF_VLP_POSE = loc(0.0, 0.0)
+
+doc: \<DOC>
+Construct a VirtualLP Leaf Node
+This is not intended to be public. Use `create-child`
+instead.
+<DOC>
+defn VirtualLP (parent:VirtualLP, pose:Pose = DEF_VLP_POSE) -> VirtualLP:
+  #VirtualLP(
+    One(parent),
+    Vector<VirtualLP>(),
+    Vector<VirtualPad>(),
+    HashTable<LayerSpecifier, Vector<Shape>>(),
+    Vector<VirtualCopper>(),
+    pose
+  )
+
+doc: \<DOC>
+Construct a VirtualLP Root Node
+<DOC>
+public defn VirtualLP (pose:Pose = DEF_VLP_POSE) -> VirtualLP :
+  #VirtualLP(
+    None(),
+    Vector<VirtualLP>(),
+    Vector<VirtualPad>(),
+    HashTable<LayerSpecifier, Vector<Shape>>(),
+    Vector<VirtualCopper>(),
+    pose
+  )
+
+doc: \<DOC>
+Check if this is the root node in a Virtual Landpattern Tree
+<DOC>
+public defn is-root? (vp:VirtualLP) -> True|False :
+  parent(vp) is None
+
+doc: \<DOC>
+Retrieve the Shapes associated with a Layer as a Vector
+<DOC>
+public defn get-artwork (vp:VirtualLP, ls:LayerSpecifier) -> Vector<Shape> :
+  val art = artwork(vp)
+  if key?(art, ls):
+    get(art, ls)
+  else:
+    val ret = to-vector<Shape>([])
+    set(art, ls, ret)
+    ret
+
+doc: \<DOC>
+Attempts to mimic the `layer` function from jitx/commands
+
+This returns the shapes present on a specific layer that
+are defined directly in the landpattern or its children. It
+does not include the geometry defined in the pads.
+
+<DOC>
+public defn get-layer (vp:VirtualLP, ls:LayerSpecifier) -> Tuple<Shape> :
+  ; @NOTE - to match the behavior of `layer` which doesn't seem
+  ;  to act recursively on a landpattern definition - we are not
+  ;  inspecting the pads in this function.
+  val local-art = get-artwork(vp, ls)
+  val kid-art = for child in children(vp) seq-cat:
+    get-layer(child, ls)
+  to-tuple $ cat(local-art, kid-art)
+
+doc: \<DOC>
+Get all shapes on the specified layer - including pad defined shapes
+This function is an expansion on `get-layer` that includes
+<DOC>
+public defn get-layer-all (vp:VirtualLP, ls:LayerSpecifier) -> Tuple<Shape> :
+  val local-art = get-artwork(vp, ls)
+  val land-art = for land in lands(vp) seq-cat:
+    get-layer(land, ls)
+  val kid-art = for child in children(vp) seq-cat:
+    get-layer-all(child, ls)
+  to-tuple $ seq-cat({_}, [local-art, land-art, kid-art])
+
+defn to-virtual-landpattern-pads (vp:VirtualLP) -> Seq<VirtualLPPad> :
+  for land in lands(vp) seq:
+    VirtualLPPad(land)
+
+doc: \<DOC>
+Attempts to mimic the `pads` function from jitx/commands
+<DOC>
+public defn get-pads (vp:VirtualLP) -> Tuple<VirtualLPPad> :
+  val kid-pads = for child in children(vp) seq-cat:
+    get-pads(child)
+  val lp-pads = to-virtual-landpattern-pads(vp)
+  to-tuple $ cat(lp-pads, kid-pads)
+
+doc: \<DOC>
+Attempts to mimic the `layers` function from jitx/commands
+<DOC>
+public defn get-layers (vp:VirtualLP) -> Tuple<LayerShape> :
+  ; @NOTE - to match the behavior of `layer` which doesn't seem
+  ;  to act recursively on a landpattern definition - we are not
+  ;  inspecting the pads in this function.
+
+  val art = artwork(vp)
+  val local-art = for ls in keys(art) seq-cat:
+    for sh in get(art, ls) seq:
+      LayerShape(ls, sh)
+  val kid-art = for child in children(vp) seq-cat:
+    get-layers(child)
+  to-tuple $ cat(local-art, kid-art)
+
+public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
+  to-tuple $ for m in metal(vp) filter:
+    layer-index(m) == li
+
+public defn get-coppers (vp:VirtualLP) -> Tuple<VirtualCopper> :
+  to-tuple $ metal(vp)
+
+doc: \<DOC>
+Add a shape to the specified layer in this virtual landpattern
+<DOC>
+public defn append (vp:VirtualLP, ls:LayerSpecifier, shape:Shape) -> False :
+  val layer-art = get-artwork(vp, ls)
+  add(layer-art, shape)
+
+doc: \<DOC>
+Add multiple shapes to a particular layer in this virtual landpattern
+<DOC>
+public defn append-all (vp:VirtualLP, ls:LayerSpecifier, shapes:Seqable<Shape>) -> False :
+  val layer-art = get-artwork(vp, ls)
+  add-all(layer-art, shapes)
+
+doc: \<DOC>
+Add a pad to the virtual landpattern
+<DOC>
+public defn append (vp:VirtualLP, p:VirtualPad) -> False :
+  add{_, p} $ lands(vp)
+
+doc: \<DOC>
+Add a multiple pads to the virtual landpattern
+<DOC>
+public defn append-all (vp:VirtualLP, ps:Seqable<VirtualPad>) -> False :
+  add-all{_, ps} $ lands(vp)
+
+doc: \<DOC>
+Add a virtual `copper` statement to virtual landpattern
+<DOC>
+public defn append (vp:VirtualLP, cu:VirtualCopper) -> False:
+  add{_, cu} $ metal(vp)
+
+doc: \<DOC>
+Add multiple virtual `copper` statements to virtual landpattern
+<DOC>
+public defn append-all (vp:VirtualLP, cus:Seqable<VirtualCopper>) -> False:
+  add-all{_, cus} $ metal(vp)
+
+doc: \<DOC>
+Add a new child virtual landpattern node
+@param vp Self
+@param child VirtualLP to include as a child of `vp`
+@throws ValueError If the passed `child` is already associated
+with a parent.
+<DOC>
+public defn append (vp:VirtualLP, child:VirtualLP) -> False :
+  ; @TODO - check for cycles
+  if parent(child) is-not None:
+    throw $ ValueError("VirtualLP Child is already claimed by Parent")
+  set-parent(child, One(vp))
+  add{_, child} $ children(vp)
+
+doc: \<DOC>
+Create a new Virtual Landpattern that is a child of this node
+@param vp Self
+@param offset Default pose for the child node. This pose will
+  be relative to the parent's pose.
+@return VirtualLP with parent set to `vp`.
+<DOC>
+public defn create-child (
+  vp:VirtualLP
+  --
+  offset:Pose = DEF_VLP_POSE
+  ) -> VirtualLP :
+  val ret = VirtualLP(vp, offset)
+  add{_, ret} $ children(vp)
+  ret
+
+doc: \<DOC>
+Recursively generate the pads and layer artwork for this virtual landpattern
+
+This function should be called from within a `pcb-landpattern`
+definition. It will create `pad` and `layer` statements
+which build up the landpattern
+<DOC>
+public defn make-landpattern (vp:VirtualLP, parent-pose:Pose = DEF_VLP_POSE) :
+  inside pcb-landpattern:
+    val curr-pose = parent-pose * pose(vp)
+    for pd in lands(vp) do:
+      make-pad(pd, curr-pose)
+
+    val art = artwork(vp)
+    for ls in keys(art) do:
+      val shapes = get(art, ls)
+      for sh in shapes do:
+        layer(ls) = curr-pose * sh
+
+    for child in children(vp) do:
+      make-landpattern(child, curr-pose)

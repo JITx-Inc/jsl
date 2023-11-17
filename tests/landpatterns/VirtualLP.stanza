@@ -1,0 +1,181 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/VirtualLP:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/VirtualLP
+  import jsl/geometry/LineRectangle
+
+
+deftest(virtual-lp) test-single-layer:
+  val root = VirtualLP()
+
+  ; Null Test - Nothing Added to the Landpattern Yet
+
+  #EXPECT(is-root?(root) == true)
+  #EXPECT(get-layer(root, SolderMask(Top)) == [])
+  #EXPECT(get-layers(root) == [])
+  #EXPECT(get-pads(root) == [])
+  #EXPECT(get-coppers(root) == [])
+
+  pcb-landpattern null-pattern :
+    make-landpattern(root)
+
+  #EXPECT(pads(null-pattern) == [])
+  #EXPECT(layers(null-pattern) == [])
+  #EXPECT(layer(null-pattern, SolderMask(Top)) == [])
+
+  ; Simple Single Layer Landpattern test
+  val test-layer = Silkscreen("outline", Top)
+  ; Add a pad
+  append(root, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
+  ; Add a silkscreen
+  append(root, test-layer, LineRectangle(2.0, 2.0))
+
+  ; Add a sequence of Pads
+  val pad-set = for i in 2 to 4 seq:
+    val x-pos = to-double(i)
+    VirtualPad(i, smd-pad(Circle(0.5)), loc(x-pos, 0.0))
+
+  append-all(root, pad-set)
+
+  ; Add a sequence of shapes
+  val shapes = for i in 0 to 3 seq:
+    val x-pos = to-double(i)
+    Line(0.1, [Point(x-pos, -1.0), Point(x-pos, 1.0)])
+
+  append-all(root, test-layer, shapes)
+
+  append(root, VirtualCopper(LayerIndex(0), Circle(-1.5, -3.5, 0.1)))
+
+  ; Introspection
+  val vpds = get-pads(root)
+  #EXPECT(length(vpds) == 3)
+
+  val vsilk = get-layer(root, test-layer)
+  #EXPECT(length(vsilk) == 4)
+
+  val vmetal = get-copper(root, LayerIndex(0))
+  #EXPECT(length(vmetal) == 1)
+
+  val vno-metal = get-copper(root, LayerIndex(1))
+  #EXPECT(length(vno-metal) == 0)
+
+  ; This is going to return empty because the only
+  ; place where the soldermask is defined is in the
+  ; pads and by default `layer` won't combine the LP and the
+  ; pad artwork.
+  val vsm = get-layer(root, SolderMask(Top))
+  #EXPECT(vsm == [])
+
+  ; This is going to return not empty because it will look
+  ; for soldermask recursively in all of the pads as well.
+  val vsm-all = get-layer-all(root, SolderMask(Top))
+  #EXPECT(length(vsm-all) == 3)
+
+  ; Generate the landpattern
+  pcb-landpattern simple:
+    make-landpattern(root)
+
+  val pds = pads(simple)
+  #EXPECT(length(pds) == 3)
+
+  val silk = layer(simple, test-layer)
+  #EXPECT(length(silk) == 4)
+
+  val data = layers(simple)
+  #EXPECT(length(data) == 4)
+
+
+deftest(virtual-lp) test-lp-tree:
+
+  val root = VirtualLP()
+
+  val c1 = create-child(root, offset = loc(5.0, 0.0))
+
+  #EXPECT(is-root?(root) == true)
+  #EXPECT(is-root?(c1) == false)
+
+  ; Create another root and then we will add it
+  ;  to the root with `append`
+  val c2 = VirtualLP()
+  #EXPECT(is-root?(c2) == true)
+
+  append(root, c2)
+  #EXPECT(is-root?(c2) == false)
+
+  set-pose(c2, loc(0.0, -2.0))
+
+  ; If we try to append a child that already
+  ;   has a parent - this should be a fault.
+  expect-throw({append(root, c1)})
+
+  ; Null Pattern
+
+  pcb-landpattern null-pattern :
+    make-landpattern(root)
+
+  #EXPECT(pads(null-pattern) == [])
+  #EXPECT(layers(null-pattern) == [])
+  #EXPECT(layer(null-pattern, SolderMask(Top)) == [])
+  #EXPECT(layer(null-pattern, Silkscreen("outline", Top)) == [])
+
+
+  ; Populate the children with stuff
+
+  val test-layer = Silkscreen("outline", Top)
+  append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
+  append(c1, test-layer, LineRectangle(2.0, 2.0))
+
+  append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0)))
+  append(c1, test-layer, LineRectangle(2.0, 2.0))
+
+  ; Introspection
+  val vpds = get-pads(root)
+  #EXPECT(length(vpds) == 2)
+
+  val vsilk = get-layer(root, test-layer)
+  #EXPECT(length(vsilk) == 2)
+
+  ; This is going to return empty because the only
+  ; place where the soldermask is defined is in the
+  ; pads and by default `layer` won't combine the LP and the
+  ; pad artwork.
+  val vsm = get-layer(root, SolderMask(Top))
+  #EXPECT(vsm == [])
+
+  ; This is going to return not empty because it will look
+  ; for soldermask recursively in all of the pads as well.
+  val vsm-all = get-layer-all(root, SolderMask(Top))
+  #EXPECT(length(vsm-all) == 2)
+
+  pcb-landpattern tree-pattern :
+    make-landpattern(root)
+
+  val pds = pads(tree-pattern)
+  #EXPECT(length(pds) == 2)
+
+  val grid = PadGrid(tree-pattern)
+
+  #EXPECT(length(columns(grid)) == 2)
+  #EXPECT(length(rows(grid)) == 2)
+
+  val Xs = column-Xs(grid)
+  #EXPECT(almost-equal?(Xs, [0.0, 5.0]))
+
+  val Ys = row-Ys(grid)
+  #EXPECT(almost-equal?(Ys, [-2.0, 0.0]))
+
+  val silk = layer(tree-pattern, test-layer)
+  #EXPECT(length(silk) == 2)
+
+  val data = layers(tree-pattern)
+  #EXPECT(length(data) == 2)
+
+  val sm = layer(tree-pattern, SolderMask(Top))
+  #EXPECT(length(sm) == 0)
