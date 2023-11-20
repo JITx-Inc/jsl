@@ -16,6 +16,11 @@ public defstruct VirtualPad :
   loc:Pose
   side:Side with: (default => Top)
 
+public defn to-ref (p:VirtualPad) -> Ref :
+  match(pad-id(p)):
+    (i:Int): IndexRef(Ref("p"), i)
+    (x:Ref): x
+
 doc: \<DOC>
 Generator to create a `pad` statement for this `VirtualPad` instance
 
@@ -25,10 +30,7 @@ This is often used for translating an entire landpattern.
 <DOC>
 public defn make-pad (p:VirtualPad, offset:Pose) :
   inside pcb-landpattern:
-    val r = match(pad-id(p)):
-      (i:Int): IndexRef(Ref("p"), i)
-      (x:Ref): x
-
+    val r = to-ref(p)
     pad (r) : pad-def(p) at offset * loc(p) on side(p)
 
 doc: \<DOC>
@@ -43,23 +45,25 @@ Function to mimic `layers` from jitx/commands on `VirtualPad`
 public defn get-layers (p:VirtualPad) -> Tuple<LayerShape> :
   layers $ pad-def(p)
 
-doc: \<DOC>
-This is a mimic for the `LandPatternPad` type
-<DOC>
-public defstruct VirtualLPPad :
-  ; @NOTE - This has challenges when used inside `pcb-landpattern
-  ;  definition. See JITX-7114
-  pad:Pad
-  pose:Pose
-  side:Side
+; Helpers for making `VirtualPad` behave like `LandpatternPad`
 
-public defn VirtualLPPad (p:VirtualPad) -> VirtualLPPad:
-  VirtualLPPad(pad-def(p), loc(p), side(p))
+public defn ref (p:VirtualPad) -> Ref:
+  to-ref(p)
+
+public defn pad (p:VirtualPad) -> Pad :
+  pad-def(p)
+
+public defn pose (p:VirtualPad) -> Pose :
+  loc(p)
+
 
 public defstruct VirtualCopper :
   layer-index:LayerIndex
   shape:Shape
 
+public defn make-copper (cu:VirtualCopper) :
+  inside pcb-landpattern:
+    copper(layer-index(cu)) = shape(cu)
 
 
 doc: \<DOC>
@@ -195,17 +199,13 @@ public defn get-layer-all (vp:VirtualLP, ls:LayerSpecifier) -> Tuple<Shape> :
     get-layer-all(child, ls)
   to-tuple $ seq-cat({_}, [local-art, land-art, kid-art])
 
-defn to-virtual-landpattern-pads (vp:VirtualLP) -> Seq<VirtualLPPad> :
-  for land in lands(vp) seq:
-    VirtualLPPad(land)
-
 doc: \<DOC>
 Attempts to mimic the `pads` function from jitx/commands
 <DOC>
-public defn get-pads (vp:VirtualLP) -> Tuple<VirtualLPPad> :
+public defn get-pads (vp:VirtualLP) -> Tuple<VirtualPad> :
   val kid-pads = for child in children(vp) seq-cat:
     get-pads(child)
-  val lp-pads = to-virtual-landpattern-pads(vp)
+  val lp-pads = lands(vp)
   to-tuple $ cat(lp-pads, kid-pads)
 
 doc: \<DOC>
@@ -309,14 +309,20 @@ which build up the landpattern
 public defn make-landpattern (vp:VirtualLP, parent-pose:Pose = DEF_VLP_POSE) :
   inside pcb-landpattern:
     val curr-pose = parent-pose * pose(vp)
+    ; Pads
     for pd in lands(vp) do:
       make-pad(pd, curr-pose)
 
+    ; Layer Art
     val art = artwork(vp)
     for ls in keys(art) do:
       val shapes = get(art, ls)
       for sh in shapes do:
         layer(ls) = curr-pose * sh
+
+    ; Copper
+    for ml in metal(vp) do:
+      make-copper(ml)
 
     for child in children(vp) do:
       make-landpattern(child, curr-pose)

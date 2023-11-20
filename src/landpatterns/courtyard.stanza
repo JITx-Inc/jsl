@@ -51,7 +51,7 @@ rectangle of.
 @param expand-by Amount to expand the created dimension by.
 <DOC>
 public defn bounds (
-  lp-pads:Seqable<LandPatternPad|VirtualLPPad>
+  lp-pads:Seqable<LandPatternPad|VirtualPad>
   --
   layer-spec:LayerSpecifier|False = false
   expand-by:Double = 0.0
