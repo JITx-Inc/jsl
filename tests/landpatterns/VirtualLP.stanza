@@ -35,7 +35,7 @@ deftest(virtual-lp) test-single-layer:
   ; Add a pad
   append(root, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
   ; Add a silkscreen
-  append(root, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(root, test-layer, LineRectangle(2.0, 2.0))
 
   ; Add a sequence of Pads
   val pad-set = for i in 2 to 4 seq:
@@ -49,7 +49,7 @@ deftest(virtual-lp) test-single-layer:
     val x-pos = to-double(i)
     Line(0.1, [Point(x-pos, -1.0), Point(x-pos, 1.0)])
 
-  append-all(root, test-layer, shapes)
+  add-artwork(root, test-layer, shapes)
 
   append(root, VirtualCopper(LayerIndex(0), Circle(-1.5, -3.5, 0.1)))
 
@@ -130,10 +130,10 @@ deftest(virtual-lp) test-lp-tree:
 
   val test-layer = Silkscreen("outline", Top)
   append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
-  append(c1, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0))
 
   append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0)))
-  append(c1, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0))
 
   ; Introspection
   val vpds = get-pads(root)
@@ -179,3 +179,65 @@ deftest(virtual-lp) test-lp-tree:
 
   val sm = layer(tree-pattern, SolderMask(Top))
   #EXPECT(length(sm) == 0)
+
+deftest(virtual-lp) test-find-by-name:
+  val root = VirtualLP()
+
+  val c1 = create-child(root, offset = loc(5.0, 0.0), name = "Uno")
+  val c2 = create-child(root, offset = loc(0.0, -2.0), name = "Dos")
+
+  ; Populate the children with stuff
+
+  val test-layer = Silkscreen("outline", Top)
+  append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0), name = "first"))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), name = "outline")
+
+  append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0), name = "number-2"))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), name = "background")
+
+  var elems = to-tuple $ find-by-name(root, "background")
+  #EXPECT(length(elems) == 1)
+
+  val va = elems[0] as VirtualArtwork
+  #EXPECT(layer-spec(va) == test-layer)
+
+  elems = to-tuple $ find-by-name(root, "Dos")
+  #EXPECT(length(elems) == 1)
+
+  val vp = elems[0] as VirtualLP
+  #EXPECT( parent(vp) is-not None )
+
+  elems = to-tuple $ find-by-name(root, "number-2")
+  #EXPECT(length(elems) == 1)
+
+  val vpad = elems[0] as VirtualPad
+  #EXPECT((pad-id(vpad) as Int) == 2)
+
+  ; Test No Name Found
+
+  val no-elems = to-tuple $ find-by-name(root, "Garbage")
+  #EXPECT(length(no-elems) == 0)
+
+deftest(virtual-lp) test-find-by-class:
+  val root = VirtualLP()
+
+  val c1 = create-child(root, offset = loc(5.0, 0.0))
+  val c2 = create-child(root, offset = loc(0.0, -2.0))
+
+  ; Populate the children with stuff
+
+  val test-layer = Silkscreen("outline", Top)
+  append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0), name = "first"))
+  add-artwork(c1, test-layer, [LineRectangle(2.0, 2.0), LineRectangle(1.0, 1.0)], class = ["outline"])
+
+  append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0), name = "first"))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), class = "outline")
+  add-artwork(c1, test-layer, Circle(0.5), class = "outline")
+
+  var elems = to-tuple $ find-by-class(root, "outline")
+  #EXPECT(length(elems) == 4)
+
+  ; Check for a group that doesn't exist
+
+  val no-elems = to-tuple $ find-by-class(root, "asdfasdf")
+  #EXPECT(length(no-elems) == 0)
