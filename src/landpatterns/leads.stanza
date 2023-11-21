@@ -8,9 +8,3 @@ defpackage jsl/landpatterns/leads:
   forward jsl/landpatterns/leads/protrusions
   forward jsl/landpatterns/leads/lead-types
 
-
-public defn bga-courtyard-excess (density-level:DensityLevel):
-  switch(density-level):
-    DensityLevelA: 2.0
-    DensityLevelB: 1.0
-    DensityLevelC: 0.5

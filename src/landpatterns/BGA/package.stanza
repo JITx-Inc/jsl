@@ -147,6 +147,13 @@ public defmethod name (bga:BGA) -> String:
     to-deci $ typ $ height(b),
   ])
 
+public defmethod courtyard-excess (pkg:BGA, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+  ; From IPC 7351B Table 3-17
+  switch(density-level):
+    DensityLevelA: 2.0
+    DensityLevelB: 1.0
+    DensityLevelC: 0.5
+
 public defmethod build-landpattern (
   pkg:BGA,
   vp:VirtualLP,
