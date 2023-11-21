@@ -1,13 +1,19 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/dual-row:
   import core
+  import math
   import jitx
   import jitx/commands
 
   import jsl/errors
   import jsl/design/settings
+  import jsl/geometry/LineRectangle
+  import jsl/geometry/basics
+  import jsl/geometry/box
+
   import jsl/landpatterns/helpers
   import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/courtyard
   import jsl/landpatterns/packages
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pads
@@ -15,10 +21,6 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/leads
   import jsl/landpatterns/IPC
   import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/courtyard
-  import jsl/geometry/LineRectangle
-  import jsl/geometry/basics
-  import jsl/geometry/box
 
 val DUAL-ROW-COLS = 2
 
@@ -111,7 +113,6 @@ public defn compute-outline (
   side:Side = Top
   ) -> Shape :
 
-  val lp-pads = get-pads(vp)
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
   val courtyard? = get-courtyard-boundary(vp, side = side)
 
@@ -238,6 +239,80 @@ public defn build-dual-row-smd-pin-1 (
   ; TODO - Check that the marker will not overlap with any existing silkscreen
   ;   that will prevent it from being easily visible.
 
-  add-artwork(vp, Silkscreen("pin-1-marker", Top), Circle(marker-pos, line-width), class = "pin1-marker")
+  add-artwork(vp, Silkscreen("pin-1-marker", Top), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
+
+public defn build-dual-row-outline-pin-1 (
+  vp:VirtualLP
+  --
+  pin-1-id:Int|Ref = 1,
+  side:Side = Top
+  ):
+
+  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
+  if length(outlines) != 1:
+    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+
+  val outline = outlines[0]
+
+  val pin-1-pad? = get-pad-by-ref(vp, pin-1-id)
+  val pin-1-pad = match(pin-1-pad?):
+    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [pin-1-id])
+    (x:One<VirtualPad>): value(x)
+
+  ; Find the corner of the outline nearest to pad 1
+  val o-sh = shape(outline)
+
+  ; The Outline is typically a line rectangle which creates a
+  ;  single line. We use this to determine the line width
+  ;  so that we can place the marker in the mid-line
+  val line-width = match(o-sh):
+    (x:Line): width(x)
+    ; TODO - this probably should be setting
+    (_): 0.1
+
+  val o-box = bounds $ o-sh
+  val c-pts = corners(o-box)
+
+  val pin-1-pos = center $ pose(pin-1-pad)
+
+  defn compute-dist (x:Point) -> Double:
+    l2-norm(x - pin-1-pos)
+
+  val closest = minimum(compute-dist, c-pts)
+
+  ; Compute the Marker Shape & Size
+  val marker-size = (20 %)
+  val opt1 = y(dims(o-box)) * marker-size
+  val marker-geom-limit = min(opt1, x(dims(o-box)))
+  val marker-height = min(marker-geom-limit, 1.25)
+
+  val st-offset = line-width / 2.0
+  val marker-shape = loc(st-offset, (- st-offset)) * Polygon([
+    Point(0.0, 0.0),
+    Point(marker-height, 0.0),
+    Point(0.0, (- marker-height))
+    ])
+
+  ; Compute the angle of the marker depending on
+  ;  what corner of the outline the marker is in.
+  val angle = atan2(y(closest), x(closest))
+  val rot = if angle > (PI / 2.0): ; NW
+    0.0
+  else if angle < (- PI / 2.0): ; SW
+    90.0
+  else if angle < 0.0: ; SE
+    180.0
+  else: ; NE
+    -90.0
+
+  ; Place the marker in the closest corner.
+  val marker-pose = loc(closest, rot)
+  val marker = marker-pose * marker-shape
+  add-artwork(
+    vp, Silkscreen("pin-1-marker", side),
+    marker,
+    name = "pin-1-triangle",
+    class = "pin-1-marker"
+    )
 
 
