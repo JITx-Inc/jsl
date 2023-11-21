@@ -3,13 +3,18 @@ defpackage jsl/landpatterns/courtyard:
   import core
   import jitx
   import jitx/commands
+
+  import jsl/design/settings
   import jsl/landpatterns/helpers
   import jsl/geometry/basics
+  import jsl/geometry/box
   import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/packages with:
+    only => (PackageBody, envelope)
   ; TODO - This ideally moves to jitx
   import jsl/geometry/LineRectangle
 
-public val DEF_COURTYARD_WIDTH = 0.2
+public val DEF_COURTYARD_WIDTH = 0.1
 
 public defn build-courtyard-origin (
   vp:VirtualLP,
@@ -19,7 +24,7 @@ public defn build-courtyard-origin (
   ) -> False:
 
   val shape = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
-  append(vp, Courtyard(side), shape)
+  add-artwork(vp, Courtyard(side), shape, class = "courtyard")
 
 doc: \<DOC>
 Generator for Courtyard Origin Marker
@@ -40,6 +45,7 @@ public defn make-courtyard-origin (
   inside pcb-landpattern:
     layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
 
+
 doc: \<DOC>
 Generate the Bounding Dims of a sequence of pads
 @param lp-pads the pads that we want to create a bounding
@@ -55,60 +61,102 @@ public defn bounds (
   --
   layer-spec:LayerSpecifier|False = false
   expand-by:Double = 0.0
-  ) -> Dims :
-  val unionAll = Union $ for lp-pad in lp-pads seq:
+  ) -> Box :
+
+  val unionBox = reduce{union, _} $ for lp-pad in lp-pads seq:
     val pd = pad(lp-pad)
     val l = pose(lp-pad)
     match(layer-spec):
       (_:False):
-        l * pad-shape(pd)
+        bounds(l * pad-shape(pd))
       (ls:LayerSpecifier):
         val shapes = layer(pd, ls)
-        l * Union(shapes)
+        bounds(l * Union(shapes))
 
-  ; NOTE - this is not positioned in any way - it is
-  ;  just the dimensions.
-  ;  Ie - it isn't a `Rectangle` with a pose.
-  dims $ expand-union(unionAll, expand-by)
+  fatten(expand-by, unionBox)
+
+public defn compute-courtyard-boundary (
+  lp-pads:Seqable<LandPatternPad|VirtualPad>,
+  pkg-body:PackageBody,
+  density-level:DensityLevel,
+  excess:Double,
+  side:Side,
+  pos:Pose,
+  ):
+  ; @NOTE - Here I'm using the soldermask openings for the pads
+  ;   as the controlling boundary/outline. By doing this -
+  ;   I can enforce at least a sliver of soldermask between
+  ;   components.
+  val pad-outline = bounds(lp-pads, layer-spec = SolderMask(side))
+  val pkg-outline = bounds(envelope(pkg-body, density-level = density-level))
+  val outline = union(pad-outline, pkg-outline)
+  val outline* = fatten(excess, outline)
+  val rect = to-Rectangle(outline*)
+  pos * LineRectangle(width(rect), height(rect), line-width = DEF_COURTYARD_WIDTH, pose = pose(rect))
+
 
 doc: \<DOC>
 Generator for Courtyard Boundary
 
 The courtyard boundary creates the typical minimum spacing
-expected around a component. The idea is that for soldering/reflow
-we need some space around a component to allow rework - otherwise
-we could damage or de-solder components we don't intend to modify.
+expected around a component. This spacing is for mechanical assembly
+and thermal reflow reasons.
 
-This function uses all of the copper pads to define the maximal extent
-of the landpattern. This maximal extent is then padded with the `excess`
+This function uses the copper pads and the package body to define the
+envelope of the component. This envelope is then expanded with the `excess`
 amount on all sides. We then compute the smallest rectangle that
 encapsulates all of these expanded features. This rectangle forms
 the courtyard boundary.
 
+@param pkg-body Package Body of the component
 @param excess Additional space to pad the boundary of the
 pads for this component when making the courtyard boundary.
 The default value is 0.5mm
 @param side Which side of the board to draw the courtyard on. By
 default we use the `Top` side as per convention.
-@param pose Pose offset for this group of features.
+@param pose Pose offset for this group of features. Default is no transform.
+@param density-level
 <DOC>
 public defn make-courtyard-boundary (
+  pkg-body:PackageBody
+  density-level:DensityLevel
   --
   excess:Double = 0.5
   side:Side = Top
-  pose:Pose = loc(0.0, 0.0)
+  pos:Pose = loc(0.0, 0.0),
   ):
   inside pcb-landpattern:
-    val outline = bounds(pads(self), expand-by = excess)
-    layer(Courtyard(side)) = pose * LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
+    val outline = compute-courtyard-boundary(pads(self), pkg-body, density-level, excess, side, pos)
+    layer(Courtyard(side)) = outline
 
+doc: \<DOC>
+Create a courtyard boundary in a Virtual Landpattern
+
+@param vp Virtual Landpattern Container
+@param pkg-body Package Body for the Component
+@param density-level
+<DOC>
 public defn build-courtyard-boundary (
   vp:VirtualLP,
+  pkg-body:PackageBody
+  density-level:DensityLevel
   --
   excess:Double = 0.5
-  pose:Pose = loc(0.0, 0.0)
-  side:Side = Top
+  pos:Pose = loc(0.0, 0.0)
+  side:Side = Top,
   ) -> False:
-  val outline = bounds(get-pads(vp), expand-by = excess)
-  val content = pose * LineRectangle(outline, line-width = DEF_COURTYARD_WIDTH)
-  append(vp, Courtyard(side), content)
+  val outline = compute-courtyard-boundary(get-pads(vp), pkg-body, density-level, excess, side, pos)
+  add-artwork(vp, Courtyard(side), outline, class = "courtyard")
+
+doc: \<DOC>
+Retrieve the Dimensions of the Courtyard Boundary
+<DOC>
+public defn get-courtyard-boundary (
+  vp:VirtualLP
+  --
+  side:Side = Top
+  ) -> Box|False:
+  val content = get-layer(vp, Courtyard(side))
+  if length(content) == 0: false
+  else:
+    bounds $ Union(content)
