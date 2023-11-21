@@ -6,8 +6,7 @@ defpackage jsl/geometry/LineRectangle:
   import jitx
   import jitx/commands
 
-defn gen-default-width ():
-  clearance(current-rules(), MinSilkscreenWidth)
+  import jsl/geometry/box
 
 val DEF_LR_POSE = loc(0.0, 0.0)
 
@@ -24,7 +23,7 @@ center aligned vertically and horizontally.
 public defn LineRectangle (
   d:Dims
   --
-  line-width:Double = gen-default-width(),
+  line-width:Double,
   pose:Pose = DEF_LR_POSE,
   anchor:Anchor = C
   ):
@@ -65,7 +64,7 @@ center aligned vertically and horizontally.
 public defn LineRectangle (
   width:Double, height:Double,
   --
-  line-width:Double = gen-default-width(),
+  line-width:Double
   pose:Pose = DEF_LR_POSE,
   anchor:Anchor = C
   ):
@@ -76,3 +75,12 @@ public defn LineRectangle (
     anchor = anchor
     )
 
+public defn LineRectangle (
+  b:Box
+  --
+  line-width:Double
+  anchor:Anchor = C
+  ):
+  val rect = to-Rectangle(b)
+  val d = dims(rect)
+  LineRectangle(d, line-width = line-width, pose = pose(rect), anchor = anchor)

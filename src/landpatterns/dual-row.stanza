@@ -147,9 +147,7 @@ public defn compute-outline (
     else:
       pkg-outline
 
-  val rect = to-Rectangle(h-shrink)
-  val d = dims(rect)
-  LineRectangle(d, line-width = line-width, pose = pose(rect))
+  LineRectangle(h-shrink, line-width = line-width)
 
 doc: \<DOC>
 Build the silkscreen outline for a dual-row SMD package

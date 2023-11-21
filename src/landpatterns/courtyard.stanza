@@ -11,7 +11,6 @@ defpackage jsl/landpatterns/courtyard:
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/packages with:
     only => (PackageBody, envelope)
-  ; TODO - This ideally moves to jitx
   import jsl/geometry/LineRectangle
 
 public val DEF_COURTYARD_WIDTH = 0.1
@@ -91,8 +90,7 @@ public defn compute-courtyard-boundary (
   val pkg-outline = bounds(envelope(pkg-body, density-level = density-level))
   val outline = union(pad-outline, pkg-outline)
   val outline* = fatten(excess, outline)
-  val rect = to-Rectangle(outline*)
-  pos * LineRectangle(width(rect), height(rect), line-width = DEF_COURTYARD_WIDTH, pose = pose(rect))
+  pos * LineRectangle(outline*, line-width = DEF_COURTYARD_WIDTH)
 
 
 doc: \<DOC>
