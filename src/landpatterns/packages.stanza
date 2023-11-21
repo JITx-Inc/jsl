@@ -111,10 +111,24 @@ public defn PackageBody (
 doc: \<DOC>
 Physical Envelope of the package body.
 <DOC>
-public defmulti envelope (x:PackageBody) -> Dims
+public defmulti envelope (
+  body:PackageBody
+  --
+  density-level:DensityLevel = ?
+  ) -> Rectangle
 
-public defmethod envelope (x:PackageBody) -> Dims :
-  Dims(max-value(width(x)), max-value(length(x)))
+public defmethod envelope (
+  body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Rectangle :
+  val func = switch(density-level):
+    DensityLevelA: max-value
+    DensityLevelB: typ
+    DensityLevelC: min-value
+
+  val d = Dims(func(width(body)), func(length(body)))
+  jsl-Rectangle(d, pose = pose(body))
 
 
 doc: \<DOC>
