@@ -1,0 +1,138 @@
+defpackage jsl/geometry/box :
+  import core
+  import collections
+  import jitx
+  import jitx/geometry/shapes/arc-utils
+  import jitx/geometry/shapes/offset
+
+  import jsl/errors
+
+;============================================================
+;========================== Box =============================
+;============================================================
+
+public defstruct Box <: Equalable :
+  lo: Point
+  hi: Point
+with :
+  constructor => #Box
+
+public defn Box (lo:Point, hi:Point) :
+  if x(hi) < x(lo) or y(hi) < y(lo) : fatal("Negative Box")
+  #Box(lo, hi)
+
+public defn up (b:Box) : y(hi(b))
+public defn right (b:Box) : x(hi(b))
+public defn down (b:Box) : y(lo(b))
+public defn left (b:Box) : x(lo(b))
+
+public defn Box (v:Point) -> Box :
+  Box(v, v)
+
+public defn center (b:Box) -> Point :
+  0.5 * (lo(b) + hi(b))
+
+public defn dims (b:Box) -> Point :
+  hi(b) - lo(b)
+
+public defn fatten (dims:Point, b:Box) -> Box :
+  Box(lo(b) - dims, hi(b) + dims)
+
+public defn fatten (dims:Double, b:Box) -> Box :
+  fatten(Point(dims, dims), b)
+
+public defn corners (b:Box) -> Tuple<Point> :
+  val [l, h] = [lo(b), hi(b)]
+  [Point(x(l), y(l)), Point(x(h), y(l)), Point(x(h), y(h)), Point(x(l), y(h))]
+
+public defn dims-to-box (dims:Point) -> Box :
+  val hdims = 0.5 * dims
+  Box((- hdims), hdims)
+
+public defn union (b:Box, v:Point) -> Box :
+  Box(min(lo(b), v), max(hi(b), v))
+
+public defn union (b0:Box, b1:Box) -> Box :
+  Box(min(lo(b0), lo(b1)), max(hi(b0), hi(b1)))
+
+public defn bit-or (b0:Box, b1:Box) -> Box :
+  union(b0, b1)
+
+public defn intersects? (b0:Box, b1:Box) -> True|False :
+  not for i in 0 to 2 any? :
+    (hi(b0)[i] < lo(b1)[i] or lo(b0)[i] > hi(b1)[i])
+
+public defn contains? (b:Box, p:Point) -> True|False :
+  for i in 0 to 2 all? :
+    p[i] >= lo(b)[i] and p[i] <= hi(b)[i]
+
+public defn contains? (b1:Box, b2:Box) -> True|False :
+  val cs = corners(b2)
+  for c in corners(b2) all? :
+    contains?(b1, c)
+
+val [neg-inf, pos-inf] = [DOUBLE-NEGATIVE-INFINITY, DOUBLE-POSITIVE-INFINITY]
+
+public defn inf-box () -> Box:
+  Box(Point(neg-inf, neg-inf), Point(pos-inf, pos-inf))
+
+defmethod equal? (b1:Box, b2:Box) :
+  lo(b1) == lo(b2) or hi(b1) == hi(b2)
+
+defmethod print (o:OutputStream, b:Box) :
+  print(o, "box(%_, %_)"  % [lo(b), hi(b)])
+
+public defn transform (pose:Pose, b:Box) -> Box :
+  bounds(transform(pose, Polygon(corners(b))))
+
+public defn min-width (b:Box) -> Double :
+  min(x(hi(b)) - x(lo(b)), y(hi(b)) - y(lo(b)))
+
+public defn to-Rectangle (b:Box) -> Rectangle :
+  val pt = center(b)
+  val d = dims(b)
+  Rectangle(x(d), y(d), loc(pt))
+
+public defn to-Dims (b:Box) -> Dims:
+  val d = dims(b)
+  Dims(x(d), y(d))
+
+;============================================================
+;==================== Geometry Bounds =======================
+;============================================================
+
+public defn bounds (e:Shape) -> Box :
+  _bounds(e, false)
+
+defn _bounds (e:Shape, ignore-width?: True|False) -> Box :
+  ; We shadow the `bounds` function to make sure nobody calls it by mistake instead
+  defn bounds (e:Shape) -> Box :
+    _bounds(e, ignore-width?)
+
+  defn make-line-bounds (e: Point|Arc, width: Double) -> Box :
+    if ignore-width? : bounds(e)
+    else : fatten(0.5 * width, bounds(e))
+
+  match(e) :
+    (s:Point) : Box(s)
+    (s:Polygon) : reduce(union, seq(bounds, points(s)))
+    (s:Circle) : Box(center(s) - Point(radius(s), radius(s)), center(s) + Point(radius(s), radius(s)))
+    (s:Segment) : reduce(union, seq(bounds, [source(s) target(s)]))
+    (s:Arc):
+      val [lo hi ] = get-bounds(s)
+      Box(lo, hi)
+    (s:Rectangle) : bounds(to-polygon(s))
+    (s:Capsule) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:RoundedRectangle) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:ChamferedRectangle) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:DShape) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:GeneralRoundedRectangle) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:GeneralChamferedRectangle) : bounds(Rectangle(width(s), height(s), pose(s)))
+    (s:Line) : reduce(union, seq(make-line-bounds{_, width(s)}, points(s)))
+    (s:Polyline) : reduce(union, seq(make-line-bounds{_, width(s)}, elements(s)))
+    (s:PolygonWithArcs) : reduce(union, seq(bounds, elements(s)))
+    (s:Union) : reduce(union, seq(bounds, shapes(s)))
+    (s:Difference) : bounds(shape1(s))
+    (s:Offset) : fatten(amount(s), bounds(shape(s)))
+    (t:Text):
+      throw $ ValueError("Text Boundary Box Not Implemented")
