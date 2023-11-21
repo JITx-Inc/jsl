@@ -4,6 +4,7 @@ defpackage jsl/landpatterns/dual-row:
   import jitx
   import jitx/commands
 
+  import jsl/errors
   import jsl/design/settings
   import jsl/landpatterns/helpers
   import jsl/landpatterns/packages
@@ -13,28 +14,12 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/leads
   import jsl/landpatterns/IPC
   import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/courtyard
+  import jsl/geometry/LineRectangle
+  import jsl/geometry/basics
+  import jsl/geometry/box
 
 val DUAL-ROW-COLS = 2
-
-; TODO - Refactor this as a separate generator
-public defn draw-pol-marker (locs:Tuple<Pose>,
-                             part-sz:Dims,
-                             pad-sz:Dims,
-                             ) :
-  inside pcb-landpattern :
-    ; TODO - this is used differently - no current-rules call
-    val mask-reg        = clearance(SolderMaskRegistration)
-    val silk-mask-space = clearance(MinSilkSolderMaskSpace)
-    val min-silk        = clearance(MinSilkscreenWidth)
-
-    val pad-loc = center(locs[0])
-    val pol-x = min(-0.5 * x(part-sz), x(pad-loc) - 0.5 * x(pad-sz))
-    val pol-y = max( 0.5 * y(part-sz), y(pad-loc) + 0.5 * y(pad-sz))
-    val line-length = 2.0 * min-silk
-
-    val dist = mask-reg + silk-mask-space + min-silk * 0.5 + 0.01
-    val line = Line(min-silk, [Point(-0.5 * line-length, 0.0), Point(0.5 * line-length, 0.0)])
-    layer(Silkscreen("pol", Top)) = loc(pol-x, pol-y + dist) * line
 
 
 doc: \<DOC>
@@ -99,5 +84,166 @@ public defn build-dual-row-smd-landpattern (
     append(vp, VirtualPad(num-leads + 1, smd-pad(thermal-lead?), loc(0.0, 0.0), class = ["pad", "thermal"]))
 
 
+defn default-line-width () -> Double :
+  clearance(current-rules(), MinSilkscreenWidth)
+
+defn default-line-clearance () -> Double :
+  clearance(current-rules(), MinSilkSolderMaskSpace)
+
+
+doc: \<DOC>
+Compute outline shape by avoiding overlaps with pads
+
+This function takes an outline (like the outline of the package body)
+and computes the set of shapes that can maximally fullfill that outline
+but not overlap with any of the pads in a package.
+
+This function will also obey clearance requirements to prevent DRC
+issues.
+
+@param outline Starting Outline centered at origin.
+@param lp-pads Landpattern pads to avoid. These pads should be centered
+  at the origin.
+<DOC>
+public defn compute-outline (
+  vp:VirtualLP,
+  pkg-body:PackageBody,
+  density-level:DensityLevel
+  --
+  line-width:Double = default-line-width(),
+  mask-clearance:Double = default-line-clearance(),
+  side:Side = Top
+  ) -> Shape :
+
+  val lp-pads = get-pads(vp)
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val courtyard? = get-courtyard-boundary(vp, side = side)
+
+  ; Check for overlap between the pad soldermask and the
+  ;  current proposed outline. We will then shrink the
+  ;  proposed outline until there is at least `mask-clearance`
+  ;  on either side.
+  val h-shrink = let:
+    val col-0-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-0")
+    val col-1-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-1")
+
+    val col-0-outline = bounds(col-0-pads, layer-spec = SolderMask(side))
+    val col-1-outline = bounds(col-1-pads, layer-spec = SolderMask(side))
+
+    val interstitial = Box(
+      Point(right(col-0-outline), down(col-0-outline)),
+      Point(left(col-1-outline), up(col-1-outline))
+    )
+
+    val iW = x(dims(interstitial)) - ((2.0 * mask-clearance) + line-width)
+    val iP = x(dims(pkg-outline))
+
+    ; Compute the shrinkage that will be applid to
+    ;   both sides (if any)
+    val diff = (iW - iP) / 2.0
+    if diff < 0.0 :
+      ; We need to shrink the package outline
+      fatten(Point(diff, 0.0), pkg-outline)
+    else:
+      pkg-outline
+
+  val rect = to-Rectangle(h-shrink)
+  val d = dims(rect)
+  LineRectangle(d, line-width = line-width, pose = pose(rect))
+
+doc: \<DOC>
+Build the silkscreen outline for a dual-row SMD package
+
+This function will generate different silkscreen
+artwork depending on the density level.
+
+@param vp Virtual landpattern container.
+@param pkg-body Package Body - assumed to be centered in the virtual landpattern container origin.
+<DOC>
+public defn build-dual-row-smd-outline (
+  vp:VirtualLP,
+  pkg-body:PackageBody,
+  density-level:DensityLevel,
+  --
+  line-width:Double = default-line-width(),
+  mask-clearance:Double = default-line-clearance(),
+  side:Side = Top,
+  ):
+  val outline-geom = compute-outline(
+    vp, pkg-body, density-level,
+    line-width = line-width,
+    mask-clearance = mask-clearance,
+    side = side,
+  )
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+doc: \<DOC>
+Create a Pin-1 indicator for dual-row land patterns
+
+This creates a small circle in the silkscreen directly
+above the pin 1 pad.
+
+This function assumes that the landpattern grid is
+2 Column x N/2 rows (standard grid for Dual row components)
+
+This function accounts for the minimum mask to silk
+clearance distance.
+
+@param vp Virtual Landpattern Container to draw artwork to.
+@param pkg-body The phyical component body of the device.
+@param pin-1-id Identifier for Pin 1 on the device. Default
+is pin `1`. User can override this identifier.
+@param line-width Silkscreen line width. We will use this to
+define the radius of the circle marker. The default is the
+min silkscreen trace width from the design rules.
+@param mask-clearance Mask to silk clearance requirement. The
+default is the minimum mask to silk clearance from the design
+rules.
+@param side Which side of the board to draw on the marker on.
+The default value is `Top`.
+<DOC>
+public defn build-dual-row-smd-pin-1 (
+  vp:VirtualLP,
+  pkg-body:PackageBody,
+  --
+  pin-1-id:Int|Ref = 1,
+  line-width:Double = default-line-width(),
+  mask-clearance:Double = default-line-clearance(),
+  side:Side = Top
+  ):
+  ; Draw a circle dot inside the rectangle above pin 1
+  val pin-1-pad? = get-pad-by-ref(vp, pin-1-id)
+  val pin-1-pad = match(pin-1-pad?):
+    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [pin-1-id])
+    (x:One<VirtualPad>): value(x)
+
+  val pad-loc = pose(pin-1-pad)
+  val pad-center = center(pad-loc)
+  val angle = angle(pad-loc)
+
+  val smasks = get-layer(pin-1-pad, SolderMask(side))
+  if length(smasks) == 0:
+    ; This is a very strange error - it means
+    ;  that pad 1 of this component doesn't have a soldermask
+    ;  opening.
+    ; This could happen if the user passed an erroneous `side` argument
+    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
+  val smask = smasks[0]
+
+  ; Apply the transform so that I can get the
+  ;   true "height" of the pad regardless of rotation.
+  val smask* = pad-loc * smask
+  val height = y $ dims(smask*)
+
+  val offset = Point(0.0, (height / 2.0) + mask-clearance + line-width)
+  val marker-pos = pad-center + offset
+
+  ; TODO - Check that the marker will be visible and not blocked by the package
+  ;   body.
+  ;
+  ; TODO - Check that the marker will not overlap with any existing silkscreen
+  ;   that will prevent it from being easily visible.
+
+  add-artwork(vp, Silkscreen("pin-1-marker", Top), Circle(marker-pos, line-width), class = "pin1-marker")
 
 
