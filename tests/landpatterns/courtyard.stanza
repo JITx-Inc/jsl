@@ -5,9 +5,11 @@ defpackage jsl/tests/landpatterns/courtyard:
   import jitx
   import jitx/commands
 
+  import jsl/design/settings
   import jsl/tests/utils
   import jsl/tests/landpatterns/defchecks
   import jsl/landpatterns/pads
+  import jsl/landpatterns/packages
   import jsl/landpatterns/courtyard
 
 
@@ -44,14 +46,14 @@ deftest(courtyard) test-courtyard-origin :
 deftest(courtyard) test-courtyard-boundary:
 
   val excess = 1.0
-
+  val body = PackageBody(length = typ(0.1), width = typ(0.1), height = typ(0.1))
   pcb-landpattern test-lp:
     pad p[1] : smd-pad(Circle(0.5)) at loc(2.0, 2.0)
     pad p[2] : smd-pad(Circle(0.5)) at loc(-2.0, 2.0)
     pad p[3] : smd-pad(Circle(0.5)) at loc(2.0, -3.0)
     pad p[4] : smd-pad(Circle(0.5)) at loc(3.0, -1.0)
 
-    make-courtyard-boundary(excess = excess)
+    make-courtyard-boundary(body, DensityLevelC, excess = excess)
 
   val not-empty = to-hashset<LayerSpecifier>([
     SolderMask(Top)
@@ -68,7 +70,8 @@ deftest(courtyard) test-courtyard-boundary:
   val position-span = (3.0 + 2.0)
   val pad-diam = 1.0
   val line-width = 0.2
-  val expWidth = position-span + pad-diam + (2.0 * excess) + DEF_COURTYARD_WIDTH
+  val mask-clear = clearance(current-rules(), MinSilkSolderMaskSpace)
+  val expWidth = position-span + pad-diam + (2.0 * excess) + (2.0 * mask-clear) + DEF_COURTYARD_WIDTH
   val expHeight = expWidth
   #EXPECT(almost-equal?(x(outline), expWidth))
   #EXPECT(almost-equal?(y(outline), expHeight))
