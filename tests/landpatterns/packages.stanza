@@ -23,16 +23,16 @@ deftest(packages) test-basic:
   #EXPECT((typ $ length(a)) == 2.5)
   #EXPECT((typ $ height(a)) == 4.5)
 
-  #EXPECT(anchor(a) == C)
+  #EXPECT(pose(a) == loc(0.0, 0.0))
 
   val b = PackageBody(
     width = typ(1.0),
     length = typ(2.0),
     height = typ(3.0),
-    anchor = E
+    pose = loc(1.0, 2.0)
     )
 
-  #EXPECT(anchor(b) == E)
+  #EXPECT(pose(b) == loc(1.0, 2.0))
 
 deftest(packages) test-ensures:
   val test-vecs = [

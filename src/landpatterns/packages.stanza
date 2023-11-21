@@ -29,6 +29,8 @@ defpackage jsl/landpatterns/packages:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/courtyard
   import jsl/landpatterns/VirtualLP
+  import jsl/geometry/basics with:
+    prefix => jsl-
 
 doc: \<DOC>
 Physical body of the Component (also called the Lead Carrier or just Carrier)
@@ -82,10 +84,11 @@ public defstruct PackageBody <: Hashable & Equalable :
   height:Toleranced with: (ensure => ensure-positive!)
 
   doc: \<DOC>
-  Origin Position of the Package Body
+  Transform applied to the package body.
+  By default the package body is centered at (0.0, 0.0)
   <DOC>
-  anchor:Anchor with: (
-    default => C
+  pose:Pose with: (
+    default => loc(0.0, 0.0)
   )
 with:
   equalable => true
@@ -101,9 +104,9 @@ public defn PackageBody (
   width:Toleranced,
   length:Toleranced,
   height:Toleranced,
-  anchor:Anchor = C
+  pose:Pose = loc(0.0, 0.0)
   ):
-  #PackageBody(width, length, height, anchor)
+  #PackageBody(width, length, height, pose)
 
 doc: \<DOC>
 Physical Envelope of the package body.
