@@ -87,11 +87,17 @@ public defn build-dual-row-smd-landpattern (
         match(pad-gen?):
           (_:False): None()
           (pad-gen):
-            One $ VirtualPad(pad-id, pad-gen(pad-size), pos)
+            val cls = [
+              "pad",
+              to-string("col-%_" % [c]),
+              to-string("row-%_" % [r])
+            ]
+            One $ VirtualPad(pad-id, pad-gen(pad-size), pos, class = cls)
 
   append-all(vp, gen-pad-info())
   match(thermal-lead?:Shape):
-    append(vp, VirtualPad(num-leads + 1, smd-pad(thermal-lead?), loc(0.0, 0.0)))
+    append(vp, VirtualPad(num-leads + 1, smd-pad(thermal-lead?), loc(0.0, 0.0), class = ["pad", "thermal"]))
+
 
 
 
