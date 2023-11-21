@@ -7,6 +7,7 @@ defpackage jsl/landpatterns/courtyard:
   import jsl/design/settings
   import jsl/landpatterns/helpers
   import jsl/geometry/basics
+  import jsl/landpatterns/leads
   import jsl/geometry/box
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/packages with:
@@ -44,35 +45,6 @@ public defn make-courtyard-origin (
   inside pcb-landpattern:
     layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
 
-
-doc: \<DOC>
-Generate the Bounding Dims of a sequence of pads
-@param lp-pads the pads that we want to create a bounding
-rectangle of.
-@param layer-spec Optional layer specifier that will compute
-  the bounds based on the geometry in a particular layer.
-  If this value is false - we compute the boundary based on the
-  copper pad geometry only.
-@param expand-by Amount to expand the created dimension by.
-<DOC>
-public defn bounds (
-  lp-pads:Seqable<LandPatternPad|VirtualPad>
-  --
-  layer-spec:LayerSpecifier|False = false
-  expand-by:Double = 0.0
-  ) -> Box :
-
-  val unionBox = reduce{union, _} $ for lp-pad in lp-pads seq:
-    val pd = pad(lp-pad)
-    val l = pose(lp-pad)
-    match(layer-spec):
-      (_:False):
-        bounds(l * pad-shape(pd))
-      (ls:LayerSpecifier):
-        val shapes = layer(pd, ls)
-        bounds(l * Union(shapes))
-
-  fatten(expand-by, unionBox)
 
 public defn compute-courtyard-boundary (
   lp-pads:Seqable<LandPatternPad|VirtualPad>,
