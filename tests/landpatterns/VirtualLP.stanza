@@ -11,6 +11,7 @@ defpackage jsl/tests/landpatterns/VirtualLP:
   import jsl/landpatterns/VirtualLP
   import jsl/geometry/LineRectangle
 
+val LINE-WIDTH = 0.2
 
 deftest(virtual-lp) test-single-layer:
   val root = VirtualLP()
@@ -35,7 +36,7 @@ deftest(virtual-lp) test-single-layer:
   ; Add a pad
   append(root, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
   ; Add a silkscreen
-  add-artwork(root, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(root, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH))
 
   ; Add a sequence of Pads
   val pad-set = for i in 2 to 4 seq:
@@ -130,10 +131,10 @@ deftest(virtual-lp) test-lp-tree:
 
   val test-layer = Silkscreen("outline", Top)
   append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0)))
-  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH))
 
   append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0)))
-  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0))
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH))
 
   ; Introspection
   val vpds = get-pads(root)
@@ -190,10 +191,10 @@ deftest(virtual-lp) test-find-by-name:
 
   val test-layer = Silkscreen("outline", Top)
   append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0), name = "first"))
-  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), name = "outline")
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH), name = "outline")
 
   append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0), name = "number-2"))
-  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), name = "background")
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH), name = "background")
 
   var elems = to-tuple $ find-by-name(root, "background")
   #EXPECT(length(elems) == 1)
@@ -228,10 +229,10 @@ deftest(virtual-lp) test-find-by-class:
 
   val test-layer = Silkscreen("outline", Top)
   append(c1, VirtualPad(1, smd-pad(Circle(0.5)), loc(0.0, 0.0), name = "first"))
-  add-artwork(c1, test-layer, [LineRectangle(2.0, 2.0), LineRectangle(1.0, 1.0)], class = ["outline"])
+  add-artwork(c1, test-layer, [LineRectangle(2.0, 2.0, line-width = LINE-WIDTH), LineRectangle(1.0, 1.0, line-width = LINE-WIDTH)], class = ["outline"])
 
   append(c2, VirtualPad(2, smd-pad(Circle(0.25)), loc(0.0, 0.0), name = "first"))
-  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0), class = "outline")
+  add-artwork(c1, test-layer, LineRectangle(2.0, 2.0, line-width = LINE-WIDTH), class = "outline")
   add-artwork(c1, test-layer, Circle(0.5), class = "outline")
 
   var elems = to-tuple $ find-by-class(root, "outline")
