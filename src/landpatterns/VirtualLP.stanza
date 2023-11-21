@@ -80,6 +80,7 @@ public defstruct VirtualPad <: VirtualElement :
 
 with:
   constructor => #VirtualPad
+  printer => true
 
 public defn VirtualPad (
   pad-id:Int|Ref,
@@ -140,6 +141,7 @@ public defstruct VirtualCopper <: VirtualElement :
   class:Vector<String> with: (as-method => true)
 with:
   constructor => #VirtualCopper
+  printer => true
 
 public defn VirtualCopper (
   layer-index:LayerIndex,
@@ -163,6 +165,7 @@ public defstruct VirtualArtwork <: VirtualElement :
   class:Vector<String> with: (as-method => true)
 with:
   constructor => #VirtualArtwork
+  printer => true
 
 public defn VirtualArtwork (
   layer-spec:LayerSpecifier,
@@ -241,6 +244,7 @@ public defstruct VirtualLP <: VirtualElement :
 
 with:
   constructor => #VirtualLP
+  printer => true
 
 val DEF_VLP_POSE = loc(0.0, 0.0)
 
