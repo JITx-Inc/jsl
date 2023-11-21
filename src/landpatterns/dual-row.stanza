@@ -7,6 +7,7 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/errors
   import jsl/design/settings
   import jsl/landpatterns/helpers
+  import jsl/landpatterns/silkscreen
   import jsl/landpatterns/packages
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pads
@@ -84,11 +85,6 @@ public defn build-dual-row-smd-landpattern (
     append(vp, VirtualPad(num-leads + 1, smd-pad(thermal-lead?), loc(0.0, 0.0), class = ["pad", "thermal"]))
 
 
-defn default-line-width () -> Double :
-  clearance(current-rules(), MinSilkscreenWidth)
-
-defn default-line-clearance () -> Double :
-  clearance(current-rules(), MinSilkSolderMaskSpace)
 
 
 doc: \<DOC>
@@ -110,8 +106,8 @@ public defn compute-outline (
   pkg-body:PackageBody,
   density-level:DensityLevel
   --
-  line-width:Double = default-line-width(),
-  mask-clearance:Double = default-line-clearance(),
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
   side:Side = Top
   ) -> Shape :
 
@@ -163,8 +159,8 @@ public defn build-dual-row-smd-outline (
   pkg-body:PackageBody,
   density-level:DensityLevel,
   --
-  line-width:Double = default-line-width(),
-  mask-clearance:Double = default-line-clearance(),
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
   side:Side = Top,
   ):
   val outline-geom = compute-outline(
@@ -205,8 +201,8 @@ public defn build-dual-row-smd-pin-1 (
   pkg-body:PackageBody,
   --
   pin-1-id:Int|Ref = 1,
-  line-width:Double = default-line-width(),
-  mask-clearance:Double = default-line-clearance(),
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
   side:Side = Top
   ):
   ; Draw a circle dot inside the rectangle above pin 1

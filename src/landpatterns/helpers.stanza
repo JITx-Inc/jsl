@@ -7,6 +7,8 @@ defpackage jsl/landpatterns/helpers:
   import jitx/commands
   import jsl/errors
 
+  import jsl/landpatterns/silkscreen
+
 public defn ensure-positive! (
   field:String,
   value: Int|Long|Double|Float|Toleranced|Dims
@@ -103,9 +105,6 @@ public defn ref-label (pose:Pose = loc(0.0, 0.0) -- anchor:Anchor = C) :
     val min-silkscreen-text-height = clearance(current-rules(), MinSilkscreenTextHeight)
     layer(Silkscreen("values", Top)) = Text(">REF", min-silkscreen-text-height, anchor, pose)
 
-defn default-line-width () -> Double :
-  clearance(current-rules(), MinSilkscreenWidth)
-
 doc: \<DOC>
 Create a plus symbol shape
 @param line-length Length of the horizontal or vertical segments
@@ -116,7 +115,7 @@ Create a plus symbol shape
 public defn PlusSymbol (
   --
   line-length:Double = 1.0,
-  line-width:Double = default-line-width(),
+  line-width:Double = default-silk-width(),
   pose:Pose = loc(0.0, 0.0)
   ) -> Shape:
   val arm = 0.5 * line-length
