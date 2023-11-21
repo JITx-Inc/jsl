@@ -4,6 +4,7 @@ defpackage jsl/geometry/basics:
   import jitx
   import jitx/commands
 
+
 ; TODO -
 ;   I want to refactor the shape definitions in esir.stanza:
 ;   1.  We keep the form of `Shape(anchor:Anchor, args ...)` - this is useful for
@@ -14,8 +15,8 @@ defpackage jsl/geometry/basics:
 public defn Capsule (size:Dims -- anchor:Anchor = C):
   Capsule(anchor, x(size), y(size))
 
-public defn Rectangle (size:Dims -- anchor:Anchor = C):
-  Rectangle(anchor, x(size), y(size))
+public defn Rectangle (size:Dims -- anchor:Anchor = C, pose:Pose = loc(0.0, 0.0)):
+  pose * Rectangle(anchor, x(size), y(size))
 
 public defn RoundedRectangle (size:Dims, r:Double -- anchor:Anchor = C):
   RoundedRectangle(anchor, x(size), y(size), r)
