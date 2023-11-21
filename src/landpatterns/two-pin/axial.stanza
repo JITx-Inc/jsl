@@ -160,6 +160,14 @@ public defmethod name (pkg:Axial-2pin) -> String :
     to-deci $ typ $ length $ lead $ pkg
     ]
 
+public defmethod courtyard-excess (pkg:Axial-2pin, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+  ; From IPC 7351B - Estimated based on SMT
+  ;  components. User may want to override and configure these values.
+  switch(density-level):
+    DensityLevelA: 0.5
+    DensityLevelB: 0.25
+    DensityLevelC: 0.1
+
 public defmethod build-landpattern (
   pkg:Axial-2pin,
   vp:VirtualLP,

@@ -192,6 +192,11 @@ public defmethod package-body (x:SMT-Chip) -> PackageBody :
     height = height(x)
   )
 
+public defmethod courtyard-excess (pkg:SMT-Chip, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+  val protrusion = protrusion(pkg)
+  val fillets = lead-fillets(protrusion, density-level = density-level)
+  courtyard-excess(fillets)
+
 defn select-protrusion (chip-def:SMT-Chip-Def) -> LeadProtrusion :
   if typ(width(chip-def)) > 0.8: BigRectangularLeads()
   else: SmallRectangularLeads()

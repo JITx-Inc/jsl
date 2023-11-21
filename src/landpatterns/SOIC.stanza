@@ -265,6 +265,16 @@ public defn SOIC-W (
     )
 
 doc: \<DOC>
+Courtyard Excess Expectation for SOIC
+
+The user can override by providing a custom {@link LeadProtrusion} type.
+<DOC>
+public defmethod courtyard-excess (pkg:SOIC, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+  val protrusion = lead-type $ lead $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level)
+  courtyard-excess(fillets)
+
+doc: \<DOC>
 Generator for Creating SOIC LandPatterns
 @param pkg SOIC Package Definition
 @param density-level Defines the compactness of the symbol created. By default,

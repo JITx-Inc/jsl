@@ -170,6 +170,8 @@ Lead Numbering Scheme for this Package
 <DOC>
 public defmulti lead-numbering (x:Package) -> Numbering
 
+public defmulti courtyard-excess (x:Package, density-level:DensityLevel = ?) -> Double
+
 doc: \<DOC>
 Default Landpattern Generator Pose
 This value should be the default value used for the
@@ -335,9 +337,8 @@ public defmethod build-courtyard (
   density-level:DensityLevel = DENSITY-LEVEL
   ) -> False:
   build-courtyard-origin(vp)
-  ; @TODO - I need some way to extract the courtyard excess specifications
-  ;  from the component
-  build-courtyard-boundary(vp)
+  val excess = courtyard-excess(pkg, density-level)
+  build-courtyard-boundary(vp, package-body(pkg), density-level, excess = excess)
 
 
 doc: \<DOC>
