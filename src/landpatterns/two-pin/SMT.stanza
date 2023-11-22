@@ -100,27 +100,27 @@ Create a SMT-Chip Package given a chip size string.
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return SMT Chip Package with all default configurations
 <DOC>
-public defn get-chip-pkg (k:String) -> SMT-Chip :
+public defn get-chip-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Chip :
   val chip-def = chips[k]
-  SMT-Chip(chip-def)
+  SMT-Chip(chip-def, density-level = density-level)
 
 doc: \<DOC>
 Create a Resistor SMT Chip Package of a given size
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return Package with all default configurations
 <DOC>
-public defn get-resistor-pkg (k:String) -> SMT-Resistor :
+public defn get-resistor-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Resistor :
   val chip-def = chips[k]
-  SMT-Resistor(chip-def)
+  SMT-Resistor(chip-def, density-level = density-level)
 
 doc: \<DOC>
 Create a Capacitor SMT Chip Package of a given size
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return Package with all default configurations
 <DOC>
-public defn get-capacitor-pkg (k:String) -> SMT-Capacitor :
+public defn get-capacitor-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Capacitor :
   val chip-def = chips[k]
-  SMT-Capacitor(chip-def)
+  SMT-Capacitor(chip-def, density-level = density-level)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -174,6 +174,10 @@ public defstruct SMT-Chip <: Package :
   protrusion:LeadProtrusion
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   constructor => #SMT-Chip
 
@@ -192,9 +196,9 @@ public defmethod package-body (x:SMT-Chip) -> PackageBody :
     height = height(x)
   )
 
-public defmethod courtyard-excess (pkg:SMT-Chip, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+public defmethod courtyard-excess (pkg:SMT-Chip) -> Double :
   val protrusion = protrusion(pkg)
-  val fillets = lead-fillets(protrusion, density-level = density-level)
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
 defn select-protrusion (chip-def:SMT-Chip-Def) -> LeadProtrusion :
@@ -224,18 +228,17 @@ public defn SMT-Chip (
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
-  lead-numbering:Numbering = select-numbering(polarized?)
+  lead-numbering:Numbering = select-numbering(polarized?),
+  density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering)
+  #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod build-landpattern (
   pkg:SMT-Chip,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
 
-  val lead-fillets = lead-fillets(protrusion(pkg), density-level = density-level)
+  val lead-fillets = lead-fillets(protrusion(pkg), density-level = density-level(pkg))
   val cdef = def(pkg)
 
   val lead-span = length(cdef)
@@ -287,6 +290,10 @@ public defstruct SMT-Resistor <: SMT-Chip :
   protrusion:LeadProtrusion with: ( as-method => true )
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   constructor => #SMT-Resistor
 
@@ -301,9 +308,10 @@ public defn SMT-Resistor (
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
-  lead-numbering:Numbering = STD-SMT-CHIP-NUMBERING
+  lead-numbering:Numbering = STD-SMT-CHIP-NUMBERING,
+  density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Resistor(chip-def, height, protrusion, pad-planner, lead-numbering)
+  #SMT-Resistor(chip-def, height, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod name (pkg:SMT-Resistor) -> String :
   defn to-deci (v:Double) -> String:
@@ -331,6 +339,10 @@ public defstruct SMT-Capacitor <: SMT-Chip :
   protrusion:LeadProtrusion with: ( as-method => true )
   pad-planner:PadPlanner with: (as-method => true)
   lead-numbering:Numbering with: (as-method => true)
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   constructor => #SMT-Capacitor
 
@@ -344,9 +356,10 @@ public defn SMT-Capacitor (
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
-  lead-numbering:Numbering = select-numbering(polarized?)
+  lead-numbering:Numbering = select-numbering(polarized?),
+  density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Capacitor(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering)
+  #SMT-Capacitor(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod name (pkg:SMT-Capacitor) -> String :
   defn to-deci (v:Double) -> String:

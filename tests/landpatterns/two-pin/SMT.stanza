@@ -15,18 +15,21 @@ defpackage jsl/tests/landpatterns/two-pin/SMT:
 
 deftest(two-pin) test-basic:
 
+  val chip-def = SMT-Chip-Def(
+    "0603", [],
+    1.55 +/- 0.15,
+    0.8 +/- 0.15,
+    0.3 +/- 0.2,
+    0.8 +/- 0.15
+  )
+  val h = 0.45 +/- 0.15
   val SMT-0603 = SMT-Chip(
-    SMT-Chip-Def(
-      "0603", [],
-      1.55 +/- 0.15,
-      0.8 +/- 0.15,
-      0.3 +/- 0.2,
-      0.8 +/- 0.15
-    ),
-    height = 0.45 +/- 0.15,
+    chip-def
+    height = h,
+    density-level = DensityLevelA
   )
 
-  val lp-A = create-landpattern(SMT-0603, density-level = DensityLevelA)
+  val lp-A = create-landpattern(SMT-0603)
 
   val exp-Pitch-A = 1.65 +/- 0.1
 
@@ -46,7 +49,13 @@ deftest(two-pin) test-basic:
       ; Y Direction
       #EXPECT(almost-equal?(height(shape), 0.65))
 
-  val lp-B = create-landpattern(SMT-0603, density-level = DensityLevelB)
+  val SMT-0603-B = SMT-Chip(
+    chip-def
+    height = h,
+    density-level = DensityLevelB
+  )
+
+  val lp-B = create-landpattern(SMT-0603-B)
 
   val exp-Pitch-B = 1.55 +/- 0.1
 
@@ -66,7 +75,13 @@ deftest(two-pin) test-basic:
       ; Y Direction
       #EXPECT(almost-equal?(height(shape), 0.55))
 
-  val lp-C = create-landpattern(SMT-0603, density-level = DensityLevelC)
+  val SMT-0603-C = SMT-Chip(
+    chip-def
+    height = h,
+    density-level = DensityLevelC
+  )
+
+  val lp-C = create-landpattern(SMT-0603-C)
 
   val exp-Pitch-C = 1.45 +/- 0.1
 
@@ -89,8 +104,8 @@ deftest(two-pin) test-basic:
 
 deftest(two-pin) test-chip-table :
 
-  val SMT-0805 = get-chip-pkg("0805")
-  val SMT-2012m = get-chip-pkg("2012m")
+  val SMT-0805 = get-chip-pkg("0805", DensityLevelC)
+  val SMT-2012m = get-chip-pkg("2012m", DensityLevelC)
 
   #EXPECT(num-leads(SMT-0805) == 2)
   #EXPECT(num-leads(SMT-2012m) == 2)
@@ -98,7 +113,7 @@ deftest(two-pin) test-chip-table :
   val exp-Pitch = 1.7 +/- 0.1
   val exp-W = 1.2
   val exp-L = 0.710555
-  var lp = create-landpattern(SMT-0805, density-level = DensityLevelC)
+  var lp = create-landpattern(SMT-0805)
   var grid = PadGrid(lp)
 
   #EXPECT(length(rows(grid)) == 2)
@@ -114,7 +129,7 @@ deftest(two-pin) test-chip-table :
       #EXPECT(almost-equal?(height(shape), exp-L))
 
   ; Check the metric version
-  lp = create-landpattern(SMT-2012m, density-level = DensityLevelC)
+  lp = create-landpattern(SMT-2012m)
   grid = PadGrid(lp)
 
   #EXPECT(length(rows(grid)) == 2)
@@ -132,9 +147,9 @@ deftest(two-pin) test-chip-table :
 
 deftest(two-pin) test-resistor-smt :
 
-  val pkg = get-resistor-pkg("0402")
+  val pkg = get-resistor-pkg("0402", DensityLevelC)
 
-  val lp = create-landpattern(pkg, density-level = DensityLevelC)
+  val lp = create-landpattern(pkg)
   val grid = PadGrid(lp)
 
   val exp-Pitch = 0.84 +/- 0.1
@@ -153,9 +168,9 @@ deftest(two-pin) test-resistor-smt :
 
 deftest(two-pin) test-capacitor-smt :
 
-  val pkg = get-capacitor-pkg("1206")
+  val pkg = get-capacitor-pkg("1206", DensityLevelB)
 
-  val lp = create-landpattern(pkg, density-level = DensityLevelB)
+  val lp = create-landpattern(pkg)
   val grid = PadGrid(lp)
 
   val exp-Pitch = 3.2 +/- 0.1
@@ -174,9 +189,9 @@ deftest(two-pin) test-capacitor-smt :
 
 deftest(two-pin) test-capacitor-smt-with-pose:
 
-  val pkg = get-capacitor-pkg("1206")
+  val pkg = get-capacitor-pkg("1206", DensityLevelB)
 
-  val lp = create-landpattern(pkg, pose = loc(-0.5, 0.0), density-level = DensityLevelB)
+  val lp = create-landpattern(pkg, pose = loc(-0.5, 0.0))
   val grid = PadGrid(lp)
 
   val exp-Pitch = 3.2 +/- 0.1
