@@ -267,47 +267,15 @@ public defn build-dual-row-outline-pin-1 (
   ;  so that we can place the marker in the mid-line
   val line-width = match(o-sh):
     (x:Line): width(x)
-    ; TODO - this probably should be setting
+    ; TODO - this probably should be a setting
     (_): 0.1
 
   val o-box = bounds $ o-sh
-  val c-pts = corners(o-box)
 
   val pin-1-pos = center $ pose(pin-1-pad)
 
-  defn compute-dist (x:Point) -> Double:
-    l2-norm(x - pin-1-pos)
+  val marker = compute-triangle-marker(pin-1-pos, o-box, line-width)
 
-  val closest = minimum(compute-dist, c-pts)
-
-  ; Compute the Marker Shape & Size
-  val marker-size = (20 %)
-  val opt1 = y(dims(o-box)) * marker-size
-  val marker-geom-limit = min(opt1, x(dims(o-box)))
-  val marker-height = min(marker-geom-limit, 1.25)
-
-  val st-offset = line-width / 2.0
-  val marker-shape = loc(st-offset, (- st-offset)) * Polygon([
-    Point(0.0, 0.0),
-    Point(marker-height, 0.0),
-    Point(0.0, (- marker-height))
-    ])
-
-  ; Compute the angle of the marker depending on
-  ;  what corner of the outline the marker is in.
-  val angle = atan2(y(closest), x(closest))
-  val rot = if angle > (PI / 2.0): ; NW
-    0.0
-  else if angle < (- PI / 2.0): ; SW
-    90.0
-  else if angle < 0.0: ; SE
-    180.0
-  else: ; NE
-    -90.0
-
-  ; Place the marker in the closest corner.
-  val marker-pose = loc(closest, rot)
-  val marker = marker-pose * marker-shape
   add-artwork(
     vp, Silkscreen("pin-1-marker", side),
     marker,
