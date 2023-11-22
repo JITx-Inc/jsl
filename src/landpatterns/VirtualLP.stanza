@@ -543,6 +543,12 @@ public defn get-pad-by-ref (vp:VirtualLP, r:Ref|Int) -> Maybe<VirtualPad> :
     else:
       None()
 
+public defn get-pad-by-ref! (vp:VirtualLP, r:Ref|Int) -> VirtualPad :
+  val pin-1-pad? = get-pad-by-ref(vp, r)
+  match(pin-1-pad?):
+    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [r])
+    (x:One<VirtualPad>): value(x)
+
 ; Converters
 #for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
   funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualLP]) :

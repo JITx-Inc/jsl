@@ -254,11 +254,7 @@ public defn build-dual-row-outline-pin-1 (
 
   val outline = outlines[0]
 
-  val pin-1-pad? = get-pad-by-ref(vp, pin-1-id)
-  val pin-1-pad = match(pin-1-pad?):
-    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [pin-1-id])
-    (x:One<VirtualPad>): value(x)
-
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
   ; Find the corner of the outline nearest to pad 1
   val o-sh = shape(outline)
 
