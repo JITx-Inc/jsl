@@ -208,7 +208,7 @@ That virtual environment can then be written out to a
 @param density-level Density Level for this LandPattern definition.
 See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
-public defmulti build-landpattern (
+public defmulti build-pads (
   pkg:Package,
   vp:VirtualLP,
   ) -> False
@@ -227,7 +227,7 @@ by this generator function. By default, no offset is applied.
 @param density-level Density Level for this LandPattern definition.
 See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
-public defmulti make-landpattern (
+public defmulti make-pads (
   pkg:Package
   --
   pose:Pose = ?
@@ -236,14 +236,14 @@ public defmulti make-landpattern (
 doc: \<DOC>
 Default Implementation of the Landpattern Copper Generator
 <DOC>
-public defmethod make-landpattern (
+public defmethod make-pads (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-landpattern(pkg, virt)
+    build-pads(pkg, virt)
     make-landpattern(virt)
 
 
@@ -513,7 +513,7 @@ Default `build-all` implementation
 
 Builders are applied in the following order:
 
-1.  {@link build-landpattern}
+1.  {@link build-pads}
 1.  {@link build-courtyard}
 1.  {@link build-silkscreen}
 1.  {@link build-keep-out}
@@ -524,7 +524,7 @@ public defmethod build-all (
   pkg:Package,
   virt:VirtualLP
   ) -> False :
-  build-landpattern(pkg, virt)
+  build-pads(pkg, virt)
   build-courtyard(pkg, virt)
   build-silkscreen(pkg, virt)
   build-keep-out(pkg, virt)

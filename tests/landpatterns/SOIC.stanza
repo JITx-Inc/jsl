@@ -65,7 +65,7 @@ deftest(SOIC) test-SOIC-N:
     #EXPECT(name(N) == expName)
 
     pcb-landpattern N-lp:
-      make-landpattern(N)
+      make-pads(N)
 
     val exp-Pitch-X = tol%(5.2, (1 %))
     val exp-Pitch-Y = tol%(1.27, (1 %))
@@ -103,7 +103,7 @@ deftest(SOIC) test-SOIC-W:
     #EXPECT(name(W) == expName)
 
     pcb-landpattern W-lp:
-      make-landpattern(W)
+      make-pads(W)
 
     val exp-Pitch-X = tol%(9.6, (1 %))
     val exp-Pitch-Y = tol%(1.27, (1 %))

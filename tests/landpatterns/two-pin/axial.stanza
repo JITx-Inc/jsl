@@ -37,7 +37,7 @@ deftest(two-pin) test-basic-axial:
   #EXPECT(prefix?(pkgName, "Axial"))
 
   pcb-landpattern lp-B:
-    make-landpattern(cap)
+    make-pads(cap)
 
   var grid = PadGrid(lp-B)
 

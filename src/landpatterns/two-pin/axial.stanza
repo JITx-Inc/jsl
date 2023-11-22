@@ -173,7 +173,7 @@ public defmethod courtyard-excess (pkg:Axial-2pin) -> Double :
     DensityLevelB: 0.25
     DensityLevelC: 0.1
 
-public defmethod build-landpattern (
+public defmethod build-pads (
   pkg:Axial-2pin,
   vp:VirtualLP,
   ) :

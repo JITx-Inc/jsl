@@ -282,12 +282,12 @@ public defmethod courtyard-excess (pkg:SOIC) -> Double :
   courtyard-excess(fillets)
 
 doc: \<DOC>
-Generator for Creating SOIC LandPatterns
+Generator for Creating SOIC LandPattern Pads
 @param pkg SOIC Package Definition
 @param density-level Defines the compactness of the symbol created. By default,
   the design density-level will be selected.
 <DOC>
-public defmethod build-landpattern (
+public defmethod build-pads (
   pkg:SOIC
   vp:VirtualLP
   ) -> False :
