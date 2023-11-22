@@ -2,6 +2,7 @@ packages jsl/* defined-in "./src/"
 
 packages jsl/tests/* defined-in "./tests/"
 packages jsl/tests/landpatterns/* defined-in "./tests/landpatterns/"
+packages jsl/examples/* defined-in "./examples/"
 
 build-test tests:
   inputs:

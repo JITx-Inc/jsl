@@ -1,0 +1,148 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/BGA-complex:
+  import core
+  import jitx
+  import jitx/commands
+  import jsl/design/settings
+  import jsl/examples/landpatterns/board
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/pad-planner
+
+  import jsl/landpatterns/VirtualLP
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Dialog DA14706
+; https://www.renesas.com/us/en/document/dst/da1470x-datasheet?r=1614981
+
+val dl = DensityLevelC
+
+public deftype VFBGA142 <: BGA
+
+public defn VFBGA142 () -> VFBGA142 :
+  val pad-conf = PadConfig-D(
+    copper-D-adj = -0.05,
+    mask-D-adj = 0.0,
+  )
+
+  new VFBGA142:
+    defmethod num-leads (this) : 144
+    defmethod rows (this) : 12
+    defmethod columns (this) : 12
+    defmethod lead-diam (this) : 0.25
+    defmethod pitch (this) : 0.45
+    defmethod density-level (this) : dl
+    defmethod pad-planner (this) :
+      ; Create a carve out in the top-right corner
+      Perimeter-Matrix-Planner(
+        [
+          PadIsland(
+            0 through 3
+            8 through 11
+          ),
+          PadIsland( ; F[10]
+            5 through 5,
+            9 through 9
+          ),
+          PadIsland( ; G[11]
+            6 through 6,
+            10 through 10
+          )
+        ],
+        pad-conf
+      )
+    defmethod lead-numbering (this) :
+      Grid-Numbering(rows(this), columns(this))
+    defmethod package-body (this) :
+      PackageBody(
+        width = min-typ-max(6.13, 6.2, 6.27)
+        length = min-typ-max(5.93, 6.0, 6.07),
+        height = min-typ-max(0.72, 0.82, 0.92)
+      )
+
+    defmethod build-pads (
+      this,
+      root:VirtualLP
+      ):
+      val prim = create-child(root)
+
+      build-vpads(this, prim)
+
+      val ey = 0.2075
+      val ex = 0.2975
+      val l = 4.0 * pitch(this) as Double
+      val offset = Point(l, l) + Point(ex, ey)
+      val sec = create-child(root, offset = loc(offset))
+
+      val sec-rows = 4
+      val sec-cols = 4
+      val num-scheme = Grid-Numbering(
+        sec-rows, sec-cols, 0, 8
+      )
+
+      val sec-pkg = BGA(
+        num-leads = 16,
+        rows = sec-rows,
+        columns = sec-cols,
+        lead-diam = lead-diam(this),
+        pitch = pitch(this),
+        package-body = package-body(this),
+        pad-planner = Full-Matrix-Planner(pad-conf)
+        lead-numbering = num-scheme,
+        density-level = dl
+      )
+
+      build-pads(sec-pkg, sec)
+
+
+
+pcb-symbol test-sym:
+  for i in 1 through 12 do :
+    pin (IndexRef(Ref("p"), i)) at Point(-2.54, (2.54 - (to-double(i) * 2.54))) with :
+      direction = Left
+      length = 2.54
+      number-size = 0.762
+      name-size = 0.762
+
+pcb-component test-BGA:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [p[1] | A[1] A[2] A[3] A[4] A[5] A[6] A[7] A[8] A[9] A[10] A[11] A[12] | Right ]
+    [p[2] | B[1] B[2] B[3] B[4] B[5] B[6] B[7] B[8] B[9] B[10] B[11] B[12] | Right ]
+    [p[3] | C[1] C[2] C[3] C[4] C[5] C[6] C[7] C[8] C[9] C[10] C[11] C[12] | Right ]
+    [p[4] | D[1] D[2] D[3] D[4] D[5] D[6] D[7] D[8] D[9] D[10] D[11] D[12] | Right ]
+    [p[5] | E[1] E[2] E[3] E[4] E[5] E[6] E[7] E[8] E[9] E[10] E[11] E[12] | Right ]
+    [p[6] | F[1] F[2] F[3] F[4] F[5] F[6] F[7] F[8] F[9]       F[11] F[12] | Right ]
+    [p[7] | G[1] G[2] G[3] G[4] G[5] G[6] G[7] G[8] G[9] G[10]       G[12] | Right ]
+    [p[8] | H[1] H[2] H[3] H[4] H[5] H[6] H[7] H[8] H[9] H[10] H[11] H[12] | Right ]
+    [p[9] | J[1] J[2] J[3] J[4] J[5] J[6] J[7] J[8] J[9] J[10] J[11] J[12] | Right ]
+    [p[10] | K[1] K[2] K[3] K[4] K[5] K[6] K[7] K[8] K[9] K[10] K[11] K[12] | Right ]
+    [p[11] | L[1] L[2] L[3] L[4] L[5] L[6] L[7] L[8] L[9] L[10] L[11] L[12] | Right ]
+    [p[12] | M[1] M[2] M[3] M[4] M[5] M[6] M[7] M[8] M[9] M[10] M[11] M[12] | Right ]
+
+  assign-symbol(test-sym)
+
+  val lp = create-landpattern(VFBGA142())
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-BGA
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("BGA-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

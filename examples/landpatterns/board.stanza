@@ -1,0 +1,72 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/board:
+  import core
+  import jitx
+
+pcb-material copper :
+  type = Conductor
+  name = "Copper"
+
+pcb-material core :
+  type = Dielectric
+  dielectric-coefficient = 4.26
+  name = "FR4 Core"
+
+pcb-material core-45 :
+  type = Dielectric
+  dielectric-coefficient = 4.5
+  name = "4.5 DK FR4 Core"
+
+pcb-material prepreg :
+  type = Dielectric
+  dielectric-coefficient = 4.26
+  name = "FR4 Prepreg 2113/2116"
+
+pcb-material prepreg-2313 :
+  type = Dielectric
+  dielectric-coefficient = 4.05
+  name = "FR4 Prepreg 2313"
+
+pcb-material soldermask :
+  type = Dielectric
+  dielectric-coefficient = 3.9
+  name = "Taiyo BSN4000"
+
+public pcb-stackup jlcpcb-jlc2313 :
+  name = "JLCPCB 4-layer 1.6mm"
+  layer(0.019, soldermask) ; 0.5mil over conductor
+  layer(0.035, copper)
+  layer(0.1, prepreg-2313)
+  layer(0.0175, copper)
+  layer(1.2650, core)
+  layer(0.0175, copper)
+  layer(0.1, prepreg-2313)
+  layer(0.035, copper)
+  layer(0.019, soldermask) ; 0.5mil over conductor
+
+
+public pcb-board default-board (outline:Shape) :
+  stackup = jlcpcb-jlc2313
+  boundary = outline
+  signal-boundary = outline
+
+public pcb-rules default-rules :
+  min-copper-width = 0.13 ; 5mil
+  min-copper-copper-space = 0.2 ;
+  min-copper-hole-space = 0.2032 ; 8mil
+  min-copper-edge-space = 0.381 ; 10mil outer, but 15mil inner
+  min-annular-ring = 0.1524 ; 6mil
+  min-drill-diameter = 0.254 ; 10mil
+  min-silkscreen-width = 0.2 ; 3mil
+  min-pitch-leaded = 0.35 ; guess
+  min-pitch-bga = 0.35 ; guess
+  max-board-width = 457.2 ; 18in
+  max-board-height = 609.6 ; 24in
+  solder-mask-registration = 0.15
+  min-silk-solder-mask-space = 0.15
+  min-silkscreen-text-height = 0.762
+  min-th-pad-expand-outer = 0.15
+  min-soldermask-opening = 0.152
+  min-soldermask-bridge = 0.102
+  min-hole-to-hole = 0.254
+  min-pth-pin-solder-clearance = 3.0

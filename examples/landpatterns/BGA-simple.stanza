@@ -1,0 +1,96 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/BGA-simple:
+  import core
+  import jitx
+  import jitx/commands
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-symbol test-sym:
+  val pin-names = ["VDD", "VO-", "VO+", "BYPASS", "SHUTDOWN", "GND", "IN+", "IN-"]
+  for i in 0 to length(pin-names) do :
+    pin (Ref(pin-names[i])) at Point(-2.54, (2.54 - (to-double(i) * 2.54))) with :
+      direction = Left
+      length = 2.54
+      number-size = 0.762
+      name-size = 0.762
+
+pcb-component test-BGA:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [VO- | A[1] | Right |  0]
+    [VDD | A[3] | Up |  0]
+    [SHUTDOWN | B[1] | Left | 0]
+    [GND | B[2] | Down | 0]
+    [VO+ | B[3] | Right | 0]
+    [BYPASS | C[1] | Left | 0]
+    [IN+ | C[2] | Left | 0]
+    [IN- | C[3] | Left | 0]
+
+  assign-symbol(test-sym)
+
+ ; This test is based on the TI, TPA6203A1GQVR
+  ; Datasheet:
+  ;  https://www.ti.com/lit/ds/symlink/tpa6203a1.pdf
+  ;
+  ; Drawing:
+  ;  https://www.ti.com/lit/ml/mpbg144c/mpbg144c.pdf
+  ;
+  ; NSMD
+
+  val planner = Perimeter-Matrix-Planner(
+    ; Pad A2 is not present
+    PadIsland(
+      0 through 0 ; Row A
+      1 through 1 ; Pin 2
+    )
+    PadConfig-D(
+      copper-D-adj = ipc-bga-copper(
+        NonSolderMaskDefined,
+        density-level = DensityLevelC
+        ),
+      mask-D-adj = 0.0,
+    )
+  )
+
+  val body = PackageBody(
+    width = 2.0 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 0.71 +/- [0.06, 0.0]
+  )
+
+  val pkg = BGA(
+    num-leads = 9,
+    rows = 3,
+    columns = 3,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner
+  )
+
+  val lp = create-landpattern(pkg, density-level = DensityLevelB)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-BGA
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("BGA-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

@@ -1,0 +1,60 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/SOIC8N:
+  import core
+  import jitx
+  import jitx/commands
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SOIC
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-symbol test-sym:
+  val pin-names = ["VDD", "VIN+", "VIN-", "VSS", "VOUT"]
+  for i in 0 to length(pin-names) do :
+    pin (Ref(pin-names[i])) at Point(-2.54, (2.54 - (to-double(i) * 2.54))) with :
+      direction = Left
+      length = 2.54
+      number-size = 0.762
+      name-size = 0.762
+
+pcb-component test-SOIC:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [VDD | p[5] | Up |  0]
+    [VIN+ | p[3] | Left | 0]
+    [VIN- | p[4] | Left | 0]
+    [VSS | p[2] | Down | 0]
+    [VOUT | p[1] | Right | 0]
+
+  assign-symbol(test-sym)
+
+  val pkg = SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-SOIC
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("SOIC8N-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
