@@ -6,11 +6,14 @@ defpackage jsl/landpatterns/two-pin/SMT:
 
   import jsl/errors
   import jsl/design/settings
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+
   import jsl/landpatterns/helpers
   import jsl/landpatterns/two-pin/SMT-table with:
     prefix => #SMT-
   import jsl/landpatterns/two-pin/utils
-
+  import jsl/landpatterns/silkscreen
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads
   import jsl/landpatterns/IPC
@@ -260,6 +263,9 @@ public defmethod build-pads (
   val planner = pad-planner(pkg)
   val num-scheme = lead-numbering(pkg)
 
+  if polarized?(pkg):
+    add(class(vp), "polarized")
+
   defn gen-pad-info () -> Seq<VirtualPad> :
     ; Column Major
     val num-cols = 1
@@ -271,10 +277,96 @@ public defmethod build-pads (
       match(pad-gen?):
         (_:False): None()
         (pad-gen):
-          One $ VirtualPad(pad-id, pad-gen(pad-sz), pos)
-
+          val cls = ["pad"]
+          One $ VirtualPad(pad-id, pad-gen(pad-sz), pos, class = cls)
 
   append-all(vp, gen-pad-info())
+
+public defn get-two-pin-pads (vp:VirtualLP) -> [VirtualPad, VirtualPad] :
+  val [r1, r2] = if contains?(class(vp), "polarized"):
+    [Ref("c"), Ref("a")]
+  else:
+    [1, 2]
+
+  val p1 = get-pad-by-ref!(vp, r1)
+  val p2 = get-pad-by-ref!(vp, r2)
+  [p1, p2]
+
+public defn build-SMT-outline (
+  pkg:SMT-Chip,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val [p1, p2] = get-two-pin-pads(vp)
+  val s1 = bounds([p1], layer-spec = SolderMask(side))
+  val s2 = bounds([p2], layer-spec = SolderMask(side))
+
+  ; I'm assuming that the pads in this LP container
+  ;  are oriented with the length in the Y axis.
+  val interstitial = Box(
+    Point(left(s2), up(s2)),
+    Point(right(s1), down(s1))
+  )
+  println("Interstitial: %_" % [interstitial])
+  val h = y(dims(interstitial))
+  println("H: %_" % [h])
+  ; Minimum box height is mask clearance and  linewidth on either side
+  ;  and then I'm arbitrarily requiring at least mask-clearance between
+  ;  the top and bottom lines for them to be visible. For polarized chips
+  ;  I need an additional line width
+  val add-clearance = if polarized?(pkg):
+    mask-clearance + line-width
+  else:
+    mask-clearance
+  val free-space = h - ((2.0 * (mask-clearance + line-width)) + add-clearance)
+  println("Free Space: %_" % [free-space])
+
+  defn create-line (v:Double, width:Double = line-width) -> Line :
+    val shrink = (width / 2.0)
+    Line(width, [
+      Point(left(interstitial) + shrink , v),
+      Point(right(interstitial) - shrink, v)
+      ])
+
+  val outline = if free-space < 0.0 :
+    ; We will draw a Line instead of a LineRectangle because there is
+    ;  not enough space.
+    val c = center(interstitial)
+    create-line(y(c))
+  else:
+    val shrink = Point((- line-width / 2.0), (- ((line-width / 2.0) + mask-clearance)))
+    println("Shrink: %_" % [shrink])
+    val o-box = fatten(shrink, interstitial)
+    LineRectangle(o-box, line-width = line-width),
+
+  add-artwork(vp, Silkscreen("outline", side), outline, class = "outline")
+
+  ; Add Polarized Marker
+  if polarized?(pkg):
+    val pol-line = if free-space < 0.0 :
+      ; We will put an additional line on the other side of the 'c' pad
+      val v = up(s1) + mask-clearance + (line-width / 2.0)
+      create-line(v)
+    else:
+      ; We will put an additional line inside the rect on the 'c' side.
+      val pol-size = (15 %)
+      val pol-h = h * pol-size
+      val pol-width = max(pol-h, line-width)
+
+      val v = up(interstitial) - (mask-clearance) - line-width - (0.5 * pol-width)
+
+      create-line(v, pol-width)
+    add-artwork(vp, Silkscreen("polarized", side), pol-line, class = "pol-marker")
+
+public defmethod build-silkscreen (
+  pkg:SMT-Chip,
+  vp:VirtualLP
+  ):
+  build-SMT-outline(pkg, vp)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   Resistor
