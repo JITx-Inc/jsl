@@ -300,9 +300,18 @@ public defmethod build-pads (
     package-body(pkg),
     pad-planner = pad-planner(pkg),
     num-scheme = lead-numbering(pkg),
-    density-level = density-level,
+    density-level = density-level(pkg),
     with-pol-marker? = true
     thermal-lead? = thermal-lead?(pkg)
   )
 
-
+public defmethod build-silkscreen (
+  pkg:SOIC,
+  vp:VirtualLP,
+  ) -> False :
+  val body = package-body(pkg)
+  build-dual-row-smd-outline(
+    vp, body, density-level(pkg)
+  )
+  build-dual-row-smd-pin-1(vp, body)
+  build-dual-row-outline-pin-1(vp)
