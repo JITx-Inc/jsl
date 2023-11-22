@@ -103,6 +103,60 @@ deftest(BGA) test-full-simple :
       #EXPECT(almost-equal?(radius(pShape), to-radius(0.25)))
       #EXPECT(center(pShape) == Point(0.0, 0.0))
 
+
+deftest(BGA) test-full-landpattern :
+  ; This test is based on the TI, TXB0104NMN
+  ; Datasheet:
+  ;  https://www.ti.com/lit/ds/symlink/txb0104.pdf
+  ;
+  ; NSMD variant of the recommended land pattern
+
+  val planner = Full-Matrix-Planner(
+    PadConfig-D(
+      copper-D-adj = -0.05,
+      mask-D-adj = 0.0,
+    )
+  )
+
+  val body = PackageBody(
+    width = 2.5 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 1.0 +/- 0.1
+  )
+
+  val pkg = BGA(
+    num-leads = 12,
+    rows = 3,
+    columns = 4,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+
+  ; Check for courtyard
+  val cy = layer(lp, Courtyard(Top))
+  #EXPECT(length(cy) == 2)
+
+  ; Check for the silkscreen
+  val silk = layer(lp, Silkscreen("outline", Top))
+  #EXPECT(length(silk) == 1)
+
+  val outline = dims $ silk[0]
+  val silk-width = clearance(current-rules(), MinSilkscreenWidth)
+  #EXPECT(almost-equal?(outline, Dims(2.4 + silk-width, 1.9 + silk-width)))
+
+  val pin-1-silk  = layer(lp, Silkscreen("pin-1-marker", Top))
+  ; Expect to see the Dot and the Triangle
+  #EXPECT(length(pin-1-silk) == 2)
+  val marker = pin-1-silk[0] as Circle
+  #EXPECT(almost-equal?(center(marker), Point(-1.5024, 0.9119 )))
+  #EXPECT(pin-1-silk[1] is Polygon)
+
+
 deftest(BGA) test-perimeter-simple :
   ; This test is based on the TI, TPA6203A1GQVR
   ; Datasheet:
