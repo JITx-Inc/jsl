@@ -170,7 +170,22 @@ Lead Numbering Scheme for this Package
 <DOC>
 public defmulti lead-numbering (x:Package) -> Numbering
 
-public defmulti courtyard-excess (x:Package, density-level:DensityLevel = ?) -> Double
+public defmulti courtyard-excess (x:Package) -> Double
+
+doc: \<DOC>
+Density Level for this Package
+<DOC>
+public defmulti density-level (x:Package) -> DensityLevel
+
+doc: \<DOC>
+Default Density Level Setting
+
+If the package doesn't provide an implementation for
+density-level - then this function will serve the `DENSITY-LEVEL`
+from the design settings file as the default level.
+<DOC>
+public defmethod density-level (x:Package) -> DensityLevel :
+  DENSITY-LEVEL
 
 doc: \<DOC>
 Default Landpattern Generator Pose
@@ -196,8 +211,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-landpattern (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 
@@ -218,7 +231,6 @@ public defmulti make-landpattern (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 doc: \<DOC>
@@ -228,11 +240,10 @@ public defmethod make-landpattern (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-landpattern(pkg, virt, density-level = density-level)
+    build-landpattern(pkg, virt)
     make-landpattern(virt)
 
 
@@ -252,8 +263,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-silkscreen (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 doc: \<DOC>
@@ -262,8 +271,6 @@ Default silkscreen creator - No Silkscreen Content
 public defmethod build-silkscreen (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False:
   false
 
@@ -284,7 +291,6 @@ public defmulti make-silkscreen (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 doc: \<DOC>
@@ -294,11 +300,10 @@ public defmethod make-silkscreen (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-silkscreen(pkg, virt, density-level = density-level)
+    build-silkscreen(pkg, virt)
     make-landpattern(virt)
 
 
@@ -319,8 +324,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-courtyard (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 doc: \<DOC>
@@ -333,12 +336,10 @@ rectangle on the `Courtyard(Top)` layer.
 public defmethod build-courtyard (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False:
   build-courtyard-origin(vp)
-  val excess = courtyard-excess(pkg, density-level)
-  build-courtyard-boundary(vp, package-body(pkg), density-level, excess = excess)
+  val excess = courtyard-excess(pkg)
+  build-courtyard-boundary(vp, package-body(pkg), density-level(pkg), excess = excess)
 
 
 doc: \<DOC>
@@ -357,18 +358,16 @@ public defmulti make-courtyard (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 public defmethod make-courtyard (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-courtyard(pkg, virt, density-level = density-level)
+    build-courtyard(pkg, virt)
     make-landpattern(virt)
 
 
@@ -389,8 +388,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-keep-out (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 doc: \<DOC>
@@ -399,8 +396,6 @@ Default `build-keep-out` - No Keep-out Regions Applied.
 public defmethod build-keep-out (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False:
   false
 
@@ -420,7 +415,6 @@ public defmulti make-keep-out (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 doc: \<DOC>
@@ -430,11 +424,10 @@ public defmethod make-keep-out (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-keep-out(pkg, virt, density-level = density-level)
+    build-keep-out(pkg, virt)
     make-landpattern(virt)
 
 doc: \<DOC>
@@ -455,8 +448,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-conformal-mask (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 doc: \<DOC>
@@ -465,8 +456,6 @@ Default `build-conformal-mask` - No Conformal Mask Regions Applied.
 public defmethod build-conformal-mask (
   pkg:Package,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False:
   false
 
@@ -487,7 +476,6 @@ public defmulti make-conformal-mask (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 doc: \<DOC>
@@ -497,11 +485,10 @@ public defmethod make-conformal-mask (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-conformal-mask(pkg, virt, density-level = density-level)
+    build-conformal-mask(pkg, virt)
     make-landpattern(virt)
 
 
@@ -519,8 +506,6 @@ See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 public defmulti build-all (
   pkg:Package,
   virt:VirtualLP
-  --
-  density-level:DensityLevel = ?
   ) -> False
 
 doc: \<DOC>
@@ -538,34 +523,12 @@ Builders are applied in the following order:
 public defmethod build-all (
   pkg:Package,
   virt:VirtualLP
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False :
-  build-landpattern(
-    pkg,
-    virt,
-    density-level = density-level
-    )
-  build-courtyard(
-    pkg,
-    virt,
-    density-level = density-level
-    )
-  build-silkscreen(
-    pkg,
-    virt,
-    density-level = density-level
-    )
-  build-keep-out(
-    pkg,
-    virt,
-    density-level = density-level
-    )
-  build-conformal-mask(
-    pkg,
-    virt,
-    density-level = density-level
-    )
+  build-landpattern(pkg, virt)
+  build-courtyard(pkg, virt)
+  build-silkscreen(pkg, virt)
+  build-keep-out(pkg, virt)
+  build-conformal-mask(pkg, virt)
 
 
 doc: \<DOC>
@@ -585,7 +548,6 @@ public defmulti make-all (
   pkg:Package
   --
   pose:Pose = ?
-  density-level:DensityLevel = ?
   )
 
 doc: \<DOC>
@@ -601,11 +563,10 @@ public defmethod make-all (
   pkg:Package
   --
   pose:Pose = DEF_LP_POSE
-  density-level:DensityLevel = DENSITY-LEVEL
   ):
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
-    build-all(pkg, virt, density-level = density-level)
+    build-all(pkg, virt)
     make-landpattern(virt)
 
 doc: \<DOC>
@@ -639,7 +600,6 @@ public defmulti create-landpattern (
   --
   pose:Pose = ?,
   description:String = ?,
-  density-level:DensityLevel = ?
   ) -> LandPattern
 
 doc: \<DOC>
@@ -663,11 +623,11 @@ public defmethod create-landpattern (
   --
   pose:Pose = DEF_LP_POSE,
   description:String = "",
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> LandPattern :
   pcb-landpattern lp:
     name = name(pkg)
-    make-all(pkg, pose = pose, density-level = density-level)
+    description = description
+    make-all(pkg, pose = pose)
   lp
 
 

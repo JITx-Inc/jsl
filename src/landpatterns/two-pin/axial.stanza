@@ -125,6 +125,10 @@ public defstruct Axial-2pin <: Package :
   Lead numbering scheme
   <DOC>
   lead-numbering:Numbering with: (as-method => true)
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   constructor => #Axial-2pin
 
@@ -143,9 +147,10 @@ public defn Axial-2pin (
   bend-radius:Double = compute-default-bend-radius(width(lead))
   package-body:PackageBody,
   pad-planner:PadPlanner = PthPadPlanner(),
-  lead-numbering:Numbering = select-numbering(polarized?)
+  lead-numbering:Numbering = select-numbering(polarized?),
+  density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #Axial-2pin(lead, mounting, polarized?, bend-start, bend-radius, package-body, pad-planner, lead-numbering)
+  #Axial-2pin(lead, mounting, polarized?, bend-start, bend-radius, package-body, pad-planner, lead-numbering, density-level)
 
 public defmethod name (pkg:Axial-2pin) -> String :
   defn to-deci (v:Double) -> String:
@@ -160,10 +165,10 @@ public defmethod name (pkg:Axial-2pin) -> String :
     to-deci $ typ $ length $ lead $ pkg
     ]
 
-public defmethod courtyard-excess (pkg:Axial-2pin, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+public defmethod courtyard-excess (pkg:Axial-2pin) -> Double :
   ; From IPC 7351B - Estimated based on SMT
   ;  components. User may want to override and configure these values.
-  switch(density-level):
+  switch(density-level(pkg)):
     DensityLevelA: 0.5
     DensityLevelB: 0.25
     DensityLevelC: 0.1
@@ -171,13 +176,11 @@ public defmethod courtyard-excess (pkg:Axial-2pin, density-level:DensityLevel = 
 public defmethod build-landpattern (
   pkg:Axial-2pin,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) :
 
   val lead-diam = width $ lead $ pkg
-  val hole-diam = compute-hole-diam(lead-diam, density-level)
-  val pad-diam = compute-pad-diam(hole-diam, density-level)
+  val hole-diam = compute-hole-diam(lead-diam, density-level(pkg))
+  val pad-diam = compute-pad-diam(hole-diam, density-level(pkg))
 
   val hole-sz = Dims(hole-diam, hole-diam)
   val pad-sz = Dims(pad-diam, pad-diam)

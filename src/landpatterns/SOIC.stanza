@@ -190,6 +190,10 @@ public defstruct SOIC <: Package :
   <DOC>
   lead-numbering:Numbering with: (as-method => true)
 
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   hashable => true
   printer => true
@@ -216,10 +220,11 @@ public defn SOIC (
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-planner, num-scheme
+    pad-planner, num-scheme, density-level
     )
 
 doc: \<DOC>
@@ -237,10 +242,11 @@ public defn SOIC-N (
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-planner, num-scheme
+    pad-planner, num-scheme, density-level
     )
 
 doc: \<DOC>
@@ -258,10 +264,11 @@ public defn SOIC-W (
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC:
   #SOIC(
     num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
-    pad-planner, num-scheme
+    pad-planner, num-scheme, density-level
     )
 
 doc: \<DOC>
@@ -269,9 +276,9 @@ Courtyard Excess Expectation for SOIC
 
 The user can override by providing a custom {@link LeadProtrusion} type.
 <DOC>
-public defmethod courtyard-excess (pkg:SOIC, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+public defmethod courtyard-excess (pkg:SOIC) -> Double :
   val protrusion = lead-type $ lead $ pkg
-  val fillets = lead-fillets(protrusion, density-level = density-level)
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
 doc: \<DOC>
@@ -283,9 +290,7 @@ Generator for Creating SOIC LandPatterns
 public defmethod build-landpattern (
   pkg:SOIC
   vp:VirtualLP
-  --
-  density-level:DensityLevel = DENSITY-LEVEL,
-  ) :
+  ) -> False :
   build-dual-row-smd-landpattern(
     vp,
     num-leads(pkg),

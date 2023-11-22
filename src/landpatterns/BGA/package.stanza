@@ -80,6 +80,10 @@ public defstruct BGA <: Package :
   <DOC>
   lead-numbering:Numbering with: (as-method => true)
 
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
 with:
   hashable => true
   printer => true
@@ -113,13 +117,15 @@ public defn BGA (
   package-body:PackageBody,
   pad-planner:BGA-PadPlanner = Full-Matrix-Planner(),
   lead-numbering:Numbering = Grid-Numbering(rows, columns)
+  density-level:DensityLevel = DENSITY-LEVEL
 ) -> BGA :
   #BGA(
     num-leads, rows, columns,
     lead-diam, pitch,
     package-body,
     pad-planner,
-    lead-numbering
+    lead-numbering,
+    density-level
   )
 
 public defmethod name (bga:BGA) -> String:
@@ -147,9 +153,9 @@ public defmethod name (bga:BGA) -> String:
     to-deci $ typ $ height(b),
   ])
 
-public defmethod courtyard-excess (pkg:BGA, density-level:DensityLevel = DENSITY-LEVEL) -> Double :
+public defmethod courtyard-excess (pkg:BGA) -> Double :
   ; From IPC 7351B Table 3-17
-  switch(density-level):
+  switch(density-level(pkg)):
     DensityLevelA: 2.0
     DensityLevelB: 1.0
     DensityLevelC: 0.5
@@ -157,8 +163,6 @@ public defmethod courtyard-excess (pkg:BGA, density-level:DensityLevel = DENSITY
 public defmethod build-landpattern (
   pkg:BGA,
   vp:VirtualLP,
-  --
-  density-level:DensityLevel = DENSITY-LEVEL
   ) -> False :
   ; For the BGA - we size the pad according to the
   ;  ball diameter and allow the `PadConfig` object to

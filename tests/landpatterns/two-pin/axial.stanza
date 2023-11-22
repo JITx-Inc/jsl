@@ -30,13 +30,14 @@ deftest(two-pin) test-basic-axial:
     lead = TH-Lead-WeldBead(length = min-typ(35.0, 35.0), width = typ(0.5)),
     polarized? = true,
     package-body = cyl,
+    density-level = DensityLevelB
   )
 
   val pkgName = name(cap)
   #EXPECT(prefix?(pkgName, "Axial"))
 
   pcb-landpattern lp-B:
-    make-landpattern(cap, density-level = DensityLevelB)
+    make-landpattern(cap)
 
   var grid = PadGrid(lp-B)
 
@@ -116,12 +117,13 @@ deftest(two-pin) test-axial-with-pose:
     lead = TH-Lead-WeldBead(length = min-typ(35.0, 35.0), width = typ(0.5)),
     polarized? = false,
     package-body = cyl,
+    density-level = DensityLevelB,
   )
 
   val pkgName = name(cap)
   #EXPECT(prefix?(pkgName, "Axial"))
 
-  val lp-B = create-landpattern(cap, pose = loc(0.0, -0.5) density-level = DensityLevelB)
+  val lp-B = create-landpattern(cap, pose = loc(0.0, -0.5) )
 
   var grid = PadGrid(lp-B)
 

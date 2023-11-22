@@ -31,13 +31,14 @@ deftest(two-pin) test-basic-radial:
     lead = TH-Lead(length = typ(15.0), width = typ(0.6)),
     polarized? = true,
     package-body = cyl,
+    density-level = DensityLevelB
   )
 
   val pkgName = name(cap)
   #EXPECT(prefix?(pkgName, "Radial"))
 
   pcb-landpattern lp-B:
-    make-landpattern(cap, density-level = DensityLevelB)
+    make-landpattern(cap)
 
   var grid = PadGrid(lp-B)
 
@@ -117,12 +118,13 @@ deftest(two-pin) test-radial-with-pose:
     lead = TH-Lead(length = typ(15.0), width = typ(0.6)),
     polarized? = false,
     package-body = cyl,
+    density-level = DensityLevelB
   )
 
   val pkgName = name(cap)
   #EXPECT(prefix?(pkgName, "Radial"))
 
-  val lp-B = create-landpattern(cap, pose = loc(1.0, 1.0, 90.0) density-level = DensityLevelB)
+  val lp-B = create-landpattern(cap, pose = loc(1.0, 1.0, 90.0))
 
   var grid = PadGrid(lp-B)
 
