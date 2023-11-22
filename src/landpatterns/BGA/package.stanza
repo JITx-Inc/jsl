@@ -160,10 +160,10 @@ public defmethod courtyard-excess (pkg:BGA) -> Double :
     DensityLevelB: 1.0
     DensityLevelC: 0.5
 
-public defmethod build-landpattern (
+public defn build-vpads (
   pkg:BGA,
-  vp:VirtualLP,
-  ) -> False :
+  vp:VirtualLP
+  ):
   ; For the BGA - we size the pad according to the
   ;  ball diameter and allow the `PadConfig` object to
   ;  drive the pad sizing.
@@ -179,7 +179,18 @@ public defmethod build-landpattern (
         match(pad-gen?):
           (_:False): None()
           (pad-gen):
-            One $ VirtualPad(pad-id, pad-gen(pad-size), pos)
+            val cls = [
+              "pad",
+              to-string("col-%_" % [c]),
+              to-string("row-%_" % [r])
+            ]
+            One $ VirtualPad(pad-id, pad-gen(pad-size), pos, class = cls)
 
   append-all(vp, gen-pad-info())
+
+public defmethod build-pads (
+  pkg:BGA,
+  vp:VirtualLP,
+  ) -> False :
+  build-vpads(pkg, vp)
 

@@ -38,7 +38,7 @@ deftest(two-pin) test-basic-radial:
   #EXPECT(prefix?(pkgName, "Radial"))
 
   pcb-landpattern lp-B:
-    make-landpattern(cap)
+    make-pads(cap)
 
   var grid = PadGrid(lp-B)
 

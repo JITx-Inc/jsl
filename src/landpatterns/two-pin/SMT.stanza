@@ -233,7 +233,7 @@ public defn SMT-Chip (
   ):
   #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering, density-level)
 
-public defmethod build-landpattern (
+public defmethod build-pads (
   pkg:SMT-Chip,
   vp:VirtualLP,
   ):
