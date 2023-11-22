@@ -1,11 +1,120 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/silkscreen:
   import core
+  import math
   import jitx
   import jitx/commands
+
+  import jsl/geometry/box
+  import jsl/landpatterns/helpers
 
 public defn default-silk-width () -> Double :
   clearance(current-rules(), MinSilkscreenWidth)
 
 public defn default-mask-clearance () -> Double :
   clearance(current-rules(), MinSilkSolderMaskSpace)
+
+doc: \<DOC>
+Compute the closest corner of the passed Box to the Pin1 position.
+
+This tool is used to determine what to place pin 1
+markers in a component's silkscreen.
+
+@param pin-1-pos Position of the Pin 1 pad.
+@param outline-box Box that represents the silkscreen
+outline of the component.
+<DOC>
+public defn compute-closest-corner (
+  pin-1-pos:Point,
+  outline-box:Box
+  ):
+  val corners = corners(outline-box)
+
+  defn compute-dist (x:Point) -> Double:
+    l2-norm(x - pin-1-pos)
+
+  minimum(compute-dist, corners)
+
+doc: \<DOC>
+Compute the Corner Anchor Position.
+
+Given a point on the outline box that is closest
+to pin 1 - compute the anchor position. For example,
+if pin 1 is in the top left and the closest corner is
+in the top-left, this would be the `NW` anchor position.
+@param closest Closest point on the outline
+<DOC>
+public defn compute-corner (closest:Point) -> Anchor :
+  val angle = atan2(y(closest), x(closest))
+  if angle > (PI / 2.0): NW
+  else if angle < (- PI / 2.0): SW
+  else if angle < 0.0: SE
+  else: NE
+
+doc: \<DOC>
+Compute the rotation of the shape pattern for a particular anchor
+
+We typically position the triangle marker or pin 1 dot
+marker by transforming its base configuration. This means
+translating and rotating it to fit in one of the outline
+corners.
+
+This method takes the corner anchor position and converts
+it to rotation angle for a shape pattern.
+<DOC>
+public defn corner-to-rotation (corner:Anchor) -> Double :
+  switch(corner):
+    NW: 0.0
+    SW: 90.0
+    SE: 180.0
+    NE: -90.0
+
+doc: \<DOC>
+Compute the Triangle Marker Shape for Pin-1 outline
+
+@param pin-1-pos Position of the pin 1 pad
+@param outline-box Silkscreen outline as a 2D box.
+@param line-width Silkscreen line width - primarily
+used for positioning and not for drawing lines.
+@param max-height Max triangle marker height. This
+function attempts to compute a reasonable marker size
+based on the component's scale. This is a limiter to
+prevent unnecessarily large triangle marker features.
+<DOC>
+public defn compute-triangle-marker (
+  pin-1-pos:Point,
+  outline-box:Box,
+  line-width:Double,
+  max-height:Double = 1.25
+  ) -> Shape:
+
+  val closest = compute-closest-corner(pin-1-pos, outline-box)
+
+  ; Compute the Marker Shape & Size
+  val marker-size = if contains?(outline-box, pin-1-pos):
+    ; Pad is inside the outline - so we need to
+    ;  take care that the triangle marker doesn't
+    ;  overlap the internal pad
+    val diff = closest - pin-1-pos
+    abs $ y(diff)
+  else:
+    val marker-ratio = (15 %)
+    val opt1 = y(dims(outline-box)) * marker-ratio
+    min(opt1, x(dims(outline-box)))
+  val marker-height = min(marker-size, max-height)
+
+  val st-offset = line-width / 2.0
+  val marker-shape = loc(st-offset, (- st-offset)) * Polygon([
+    Point(0.0, 0.0),
+    Point(marker-height, 0.0),
+    Point(0.0, (- marker-height))
+    ])
+
+  ; Compute the angle of the marker depending on
+  ;  what corner of the outline the marker is in.
+  val corner = compute-corner(closest)
+  val rot = corner-to-rotation(corner)
+
+  ; Place the marker in the closest corner.
+  val marker-pose = loc(closest, rot)
+  marker-pose * marker-shape
