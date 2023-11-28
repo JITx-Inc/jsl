@@ -18,7 +18,8 @@ with :
   constructor => #Box
 
 public defn Box (lo:Point, hi:Point) :
-  if x(hi) < x(lo) or y(hi) < y(lo) : fatal("Negative Box")
+  if x(hi) < x(lo) or y(hi) < y(lo) :
+    throw $ ValueError("Negative Box: lo=%_ hi=%_" % [lo, hi])
   #Box(lo, hi)
 
 public defn up (b:Box) : y(hi(b))
