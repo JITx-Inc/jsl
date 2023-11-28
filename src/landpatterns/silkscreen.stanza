@@ -70,6 +70,26 @@ public defn corner-to-rotation (corner:Anchor) -> Double :
     NE: -90.0
 
 doc: \<DOC>
+Create a shape for the triangle corner marker
+
+This is often used in a rectangular outlines for marking the
+the pin-1 indication in one of the corners of the outline.
+
+This function creates a shape that is a solid, isosceles right triangle (polygon)
+in the lower right quadrant of the XY plane. It is then offset
+from the X and Y axis (toward the lower right quandrant) by
+half the line-width
+<DOC>
+public defn create-corner-marker-shape (line-width:Double, marker-height:Double) -> Shape :
+  val st-offset = line-width / 2.0
+  loc(st-offset, (- st-offset)) * Polygon([
+    Point(0.0, 0.0),
+    Point(marker-height, 0.0),
+    Point(0.0, (- marker-height))
+    ])
+
+
+doc: \<DOC>
 Compute the Triangle Marker Shape for Pin-1 outline
 
 @param pin-1-pos Position of the pin 1 pad
@@ -103,12 +123,7 @@ public defn compute-triangle-marker (
     min(opt1, x(dims(outline-box)))
   val marker-height = min(marker-size, max-height)
 
-  val st-offset = line-width / 2.0
-  val marker-shape = loc(st-offset, (- st-offset)) * Polygon([
-    Point(0.0, 0.0),
-    Point(marker-height, 0.0),
-    Point(0.0, (- marker-height))
-    ])
+  val marker-shape = create-corner-marker-shape(line-width, marker-height)
 
   ; Compute the angle of the marker depending on
   ;  what corner of the outline the marker is in.
