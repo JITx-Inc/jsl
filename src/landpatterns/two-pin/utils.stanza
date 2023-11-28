@@ -5,6 +5,7 @@ defpackage jsl/landpatterns/two-pin/utils:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/leads
+  import jsl/landpatterns/VirtualLP
 
 public val STD-SMT-CHIP-NUMBERING = Column-Major-Numbering(2,1)
 
@@ -57,3 +58,13 @@ public defn compute-pad-diam (hole-diam:Double, density-level:DensityLevel) -> D
       min-outer-layer-pad-size,
   ])
   pad-diameter
+
+public defn get-two-pin-pads (vp:VirtualLP) -> [VirtualPad, VirtualPad] :
+  val [r1, r2] = if contains?(class(vp), "polarized"):
+    [Ref("c"), Ref("a")]
+  else:
+    [1, 2]
+
+  val p1 = get-pad-by-ref!(vp, r1)
+  val p2 = get-pad-by-ref!(vp, r2)
+  [p1, p2]
