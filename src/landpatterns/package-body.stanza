@@ -1,0 +1,186 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/package-body:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns/helpers
+  import jsl/design/settings
+  import jsl/geometry/basics with:
+    prefix => jsl-
+
+doc: \<DOC>
+Physical body of the Component (also called the Lead Carrier or just Carrier)
+
+For Through-hole resistors - this is the ceramic cylinder, not the leads
+For SMT resistors, the body is basically the whole chip resistor.
+
+For QFNs, the body is the entire package
+For QFPs, the body is the ceramic or plastic but not the leads.
+
+TODO - Figure here
+<DOC>
+public defstruct PackageBody <: Hashable & Equalable :
+  doc: \<DOC>
+  Measure of the package body in the X dimension.
+
+  Examples:
+  - Typically for SOP/SOIC/DFN/SON, this dimension is in the same direction as the lead-span
+  - For non-square QFN/QFP/BGA packages, this is typically the shorter of the two
+  dimensions.
+  - For axial through-hole components, the width is typically the diameter of
+  the device cylinder and orthogonal to the axial leads.
+  - For radial through-hole components:
+    -  For cylindrical components, the width is equal to the length
+    -  For non-cylindrical components, the width is typically the shorter of the two dimensions and approximately orthogonal to the plane of the leads.
+  <DOC>
+  width:Toleranced with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Measure of the package body in the Y dimension.
+
+  Examples:
+  - Typically for SOP/SOIC/DFN/SON, this dimension is orthogonal to the lead-span.
+  - For non-square QFN/QFP/BGA packages, this is typically the longer of the two
+  dimensions.
+  - For axial through-hole components, the length is typically parallel to the
+  axial leads of the device.
+  - For radial through-hole components:
+    -  For cylindrical components, the length is equal to the width.
+    -  For non-cylindrical components, the length is typically the longer dimension and parallel to the leads of the device.
+  <DOC>
+  length:Toleranced with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Measure of the package body in the Z dimension
+
+  This dimension of the package body is the nominal distance that
+  the component will stand off the surface of the PCB. This
+  dimension will typically not effect the layout and routing of the
+  PCB from an electrical perspective but will likely effect the
+  mechanical integration of the component.
+  <DOC>
+  height:Toleranced with: (ensure => ensure-positive!)
+
+  doc: \<DOC>
+  Transform applied to the package body.
+  By default the package body is centered at (0.0, 0.0)
+  <DOC>
+  pose:Pose with: (
+    default => loc(0.0, 0.0)
+  )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #PackageBody
+
+doc: \<DOC>
+Create a Package Body as a rectangular cuboid.
+<DOC>
+public defn PackageBody (
+  --
+  width:Toleranced,
+  length:Toleranced,
+  height:Toleranced,
+  pose:Pose = loc(0.0, 0.0)
+  ):
+  #PackageBody(width, length, height, pose)
+
+doc: \<DOC>
+Physical Envelope of the package body.
+<DOC>
+public defmulti envelope (
+  body:PackageBody
+  --
+  density-level:DensityLevel = ?
+  ) -> Shape
+
+public defmethod envelope (
+  body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Shape :
+  val func = switch(density-level):
+    DensityLevelA: max-value
+    DensityLevelB: typ
+    DensityLevelC: min-value
+
+  val d = Dims(func(width(body)), func(length(body)))
+  jsl-Rectangle(d, pose = pose(body))
+
+
+doc: \<DOC>
+Z-axis aligned Cylindrical package body
+
+This type is used to capture the dimensions and
+physical structure for a cylindrical body where the
+axial dimension of the cylinder is aligned with the Z-axis
+(ie, the height).
+
+This is used typically for radial capacitors.
+<DOC>
+public defstruct CylinderBody <: PackageBody :
+  doc: \<DOC>
+  Diameter of the Cyclindrical body.
+
+  This dimension of the package body is the radial dimension
+  of the cylinder in the X/Y plane.
+  <DOC>
+  diameter:Toleranced with: (ensure => ensure-positive!)
+
+  doc: \<DOC>
+  Measure of the package body in the Z dimension
+
+  This dimension of the package body is the nominal distance that
+  the component will stand off the surface of the PCB. This
+  dimension will typically not effect the layout and routing of the
+  PCB from an electrical perspective but will likely effect the
+  mechanical integration of the component.
+  <DOC>
+  height:Toleranced with: (
+    ensure => ensure-positive!
+    as-method => true
+  )
+
+  doc: \<DOC>
+  Transform applied to the package body.
+  By default the package body is centered at (0.0, 0.0)
+  <DOC>
+  pose:Pose with: (
+    as-method => true
+  )
+
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #CylinderBody
+
+public defn CylinderBody (
+  --
+  diameter:Toleranced,
+  height:Toleranced,
+  pose:Pose = loc(0.0, 0.0)
+  ):
+  #CylinderBody(diameter, height, pose)
+
+
+; Package Body Interface
+public defmethod width (body:CylinderBody) -> Toleranced :
+  diameter(body)
+
+public defmethod length (body:CylinderBody) -> Toleranced :
+  diameter(body)
+
+public defmethod envelope (
+  body:CylinderBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Shape :
+  val func = switch(density-level):
+    DensityLevelA: max-value
+    DensityLevelB: typ
+    DensityLevelC: min-value
+
+  val d = func $ diameter(body)
+  val c = center $ pose(body)
+  Circle(c, jsl-to-radius(d))
