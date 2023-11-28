@@ -282,16 +282,6 @@ public defmethod build-pads (
 
   append-all(vp, gen-pad-info())
 
-public defn get-two-pin-pads (vp:VirtualLP) -> [VirtualPad, VirtualPad] :
-  val [r1, r2] = if contains?(class(vp), "polarized"):
-    [Ref("c"), Ref("a")]
-  else:
-    [1, 2]
-
-  val p1 = get-pad-by-ref!(vp, r1)
-  val p2 = get-pad-by-ref!(vp, r2)
-  [p1, p2]
-
 public defn build-SMT-outline (
   pkg:SMT-Chip,
   vp:VirtualLP
