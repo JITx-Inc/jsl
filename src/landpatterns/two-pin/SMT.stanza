@@ -311,9 +311,7 @@ public defn build-SMT-outline (
     Point(left(s2), up(s2)),
     Point(right(s1), down(s1))
   )
-  println("Interstitial: %_" % [interstitial])
   val h = y(dims(interstitial))
-  println("H: %_" % [h])
   ; Minimum box height is mask clearance and  linewidth on either side
   ;  and then I'm arbitrarily requiring at least mask-clearance between
   ;  the top and bottom lines for them to be visible. For polarized chips
@@ -323,7 +321,6 @@ public defn build-SMT-outline (
   else:
     mask-clearance
   val free-space = h - ((2.0 * (mask-clearance + line-width)) + add-clearance)
-  println("Free Space: %_" % [free-space])
 
   defn create-line (v:Double, width:Double = line-width) -> Line :
     val shrink = (width / 2.0)
@@ -339,7 +336,6 @@ public defn build-SMT-outline (
     create-line(y(c))
   else:
     val shrink = Point((- line-width / 2.0), (- ((line-width / 2.0) + mask-clearance)))
-    println("Shrink: %_" % [shrink])
     val o-box = fatten(shrink, interstitial)
     LineRectangle(o-box, line-width = line-width),
 
