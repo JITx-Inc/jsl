@@ -76,11 +76,19 @@ public defn LineRectangle (
     )
 
 public defn LineRectangle (
+  b:Rectangle,
+  --
+  line-width:Double
+  anchor:Anchor = C
+  ):
+  val d = dims(b)
+  LineRectangle(d, line-width = line-width, pose = pose(b), anchor = anchor)
+
+public defn LineRectangle (
   b:Box
   --
   line-width:Double
   anchor:Anchor = C
   ):
   val rect = to-Rectangle(b)
-  val d = dims(rect)
-  LineRectangle(d, line-width = line-width, pose = pose(rect), anchor = anchor)
+  LineRectangle(rect, line-width = line-width, anchor = anchor)
