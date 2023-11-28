@@ -137,36 +137,19 @@ public defstruct SOIC <: Package :
     as-method => true
   )
   doc: \<DOC>
-  Lead Span is the measure from the external edge of the leads
-  on one side of the package to the external edge of the leads
-  on the opposite side of the package. In the mechanical drawing
-  of most datasheets, this dimension is labeled `E`
+  Lead Profile for the pins on the opposing edges of the SOIC package.
+  By default the {@link SOIC-Lead} type is used for the `lead` and
+  `protrusion` definitions.
   <DOC>
-  lead-span:Toleranced with: (
-    ensure => ensure-positive!
-  )
+  profile:Lead-Profile
+
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
   thermal-lead?:False|Shape
-  doc: \<DOC>
-  The center-to-center distance between leads of the package on
-  one side. In the mechanical drawings of most datasheets, this
-  dimension is labeled `e`.
-  <DOC>
-  pitch:Double with: (
-    ensure => ensure-positive!
-  )
-  doc: \<DOC>
-  Lead Structure for this Package
-  By default the `SOIC-Lead()` default implementation
-  is used.
-  <DOC>
-  lead:SMT-Lead with: (
-    default => SOIC-Lead()
-  )
+
   doc: \<DOC>
   Package Body for the SOIC.
   <DOC>
@@ -200,8 +183,8 @@ with:
   constructor => #SOIC
 
 public defmethod name (x:SOIC) -> String :
-  val p = to-int $ (100.0 * pitch(x))
-  val l = to-int $ (100.0 * (typ $ lead-span(x)))
+  val p = to-int $ (100.0 * pitch $ profile(x))
+  val l = to-int $ (100.0 * (typ $ span $ profile(x)))
   val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
   to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-leads(x)])
 
@@ -222,8 +205,13 @@ public defn SOIC (
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
+  val profile = Lead-Profile(
+    span = lead-span,
+    pitch = pitch,
+    lead = lead
+    )
   #SOIC(
-    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    num-leads, profile, thermal-lead?, package-body,
     pad-planner, num-scheme, density-level
     )
 
@@ -244,8 +232,13 @@ public defn SOIC-N (
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
+  val profile = Lead-Profile(
+    span = lead-span,
+    pitch = pitch,
+    lead = lead
+    )
   #SOIC(
-    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    num-leads, profile, thermal-lead?, package-body,
     pad-planner, num-scheme, density-level
     )
 
@@ -266,8 +259,13 @@ public defn SOIC-W (
   num-scheme:Numbering           = Std-IC-Numbering(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC:
+  val profile = Lead-Profile(
+    span = lead-span,
+    pitch = pitch,
+    lead = lead
+    )
   #SOIC(
-    num-leads, lead-span, thermal-lead?, pitch, lead, package-body,
+    num-leads, profile, thermal-lead?, package-body,
     pad-planner, num-scheme, density-level
     )
 
@@ -277,7 +275,7 @@ Courtyard Excess Expectation for SOIC
 The user can override by providing a custom {@link LeadProtrusion} type.
 <DOC>
 public defmethod courtyard-excess (pkg:SOIC) -> Double :
-  val protrusion = lead-type $ lead $ pkg
+  val protrusion = lead-type $ lead $ profile $ pkg
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
@@ -294,9 +292,7 @@ public defmethod build-pads (
   build-dual-row-smd-landpattern(
     vp,
     num-leads(pkg),
-    pitch(pkg),
-    lead(pkg),
-    lead-span(pkg),
+    profile(pkg),
     package-body(pkg),
     pad-planner = pad-planner(pkg),
     num-scheme = lead-numbering(pkg),

@@ -45,9 +45,7 @@ DFN/SON, etc.
 public defn build-dual-row-smd-landpattern (
   vp:VirtualLP,
   num-leads:Int,
-  pitch:Double,
-  lead:SMT-Lead,
-  lead-span:Toleranced,
+  profile:Lead-Profile,
   pkg-body:PackageBody,
   --
   pad-planner:PadPlanner         = RectanglePadPlanner,
@@ -57,17 +55,12 @@ public defn build-dual-row-smd-landpattern (
   thermal-lead?:False|Shape      = false
 ):
   ensure-even-positive!("dual-row:num-leads", num-leads),
-  ensure-positive!("dual-row:pitch", pitch),
-  ensure-positive!("dual-row:lead-span", lead-span),
 
-  val ipc = pad-constraints(lead, lead-span, density-level = density-level)
-  val pad-size = pad-size(ipc)
-
+  val [pad-size, delta, pitch] = to-tuple $ compute-params(profile)
   val rows = num-leads / DUAL-ROW-COLS
 
   defn gen-pad-info () -> Seq<VirtualPad> :
-    val delta = Dims(Gmin(ipc) + x(pad-size), pitch)
-    val grid = to-seq $ grid-locs(rows, DUAL-ROW-COLS, x(delta), y(delta), false)
+    val grid = to-seq $ grid-locs(rows, DUAL-ROW-COLS, delta, pitch, false)
     for c in 0 to DUAL-ROW-COLS seq-cat:
       for (r in 0 to rows, pos in grid) seq?:
         val pad-id = to-pad-id(num-scheme, r, c)
