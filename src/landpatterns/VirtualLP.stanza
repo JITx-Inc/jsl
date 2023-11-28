@@ -94,6 +94,13 @@ public defn VirtualPad (
 
   #VirtualPad(pad-id, pad-def, loc, side, name, to-class-vector(class))
 
+public defn print-pads (o:OutputStream, pds:Seqable<VirtualPad> ) :
+  val pds* = to-vector<VirtualPad>(pds)
+  qsort!(pad-id, pds*)
+  println(o, "Pads count=%_" % [length(pds*)])
+  for pd in pds* do:
+    println(o, "%_" % [[pd]])
+
 doc: \<DOC>
 Generator to create a `pad` statement for this `VirtualPad` instance
 
