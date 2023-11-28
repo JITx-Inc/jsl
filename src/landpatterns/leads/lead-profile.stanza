@@ -1,0 +1,109 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/leads/lead-profile:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/landpatterns/leads/lead-types
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/IPC
+
+
+doc: \<DOC>
+Lead Profile for Component Edges
+
+Many SMT components consist of a set of leads along
+the edge of the component. A SOIC package has 2 sets of leads
+along the left and right edges of the device. The QFN
+package typically has 4 sets of leads on each of the 4 edges
+of the component package.
+
+A `Lead-Profile` describes the parameters of two sets of
+edge mounted leads found on opposing sides of a IC package.
+
+TODO - Diagram Here
+
+*  `span` - defines the lead span from the external edge of leads
+   on one side of the package to the external edge of the leads on
+   the other side of the package.
+*  `pitch` - center-to-center distance between leads on the same side
+   of the component.
+*  `lead` Lead descriptor that defines physical characteristics of each of
+   the leads.
+
+@see IPC 7351 Figure 3-3
+<DOC>
+public defstruct Lead-Profile <: Equalable & Hashable :
+  span : Toleranced with: (ensure => ensure-positive!)
+  pitch : Double with: (ensure => ensure-positive!)
+  lead : SMT-Lead
+with:
+  equalable => true
+  printer => true
+  hashable => true
+  constructor => #Lead-Profile
+
+public defn Lead-Profile (
+  --
+  span:Toleranced,
+  pitch:Double
+  lead:SMT-Lead
+  ) -> Lead-Profile :
+  #Lead-Profile(span, pitch, lead)
+
+doc: \<DOC>
+Compute the Lead-Profile parameters
+
+This is a header function for creating the {@link Lead-Profile-Params}
+object from a `Lead-Profile`. These definitions are useful
+for defining the actual pad locations for a footprint from the physical
+dimensions of a package.
+<DOC>
+public defn compute-params (
+  pf:Lead-Profile
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Lead-Profile-Params :
+  val ipc = pad-constraints(lead(pf), span(pf), density-level = density-level)
+  val pad-size = pad-size(ipc)
+
+  val delta = Gmin(ipc) + x(pad-size)
+  val pitch = pitch(pf)
+  #Lead-Profile-Params(pad-size, delta, pitch)
+
+
+doc: \<DOC>
+Calculated Parameters from the Lead-Profile
+
+These parameters are used to position the pads of the
+footprint that will make with a particular Lead-Profile.
+<DOC>
+public defstruct Lead-Profile-Params <: Equalable & Hashable :
+  doc: \<DOC>
+  Pad Dimensions
+  <DOC>
+  pad-size:Dims with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Center to center distance in the lead-span direction.
+  <DOC>
+  center:Double with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Center to Center distance between pads on one edge side.
+  <DOC>
+  pitch:Double with: (ensure => ensure-positive!)
+with:
+  equalable => true
+  printer => true
+  hashable => true
+  constructor => #Lead-Profile-Params
+
+public defn Lead-Profile-Params (
+  --
+  pad-size:Dims,
+  center:Double,
+  pitch:Double
+  ):
+  #Lead-Profile-Params(pad-size, center, pitch)
+
+public defn to-tuple (params:Lead-Profile-Params) -> [Dims, Double, Double] :
+  [pad-size(params), center(params), pitch(params)]
