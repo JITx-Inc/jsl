@@ -1,9 +1,16 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/two-pin/radial:
   import core
+  import collections
   import jitx
+  import jitx/commands
 
   import jsl/design/settings
+  import jsl/errors
+  import jsl/geometry/basics
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+
   import jsl/landpatterns/leads
   import jsl/landpatterns/helpers
   import jsl/landpatterns/packages
@@ -11,6 +18,7 @@ defpackage jsl/landpatterns/two-pin/radial:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/two-pin/utils
   import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/silkscreen
 
 ; TODO - Consider adding an angle here that
 ;   rotates the two pins around the Z axis.
@@ -114,6 +122,9 @@ public defmethod build-pads (
   val planner = pad-planner(pkg)
   val num-scheme = lead-numbering(pkg)
 
+  if polarized?(pkg):
+    add(class(vp), "polarized")
+
   defn gen-pad-info () -> Seq<VirtualPad> :
     ; Column Major
     val num-cols = 1
@@ -125,6 +136,161 @@ public defmethod build-pads (
       match(th-pad-gen?):
         (_:False): None()
         (th-pad-gen):
-          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+          val cls = [
+            "pad",
+          ]
+          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos, class = cls)
 
   append-all(vp, gen-pad-info())
+
+public defn build-radial-cylinder-outline (
+  pkg:Radial-2pin,
+  vp:VirtualLP,
+  body:CylinderBody
+  line-width:Double = default-silk-width(),
+  ) -> Shape:
+  val body-env = envelope(body, density-level = density-level(pkg)) as Circle
+  val R = radius(body-env)
+  val outline-shape = Polyline(line-width, [Arc(Point(0.0, 0.0), R, 0.0, 360.0)])
+  pose(body) * outline-shape
+
+public defn build-radial-rectilinear-outline (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  body:PackageBody,
+  line-width:Double = default-silk-width(),
+  ):
+  val body-env = envelope(body, density-level = density-level(pkg)) as Rectangle
+  val outline-shape = LineRectangle(body-env, line-width = line-width)
+  pose(body) * outline-shape
+
+public defn build-radial-outline (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val body = package-body(pkg)
+  val outline = match(body):
+    (x:CylinderBody):
+      build-radial-cylinder-outline(pkg, vp, x, line-width)
+    (x:PackageBody):
+      build-radial-rectilinear-outline(pkg, vp, x, line-width)
+    (x):
+      throw $ ValueError("Unhandled Package Body Type: %_" % [body])
+
+  ; TODO - check for clearance violations in the silk to soldermask
+  ;   and break up the polyline into multiple parts.
+  add-artwork(vp, Silkscreen("outline", side), outline, class = "outline")
+
+val MIN-PLUS-SIZE = 0.75
+
+defn plus-size-ratio (density-level:DensityLevel) -> Percentage:
+  switch(density-level):
+    DensityLevelA: (25 %)
+    DensityLevelB: (20 %)
+    DensityLevelC: (15 %)
+
+public defn build-polarity-cylinder-marker (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ) -> Shape:
+
+  val body = package-body(pkg)
+  val box = bounds $ envelope(body, density-level = density-level(pkg))
+  val d = dims(box)
+  val R = to-radius $ y(d)
+
+  val markers = Vector<Shape>()
+
+  val ratio = plus-size-ratio $ density-level(pkg)
+  val plus-len = max(MIN-PLUS-SIZE, x(d) * ratio)
+  val plus-y = R + (line-width / 2.0) + mask-clearance + (line-width / 2.0) + (plus-len / 2.0)
+  val pos-marker = PlusSymbol(line-length = plus-len, line-width = line-width, pose = loc(0.0, plus-y))
+  add(markers, pos-marker)
+
+  val neg-width = 2.5 * line-width
+  val neg-R = R + (line-width / 2.0) + (neg-width / 2.0)
+  val neg-marker = Polyline(1.0 * neg-width, [Arc(Point(0.0, 0.0), neg-R, 240.0, 60.0)])
+  add(markers, neg-marker)
+
+  ; This creates the fill on the negative terminal that is
+  ;  typical of electrolytic (polarized) radial capacitors
+  ;  Unfortunately - the `Difference` shape isn't supported
+  ;  yet in the front-end rendering.
+  ; val [pad-1, pad-2] = get-two-pin-pads(vp)
+  ; val neg-fill = PolygonWithArcs([Point(R, 0.0), Point((- R), 0.0), Arc(Point(0.0, 0.0), R, 180.0, 180.0)])
+  ; val neg-smask = get-layer(pad-2, SolderMask(side))
+  ; val neg-smask* = expand(pose(pad-2) * neg-smask[0], mask-clearance)
+  ; val neg-fill* = Difference(neg-fill, neg-smask*)
+  ; add(markers, neg-fill*)
+
+  Union $ to-tuple(markers)
+
+public defn build-polarity-rectilinear-marker (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ) -> Shape:
+
+  val body = package-body(pkg)
+  val box = bounds $ envelope(body, density-level = density-level(pkg))
+  val d = dims(box)
+  val R = to-radius $ y(d)
+
+  val markers = Vector<Shape>()
+
+  val ratio = plus-size-ratio $ density-level(pkg)
+  val plus-len = max(MIN-PLUS-SIZE, x(d) * ratio)
+  val plus-y = R + (line-width / 2.0) + mask-clearance + (line-width / 2.0) + (plus-len / 2.0)
+  val pos-marker = PlusSymbol(line-length = plus-len, line-width = line-width, pose = loc(0.0, plus-y))
+  add(markers, pos-marker)
+
+  val MIN-MARKER-HEIGHT = 0.5
+  val marker-height = max(MIN-MARKER-HEIGHT, x(d) * ratio)
+  val tri-shape = create-corner-marker-shape(line-width, marker-height)
+
+  val tri-marker-pts = [Point(left(box), up(box)), Point(right(box), up(box))]
+  for tri-marker-pt in tri-marker-pts do:
+    val corner = compute-corner(tri-marker-pt)
+    val rot = corner-to-rotation(corner)
+    val marker-pose = loc(tri-marker-pt, rot)
+    val tri-marker = marker-pose * tri-shape
+    add(markers, tri-marker)
+
+  Union $ to-tuple(markers)
+
+public defn build-polarity-marker (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val body = package-body(pkg)
+  val shape = match(body):
+    (x:CylinderBody):
+      build-polarity-cylinder-marker(pkg, vp, line-width, mask-clearance, side)
+    (x:PackageBody):
+      build-polarity-rectilinear-marker(pkg, vp, line-width, mask-clearance, side)
+    (x): throw $ ValueError("Unhandle Package Body Type: %_" % [x])
+
+  add-artwork(vp, Silkscreen("polarity", side), shape, class = "polarity-marker" )
+
+public defmethod build-silkscreen (
+  pkg:Radial-2pin,
+  vp:VirtualLP
+  ) :
+  build-radial-outline(pkg, vp)
+  if polarized?(pkg):
+    build-polarity-marker(pkg, vp)
