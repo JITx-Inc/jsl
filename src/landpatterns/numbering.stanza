@@ -154,6 +154,47 @@ public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> In
 
   (column * rows) + row + 1
 
+doc: \<DOC>
+Uneven (Asymmetric) Column Major Numbering
+
+This provides a mechanism to create a column major
+numbering scheme where each column may not have the exact
+same number of rows.
+<DOC>
+public defstruct Uneven-Column-Major-Numbering <: Numbering :
+  columns:Tuple<Int>
+
+doc: \<DOC>
+Construct an Uneven Column Structure for Quad Packages
+
+This will construct a asymmetric column major numbering that
+expects (2 * x-count) + (2 * y-count) total unique leads in the package.
+
+@param x-count Number of leads on the E/W sides of the package
+@param y-count Number of leads on the N/S side of the package.
+<DOC>
+public defn Uneven-Column-Major-Numbering (x-count:Int, y-count:Int) -> Uneven-Column-Major-Numbering :
+  Uneven-Column-Major-Numbering([x-count, y-count, x-count, y-count])
+
+public defmethod to-pad-id (x:Uneven-Column-Major-Numbering, row:Int, column:Int) -> Int|Ref :
+  val c-set = columns(x)
+  val cols = length(c-set)
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  if not (column < cols):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
+
+  val rows = c-set[column]
+  if not (row < rows):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, rows])
+
+  val offset = sum(c-set[0 to column]) when column > 0 else 0
+  offset + row + 1
+
+public defn get-total-pads (x:Uneven-Column-Major-Numbering) -> Int :
+  sum(columns(x))
+
 val DEF-ROW-OMITS = "IOQSXZ"
 
 doc: \<DOC>
