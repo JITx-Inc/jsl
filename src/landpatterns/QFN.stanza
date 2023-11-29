@@ -2,107 +2,262 @@
 defpackage jsl/landpatterns/QFN:
   import core
   import jitx
+  import jitx/commands
 
   import jsl/design/settings
+  import jsl/errors
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
   import jsl/landpatterns/quad
+  import jsl/landpatterns/helpers
   import jsl/landpatterns/leads
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/silkscreen
 
-public defn make-qfn-landpattern (
-  pins-W : PinEdgeConfig,
-  pins-S : PinEdgeConfig,
-  pins-E : PinEdgeConfig,
-  pins-N : PinEdgeConfig,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-length: Toleranced,
-  package-width: Toleranced = package-length,
+doc: \<DOC>
+QFN Lead Type
+<DOC>
+public defstruct QFN-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with: (
+      as-method => true,
+      default => QuadFlatNoLeads(),
+    )
+  length:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+  width:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #QFN-Lead
+
+doc: \<DOC>
+Constructor for `QFN-Lead` type
+<DOC>
+public defn QFN-Lead (
   --
-  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
-  corner-pads?:False|[Pad, Pad] = false, ; corner pads
-  thermal-pad?: Shape|False = false
+  lead-type:LeadProtrusion = QuadFlatNoLeads(),
+  length:Toleranced,
+  width:Toleranced
   ):
-  make-quad-landpattern(
-    pins-W, pins-S, pins-E, pins-N,
-    lead-length, lead-width,
-    package-length, package-width, ; lead-span-[x,y]
-    QuadFlatNoLeads,
-    package-length, package-width,
-    density-level = density-level,
-    corner-pads? = corner-pads?
-    thermal-pad? = thermal-pad?
+  #QFN-Lead(lead-type, length, width)
+
+doc: \<DOC>
+Helper for Creating QFN Lead Profiles
+
+For most QFN packages, the lead profile on the
+NS vs EW edges is the same. This function makes that
+assumption and constructions a {@link Quad-Lead-Profile}
+that
+<DOC>
+public defn QFN-Lead-Profile (
+  --
+  span : Toleranced,
+  pitch : Double,
+  lead-length : Toleranced,
+  lead-width : Toleranced,
+  ) -> Quad-Lead-Profile:
+  val lead = QFN-Lead(length = lead-length, width = lead-width)
+  val profile = Lead-Profile( span = span, pitch = pitch, lead = lead)
+  #Quad-Lead-Profile(profile, None(), profile, None())
+
+
+public defstruct QFN <: Quad-Package :
+  doc: \<DOC>
+  Number of leads ignoring any depopulated leads and thermal leads
+  <DOC>
+  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+
+  doc: \<DOC>
+  Lead Profiles for all of the QFN's edges
+
+  By default the QFN uses the {@link QuadFlatNoLeads} protrusion
+  type by default.
+  <DOC>
+  lead-profile:Quad-Lead-Profile with: (as-method => true)
+  doc: \<DOC>
+  Optional thermal lead for the package.
+  <DOC>
+  thermal-lead?:False|Shape with: (as-method => true)
+
+  doc: \<DOC>
+  Package Body for the Quad-based Package.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Planner for the Quad package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the Quad Package
+
+  This provides a numbering scheme for the leads of the Quad
+  package. By default, it uses {@link Column-Major-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
+
+with:
+  printer => true
+  constructor => #QFN
+
+public defn QFN (
+  --
+  num-leads:Int,
+  lead-profile:Quad-Lead-Profile,
+  thermal-lead?:False|Shape,
+  package-body:PackageBody,
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  #QFN(
+    num-leads, lead-profile, thermal-lead?,
+    package-body, pad-planner, lead-numbering,
+    density-level
   )
 
-public defn make-qfn-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
-  --
-  density-level: DensityLevel = DENSITY-LEVEL,
-  corner-pads?:False|[Pad, Pad] = false,
-  thermal-pad?: Shape|False = false
-  ):
-  make-quad-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size, ; lead-span
-    QuadFlatNoLeads,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?
-    thermal-pad? = thermal-pad?
-  )
+public defmethod name (pkg:QFN) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+  val body = package-body(pkg)
+  val p = to-deci(pitch $ x-leads $ lead-profile(pkg))
+  val w = to-deci(typ $ width(body))
+  val l = to-deci(typ $ length(body))
+  val h = to-deci(typ $ height(body))
+  val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
+  to-string("QFN%_P%_X%_X%_-%_N" % [p, w, l, h, n])
 
-public pcb-landpattern qfn-landpattern (
-  pins-W : PinEdgeConfig,
-  pins-S : PinEdgeConfig,
-  pins-E : PinEdgeConfig,
-  pins-N : PinEdgeConfig,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-length: Toleranced,
-  package-width: Toleranced = package-length,
-  --
-  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
-  corner-pads?:False|[Pad, Pad] = false, ; corner pads
-  thermal-pad?: Shape|False = false
-  ):
-  name = to-string("QFN%_X%_" % [pitch, package-width, package-length])
-  make-qfn-landpattern(
-    pins-W, pins-S, pins-E, pins-N,
-    lead-length, lead-width,
-    package-length, package-width, ; lead-span-[x,y]
-    density-level = density-level,
-    corner-pads? = corner-pads?,
-    thermal-pad? = thermal-pad?
-  )
+public defmethod courtyard-excess (pkg:QFN) -> Double :
+  val protrusion = lead-type $ lead $ x-leads $ lead-profile $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
+  courtyard-excess(fillets)
 
-public pcb-landpattern qfn-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
+public defn QFN-overall-outline (
+  pkg:QFN,
+  vp:VirtualLP
   --
-  density-level: DensityLevel = DENSITY-LEVEL,
-  corner-pads?:False|[Pad, Pad] = false,
-  thermal-pad?: Shape|False = false
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
   ):
-  name = to-string("QFN%_P%_X%_" % [pitch, package-size, package-size])
-  make-qfn-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?,
-    thermal-pad? = thermal-pad?
-  )
+  val pkg-body = package-body(pkg)
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+
+  val overall = union(pkg-outline, pad-outline*)
+  LineRectangle(overall, line-width = line-width)
+
+public defn QFN-pkg-outline (
+  pkg:QFN,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+  val pkg-body = package-body(pkg)
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+  LineRectangle(pkg-outline*, line-width = line-width)
+  ; TODO - Here is where I want to use `Difference` to substract out
+  ;  the combined soldermask on all sides.
+
+public defn QFN-outline (
+  pkg:QFN,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+  val outline-geom = switch(density-level(pkg)):
+    DensityLevelA: QFN-overall-outline(pkg, vp)
+    DensityLevelB: QFN-overall-outline(pkg, vp)
+    DensityLevelC: QFN-pkg-outline(pkg, vp)
+
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+public defn QFN-pin-1-marker (
+  pkg:QFN,
+  vp:VirtualLP
+  --
+  pin-1-id:Int|Ref = 1,
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val extra-margin = switch(density-level(pkg)):
+    DensityLevelA: mask-clearance + line-width
+    DensityLevelB: mask-clearance + line-width
+    DensityLevelC: 0.0
+
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
+
+  val pad-loc = pose(pin-1-pad)
+  val pad-center = center(pad-loc)
+
+  val smasks = get-layer(pin-1-pad, SolderMask(side))
+  if length(smasks) == 0:
+    ; This is a very strange error - it means
+    ;  that pad 1 of this component doesn't have a soldermask
+    ;  opening.
+    ; This could happen if the user passed an erroneous `side` argument
+    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
+  val smask = smasks[0]
+
+  val width = x $ dims(smask)
+  val offset = Point((- (width / 2.0) + mask-clearance + line-width + extra-margin), 0.0)
+  val marker-shape = Circle(offset, line-width)
+
+  val marker-geom = pad-loc * marker-shape
+
+  add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
+
+  if density-level(pkg) == DensityLevelA :
+    val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
+    if length(outlines) != 1:
+      throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+
+    val outline = outlines[0]
+    val o-box = bounds $ shape(outline)
+
+    val marker = compute-triangle-marker(pad-center, o-box, line-width)
+    add-artwork(
+      vp, Silkscreen("pin-1-marker", side),
+      marker,
+      name = "pin-1-triangle",
+      class = "pin-1-marker"
+      )
+
+
+public defmethod build-silkscreen (
+  pkg:QFN,
+  vp:VirtualLP
+  ) -> False:
+  QFN-outline(pkg, vp)
+  QFN-pin-1-marker(pkg, vp)
+
+

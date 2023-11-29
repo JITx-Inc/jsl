@@ -1,0 +1,106 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/QFN:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/leads
+
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-symbol test-sym:
+  for i in 1 through 33 do :
+    pin (IndexRef(Ref("p"), i)) at Point(-2.54, (2.54 - (to-double(i) * 2.54))) with :
+      direction = Left
+      length = 2.54
+      number-size = 0.762
+      name-size = 0.762
+
+pcb-component test-QFN:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+    [p[3] | p[3] | Up |  0]
+    [p[4] | p[4] | Down | 0]
+    [p[5] | p[5] | Up |  0]
+    [p[6] | p[6] | Down | 0]
+    [p[7] | p[7] | Up |  0]
+    [p[8] | p[8] | Down | 0]
+
+    [p[9] | p[9] | Up |  0]
+    [p[10] | p[10] | Down | 0]
+    [p[11] | p[11] | Up |  0]
+    [p[12] | p[12] | Down | 0]
+    [p[13] | p[13] | Up |  0]
+    [p[14] | p[14] | Down | 0]
+    [p[15] | p[15] | Up |  0]
+    [p[16] | p[16] | Down | 0]
+
+    [p[17] | p[17] | Up |  0]
+    [p[18] | p[18] | Down | 0]
+    [p[19] | p[19] | Up |  0]
+    [p[20] | p[20] | Down | 0]
+    [p[21] | p[21] | Up |  0]
+    [p[22] | p[22] | Down | 0]
+    [p[23] | p[23] | Up |  0]
+    [p[24] | p[24] | Down | 0]
+
+    [p[25] | p[25] | Down | 0]
+    [p[26] | p[26] | Up |  0]
+    [p[27] | p[27] | Down | 0]
+    [p[28] | p[28] | Up |  0]
+    [p[29] | p[29] | Down | 0]
+    [p[30] | p[30] | Up |  0]
+    [p[31] | p[31] | Down | 0]
+    [p[32] | p[32] | Down | 0]
+    [p[33] | p[33] | Down | 0]
+
+  assign-symbol(test-sym)
+
+  ; ESP32-C6FH4
+  ; 32 QFN
+
+  val pkg = QFN(
+    num-leads = 32,
+    lead-profile = QFN-Lead-Profile(
+      span = 5.0 +/- 0.05,
+      pitch = 0.5,
+      lead-length = 0.4 +/- 0.05,
+      lead-width = 0.25 +/- 0.05
+    ),
+    thermal-lead? = Rectangle(3.7, 3.7),
+    package-body = PackageBody(
+      width = 5.0 +/- 0.05,
+      length = 5.0 +/- 0.05,
+      height = 0.8 +/- 0.05
+    ),
+    density-level = DensityLevelA
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-QFN
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("QFN-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
