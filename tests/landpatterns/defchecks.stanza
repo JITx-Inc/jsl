@@ -5,6 +5,7 @@ defpackage jsl/tests/landpatterns/defchecks:
   import jitx
   import jitx/commands
   import jsl/errors
+  import jsl/tests/utils
 
 doc: \<DOC>
 Pad Grid - Tool for Checking Landpatterns
@@ -21,6 +22,36 @@ defn update (rows:HashTable<Double, Tuple<LandPatternPad>>, y-pos:Double, pd:Lan
   val newPads = to-tuple $ cat(res, [pd])
   set(rows, y-pos, newPads)
 
+val GRID-EPS = 1.0e-6
+
+public defn combine-within-threshold (
+  pad-set:HashTable<Double, Tuple<LandPatternPad>>,
+  eps:Double
+  ) -> HashTable<Double, Tuple<LandPatternPad>> :
+  val ret = HashTable<Double, Tuple<LandPatternPad>>()
+  val ordinals = to-vector<Double> $ keys(pad-set)
+  while length(ordinals) > 0:
+    val ordinal = pop(ordinals)
+
+    val m-indices = to-vector<Int> $ for (sister in ordinals, i in 0 to false) seq?:
+      if almost-equal?(ordinal, sister, eps):
+        One(i)
+      else:
+        None()
+
+    qsort!(m-indices)
+
+    val matches = to-tuple $ for i in in-reverse(m-indices) seq:
+      remove(ordinals, i)
+
+    val matching-ordinals = cat([ordinal], matches)
+    val ord-set = to-tuple $ for o in matching-ordinals seq-cat :
+      pad-set[o]
+    ret[ordinal] = ord-set
+
+  ret
+
+
 public defn PadGrid (lp-def:LandPattern) -> PadGrid:
   val rows = HashTable<Double, Tuple<LandPatternPad>>()
   val cols = HashTable<Double, Tuple<LandPatternPad>>()
@@ -29,7 +60,10 @@ public defn PadGrid (lp-def:LandPattern) -> PadGrid:
     val pos = center(l)
     update(rows, y(pos), lp-pad)
     update(cols, x(pos), lp-pad)
-  PadGrid(rows, cols)
+
+  val rows* = combine-within-threshold(rows, GRID-EPS)
+  val cols* = combine-within-threshold(cols, GRID-EPS)
+  PadGrid(rows*, cols*)
 
 
 doc: \<DOC>
