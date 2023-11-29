@@ -202,3 +202,47 @@ deftest(numbering) test-row-rollover-grid-numbering:
   ]
 
   #EXPECT(obs == exp)
+
+deftest(numbering) test-uneven-column-major-numbering:
+
+  val rows = 4
+  val columns = 5
+  val uut = Uneven-Column-Major-Numbering(rows, columns)
+
+  val testvecs = [
+    [[0,0], 1],
+    [[1,0], 2],
+    [[2,0], 3],
+    [[3,0], 4],
+    [[0,1], 5],
+    [[1,1], 6],
+    [[2,1], 7],
+    [[3,1], 8],
+    [[4,1], 9],
+    [[0,2], 10],
+    [[1,2], 11],
+    [[2,2], 12],
+    [[3,2], 13],
+    [[0,3], 14],
+    [[1,3], 15],
+    [[2,3], 16],
+    [[3,3], 17],
+    [[4,3], 18],
+  ]
+  for testvec in testvecs do:
+    val [g-loc, pad-id] = testvec
+    val [r,c] = g-loc
+
+    #EXPECT(to-pad-id(uut, r, c) == pad-id)
+
+  #EXPECT(get-total-pads(uut) == 18)
+
+  expect-throw({to-pad-id(uut, -1, 0)})
+  expect-throw({to-pad-id(uut, 0, -1)})
+  expect-throw({to-pad-id(uut, -1, -1)})
+
+  expect-throw({to-pad-id(uut, 0, 4)})
+  expect-throw({to-pad-id(uut, 4, 0)})
+  expect-throw({to-pad-id(uut, 5, 1)})
+  expect-throw({to-pad-id(uut, 4, 2)})
+  expect-throw({to-pad-id(uut, 5, 3)})
