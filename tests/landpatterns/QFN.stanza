@@ -1,0 +1,190 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/QFN:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+  import jsl/design/settings
+  import jsl/landpatterns/quad
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/leads
+
+
+deftest(QFN) test-QFN-basic :
+  ; Based on ESP32-C6FH4
+  ; 32 QFN
+
+  val uut = QFN(
+    num-leads = 32,
+    lead-profile = QFN-Lead-Profile(
+      span = 5.0 +/- 0.05,
+      pitch = 0.5,
+      lead-length = 0.4 +/- 0.05,
+      lead-width = 0.25 +/- 0.05
+    ),
+    thermal-lead? = false,
+    package-body = PackageBody(
+      width = 5.0 +/- 0.05,
+      length = 5.0 +/- 0.05,
+      height = 0.8 +/- 0.05
+    )
+  )
+
+  #EXPECT(name(uut) == "QFN50P500X500X80-32N")
+
+  pcb-landpattern lp:
+    make-pads(uut)
+
+  val grid = PadGrid(lp)
+
+  ; number in a row + plus the edges on either side + thermal pad
+  val expRowLen = (num-leads(uut) / QUAD-NUM-COLUMNS)
+  val expRowsCols = expRowLen + 2
+  val expPitch = 0.5
+
+  #EXPECT(length(rows(grid)) == expRowsCols)
+  #EXPECT(length(columns(grid)) == expRowsCols)
+
+  val col-Xs = column-Xs(grid)
+  val col-Xs* = to-tuple $ col-Xs[1 to (length(col-Xs) - 1)]
+  #EXPECT(length(col-Xs*) == expRowLen)
+  val col-pitch = diff-series(col-Xs*)
+
+  for pitch in col-pitch do:
+    #EXPECT(almost-equal?(pitch, expPitch))
+
+  val row-Ys = row-Ys(grid)
+  val row-Ys* = to-tuple $ row-Ys[1 to (length(row-Ys) - 1)]
+  #EXPECT(length(row-Ys*) == expRowLen)
+  val row-pitch = diff-series(row-Ys*)
+
+  for pitch in row-pitch do:
+    #EXPECT(almost-equal?(pitch, expPitch))
+
+  val col-pads-west = get-column(grid, 0)
+  #EXPECT(length(col-pads-west) == 8)
+  for lp-pad in col-pads-west do:
+    val pd = pad(lp-pad)
+    val shape = pad-shape(pd)
+    #EXPECT(shape is Rectangle)
+
+  val col-pads-east = get-column(grid, expRowsCols - 1)
+  #EXPECT(length(col-pads-east) == 8)
+  for lp-pad in col-pads-east do:
+    val pd = pad(lp-pad)
+    val shape = pad-shape(pd)
+    #EXPECT(shape is Rectangle)
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+  ])
+
+  expect-empty-others(lp, not-empty)
+
+deftest(QFN) test-QFN-non-square :
+
+  val lead = QFN-Lead(
+    length = 0.4 +/- 0.05,
+    width = 0.25 +/- 0.05
+  )
+  val uut = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      x-leads = Lead-Profile(
+        span =  7.0 +/- 0.05,
+        pitch = 0.4,
+        lead = lead
+      ),
+      x-count = 6,
+      y-leads = Lead-Profile(
+        span =  5.0 +/- 0.05,
+        pitch = 0.6
+        lead = lead
+      ),
+      y-count = 10,
+    ),
+    package-body = PackageBody(
+      width = 7.0 +/- 0.05,
+      length = 5.0 +/- 0.05,
+      height = 0.85 +/- 0.05
+    ),
+    thermal-lead? = false,
+    density-level = DensityLevelA
+  )
+
+  #EXPECT(name(uut) == "QFN40P700X500X85-32N")
+
+  val lp = create-landpattern(uut)
+
+  val grid = PadGrid(lp)
+
+  ; number in a row + plus the edges on either side + thermal pad
+  val expRowLen = 6 + 2
+  val expColLen = 10 + 2
+
+  #EXPECT(length(rows(grid)) == expRowLen)
+  #EXPECT(length(columns(grid)) == expColLen)
+
+  val expColPitch = 0.6
+  val col-Xs = column-Xs(grid)
+  val col-Xs* = to-tuple $ col-Xs[1 to (length(col-Xs) - 1)]
+  #EXPECT(length(col-Xs*) == 10)
+  val col-pitch = diff-series(col-Xs*)
+
+  for pitch in col-pitch do:
+    #EXPECT(almost-equal?(pitch, expColPitch))
+
+  val expRowPitch = 0.4
+  val row-Ys = row-Ys(grid)
+  val row-Ys* = to-tuple $ row-Ys[1 to (length(row-Ys) - 1)]
+  #EXPECT(length(row-Ys*) == 6)
+  val row-pitch = diff-series(row-Ys*)
+
+  for pitch in row-pitch do:
+    #EXPECT(almost-equal?(pitch, expRowPitch))
+
+  val col-pads-west = get-column(grid, 0)
+  #EXPECT(length(col-pads-west) == 6)
+  for lp-pad in col-pads-west do:
+    val pd = pad(lp-pad)
+    val shape = pad-shape(pd)
+    #EXPECT(shape is Rectangle)
+
+  val col-pads-east = get-column(grid, expColLen - 1)
+  #EXPECT(length(col-pads-east) == 6)
+  for lp-pad in col-pads-east do:
+    val pd = pad(lp-pad)
+    val shape = pad-shape(pd)
+    #EXPECT(shape is Rectangle)
+
+  val not-empty = to-hashset<LayerSpecifier>([
+    SolderMask(Top)
+    Paste(Top)
+    TopSilkscreen()
+    Courtyard(Top)
+  ])
+
+  expect-empty-others(lp, not-empty)
+
+  ; Checks that we got silkscreen in the
+  ;  areas that we expected.
+
+    val silk = layer(lp, Silkscreen("outline", Top))
+    #EXPECT(length(silk) == 1)
+
+    val outline = dims $ silk[0]
+    val silk-width = clearance(current-rules(), MinSilkscreenWidth)
+    #EXPECT(almost-equal?(outline, Dims(8.1262 + silk-width, 6.1262 + silk-width)))
+
+    val pin-1-silk  = layer(lp, Silkscreen("pin-1-marker", Top))
+    ; Expect to see the Dot and the Triangle
+    #EXPECT(length(pin-1-silk) == 2)
+    val marker = pin-1-silk[0] as Circle
+    #EXPECT(almost-equal?(center(marker), Point(-4.3274, 1.0 )))
+    #EXPECT(pin-1-silk[1] is Polygon)
