@@ -200,14 +200,10 @@ public defn build-dual-row-smd-pin-1 (
   side:Side = Top
   ):
   ; Draw a circle dot inside the rectangle above pin 1
-  val pin-1-pad? = get-pad-by-ref(vp, pin-1-id)
-  val pin-1-pad = match(pin-1-pad?):
-    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [pin-1-id])
-    (x:One<VirtualPad>): value(x)
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
 
   val pad-loc = pose(pin-1-pad)
   val pad-center = center(pad-loc)
-  val angle = angle(pad-loc)
 
   val smasks = get-layer(pin-1-pad, SolderMask(side))
   if length(smasks) == 0:
@@ -232,7 +228,7 @@ public defn build-dual-row-smd-pin-1 (
   ; TODO - Check that the marker will not overlap with any existing silkscreen
   ;   that will prevent it from being easily visible.
 
-  add-artwork(vp, Silkscreen("pin-1-marker", Top), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
+  add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
 
 public defn build-dual-row-outline-pin-1 (
   vp:VirtualLP

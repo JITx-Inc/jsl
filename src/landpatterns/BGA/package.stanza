@@ -228,12 +228,6 @@ defn get-outline (vp:VirtualLP) -> Shape:
 
   shape $ outlines[0]
 
-defn get-pin-1-pad (vp:VirtualLP, pin-1-id:Int|Ref) -> VirtualPad :
-  val pin-1-pad? = get-pad-by-ref(vp, pin-1-id)
-  match(pin-1-pad?):
-    (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [pin-1-id])
-    (x:One<VirtualPad>): value(x)
-
 public defn build-triangle-marker (
   vp:VirtualLP
   --
@@ -241,7 +235,8 @@ public defn build-triangle-marker (
   side:Side = Top
   ):
   val o-sh = get-outline(vp)
-  val pin-1-pad = get-pin-1-pad(vp, pin-1-id)
+
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
 
   ; The Outline is typically a line rectangle which creates a
   ;  single line. We use this to determine the line width
@@ -273,7 +268,7 @@ public defn build-pin-1-marker (
   mask-clearance:Double = default-mask-clearance(),
   ):
   val o-sh = get-outline(vp)
-  val pin-1-pos = center $ pose $ get-pin-1-pad(vp, pin-1-id)
+  val pin-1-pos = center $ pose $ get-pad-by-ref!(vp, pin-1-id)
 
   val o-box = bounds $ o-sh
   val closest = compute-closest-corner(pin-1-pos, o-box)
