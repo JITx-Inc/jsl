@@ -25,6 +25,14 @@ public defn ensure-positive! (
   if fail:
     throw $ ValueError("%_: Expects Positive Number: %_" % [field, value])
 
+public defn ensure-positive! (
+  field:String,
+  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims>
+) :
+  match(value?):
+    (x:None): false
+    (x:One<Int|Long|Double|Float|Toleranced|Dims>): ensure-positive!(field, value(x))
+
 doc: \<DOC>
 Check if the passed value is both positive and even
 @throws ValueError when the passed value is not even or positive
@@ -67,6 +75,15 @@ public defn ensure-non-negative! (field:String, value:Int|Long|Double|Float|Tole
       x(d) < 0.0 or y(d) < 0.0
   if fail:
     throw $ ValueError("%_: Expects Non-Negative Number: %_" % [field, value])
+
+public defn ensure-non-negative! (
+  field:String,
+  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims>
+) :
+  match(value?):
+    (x:None): false
+    (x:One<Int|Long|Double|Float|Toleranced|Dims>): ensure-non-negative!(field, value(x))
+
 
 doc: \<DOC>
 Create a letter sequence from `start` to `end`
