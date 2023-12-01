@@ -12,6 +12,8 @@ defpackage jsl/tests/landpatterns/SOIC:
   import jsl/landpatterns/SOIC
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads
+  import jsl/geometry/box
+
 
 deftest(SOIC) test-lead:
 
@@ -174,12 +176,18 @@ deftest(SOIC) test-fine-pitch:
     #EXPECT(almost-equal?(outline, Dims(7.4 + silk-width, 10.9 + silk-width)))
 
     val pin-1-silk  = layer(W-lp, Silkscreen("pin-1-marker", Top))
+
     ; Expect to see the Dot and the Triangle
     #EXPECT(length(pin-1-silk) == 2)
-    val marker = pin-1-silk[0] as Circle
-    #EXPECT(almost-equal?(center(marker), Point(-4.801462, 5.5162 )))
-    #EXPECT(pin-1-silk[1] is Polygon)
-
+    for sh in pin-1-silk do:
+      match(sh):
+        (x:Circle):
+          #EXPECT(almost-equal?(center(x), Point(-4.801462, 5.5162 )))
+        (x:Polygon):
+          val pts = points(x)
+          val b = Box(Point(-3.8, 4.1), Point(-2.4, 5.5))
+          for pt in pts do:
+            #EXPECT(contains?(b, pt))
 
 deftest(SOIC) test-thermal-lead:
   val num-pins = 8

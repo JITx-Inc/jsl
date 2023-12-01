@@ -9,6 +9,7 @@ defpackage jsl/tests/landpatterns/QFN:
   import jsl/tests/landpatterns/defchecks
 
   import jsl/design/settings
+  import jsl/geometry/box
   import jsl/landpatterns/quad
   import jsl/landpatterns/QFN
   import jsl/landpatterns/packages
@@ -185,6 +186,12 @@ deftest(QFN) test-QFN-non-square :
     val pin-1-silk  = layer(lp, Silkscreen("pin-1-marker", Top))
     ; Expect to see the Dot and the Triangle
     #EXPECT(length(pin-1-silk) == 2)
-    val marker = pin-1-silk[0] as Circle
-    #EXPECT(almost-equal?(center(marker), Point(-4.3274, 1.0 )))
-    #EXPECT(pin-1-silk[1] is Polygon)
+    for sh in pin-1-silk do:
+      match(sh):
+        (x:Circle):
+          #EXPECT(almost-equal?(center(x), Point(-4.3274, 1.0 )))
+        (x:Polygon):
+          val pts = points(x)
+          val b = Box(Point(-4.358, 1.6), Point(-2.780, 3.373))
+          for pt in pts do:
+            #EXPECT(contains?(b, pt))
