@@ -128,7 +128,7 @@ package. Instances of this type can be used to create
 a landpattern using the {@link make-landpattern}
 interface.
 <DOC>
-public defstruct SOIC <: Package :
+public defstruct SOIC <: Dual-Package :
   doc: \<DOC>
   Total Number of Leads - excluding the thermal pad.
   <DOC>
@@ -141,14 +141,14 @@ public defstruct SOIC <: Package :
   By default the {@link SOIC-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
-  profile:Lead-Profile
+  lead-profile:Lead-Profile with: (as-method => true)
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape
+  thermal-lead?:False|Shape with: (as-method => true)
 
   doc: \<DOC>
   Package Body for the SOIC.
@@ -182,13 +182,9 @@ with:
   printer => true
   constructor => #SOIC
 
-public defmethod name (x:SOIC) -> String :
-  val p = to-int $ (100.0 * pitch $ profile(x))
-  val l = to-int $ (100.0 * (typ $ span $ profile(x)))
-  val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
-  to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-leads(x)])
 
 val SOIC-DEF-PAD-PLANNER = RectanglePadPlanner
+val SOIC-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
 
 doc: \<DOC>
 Create a SOIC Package
@@ -202,7 +198,7 @@ public defn SOIC (
   lead:SMT-Lead,                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
-  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
   val profile = Lead-Profile(
@@ -229,7 +225,7 @@ public defn SOIC-N (
   lead:SOIC-Lead                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
-  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC :
   val profile = Lead-Profile(
@@ -256,7 +252,7 @@ public defn SOIC-W (
   lead:SOIC-Lead                 = SOIC-Lead(),
   thermal-lead?:False|Shape      = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
-  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
+  num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
   ) -> SOIC:
   val profile = Lead-Profile(
@@ -269,45 +265,27 @@ public defn SOIC-W (
     pad-planner, num-scheme, density-level
     )
 
+public defmethod name (x:SOIC) -> String :
+  val p = to-int $ (100.0 * pitch $ lead-profile(x))
+  val l = to-int $ (100.0 * (typ $ span $ lead-profile(x)))
+  val h = to-int $ (100.0 * (typ $ height $ package-body(x)))
+  to-string("SOIC%_P%_X%_-%_" % [p, l, h, num-leads(x)])
+
 doc: \<DOC>
 Courtyard Excess Expectation for SOIC
 
 The user can override by providing a custom {@link LeadProtrusion} type.
 <DOC>
 public defmethod courtyard-excess (pkg:SOIC) -> Double :
-  val protrusion = lead-type $ lead $ profile $ pkg
+  val protrusion = lead-type $ lead $ lead-profile $ pkg
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-doc: \<DOC>
-Generator for Creating SOIC LandPattern Pads
-@param pkg SOIC Package Definition
-@param density-level Defines the compactness of the symbol created. By default,
-  the design density-level will be selected.
-<DOC>
-public defmethod build-pads (
-  pkg:SOIC
-  vp:VirtualLP
-  ) -> False :
-  build-dual-row-smd-landpattern(
-    vp,
-    num-leads(pkg),
-    profile(pkg),
-    package-body(pkg),
-    pad-planner = pad-planner(pkg),
-    num-scheme = lead-numbering(pkg),
-    density-level = density-level(pkg),
-    with-pol-marker? = true
-    thermal-lead? = thermal-lead?(pkg)
-  )
 
 public defmethod build-silkscreen (
   pkg:SOIC,
   vp:VirtualLP,
   ) -> False :
-  val body = package-body(pkg)
-  build-dual-row-smd-outline(
-    vp, body, density-level(pkg)
-  )
-  build-dual-row-smd-pin-1(vp, body)
-  build-dual-row-outline-pin-1(vp)
+  build-pkg-body-outline(pkg, vp)
+  build-smd-pin-1(pkg, vp)
+  build-outline-pin-1(pkg, vp)

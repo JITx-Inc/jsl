@@ -22,47 +22,91 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/IPC
   import jsl/landpatterns/VirtualLP
 
-val DUAL-ROW-COLS = 2
-
+public val DUAL-ROW-COLS = 2
 
 doc: \<DOC>
-Generator for a dual-row SMD Landpattern
+Base Dual Row Package Definition
 
-This generator supports components like SOIC, SOP, SOT-23,
-DFN/SON, etc.
+This is a base type that is intended to
+help construct dual-row package ICs, such
+as SOIC, SOP, SON, etc.
 
-@param num-leads Number of leads
-@param pitch
-@param lead
-@param lead-span
-@param pkg-body
-@param pose
-@param pad-planner
-@param num-scheme
-@param density-level
-
+The user is expected to create a type that
+derives from `Dual-Package` and then
+provide the remaining methods to construct
+the landpattern, like `build-silkscreen`.
 <DOC>
-public defn build-dual-row-smd-landpattern (
-  vp:VirtualLP,
-  num-leads:Int,
-  profile:Lead-Profile,
-  pkg-body:PackageBody,
-  --
-  pad-planner:PadPlanner         = RectanglePadPlanner,
-  num-scheme:Numbering           = Std-IC-Numbering(num-leads),
-  density-level:DensityLevel     = DENSITY-LEVEL,
-  with-pol-marker?:True|False    = true,
-  thermal-lead?:False|Shape      = false
-):
-  ensure-even-positive!("dual-row:num-leads", num-leads),
+public defstruct Dual-Package <: Package :
+  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
 
-  val [pad-size, delta, pitch] = to-tuple $ compute-params(profile)
-  val rows = num-leads / DUAL-ROW-COLS
+  doc: \<DOC>
+  Lead Profile Defines the Configuration of leads on each edge
+  <DOC>
+  lead-profile:Lead-Profile
+  doc: \<DOC>
+  Optional thermal lead for the package.
+  <DOC>
+  thermal-lead?:False|Shape
+
+  doc: \<DOC>
+  Package Body for the Quad-based Package.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Planner for the Quad package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the Quad Package
+
+  This provides a numbering scheme for the leads of the Dual
+  package. By default, it uses {@link Column-Major-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
+
+with:
+  printer => true
+  constructor => #Dual-Package
+
+public defmethod build-pads (
+  pkg:Dual-Package,
+  vp:VirtualLP
+  ) -> False :
+
+  val profile = lead-profile(pkg)
+  val num-scheme = lead-numbering(pkg)
+  val pad-planner = pad-planner(pkg)
+
+  val rows = num-leads(pkg) / DUAL-ROW-COLS
+  val params = compute-params(profile)
 
   defn gen-pad-info () -> Seq<VirtualPad> :
-    val grid = to-seq $ grid-locs(rows, DUAL-ROW-COLS, delta, pitch, false)
-    for c in 0 to DUAL-ROW-COLS seq-cat:
-      for (r in 0 to rows, pos in grid) seq?:
+    for c in 0 to DUAL-ROW-COLS seq-cat :
+      ; Each Column consists of  N / 2 rows.
+      ; Each column is constructed as a 1-D grid that
+      ;   is translated and then rotated into place.
+      ; This allows:
+      ;  1. All of the pads have the -X axis pointing out
+      ;     from the package body.
+      ;  2. The numbering via Column-Major can satisfy the
+      ;     standard IC numbering strategy (ie, U shaped pattern)
+      val [pad-size, delta, pitch] = to-tuple(params)
+      val rot = to-double(180 * c)
+      val offset = loc(0.0, 0.0, rot) * loc((- delta) / 2.0, 0.0)
+      val grid = grid-locs(rows, 1, 1.0, pitch)
+      for (r in 0 to rows, pos in grid) seq? :
         val pad-id = to-pad-id(num-scheme, r, c)
         val pad-gen? = pad-generator(pad-planner, r, c)
         match(pad-gen?):
@@ -73,13 +117,15 @@ public defn build-dual-row-smd-landpattern (
               to-string("col-%_" % [c]),
               to-string("row-%_" % [r])
             ]
-            One $ VirtualPad(pad-id, pad-gen(pad-size), pos, class = cls)
+            One $ VirtualPad(pad-id, pad-gen(pad-size), offset * pos, class = cls)
 
   append-all(vp, gen-pad-info())
-  match(thermal-lead?:Shape):
-    append(vp, VirtualPad(num-leads + 1, smd-pad(thermal-lead?), loc(0.0, 0.0), class = ["pad", "thermal"]))
 
-
+  match(thermal-lead?(pkg)):
+    (lead-shape:Shape):
+      val cls = ["pad", "thermal"]
+      append(vp, VirtualPad(num-leads(pkg) + 1, smd-pad(lead-shape), loc(0.0, 0.0), class = cls))
+    (x:False): false
 
 
 doc: \<DOC>
@@ -142,23 +188,37 @@ public defn compute-outline (
 doc: \<DOC>
 Build the silkscreen outline for a dual-row SMD package
 
-This function will generate different silkscreen
-artwork depending on the density level.
+This function will generate a silkscreen outline
+of the package body in the interstitial space between
+the two columns of pads. This silkscreen likely will
+not be exactly the package body width for aesthetic reasons.
 
+If the package you are construction has a thermal lead -
+this may not be the best choice of outline to use.
+
+@param pkg Component Package to model
 @param vp Virtual landpattern container.
-@param pkg-body Package Body - assumed to be centered in the virtual landpattern container origin.
+@param line-width Thickness of the silkscreen lines that
+will be used to construct the outline. The default wil be
+extracted from the design rules.
+@param mask-clearance Minimum silkmask to soldermask
+clearance requirement to use when constructing the outline.
+The default wil be extracted from the design rules.
+@param side Which side of the board to draw this outline.
+The default is `Top`. Note that if the pads of the component
+are not on `side` - this function will likely fail.
 <DOC>
-public defn build-dual-row-smd-outline (
+public defn build-pkg-body-outline (
+  pkg:Dual-Package,
   vp:VirtualLP,
-  pkg-body:PackageBody,
-  density-level:DensityLevel,
   --
   line-width:Double = default-silk-width(),
   mask-clearance:Double = default-mask-clearance(),
   side:Side = Top,
   ):
+  val pkg-body = package-body(pkg)
   val outline-geom = compute-outline(
-    vp, pkg-body, density-level,
+    vp, pkg-body, density-level(pkg),
     line-width = line-width,
     mask-clearance = mask-clearance,
     side = side,
@@ -190,9 +250,9 @@ rules.
 @param side Which side of the board to draw on the marker on.
 The default value is `Top`.
 <DOC>
-public defn build-dual-row-smd-pin-1 (
+public defn build-smd-pin-1 (
+  pkg:Dual-Package,
   vp:VirtualLP,
-  pkg-body:PackageBody,
   --
   pin-1-id:Int|Ref = 1,
   line-width:Double = default-silk-width(),
@@ -230,7 +290,8 @@ public defn build-dual-row-smd-pin-1 (
 
   add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
 
-public defn build-dual-row-outline-pin-1 (
+public defn build-outline-pin-1 (
+  pkg:Dual-Package,
   vp:VirtualLP
   --
   pin-1-id:Int|Ref = 1,
