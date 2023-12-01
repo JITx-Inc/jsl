@@ -8,6 +8,7 @@ defpackage jsl/tests/landpatterns/BGA/package:
   import jsl/design/settings
   import jsl/landpatterns/pad-planner
   import jsl/geometry/basics
+  import jsl/geometry/box
   import jsl/landpatterns/BGA
   import jsl/landpatterns/packages
   import jsl/tests/utils
@@ -152,9 +153,16 @@ deftest(BGA) test-full-landpattern :
   val pin-1-silk  = layer(lp, Silkscreen("pin-1-marker", Top))
   ; Expect to see the Dot and the Triangle
   #EXPECT(length(pin-1-silk) == 2)
-  val marker = pin-1-silk[0] as Circle
-  #EXPECT(almost-equal?(center(marker), Point(-1.5024, 0.9119 )))
-  #EXPECT(pin-1-silk[1] is Polygon)
+
+  for sh in pin-1-silk do:
+    match(sh):
+      (x:Circle):
+        #EXPECT(almost-equal?(center(x), Point(-1.5024, 0.9119 )))
+      (x:Polygon):
+        val pts = points(x)
+        val b = Box(Point(-1.3, 0.4), Point(-0.7, 1.0))
+        for pt in pts do:
+          #EXPECT(contains?(b, pt))
 
 
 deftest(BGA) test-perimeter-simple :
