@@ -8,6 +8,7 @@ defpackage jsl/examples/landpatterns/QFN:
   import jsl/landpatterns/packages
   import jsl/landpatterns/QFN
   import jsl/landpatterns/leads
+  import jsl/landpatterns/pad-planner
 
   import jsl/examples/landpatterns/board
 
@@ -81,6 +82,11 @@ pcb-component test-QFN:
       length = 5.0 +/- 0.05,
       height = 0.8 +/- 0.05
     ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.15),
+      rect-shaper,
+      8
+    )
     density-level = DensityLevelA
   )
 

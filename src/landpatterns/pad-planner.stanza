@@ -222,8 +222,10 @@ public defmethod shape-generator (x:ShapePadPlanner, row:Int, column:Int) -> (Di
   else: false
 
 public val rect-shaper:(Dims -> Shape) = Rectangle ;  {Rectangle(_0)}
-
 public val RectanglePadPlanner = ShapePadPlanner(rect-shaper)
+
+public val capsule-shaper:(Dims -> Shape) = Capsule
+public val CapsulePadPlanner = ShapePadPlanner(capsule-shaper)
 
 public defn round-rect-shaper (radius:Double) -> (Dims -> Shape) :
   {RoundedRectangle(x(_0), y(_0), radius)}
@@ -231,8 +233,11 @@ public defn round-rect-shaper (radius:Double) -> (Dims -> Shape) :
 public defn RoundedRectanglePadPlanner (radius:Double) -> ShapePadPlanner :
   ShapePadPlanner( round-rect-shaper(radius) )
 
-; TODO ChamferredRectangle
-; TODO Capsule
+public defn dshape-shaper (radius:Double) -> (Dims -> Shape) :
+  {DShape(x(_0), y(_0), radius)}
+
+public defn DShapePadPlanner (radius:Double) -> ShapePadPlanner :
+  ShapePadPlanner(dshape-shaper(radius))
 
 public defstruct Pin1-PadPlanner <: PadPlanner :
   pin1-shaper:(Dims -> Shape)
@@ -247,10 +252,53 @@ public defmethod shape-generator (x:Pin1-PadPlanner, row:Int, column:Int) -> (Di
     else: shaper(x)
   else: false
 
-; TODO - Corner Pin Shapers
-;  Make different pad shapes (possibly with pose offsets)
-;  in the corner pads of say a QFN or QFP
+doc: \<DOC>
+Chamfered Corner Shapper
 
+This function is intended to be used with {@link Corner-PadPlanner}
+to implement the differential corner pads.
+
+<DOC>
+public defn chamfered-corner-shaper (radius:Double) -> (Dims -> Shape) :
+  GeneralChamferedRectangle{_0, radius, CornerModifierUpperRight}
+
+doc: \<DOC>
+Corner Pin Pad Planner
+
+This pad planner is useful for packages like QFN, QFP, and other
+quad packages where the pads in the corners need to be customized
+to prevent overlapping pad geometry.
+
+This pad planner accepts two shapers - one for normal pads and
+one for the pads in the corner. The corner pad will be used
+normally in the first row of a column. In the last row of a
+column - the corner pad will be mirrored about the X axis.
+<DOC>
+public defstruct Corner-PadPlanner <: PadPlanner :
+  corner-shaper:(Dims -> Shape)
+  shaper:(Dims -> Shape)
+  rows:Int|Tuple<Int>
+
+public defmethod active? (x:Corner-PadPlanner, row:Int, column:Int) -> True|False :
+  match(rows(x)):
+    (r-set:Tuple<Int>): column < length(r-set)
+    (_): true
+
+public defmethod shape-generator (x:Corner-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
+  if active?(x, row, column):
+
+    val rows = match(rows(x)):
+      (r-set:Tuple<Int>): r-set[column]
+      (row-max:Int): row-max
+
+    if row == 0:
+      corner-shaper(x)
+    else if row == (rows - 1):
+      val flip-Y = loc(Point(0.0, 0.0), FlipY)
+      {flip-Y * corner-shaper(x)(_0)}
+    else:
+      shaper(x)
+  else: false
 
 doc: \<DOC>
 Plated Through-Hole Pad Planner
