@@ -1,0 +1,54 @@
+#use-added-syntax(jitx)
+defpackage jsl/design/Classable:
+  import core
+  import collections
+
+  import jsl/errors
+
+doc: \<DOC>
+Base Type for defining Tree Node objects with name/class
+
+The class concept here is similar to the HTML/CSS class
+concept. Ie, it allows us to group various objects together
+into some logical set that we can query for later.
+<DOC>
+public deftype Classable
+
+doc: \<DOC>
+Optional Name for a `Classable` Element
+
+In general, the name of each element in a container should be unique.
+Nothing prevents the user from using the same name for multiple elements,
+but functions that use the elements derived from Classable may fail in
+subtle ways if they expect to find one element with a particular name.
+<DOC>
+public defmulti name? (v:Classable) -> Maybe<String>
+
+doc: \<DOC>
+Optional Class Set for a `Classable` Element
+
+The class set is used to indicate a set of elements that are
+serve a particular common function. This is similar to the `class`
+attribute in `HTML` where they are used for styling among other
+things.
+<DOC>
+public defmulti class (v:Classable) -> Vector<String>
+
+doc: \<DOC>
+Force name resolution from an element
+@throws ValueError If the element does not have a name
+<DOC>
+public defmulti name! (v:Classable) -> String
+public defmethod name! (v:Classable) -> String :
+  match(name?(v)):
+    (_:None): throw $ ValueError("No Name is present on Classable")
+    (x:One<String>): value(x)
+
+doc: \<DOC>
+Helper Method for managing the class vector initialization.
+<DOC>
+public defn to-class-vector (x:Seqable<String>|String) -> Vector<String> :
+  val obj = match(x):
+    (y:String): [y]
+    (y:Seqable<String>): y
+  to-vector<String>(obj)
