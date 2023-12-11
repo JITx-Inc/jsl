@@ -4,6 +4,7 @@ defpackage jsl/geometry/basics:
   import jitx
   import jitx/commands
 
+  import jsl/errors
 
 ; TODO -
 ;   I want to refactor the shape definitions in esir.stanza:
@@ -110,3 +111,56 @@ Diameter to Radius Converter
 <DOC>
 public defn to-radius (diam:Double) -> Double : diam / 2.0
 
+public defn to-point (pt:Point|[Double, Double]|[Int, Int]) -> Point :
+  match(pt):
+    (x:[Double, Double]|[Int, Int]): Point(x[0], x[1])
+    (x:Point): x
+
+public defn scale-pose (p:Pose, scale:Double) -> Pose :
+  val c* = scale * center(p)
+  sub-center(p, c*)
+
+public defn scale-pts (pts:Tuple<Point>, scale:Double) -> Tuple<Point> :
+  to-tuple $ for pt in pts seq:
+    scale * pt
+
+doc: \<DOC>
+Recursively scale the shapes of a Union
+<DOC>
+public defn scale-union (x:Shape|Union, scale:Double) -> Shape :
+  match(x):
+    (U:Union):
+      Union $ for obj in shapes(U) seq:
+        scale-union(obj, scale)
+    (y:Shape): scale-shape(y, scale)
+
+doc: \<DOC>
+Scale a Shape by a factor
+
+Scale in X/Y by factor `scale`
+<DOC>
+public defn scale-shape (s:Shape, scale:Double) -> Shape :
+  match(s):
+    (obj:Point): scale * obj
+    (obj:Circle):
+      Circle(scale * center(obj), scale * radius(obj))
+    (obj:Arc):
+      Arc(scale * center(obj), scale * radius(obj), start-angle(obj), angle(obj))
+    (obj:Rectangle):
+      val p* = scale-pose(pose(obj), scale)
+      Rectangle( width(obj) * scale, height(obj) * scale, p*)
+    (obj:Line):
+      val pts* = map(scale-shape{_, scale}, points(obj))
+      Line( width(obj) * scale, pts*)
+    (obj:Polyline):
+      val pts* = map(scale-shape{_, scale}, elements(obj))
+      Polyline( width(obj) * scale, pts* )
+    (obj:Text):
+      sub-pose{_, scale-pose(pose(obj), scale)} $ sub-size(obj, size(obj) * scale)
+    (obj:Polygon):
+      Polygon $ scale-pts(points(obj), scale)
+    (obj:Union):
+      scale-union(obj, scale)
+    (obj):
+      throw $ NotImplementedYet("Shape: %_" % [obj])
+    ; (obj:LineRectangle):
