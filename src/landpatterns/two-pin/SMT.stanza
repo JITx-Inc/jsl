@@ -6,6 +6,7 @@ defpackage jsl/landpatterns/two-pin/SMT:
 
   import jsl/errors
   import jsl/design/settings
+  import jsl/design/Classable
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
 

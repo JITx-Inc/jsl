@@ -6,6 +6,7 @@ defpackage jsl/landpatterns/VirtualLP:
   import jitx/commands
 
   import jsl/errors
+  import jsl/design/Classable
 
 doc: \<DOC>
 Base Type for the Elements of the Virtual Landpattern Tree
@@ -13,45 +14,7 @@ Base Type for the Elements of the Virtual Landpattern Tree
 This type provides an interface for the elements to provide
 the name/class labeling that will later be used for filtering.
 <DOC>
-public deftype VirtualElement
-
-doc: \<DOC>
-Optional Name for an Element
-
-In general, the name of each element in virtual landpattern container
-should be unique. Nothing prevents the user from using the same
-name for multiple elements, but functions that use the virtual landpattern
-functions may fail in subtle ways if they expect to find one element with
-a particular name.
-<DOC>
-public defmulti name? (v:VirtualElement) -> Maybe<String>
-
-doc: \<DOC>
-Optional Class Set for this Element
-
-The class set is used to indicate a set of elements that are
-serve a particular function. This is similar to the `class`
-attribute in `HTML` where they are used for styling among other
-things.
-<DOC>
-public defmulti class (v:VirtualElement) -> Vector<String>
-
-doc: \<DOC>
-Force name resolution from an element
-@throws ValueError If the element does not have a name
-<DOC>
-public defmulti name! (v:VirtualElement) -> String
-public defmethod name! (v:VirtualElement) -> String :
-  match(name?(v)):
-    (_:None): throw $ ValueError("VirtualElement has No Name")
-    (x:One<String>): value(x)
-
-
-public defn to-class-vector (x:Seqable<String>|String) -> Vector<String> :
-  val obj = match(x):
-    (y:String): [y]
-    (y:Seqable<String>): y
-  to-vector<String>(obj)
+public deftype VirtualElement <: Classable
 
 val DEF_VLP_LOC = loc(0.0, 0.0)
 

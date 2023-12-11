@@ -5,8 +5,10 @@ defpackage jsl/landpatterns/two-pin/radial:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
   import jsl/errors
+  import jsl/design/settings
+  import jsl/design/Classable
+
   import jsl/geometry/basics
   import jsl/geometry/box
   import jsl/geometry/LineRectangle

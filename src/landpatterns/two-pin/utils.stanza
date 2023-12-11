@@ -2,6 +2,7 @@ defpackage jsl/landpatterns/two-pin/utils:
   import core
   import jitx
   import jsl/design/settings
+  import jsl/design/Classable
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/leads
