@@ -1,6 +1,7 @@
 #use-added-syntax(jitx, tests)
 defpackage jsl/tests/utils:
   import core
+  import collections
   import jitx
   import jitx/commands
 
@@ -68,3 +69,49 @@ defpackage jsl/tests/utils:
       flip-x?(a) == flip-x?(b)
     ]
     all?({_}, checks)
+
+  public defn almost-equal? (a:Rectangle, b:Rectangle) -> True|False :
+    val checks = [
+      almost-equal?(pose(a), pose(b)),
+      almost-equal?(width(a), width(b)),
+      almost-equal?(height(a), height(b)),
+    ]
+    all?({_}, checks)
+
+  public defn almost-equal? (a:Circle, b:Circle) -> True|False :
+    val checks = [
+      almost-equal?(center(a), center(b)),
+      almost-equal?(radius(a), radius(b)),
+    ]
+    all?({_}, checks)
+
+  public defn almost-equal? (a:Line, b:Line) -> True|False :
+    label<True|False> return:
+      if length(points(a)) != length(points(b)) :
+        return(false)
+
+      val checks = to-vector<True|False> $ for (pt-a in points(a), pt-b in points(b)) seq:
+        almost-equal?(pt-a, pt-b)
+      add(checks, width(a) == width(b))
+
+      return $ all?({_}, checks)
+
+  public defn almost-equal? (a:Text, b:Text) -> True|False :
+    val checks = [
+      string(a) == string(b),
+      almost-equal?(size(a), size(b)),
+      almost-equal?(pose(a), pose(b)),
+      anchor(a) == anchor(b)
+    ]
+    all?({_}, checks)
+
+  public defn almost-equal? (a:Polygon, b:Polygon) -> True|False :
+    label<True|False> return:
+      if length(points(a)) != length(points(b)) :
+        return(false)
+
+      val checks = to-vector<True|False> $ for (pt-a in points(a), pt-b in points(b)) seq:
+        almost-equal?(pt-a, pt-b)
+
+      return $ all?({_}, checks)
+

@@ -61,3 +61,51 @@ deftest(geometry) test-bounds-contains?:
 
   #EXPECT(contains?(uut, Dims(0.5, 0.5)))
   #EXPECT(not contains?(uut, Dims(1.0, 2.0)))
+
+deftest(geometry) test-to-point:
+  val test-vectors = [
+    [Point(1.0, 2.0),  Point(1.0, 2.0)],
+    [[3,4], Point(3.0, 4.0)],
+    [[1.5, 3.2], Point(1.5, 3.2)]
+  ]
+
+  for test-vector in test-vectors do:
+    val [input, exp] = test-vector
+    val obs = to-point(input)
+    #EXPECT(almost-equal?(obs, exp))
+
+deftest(geometry) test-scale-shape:
+  val test-vectors = [
+    [[Point(0.0, 0.0), 3.0], Point(0.0, 0.0)],
+    [[Point(0.5, 0.75), 2.0], Point(1.0, 1.5)],
+    [[Circle(Point(0.2, 0.3), 0.3), 1.5], Circle(Point(0.3, 0.45), 0.45)]
+    [[Rectangle(2.5, 5.0, loc(0.25, 0.5)), 0.25], Rectangle(0.625, 1.25, loc(0.0625, 0.125))]
+    [[Line(0.4, [Point(0.2, 0.3), Point(-0.2, -0.1)]), 2.7], Line(1.08, [Point(0.54, 0.81), Point(-0.54, -0.27)])]
+    [[Text("asdf", 12.0, C, loc(2.0, -3.0)), 1.5], Text("asdf", 18.0, C, loc(3.0, -4.5))]
+    [
+      [Polygon([Point(0.2, 0.2), Point(-0.2, 0.2), Point(-0.2, -0.3), Point(0.2, -0.3)]), 1.5],
+      Polygon([Point(0.3, 0.3), Point(-0.3, 0.3), Point(-0.3, -0.45), Point(0.3, -0.45)])
+    ]
+  ]
+
+  for test-vector in test-vectors do:
+    val [input, exp] = test-vector
+    val [sh, scale] = input
+
+    val obs = scale-shape(sh, scale)
+    val exp* = exp as Shape
+    match(obs, exp*):
+      (a*:Point, b*:Point):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*:Rectangle, b*:Rectangle):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*:Circle, b*:Circle):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*:Line, b*:Line):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*:Text, b*:Text):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*:Polygon, b*:Polygon):
+        #EXPECT(almost-equal?(a*, b*))
+      (a*, b*):
+        #EXPECT("Unhandled Types" == "")
