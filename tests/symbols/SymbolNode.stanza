@@ -1,0 +1,127 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/symbols/SymbolNode:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/Classable
+  import jsl/symbols/SymbolNode
+  import jsl/tests/utils
+
+deftest(symbol-node) test-basic-node:
+
+  val root = SymbolNode()
+
+  #EXPECT(is-root?(root) == true)
+  #EXPECT(almost-equal?(get-scale(root), UNIT-TO-MM) )
+
+  #EXPECT(get-pins(root) == [])
+  #EXPECT(get-glyphs(root) == [])
+
+  add-pin(root, "c", [-1, 0])
+  add-pin(root, "a", [1, 0])
+  #EXPECT(length(get-pins(root)) == 2)
+
+  circle(root, 0.5, name = "circle")
+  #EXPECT(length(get-glyphs(root)) == 1)
+
+  pcb-symbol symb:
+    make-symbol(root)
+
+  val obj-pins = pins(symb)
+  #EXPECT(length(obj-pins) == 2)
+
+deftest(symbol-node) test-sn-hierarchy:
+  val root = SymbolNode()
+
+  #EXPECT(is-root?(root) == true)
+
+  val c1 = create-child(root, pose = loc(0.0, -5.0), class = ["q"])
+  val c2 = create-child(root, pose = loc(0.0, -3.0), class = ["q"])
+
+  #EXPECT(is-root?(c1) == false)
+  #EXPECT(is-root?(c2) == false)
+
+  var scale = get-scale(c1)
+  #EXPECT(scale == get-scale(root))
+
+  scale = get-scale(c2)
+  #EXPECT(scale == get-scale(root))
+
+  ; Add Stuff to C1
+  add-pin(c1, Ref("q")[1], [-1, 0])
+  add-pin(c1, Ref("q")[2], [1, 0])
+
+  rectangle(c1, 0.5, 0.5)
+
+  ; Add Stuff to C2
+
+  add-pin(c2, Ref("w")[1], [-1, 0], class = ["w"])
+  add-pin(c2, Ref("w")[2], [1, 0], class = ["w"])
+
+  polygon(c2, [[0.1, 0.2], [-0.1, -0.3], [0.4, -0.2]], name = "the-poly")
+
+  ; Do some checsk
+
+  ; Root
+  #EXPECT( length(get-pins(root)) == 4)
+  #EXPECT( length(get-glyphs(root)) == 2)
+
+  ; C1
+  #EXPECT( length(get-pins(c1)) == 2)
+  #EXPECT( length(get-glyphs(c1)) == 1)
+  #EXPECT( length(to-tuple $ elements(c1)) == 3)
+  ; C2
+  #EXPECT( length(get-pins(c2)) == 2)
+  #EXPECT( length(get-glyphs(c2)) == 1)
+  #EXPECT( length(to-tuple $ elements(c2)) == 3)
+
+
+  pcb-symbol sym:
+    make-symbol(root)
+
+  #EXPECT( length(pins(sym)) == 4)
+
+deftest(symbol-node) test-append-invalid-child:
+  val root = SymbolNode(name = "one-root-to-rule-them-all")
+  val c1 = create-child(root)
+
+  val root2 = SymbolNode(name = "one-root-to-bind-them")
+  val c2 = create-child(root2)
+
+  var msg = expect-throw( { append(root, c1)} )
+  #EXPECT( index-of-chars(value!(msg), "SymbolNode Child is already claimed") is-not False)
+
+  msg = expect-throw( { append(root, c2)} )
+  #EXPECT( index-of-chars(value!(msg), "SymbolNode Child is already claimed") is-not False)
+
+  ; I expect this to work correctly:
+  append(root, root2)
+  #EXPECT(length(children(root)) == 2)
+
+
+deftest(symbol-node) test-scale-propagation:
+
+  val root = SymbolNode(scale = 2.0)
+
+  val c1 = create-child(root)
+  val c2 = create-child(root, scale = 3.0)
+
+  #EXPECT(get-scale(root) == 2.0)
+  #EXPECT(get-scale(c1) == get-scale(root))
+  #EXPECT(get-scale(c2) == 3.0)
+
+  val c3  = create-child(c1, scale = 2.5)
+  #EXPECT(get-scale(c3) == 2.5)
+
+  val c4 = create-child(c2, name = "why-they-gotta-do-me-like-that")
+  #EXPECT(get-scale(c4) == 3.0)
+
+  #EXPECT(name?(c4) is-not None)
+
+
+
+
+
+
+
