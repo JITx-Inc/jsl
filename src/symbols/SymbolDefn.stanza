@@ -1,0 +1,113 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/SymbolDefn:
+  import core
+  import jitx
+
+  import jsl/symbols/SymbolNode
+
+public deftype SymbolDefn
+
+public defmulti name (x:SymbolDefn) -> String
+
+doc: \<DOC>
+Construct the Pin definitions for the symbol
+
+This function will create the pin definitions
+in the SymbolNode tree.
+<DOC>
+public defmulti build-pins (x:SymbolDefn, sn:SymbolNode)
+doc: \<DOC>
+Construct the artwork for the symbol
+
+This function will construct the glyphs necessary
+for the symbol and insert them into the SymbolNode tree.
+<DOC>
+public defmulti build-artwork (x:SymbolDefn, sn:SymbolNode)
+doc: \<DOC>
+Construct the reference designator for the symbol
+
+This function will generate the reference designator
+for the symbol and insert it into the SymbolNode tree.
+<DOC>
+public defmulti build-designator (x:SymbolDefn, sn:SymbolNode)
+
+doc: \<DOC>
+Construct any parameter text for the symbol
+
+This function constructs text for things like the
+resistance/capacitance/inductance value, voltage rating,
+or any other parameters that we want to show next to
+the symbol in the schematic.
+<DOC>
+public defmulti build-params (x:SymbolDefn, sn:SymbolNode)
+
+doc: \<DOC>
+Construct the symbol definition
+
+This method will construct symbol definition by
+calling the `build-*` functions in the passed
+SymbolNode tree.
+<DOC>
+public defmulti build-all (x:SymbolDefn, sn:SymbolNode)
+
+doc: \<DOC>
+Default `build-all` implementation
+
+The default implementation for build-all
+calls the `build-*` methods in the following
+order:
+
+1.  build-pins
+2.  build-artwork
+3.  build-designator
+4.  build-params
+<DOC>
+public defmethod build-all (x:SymbolDefn, sn:SymbolNode) :
+  build-pins(x, sn)
+  build-artwork(x, sn)
+  build-designator(x, sn)
+  build-params(x, sn)
+
+val DEF_SYM_POSE = loc(0.0, 0.0)
+doc: \<DOC>
+Generator for constructing symbol pins/glyphs
+
+<DOC>
+public defmulti make-all (
+  x:SymbolDefn
+  --
+  pose:Pose = ?
+  scale:Double = ?
+  )
+
+public defmethod make-all (
+  x:SymbolDefn
+  --
+  pose:Pose = DEF_SYM_POSE,
+  scale:Double = UNIT-TO-MM
+  ) :
+  inside pcb-symbol:
+    val root = SymbolNode(scale = scale)
+    build-all(x, root)
+    make-symbol(root, pose)
+
+public defmulti create-symbol (
+  x:SymbolDefn,
+  --
+  pose:Pose = ?,
+  scale:Double = ?
+  description:String = ?
+) -> SchematicSymbol
+
+public defmethod create-symbol (
+  x:SymbolDefn,
+  --
+  pose:Pose = DEF_SYM_POSE,
+  scale:Double = UNIT-TO-MM
+  description:String = ""
+) -> SchematicSymbol :
+  pcb-symbol sym:
+    name = name(x)
+    description = description
+    make-all(x, pose = pose, scale = scale)
+  sym
