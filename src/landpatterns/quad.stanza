@@ -21,12 +21,12 @@ defpackage jsl/landpatterns/quad:
   import jitx/commands
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/settings
   import jsl/landpatterns/IPC
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads
   import jsl/landpatterns/pads
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner

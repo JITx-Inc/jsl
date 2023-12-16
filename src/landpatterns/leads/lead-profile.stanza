@@ -3,9 +3,9 @@ defpackage jsl/landpatterns/leads/lead-profile:
   import core
   import jitx
 
+  import jsl/ensure
   import jsl/design/settings
   import jsl/landpatterns/leads/lead-types
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/IPC
 
 

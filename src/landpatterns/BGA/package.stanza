@@ -9,8 +9,8 @@ defpackage jsl/landpatterns/BGA/package:
   import jsl/geometry/basics
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/helpers
   import jsl/errors
+  import jsl/ensure
 
   import jsl/landpatterns/packages
   import jsl/landpatterns/leads

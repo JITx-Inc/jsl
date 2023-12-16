@@ -98,7 +98,7 @@ defpackage jsl/landpatterns/pads:
   import jitx/commands with:
     prefix(pad) => def-
 
-  import jsl/landpatterns/helpers
+  import jsl/ensure
   import jsl/geometry/basics
   import jsl/errors
 

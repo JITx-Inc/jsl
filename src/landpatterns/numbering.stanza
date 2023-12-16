@@ -2,6 +2,7 @@
 defpackage jsl/landpatterns/numbering:
   import core
   import jitx
+  import jsl/ensure
   import jsl/landpatterns/helpers
   import jsl/errors
 
