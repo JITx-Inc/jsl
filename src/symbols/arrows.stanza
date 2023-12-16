@@ -1,0 +1,114 @@
+doc: \<DOC>
+Many symbols have arrows in them - think
+potentiometer, variable inductors/transformers,
+LEDs, Photodiodes, etc.
+
+This file includes functions for constructing
+arrows and styling them.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/symbols/arrows:
+  import core
+  import jitx
+
+  import jsl/errors
+  import jsl/ensure
+
+doc: \<DOC>
+Select the style of arrow to construct
+<DOC>
+public defenum ArrowStyle :
+  ClosedArrow
+  OpenArrow
+
+; Settable Default Arrow Symbol Style ?
+
+val DEF_ARROW_STYLE = OpenArrow
+val DEF_HEAD_DIMS = Dims(0.25, 0.25)
+val DEF_SHAFT_LEN = 0.5
+val DEF_LINE_WIDTH = 0.05
+
+doc: \<DOC>
+Arrow Symbol Parameterization
+<DOC>
+public defstruct ArrowSymbolParams <: Equalable:
+  style:ArrowStyle
+  head-dims:Dims with: (
+    ensure => ensure-positive!,
+    updater => sub-head-dims,
+  )
+  shaft-length:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-shaft-length
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-line-width
+  )
+with:
+  constructor => #ArrowSymbolParams
+  printer => true
+  equalable => true
+
+public defn ArrowSymbolParams (
+  --
+  style:ArrowStyle = DEF_ARROW_STYLE,
+  head-dims:Dims = DEF_HEAD_DIMS,
+  shaft-length:Double = DEF_SHAFT_LEN,
+  line-width:Double = DEF_LINE_WIDTH
+  ) -> ArrowSymbolParams:
+
+  if x(head-dims) > shaft-length :
+    throw $ ValueError("Invalid Head Length - Must be less than shaft-length")
+  if style == ClosedArrow and (y(head-dims) / 2.0) < line-width :
+    throw $ ValueError("Invalid Head Width - Must be greater than line-width")
+
+  #ArrowSymbolParams(style, head-dims, shaft-length, line-width)
+
+public defn to-tuple (v:ArrowSymbolParams) -> [ArrowStyle, Dims, Double, Double] :
+  [style(v), head-dims(v), shaft-length(v), line-width(v)]
+
+
+var DEF_ARROW_PARAMS = ArrowSymbolParams()
+public defn get-default-arrow-symbol-params () -> ArrowSymbolParams : DEF_ARROW_PARAMS
+public defn set-default-arrow-symbol-params (v:ArrowSymbolParams) -> False :
+  DEF_ARROW_PARAMS = v
+
+doc: \<DOC>
+Construct a Arrow Shape from the provided specs
+This function constructs a `Union` shape that
+presents as an arrow. The arrow is constructed
+with the tip of the arrow at the origin (0,0)
+and the end of the arrow at `shaft-length` on
+the positive X axis.
+This symbol is constructed in symbol grid units.
+<DOC>
+public defn construct-arrow (v:ArrowSymbolParams) -> Shape:
+  val [style, head-dims, shaft-length, line-width] = to-tuple(v)
+  val start = Point(0.0, 0.0)
+  val end = Point(shaft-length, 0.0)
+  val shaft = Line(line-width, [start, end])
+  val [w, h] = [y(head-dims), x(head-dims)]
+  val pts = [Point(w, h / 2.0), Point(0.0, 0.0), Point(w, h / -2.0)]
+  val tip = match(style):
+    (_:ClosedArrow): Polygon(pts)
+    (_:OpenArrow): Line(line-width, pts)
+  Union([shaft, tip])
+
+doc: \<DOC>
+Helper for Constructing Arrow Shapes
+<DOC>
+public defn construct-arrow (
+  style:ArrowStyle = DEF_ARROW_STYLE
+  --
+  head-dims:Dims = DEF_HEAD_DIMS
+  shaft-length:Double = DEF_SHAFT_LEN
+  line-width:Double = DEF_LINE_WIDTH
+  ) -> Shape:
+  val v = ArrowSymbolParams(
+    style = style,
+    head-dims = head-dims,
+    shaft-length = shaft-length,
+    line-width = line-width
+    )
+  construct-arrow(v)
