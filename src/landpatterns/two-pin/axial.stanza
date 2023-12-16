@@ -3,10 +3,10 @@ defpackage jsl/landpatterns/two-pin/axial:
   import core
   import jitx
 
+  import jsl/ensure
   import jsl/design/settings
   import jsl/geometry/basics
   import jsl/landpatterns/leads
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/packages
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner

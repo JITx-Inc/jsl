@@ -6,10 +6,10 @@ defpackage jsl/landpatterns/QFN:
 
   import jsl/design/settings
   import jsl/errors
+  import jsl/ensure
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
   import jsl/landpatterns/quad
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/leads
   import jsl/landpatterns/packages
   import jsl/landpatterns/pad-planner

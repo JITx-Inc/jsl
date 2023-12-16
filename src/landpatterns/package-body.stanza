@@ -4,7 +4,7 @@ defpackage jsl/landpatterns/package-body:
   import jitx
   import jitx/commands
 
-  import jsl/landpatterns/helpers
+  import jsl/ensure
   import jsl/design/settings
   import jsl/geometry/basics with:
     prefix => jsl-

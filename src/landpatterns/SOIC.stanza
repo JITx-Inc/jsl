@@ -31,10 +31,10 @@ defpackage jsl/landpatterns/SOIC:
   import core
   import jitx
 
+  import jsl/ensure
   import jsl/design/settings
   import jsl/landpatterns/pads
   import jsl/landpatterns/leads
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/dual-row
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering

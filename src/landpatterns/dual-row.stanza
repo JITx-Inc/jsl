@@ -6,12 +6,12 @@ defpackage jsl/landpatterns/dual-row:
   import jitx/commands
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/settings
   import jsl/geometry/LineRectangle
   import jsl/geometry/basics
   import jsl/geometry/box
 
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/silkscreen
   import jsl/landpatterns/courtyard
   import jsl/landpatterns/packages

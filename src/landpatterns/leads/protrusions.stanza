@@ -9,7 +9,7 @@ defpackage jsl/landpatterns/leads/protrusions:
 
   import jsl/design/settings
   import jsl/errors
-  import jsl/landpatterns/helpers
+  import jsl/ensure
 
 ;TODO:
 ;  - BGA (table 3-17)

@@ -5,12 +5,12 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jitx
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/settings
   import jsl/design/Classable
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
 
-  import jsl/landpatterns/helpers
   import jsl/landpatterns/two-pin/SMT-table with:
     prefix => #SMT-
   import jsl/landpatterns/two-pin/utils
