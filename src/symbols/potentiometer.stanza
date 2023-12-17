@@ -1,0 +1,62 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/potentiometer:
+  import core
+  import collections
+  import jitx
+
+  import jsl/design/Classable
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/resistors
+  import jsl/symbols/arrows
+
+public defn PotentiometerGlyph (
+  symb:PotentiometerSymbol
+  --
+  res-params:ResistorSymbolParams = get-default-resistor-symbol-params()
+  arrow-params:ArrowSymbolParams = get-default-arrow-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph:
+  val r-shape = construct-resistor-shape(pitch(symb), res-params)
+  val w-start = amplitude(res-params)
+  val w-end = pitch(symb) / 2.0
+  val shaft-len = abs(w-end - w-start)
+  val arrow* = sub-shaft-length(arrow-params, shaft-len)
+  val arrow = loc((- w-start), 0.0, 180.0) * construct-arrow(arrow*)
+  val art = Union([r-shape, arrow]) as Shape
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defstruct PotentiometerSymbol <: ResistorSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Resistor Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:PotentiometerSymbol) -> String :
+  "Potentiometer"
+
+public defmethod build-pins (
+  x:PotentiometerSymbol,
+  node:SymbolNode
+  ) :
+  two-pin-build-pins(x, node)
+  val w = pitch(x) / 2.0
+  add-pin(node, Ref("wiper"), [(- w), 0.0], name = "pin-wiper")
+
+public defmethod build-artwork (
+  x:PotentiometerSymbol, sn:SymbolNode
+  ):
+  val g = PotentiometerGlyph(x)
+  append(sn, g)
+
+var CURR-RESISTOR-SYMBOL:TwoPinSymbol = ResistorSymbol()
+public defn get-default-resistor-symbol () : CURR-RESISTOR-SYMBOL
+public defn set-default-resistor-symbol (symb:TwoPinSymbol) :
+  CURR-RESISTOR-SYMBOL = symb
+

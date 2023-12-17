@@ -1,0 +1,14 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/potentiometer:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/potentiometer
+
+val symb-defn = PotentiometerSymbol()
+val symb = create-symbol(symb-defn)
+
+view(symb)
