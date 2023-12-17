@@ -1,0 +1,69 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/TwoPinSymbol:
+  import core
+  import jitx
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+
+; The user will use p[1] and p[2] to access
+;  the two pins of the component.
+doc: \<DOC>
+Default `Ref` for the `p` pin array.
+<DOC>
+public val PINREF = Ref(`p)
+
+doc: \<DOC>
+Typical Pitch for twp-pin components
+
+This value is in unitless schematic grid units
+and will depend on the scale factor.
+
+It is typically a good idea to use the same
+pitch for all two-pin components in a design to
+make it easier to swap components in and out of
+a series/parallel arrangement.
+<DOC>
+public val TWO_PIN_DEF_PITCH = 2.0
+
+doc: \<DOC>
+Base `SymbolDefn` for Two-Pin Component Symbols
+
+Two-pin components typically refer to components
+like resistors, capacitors, etc.
+
+This type will be the base `SymbolDefn` type for
+all two-pin component symbols. These symbols will:
+
+1.  Typically all use `p[1]` and `p[2]` as the two pins of the symbol
+2.  For Polarized components, `p[1]` is the anode and `p[2]` is the cathode.
+3.  Components are typically oriented vertically, ie, pins have an X coordinate equal to 0.0, and
+    the Y coordinate is +/- pitch / 2
+4.  The pitch of the component is
+<DOC>
+public defstruct TwoPinSymbol <: SymbolDefn :
+  pitch:Double with: (default => TWO_PIN_DEF_PITCH)
+
+public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
+  val w = pitch(x) / 2.0
+  add-pin(node, PINREF[1], [0.0,    w  ], name = "pin-1")
+  add-pin(node, PINREF[2], [0.0, (- w) ], name = "pin-2")
+
+public defmethod build-pins (x:TwoPinSymbol, node:SymbolNode) :
+  two-pin-build-pins(x, node)
+
+public defmethod build-designator (x:TwoPinSymbol, sn:SymbolNode) :
+  ; TODO - I want to be able to find the bounds of the
+  ;  symbol artwork and construct the reference designator
+  ;  in the appropriate spot that avoids all of the artwork.
+  ; TODO - make `font-size` parametric and configurable.
+  text(sn, [0.5, 0.5], ">REF", anchor = W, font-size = 8)
+
+
+public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
+  ; Same Idea as above- I want to detect where the
+  ;  default designator location should be and place it
+  ;  there.
+  ; TODO - fix anchor and font-size here.
+  text(sn, [0.5, -0.5], ">VALUE")
+
