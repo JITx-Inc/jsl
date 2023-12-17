@@ -1,0 +1,204 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/resistors:
+  import core
+  import collections
+  import jitx
+  import math
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/geometry/LineRectangle
+  import jsl/design/Classable
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/SymbolNode
+
+public defenum ResistorStyle:
+  TriangleWaveStyle
+  OpenRectangle
+
+val DEF_RES_STYLE = TriangleWaveStyle
+val DEF_PORCH_WIDTH = 0.25
+val DEF_AMPLITUDE = 0.25
+val DEF_PERIODS = 3.0
+val DEF_LINE_WIDTH = 0.05
+
+doc: \<DOC>
+Resistor Symbol Parameters
+
+These parameters define the characteristics
+of a triangle-wave style resistor sybmol.
+
+TODO - Diagram here showing parameters.
+<DOC>
+public defstruct ResistorSymbolParams <: Equalable:
+  style:ResistorStyle
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width
+  )
+  amplitude:Double with: (
+    ensure => ensure-positive!
+    updater => sub-amplitude
+  )
+  periods:Double with: (
+    ensure => ensure-positive!
+    updater => sub-periods
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+  )
+with:
+  constructor => #ResistorSymbolParams
+  printer => true
+  equalable => true
+
+public defn ResistorSymbolParams (
+  --
+  style:ResistorStyle = DEF_RES_STYLE
+  porch-width:Double = DEF_PORCH_WIDTH
+  amplitude:Double = DEF_AMPLITUDE
+  periods:Double = DEF_PERIODS
+  line-width:Double = DEF_LINE_WIDTH
+  ) -> ResistorSymbolParams :
+  #ResistorSymbolParams(style, porch-width, amplitude, periods, line-width)
+
+public defn to-tuple (p:ResistorSymbolParams) -> [ResistorStyle, Double, Double, Double, Double] :
+  [style(p), porch-width(p), amplitude(p), periods(p), line-width(p)]
+
+var DEF_RESISTOR_PARAMS = ResistorSymbolParams()
+public defn get-default-resistor-symbol-params () -> ResistorSymbolParams :
+  DEF_RESISTOR_PARAMS
+
+public defn set-default-resistor-symbol-params (v:ResistorSymbolParams) -> False :
+  DEF_RESISTOR_PARAMS = v
+
+public defn ResistorGlyph (
+  symb:ResistorSymbol,
+  --
+  params:ResistorSymbolParams = get-default-resistor-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+  val art = construct-resistor-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+doc: \<DOC>
+Construct a Resistor Shape based on a Triangle Wave
+
+This function constructs the shape for a canonical resistor
+symbol defined by a triangle wave.
+
+Coarse Example (except rotated 90 degrees):
+
+----/\/\/\----
+
+TODO - we should add a diagram here that outlines
+the parameterization of the symbol.
+
+Shape is computed as a Line in Symbol Grid Units
+
+@param pitch Distance between the two pins
+@param porch-width Distance from the pin to the
+start of the triangle wave.
+@param amplitude Triangle wave's height from 0 to peak amplitude.
+The peak-to-peak amplitude is `2.0 * amplitude`
+@param periods Number of cycles of the triangle wave to create.
+Note, whole- or half-numbers are typically render best.
+@param width Line width of the triangle wave.
+<DOC>
+public defn construct-resistor-shape (
+  pitch:Double,
+  params:ResistorSymbolParams
+  ) -> Shape:
+  val [style, porch-width, amplitude, periods, width] = to-tuple(params)
+
+  if porch-width > (pitch / 2.0) :
+    ; This is a minimum check. The symbol is going to look
+    ;  like trash if `porch-width` is even close to
+    ;  pitch / 2.0
+    throw $ ValueError("Invalid Porch Width for Resistor Sym: %_" % [porch-width])
+
+  val w = pitch / 2.0
+
+  val tri-start = w - porch-width
+  val total-w = 2.0 * tri-start
+  val period-w = total-w / periods
+
+  val x-lookup = [0.0, amplitude, 0.0, (- amplitude) ]
+
+  defn construct-triangle-wave () -> Seq<Point> :
+    generate<Point>:
+      ; Front Porch
+      yield(Point(0.0, (- w)))
+      yield(Point(0.0, (- tri-start)))
+
+      val quarter-periods = to-int(2.0 * ceil( periods / 0.5 ))
+      for i in 0 to quarter-periods do:
+        val y =  to-double(i) * (period-w / 4.0) - tri-start
+        val x = x-lookup[ i % 4 ]
+        yield(Point(x, y))
+
+      ; Back Porch
+      yield(Point(0.0, tri-start))
+      yield(Point(0.0, w))
+
+  defn construct-open-rect () -> Shape :
+    val front-porch = Line(width, [
+      Point(0.0, (- w)),
+      Point(0.0, (- tri-start)),
+    ])
+    val back-porch = Line(width, [
+      Point(0.0, tri-start)
+      Point(0.0, w)
+    ])
+    val rect = LineRectangle(2.0 * amplitude, total-w, line-width = width)
+    Union([front-porch, back-porch, rect])
+
+  match(style):
+    (_:TriangleWaveStyle): Line(width, to-tuple $ construct-triangle-wave())
+    (_:OpenRectangle): construct-open-rect()
+
+doc: \<DOC>
+Resistor Symbol Definition
+
+This is the base-line resistor symbol definition
+and provides a standard implementation with sane
+defaults.
+
+The user can customize the look and feel of the
+resistor symbol by using the `set-resistor-glyph`
+function.
+<DOC>
+public defstruct ResistorSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Resistor Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:ResistorSymbol) -> String :
+  "Resistor"
+
+public defmethod build-artwork (
+  x:ResistorSymbol, sn:SymbolNode
+  ):
+  val g = ResistorGlyph(x)
+  append(sn, g)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Resistor Symbol Management
+
+var CURR-RESISTOR-SYMBOL:TwoPinSymbol = ResistorSymbol()
+public defn get-default-resistor-symbol () : CURR-RESISTOR-SYMBOL
+public defn set-default-resistor-symbol (symb:TwoPinSymbol) :
+  CURR-RESISTOR-SYMBOL = symb
+
+
