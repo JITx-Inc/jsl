@@ -7,7 +7,7 @@ defpackage jsl/ensure:
 
 public defn ensure-positive! (
   field:String,
-  value: Int|Long|Double|Float|Toleranced|Dims
+  value: Int|Long|Double|Float|Toleranced|Dims|Percentage
   ) :
   val fail = match(value):
     (x:Int): x <= 0
@@ -18,16 +18,18 @@ public defn ensure-positive! (
       min-value(t) <= 0.0
     (d:Dims):
       x(d) <= 0.0 or y(d) <= 0.0
+    (p:Percentage):
+      p <= (0 %)
   if fail:
     throw $ ValueError("%_: Expects Positive Number: %_" % [field, value])
 
 public defn ensure-positive! (
   field:String,
-  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims>
+  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims|Percentage>
 ) :
   match(value?):
     (x:None): false
-    (x:One<Int|Long|Double|Float|Toleranced|Dims>): ensure-positive!(field, value(x))
+    (x:One<Int|Long|Double|Float|Toleranced|Dims|Percentage>): ensure-positive!(field, value(x))
 
 doc: \<DOC>
 Check if the passed value is both positive and even
@@ -59,7 +61,7 @@ public defn ensure-divisible! (value:Int, divisor:Int, name: String) :
 doc: \<DOC>
 Check if the value is non-negative (ie, zero or greater)
 <DOC>
-public defn ensure-non-negative! (field:String, value:Int|Long|Double|Float|Toleranced|Dims):
+public defn ensure-non-negative! (field:String, value:Int|Long|Double|Float|Toleranced|Dims|Percentage):
   val fail = match(value):
     (x:Int): x < 0
     (x:Long): x < 0L
@@ -69,14 +71,16 @@ public defn ensure-non-negative! (field:String, value:Int|Long|Double|Float|Tole
       min-value(t) < 0.0
     (d:Dims):
       x(d) < 0.0 or y(d) < 0.0
+    (p:Percentage):
+      p < (0 %)
   if fail:
     throw $ ValueError("%_: Expects Non-Negative Number: %_" % [field, value])
 
 public defn ensure-non-negative! (
   field:String,
-  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims>
+  value?:Maybe<Int|Long|Double|Float|Toleranced|Dims|Percentage>
 ) :
   match(value?):
     (x:None): false
-    (x:One<Int|Long|Double|Float|Toleranced|Dims>): ensure-non-negative!(field, value(x))
+    (x:One<Int|Long|Double|Float|Toleranced|Dims|Percentage>): ensure-non-negative!(field, value(x))
 
