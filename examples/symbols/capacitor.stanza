@@ -1,0 +1,17 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/capacitor:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/capacitors
+
+set-default-polarized-cap-symbol-params(
+  PolarizedCapacitorSymbolParams(style = Polarized-Curved-Style)
+)
+val symb-defn = PolarizedCapacitorSymbol()
+val symb = create-symbol(symb-defn)
+
+view(symb)
