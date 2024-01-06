@@ -253,7 +253,7 @@ public defmethod shape-generator (x:Pin1-PadPlanner, row:Int, column:Int) -> (Di
   else: false
 
 doc: \<DOC>
-Chamfered Corner Shapper
+Chamfered Corner Shaper
 
 This function is intended to be used with {@link Corner-PadPlanner}
 to implement the differential corner pads.
