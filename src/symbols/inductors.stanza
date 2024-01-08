@@ -1,0 +1,151 @@
+defpackage jsl/symbols/inductors:
+  import core
+  import jitx
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/design/Classable
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/SymbolNode
+  import jsl/geometry/basics
+
+public defenum InductorCoreStyle:
+  NoBarCore
+  SingleBarCore
+  DoubleBarCore
+
+public defstruct InductorSymbolParams <: Equalable:
+  core-style:InductorCoreStyle with: (
+    updater => sub-core-style
+  )
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width
+  )
+  periods:Int with: (
+    ensure => ensure-positive!
+    updater => sub-periods
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+  )
+with:
+  constructor => #InductorSymbolParams
+  printer => true
+  equalable => true
+
+val DEF_CORE_STYLE = NoBarCore
+val DEF_PORCH_WIDTH = 0.25
+val DEF_PERIODS = 3
+val DEF_LINE_WIDTH = 0.05
+
+public defn InductorSymbolParams (
+  --
+  core-style:InductorCoreStyle = DEF_CORE_STYLE
+  porch-width:Double = DEF_PORCH_WIDTH
+  periods:Int = DEF_PERIODS
+  line-width:Double = DEF_LINE_WIDTH
+  ) -> InductorSymbolParams :
+  #InductorSymbolParams(core-style, porch-width, periods, line-width)
+
+public defn to-tuple (p:InductorSymbolParams) -> [InductorCoreStyle, Double, Int, Double] :
+  [core-style(p), porch-width(p), periods(p), line-width(p)]
+
+var DEF_INDUCTOR_PARAMS = InductorSymbolParams()
+public defn get-default-inductor-symbol-params () -> InductorSymbolParams :
+  DEF_INDUCTOR_PARAMS
+
+public defn set-default-inductor-symbol-params (v:InductorSymbolParams) -> False :
+  DEF_INDUCTOR_PARAMS = v
+
+
+public defn InductorGlyph (
+  symb:InductorSymbol,
+  --
+  params:InductorSymbolParams = get-default-inductor-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph:
+  val art = construct-inductor-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-inductor-shape (
+  pitch:Double,
+  params:InductorSymbolParams
+  ) -> Shape:
+  val [core-style, porch-width, periods, line-width] = to-tuple(params)
+
+  val w = pitch / 2.0
+
+  if porch-width > w:
+    throw $ ValueError("Invalid Porch Width for Inductor Symbol")
+
+  val circ-start = w - porch-width
+  val circ-width = 2.0 * circ-start
+  val diam = circ-width / to-double(periods)
+
+  val front-porch = Line(line-width, [Point(0.0, w), Point(0.0, circ-start)])
+  val back-porch = Line(line-width, [Point(0.0, (- w)), Point(0.0, (- circ-start))])
+
+  val wind-r = to-radius(diam)
+
+  val arcs = to-tuple $ for i in 0 to periods seq:
+    Arc(
+      Point(0.0, circ-start - wind-r - (to-double(i) * diam)),
+      wind-r,
+      90.0,
+      180.0
+    )
+
+  val winding = Polyline(line-width, arcs)
+
+  val core-x = (- (wind-r + 3. * line-width))
+  val core-lines = match(core-style):
+    (_:NoBarCore): []
+    (_:SingleBarCore): [
+      Line(line-width, [
+        Point(core-x, circ-start)
+        Point(core-x, (- circ-start))
+      ])
+    ]
+    (_:DoubleBarCore): [
+      Line(line-width, [
+        Point(core-x, circ-start)
+        Point(core-x, (- circ-start))
+      ])
+      Line(line-width, [
+        Point(core-x - (3. * line-width), circ-start)
+        Point(core-x  - (3. * line-width), (- circ-start))
+      ])
+    ]
+
+
+  val comps = [front-porch, winding, back-porch]
+  Union(cat(comps, core-lines))
+
+
+public defstruct InductorSymbol <: TwoPinSymbol :
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:InductorSymbol) -> String :
+  "Inductor"
+
+public defmethod build-artwork (
+  x:InductorSymbol, sn:SymbolNode
+  ):
+  val g = InductorGlyph(x)
+  append(sn, g)
+
+
+var CURR-INDUCTOR-SYMBOL:TwoPinSymbol = InductorSymbol()
+public defn get-default-inductor-symbol () : CURR-INDUCTOR-SYMBOL
+public defn set-default-inductor-symbol (symb:TwoPinSymbol) :
+  CURR-INDUCTOR-SYMBOL = symb
