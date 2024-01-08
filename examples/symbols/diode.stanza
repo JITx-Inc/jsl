@@ -1,0 +1,18 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/diode:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/diodes
+
+val oldParams = get-default-photo-diode-symbol-params()
+val newParams = sub-body-dims(oldParams, Dims(0.85, 0.85)) as PhotoDiodeSymbolParams
+set-default-photo-diode-symbol-params(newParams)
+
+val symb-defn = PhotoDiodeSymbol()
+val symb = create-symbol(symb-defn)
+
+view(symb)
