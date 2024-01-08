@@ -1,0 +1,782 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/diodes:
+  import core
+  import jitx
+
+  import jsl/errors
+  import jsl/ensure
+
+  import jsl/design/Classable
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/arrows
+
+
+val DEF_BODY_WIDTH = 0.6
+val DEF_LINE_WIDTH = 0.05
+val DEF_FILLED? = false
+
+doc: \<DOC>
+Base Diode Symbol Parameters
+
+These parameters define the features of a generic
+diode symbol without accoutrements.
+
+    |
+  =====
+   / \
+  /   \
+  -----
+    |
+
+The `pitch` of the two-pin component defines the overall length.
+
+
+<DOC>
+public defstruct DiodeSymbolParams <: Equalable :
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+  )
+  filled?:True|False with: (
+    updater => sub-filled?
+  )
+with:
+  constructor => #DiodeSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn DiodeSymbolParams (
+  --
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+) -> DiodeSymbolParams :
+  #DiodeSymbolParams(body-dims, line-width, filled?)
+
+public defn to-tuple (p:DiodeSymbolParams) -> [Double|Dims, Double, True|False]:
+  [body-dims(p), line-width(p), filled?(p)]
+
+public defn compute-body-start (p:DiodeSymbolParams) -> Double :
+  match(body-dims(p)):
+    (w:Double):
+      ; We use a square aspect ratio for the symbol
+      ;  based on the `body-width`
+      w / 2.0
+    (d:Dims):
+      y(d) / 2.0
+
+public defn body-width (p:DiodeSymbolParams) -> Double :
+  match(body-dims(p)):
+    (w:Double): w
+    (d:Dims): x(d)
+
+var DEF_DIODE_PARAMS = DiodeSymbolParams()
+public defn get-default-diode-symbol-params () -> DiodeSymbolParams :
+  DEF_DIODE_PARAMS
+
+public defn set-default-diode-symbol-params (v:DiodeSymbolParams) -> False :
+  DEF_DIODE_PARAMS = v
+
+
+public defn DiodeGlyph (
+  symb:DiodeSymbol,
+  --
+  params:DiodeSymbolParams = get-default-diode-symbol-params(),
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-diode-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-diode-shape (
+  pitch:Double,
+  params:DiodeSymbolParams
+  ) -> Shape:
+
+  val [body-dims, line-width, filled?] = to-tuple(params)
+
+  val bw2 = body-width(params) / 2.0
+  val p2 = pitch / 2.0
+
+  val h = compute-body-start(params)
+
+  if h > p2 :
+    throw $ ValueError("Invalid Diode Symbol Dimension: Body is too Large: body=%_ pitch=%_" % [body-dims, pitch])
+
+  val front-porch = Line(line-width, [Point(0.0, p2), Point(0.0, h)])
+  val T-bar = Line(line-width, [ Point( (- bw2), h), Point(bw2, h)])
+
+  val tri-pts = [Point(0.0, h), Point(bw2, (- h)), Point((- bw2), (- h)), Point(0.0, h)]
+  val triangle = if filled?:
+    Polygon(tri-pts)
+  else:
+    Line(line-width, tri-pts)
+
+  val back-porch = Line(line-width, [Point(0.0, (- h)), Point(0.0, (- p2))])
+  Union([front-porch, T-bar, triangle, back-porch])
+
+
+public defstruct DiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:DiodeSymbol) -> String :
+  "Diode"
+
+public defmethod build-artwork (
+  x:DiodeSymbol, sn:SymbolNode
+  ):
+  val g = DiodeGlyph(x)
+  append(sn, g)
+
+
+var CURR-DIODE-SYMBOL:TwoPinSymbol = DiodeSymbol()
+public defn get-default-diode-symbol () : CURR-DIODE-SYMBOL
+public defn set-default-diode-symbol (symb:TwoPinSymbol) :
+  CURR-DIODE-SYMBOL = symb
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Schottky Diode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
+
+  wing-size:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-wing-size
+  )
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?,
+    as-method => true
+  )
+with:
+  constructor => #SchottkyDiodeSymbolParams
+  equalable => true
+  printer => true
+
+val DEF_WING_SIZE = 0.1
+
+public defn SchottkyDiodeSymbolParams (
+  --
+  wing-size:Double = DEF_WING_SIZE
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+) -> SchottkyDiodeSymbolParams :
+  #SchottkyDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
+
+public defn sub-base-params (p:SchottkyDiodeSymbolParams, b:DiodeSymbolParams) -> SchottkyDiodeSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as SchottkyDiodeSymbolParams}
+
+var CUSTOM_SCHOTTKY_PARAMS:True|False = false
+var DEF_SCHOTTKY_DIODE_PARAMS = SchottkyDiodeSymbolParams()
+public defn get-default-schottky-diode-symbol-params () -> SchottkyDiodeSymbolParams :
+  if CUSTOM_SCHOTTKY_PARAMS:
+    DEF_SCHOTTKY_DIODE_PARAMS
+  else:
+    sub-base-params(DEF_SCHOTTKY_DIODE_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the schottky diode symbol modifies the base parameters
+<DOC>
+defn check-non-base-defaults (p:SchottkyDiodeSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-schottky-diode-symbol-params (v:SchottkyDiodeSymbolParams) -> False :
+  CUSTOM_SCHOTTKY_PARAMS = check-non-base-defaults(v)
+  DEF_SCHOTTKY_DIODE_PARAMS = v
+
+public defn SchottkyDiodeGlyph (
+  symb:SchottkyDiodeSymbol,
+  --
+  params:SchottkyDiodeSymbolParams = get-default-schottky-diode-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-schottky-diode-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-schottky-diode-shape (pitch:Double, params:SchottkyDiodeSymbolParams) -> Shape :
+  val body = construct-diode-shape(pitch, params)
+
+  val [body-dims, line-width, filled?] = to-tuple(params)
+  val wing-size = wing-size(params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+
+  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size)), Point(wing-size, (- wing-size))])
+
+  val L-wing = loc((- bw2), h) * wing-shape
+  val R-wing = loc(bw2, h, 180.0) * wing-shape
+
+  Union([L-wing, body, R-wing])
+
+public defstruct SchottkyDiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:SchottkyDiodeSymbol) -> String :
+  "SchottkyDiode"
+
+public defmethod build-artwork (
+  x:SchottkyDiodeSymbol, sn:SymbolNode
+  ):
+  val g = SchottkyDiodeGlyph(x)
+  append(sn, g)
+
+var CURR-SCHOTTKY-DIODE-SYMBOL:TwoPinSymbol = SchottkyDiodeSymbol()
+public defn get-default-schottky-diode-symbol () : CURR-SCHOTTKY-DIODE-SYMBOL
+public defn set-default-schottky-diode-symbol (symb:TwoPinSymbol) :
+  CURR-SCHOTTKY-DIODE-SYMBOL = symb
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Zener Diode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
+
+  wing-size:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-wing-size
+  )
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?,
+    as-method => true
+  )
+with:
+  constructor => #ZenerDiodeSymbolParams
+  equalable => true
+  printer => true
+
+val DEF_ZENER_WING_SIZE = 0.1
+
+public defn ZenerDiodeSymbolParams (
+  --
+  wing-size:Double = DEF_ZENER_WING_SIZE
+  body-dims:Double|Dims = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+) -> ZenerDiodeSymbolParams :
+  #ZenerDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
+
+public defn sub-base-params (p:ZenerDiodeSymbolParams, b:DiodeSymbolParams) -> ZenerDiodeSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as ZenerDiodeSymbolParams}
+
+var CUSTOM_ZENER_PARAMS:True|False = false
+var DEF_ZENER_DIODE_PARAMS = ZenerDiodeSymbolParams()
+public defn get-default-zener-diode-symbol-params () -> ZenerDiodeSymbolParams :
+  if CUSTOM_ZENER_PARAMS:
+    DEF_ZENER_DIODE_PARAMS
+  else:
+    sub-base-params(DEF_ZENER_DIODE_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the zener diode symbol modifies the base parameters
+
+This helps implement the logic that allows the user to modify
+only the `DEF_NON_POL_PARAMS` and have this propagate to
+the `DEF_POL_PARAMS`
+<DOC>
+defn check-non-base-defaults (p:ZenerDiodeSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-zener-diode-symbol-params (v:ZenerDiodeSymbolParams) -> False :
+  CUSTOM_ZENER_PARAMS = check-non-base-defaults(v)
+  DEF_ZENER_DIODE_PARAMS = v
+
+public defn ZenerDiodeGlyph (
+  symb:ZenerDiodeSymbol,
+  --
+  params:ZenerDiodeSymbolParams = get-default-zener-diode-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-zener-diode-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-zener-diode-shape (pitch:Double, params:ZenerDiodeSymbolParams) -> Shape :
+  val body = construct-diode-shape(pitch, params)
+
+  val [body-dims, line-width, filled?] = to-tuple(params)
+  val wing-size = wing-size(params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+
+  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point((- wing-size), (- wing-size))])
+
+  val L-wing = loc((- bw2), h) * wing-shape
+  val R-wing = loc(bw2, h, 180.0) * wing-shape
+
+  Union([L-wing, body, R-wing])
+
+public defstruct ZenerDiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:ZenerDiodeSymbol) -> String :
+  "ZenerDiode"
+
+public defmethod build-artwork (
+  x:ZenerDiodeSymbol, sn:SymbolNode
+  ):
+  val g = ZenerDiodeGlyph(x)
+  append(sn, g)
+
+var CURR-ZENER-DIODE-SYMBOL:TwoPinSymbol = ZenerDiodeSymbol()
+public defn get-default-zener-diode-symbol () : CURR-ZENER-DIODE-SYMBOL
+public defn set-default-zener-diode-symbol (symb:TwoPinSymbol) :
+  CURR-ZENER-DIODE-SYMBOL = symb
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Tunnel Diode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
+
+  wing-size:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-wing-size
+  )
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?,
+    as-method => true
+  )
+with:
+  constructor => #TunnelDiodeSymbolParams
+  equalable => true
+  printer => true
+
+val DEF_TUNNEL_WING_SIZE = 0.1
+
+public defn TunnelDiodeSymbolParams (
+  --
+  wing-size:Double = DEF_TUNNEL_WING_SIZE
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+) -> TunnelDiodeSymbolParams :
+  #TunnelDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
+
+public defn sub-base-params (p:TunnelDiodeSymbolParams, b:DiodeSymbolParams) -> TunnelDiodeSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as TunnelDiodeSymbolParams}
+
+var CUSTOM_TUNNEL_PARAMS:True|False = false
+var DEF_TUNNEL_DIODE_PARAMS = TunnelDiodeSymbolParams()
+public defn get-default-tunnel-diode-symbol-params () -> TunnelDiodeSymbolParams :
+  if CUSTOM_TUNNEL_PARAMS:
+    DEF_TUNNEL_DIODE_PARAMS
+  else:
+    sub-base-params(DEF_TUNNEL_DIODE_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the tunnel diode symbol modifies the base parameters
+<DOC>
+defn check-non-base-defaults (p:TunnelDiodeSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-tunnel-diode-symbol-params (v:TunnelDiodeSymbolParams) -> False :
+  CUSTOM_TUNNEL_PARAMS = check-non-base-defaults(v)
+  DEF_TUNNEL_DIODE_PARAMS = v
+
+public defn TunnelDiodeGlyph (
+  symb:TunnelDiodeSymbol,
+  --
+  params:TunnelDiodeSymbolParams = get-default-tunnel-diode-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-tunnel-diode-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-tunnel-diode-shape (pitch:Double, params:TunnelDiodeSymbolParams) -> Shape :
+  val body = construct-diode-shape(pitch, params)
+
+  val [body-dims, line-width, filled?] = to-tuple(params)
+  val wing-size = wing-size(params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+
+  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size))])
+
+  val L-wing = loc((- bw2), h) * wing-shape
+  val R-wing = loc(bw2, h) * wing-shape
+
+  Union([L-wing, body, R-wing])
+
+public defstruct TunnelDiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:TunnelDiodeSymbol) -> String :
+  "TunnelDiode"
+
+public defmethod build-artwork (
+  x:TunnelDiodeSymbol, sn:SymbolNode
+  ):
+  val g = TunnelDiodeGlyph(x)
+  append(sn, g)
+
+var CURR-TUNNEL-DIODE-SYMBOL:TwoPinSymbol = TunnelDiodeSymbol()
+public defn get-default-tunnel-diode-symbol () : CURR-TUNNEL-DIODE-SYMBOL
+public defn set-default-tunnel-diode-symbol (symb:TwoPinSymbol) :
+  CURR-TUNNEL-DIODE-SYMBOL = symb
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Light Emitting Diode (LED)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+public defstruct LEDSymbolParams <: DiodeSymbolParams :
+
+  arrow-params:ArrowSymbolParams with: (
+    updater => sub-arrow-params
+  )
+
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?,
+    as-method => true
+  )
+with:
+  constructor => #LEDSymbolParams
+  equalable => true
+  printer => true
+
+public defn compute-default-arrows (body-dims:Double|Dims, line-width:Double) -> ArrowSymbolParams :
+  defn compute-defaults (w:Double) -> [Double, Double] :
+    val l = w * (50.0 %)
+    val h = w * (20.0 %)
+    [h, l]
+
+  val [h, l] = match(body-dims):
+    (w:Double): compute-defaults(w)
+    (d:Dims): compute-defaults $ x(d)
+
+  ArrowSymbolParams(
+    head-dims = Dims(h, h),
+    shaft-length = l,
+    line-width = line-width
+  )
+
+public defn LEDSymbolParams (
+  --
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  arrow-params:ArrowSymbolParams = compute-default-arrows(body-dims, line-width)
+  filled?:True|False = DEF_FILLED?
+) -> LEDSymbolParams :
+  #LEDSymbolParams(arrow-params, body-dims, line-width, filled?)
+
+public defn sub-base-params (p:LEDSymbolParams, b:DiodeSymbolParams) -> LEDSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as LEDSymbolParams}
+
+var CUSTOM_LED_PARAMS:True|False = false
+var DEF_LED_PARAMS = LEDSymbolParams()
+public defn get-default-led-symbol-params () -> LEDSymbolParams :
+  if CUSTOM_LED_PARAMS:
+    DEF_LED_PARAMS
+  else:
+    sub-base-params(DEF_LED_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the tunnel diode symbol modifies the base parameters
+<DOC>
+defn check-non-base-defaults (p:LEDSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-led-symbol-params (v:LEDSymbolParams) -> False :
+  CUSTOM_LED_PARAMS = check-non-base-defaults(v)
+  DEF_LED_PARAMS = v
+
+public defn LEDGlyph (
+  symb:LEDSymbol,
+  --
+  params:LEDSymbolParams = get-default-led-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-led-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-led-shape (pitch:Double, params:LEDSymbolParams) -> Shape :
+  val body = construct-diode-shape(pitch, params)
+
+  val arrow-params = arrow-params(params)
+  val arrow = construct-arrow(arrow-params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+  val angle = (- 30.0)
+
+  val shaft = shaft-length(arrow-params)
+  val x-off = (- (bw2 + (1.2 * shaft)))
+  val y-off = (h / 2.0)
+  val y-adj = 0.3 * y-off
+  val L-wing = loc(x-off, y-adj + y-off, angle) * arrow
+  val R-wing = loc(x-off, (y-adj - y-off), angle) * arrow
+
+  Union([L-wing, body, R-wing])
+
+public defstruct LEDSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:LEDSymbol) -> String :
+  "LED"
+
+public defmethod build-artwork (
+  x:LEDSymbol, sn:SymbolNode
+  ):
+  val g = LEDGlyph(x)
+  append(sn, g)
+
+var CURR-LED-SYMBOL:TwoPinSymbol = LEDSymbol()
+public defn get-default-led-symbol () : CURR-LED-SYMBOL
+public defn set-default-led-symbol (symb:TwoPinSymbol) :
+  CURR-LED-SYMBOL = symb
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PhotoDiode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defstruct PhotoDiodeSymbolParams <: DiodeSymbolParams :
+
+  arrow-params:ArrowSymbolParams with: (
+    updater => sub-arrow-params
+  )
+
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?,
+    as-method => true
+  )
+with:
+  constructor => #PhotoDiodeSymbolParams
+  equalable => true
+  printer => true
+
+public defn PhotoDiodeSymbolParams (
+  --
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  arrow-params:ArrowSymbolParams = compute-default-arrows(body-dims, line-width)
+  filled?:True|False = DEF_FILLED?
+) -> PhotoDiodeSymbolParams :
+  #PhotoDiodeSymbolParams(arrow-params, body-dims, line-width, filled?)
+
+public defn sub-base-params (p:PhotoDiodeSymbolParams, b:DiodeSymbolParams) -> PhotoDiodeSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as PhotoDiodeSymbolParams}
+
+var CUSTOM_PHOTO_PARAMS:True|False = false
+var DEF_PHOTO_DIODE_PARAMS = PhotoDiodeSymbolParams()
+public defn get-default-photo-diode-symbol-params () -> PhotoDiodeSymbolParams :
+  if CUSTOM_PHOTO_PARAMS:
+    DEF_PHOTO_DIODE_PARAMS
+  else:
+    sub-base-params(DEF_PHOTO_DIODE_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the tunnel diode symbol modifies the base parameters
+<DOC>
+defn check-non-base-defaults (p:PhotoDiodeSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-photo-diode-symbol-params (v:PhotoDiodeSymbolParams) -> False :
+  CUSTOM_PHOTO_PARAMS = check-non-base-defaults(v)
+  DEF_PHOTO_DIODE_PARAMS = v
+
+public defn PhotoDiodeGlyph (
+  symb:PhotoDiodeSymbol,
+  --
+  params:PhotoDiodeSymbolParams = get-default-photo-diode-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-photo-diode-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+public defn construct-photo-diode-shape (pitch:Double, params:PhotoDiodeSymbolParams) -> Shape :
+  val body = construct-diode-shape(pitch, params)
+
+  val arrow-params = arrow-params(params)
+  val arrow = construct-arrow(arrow-params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+
+  val angle = (- (30.0 + 180.0))
+
+  val x-off = (- (1.2 * bw2)  )
+  val y-off = (h / 2.0)
+  val y-adj = 0.3 * y-off
+  val L-wing = loc(x-off, y-adj + y-off, angle) * arrow
+  val R-wing = loc(x-off, (y-adj - y-off), angle) * arrow
+
+  Union([L-wing, body, R-wing])
+
+public defstruct PhotoDiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:PhotoDiodeSymbol) -> String :
+  "PhotoDiode"
+
+public defmethod build-artwork (
+  x:PhotoDiodeSymbol, sn:SymbolNode
+  ):
+  val g = PhotoDiodeGlyph(x)
+  append(sn, g)
+
+var CURR-PHOTO-DIODE-SYMBOL:TwoPinSymbol = PhotoDiodeSymbol()
+public defn get-default-photo-diode-symbol () : CURR-PHOTO-DIODE-SYMBOL
+public defn set-default-photo-diode-symbol (symb:TwoPinSymbol) :
+  CURR-PHOTO-DIODE-SYMBOL = symb
