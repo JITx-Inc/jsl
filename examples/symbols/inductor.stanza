@@ -1,0 +1,18 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/inductor:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/inductors
+
+val oldParams = get-default-inductor-symbol-params()
+val newParams = sub-core-style(oldParams, SingleBarCore)
+set-default-inductor-symbol-params(newParams)
+
+val symb-defn = InductorSymbol()
+val symb = create-symbol(symb-defn)
+
+view(symb)
