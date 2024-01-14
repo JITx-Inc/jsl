@@ -336,8 +336,8 @@ doc: \<DOC>
 Cathode/Anode Numbering Scheme
 
 This numbering scheme is used for any two-pin component with
-polarity. This allows us to differentiate the positive (`c`) from the
-negative (`a`) terminals.
+polarity. This allows us to differentiate the positive (anode, `a`) from the
+negative (cathode, `c`) terminals.
 <DOC>
 public deftype C-A-Numbering <: Numbering
 
@@ -351,5 +351,5 @@ public defmethod to-pad-id (x:C-A-Numbering, row:Int, column:Int) -> Int|Ref :
   if (row > 1 or column > 0):
     throw $ ValueError("Invalid Row or Column Index: r=%_ in [0,1] or c=%_ in [0]" % [row, column])
 
-  if row == 0: Ref("c")
-  else: Ref("a")
+  if row == 0: Ref("a")
+  else: Ref("c")

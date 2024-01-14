@@ -138,16 +138,6 @@ This type is used to define the packages for common
 SMT passive components like resistors, capacitors, etc. These
 packages are typically named `0603`, `0805`, etc.
 
-@param def
-@param polarized? Indicates whether to use the Cathode/Anode
-style pad numbering or standard `p[1]/p[2]` style numbering.
-@param side-fillet Optional excess side fillet. This is useful
-for packages like capacitors where the lead can cover all 5 surfaces
-of the end of the package. If `false`, then no excess side-fillet area
-is added. If this value is not `false`, then this value will be
-added to both sides of the pad. This will increase its total width by `2.0 * side-fillet`
-@param
-
 <DOC>
 public defstruct SMT-Chip <: Package :
   doc: \<DOC>
@@ -155,7 +145,7 @@ public defstruct SMT-Chip <: Package :
   <DOC>
   def:SMT-Chip-Def
   doc: \<DOC>
-  Indicates whether to use the Cathode/Anode style pad numbering or standard `p[1]/p[2]` style numbering.
+  Indicates whether to use the Anode/Cathode style pad numbering or standard `p[1]/p[2]` style numbering.
   <DOC>
   polarized?:True|False
   doc: \<DOC>

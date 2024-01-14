@@ -69,10 +69,10 @@ deftest(two-pin) test-basic-radial:
 
       val r = ref(lp-pad)
       if i == 0:
-        #EXPECT(r == Ref("c"))
+        #EXPECT(r == Ref("a"))
         #EXPECT(almost-equal?(y(pos), 1.75))
       else:
-        #EXPECT(r == Ref("a"))
+        #EXPECT(r == Ref("c"))
         #EXPECT(almost-equal?(y(pos), -1.75))
 
       expect-empty-others(p, not-empty)

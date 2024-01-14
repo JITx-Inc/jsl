@@ -69,10 +69,10 @@ deftest(two-pin) test-basic-axial:
 
       val r = ref(lp-pad)
       if i == 0:
-        #EXPECT(r == Ref("c"))
+        #EXPECT(r == Ref("a"))
         #EXPECT(almost-equal?(y(pos), 8.0))
       else:
-        #EXPECT(r == Ref("a"))
+        #EXPECT(r == Ref("c"))
         #EXPECT(almost-equal?(y(pos), -8.0))
 
       expect-empty-others(p, not-empty)
