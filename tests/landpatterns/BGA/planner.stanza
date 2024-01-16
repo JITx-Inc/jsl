@@ -5,6 +5,7 @@ defpackage jsl/tests/landpatterns/BGA/planner:
   import jitx/commands
 
   import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/pad-island
 
   import jsl/landpatterns/BGA
   import jsl/tests/utils
@@ -144,8 +145,8 @@ deftest(BGA) test-equilat-tri-odd-matrix:
 deftest(BGA) test-perim-matrix :
   val uut = Perimeter-Matrix-Planner(
     PadIsland(
-      1 through 3,
-      2 through 2,
+      2 through 4,
+      3 through 3,
     )
   )
 
@@ -187,12 +188,12 @@ deftest(BGA) test-perim-matrix :
 deftest(BGA) test-therm-enh-matrix :
   val uut = ThermallyEnhanced-Matrix-Planner(
     PadIsland(
-      1 through 3,
-      1 through 3,
+      2 through 4,
+      2 through 4,
     ),
     PadIsland(
-      2 through 2,
-      2 through 2,
+      3 through 3,
+      3 through 3,
     )
   )
 

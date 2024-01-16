@@ -7,6 +7,7 @@ defpackage jsl/examples/landpatterns/BGA-complex:
   import jsl/examples/landpatterns/board
 
   import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-island
   import jsl/landpatterns/BGA
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
@@ -37,20 +38,15 @@ public defn VFBGA142 () -> VFBGA142 :
     defmethod density-level (this) : dl
     defmethod pad-planner (this) :
       ; Create a carve out in the top-right corner
+      val grid = lead-numbering(this) as Grid-Numbering
       Perimeter-Matrix-Planner(
         [
           PadIsland(
-            0 through 3
-            8 through 11
+            to-row-range(grid, "A", "D")
+            9 through 12
           ),
-          PadIsland( ; F[10]
-            5 through 5,
-            9 through 9
-          ),
-          PadIsland( ; G[11]
-            6 through 6,
-            10 through 10
-          )
+          to-pad-island(grid, "F[10]")
+          to-pad-island(grid, "G[11]")
         ],
         pad-conf
       )

@@ -7,6 +7,7 @@ defpackage jsl/landpatterns/BGA/planner:
 
   import jsl/landpatterns/BGA/pads
   import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/pad-island
   import jsl/geometry/basics
   import jsl/errors
 
@@ -155,32 +156,6 @@ public defmethod grid (x:EquilateralTriangle-Matrix-Planner, rows:Int, columns:I
       grid-locs(rows, columns, horizontal, vertical)
     (pa:Dims):
       throw $ ValueError("Asymmetric Grid Pitch Not-Allowed for Equilateral Triangle Matrix - Try Staggered-Matrix-Planner Instead")
-
-doc: \<DOC>
-Define a contiguous region of pads in a BGA matrix
-This allows us to define regions where the pads are
-either active or inactive.
-<DOC>
-public defstruct PadIsland :
-  rows:Range, ; the range of rows to depopulate
-  columns:Range, ; the range of columns to depopulate
-
-doc: \<DOC>
-Check if a row, column in the grid is a member of the Pad Island.
-<DOC>
-public defn in-range? (p:PadIsland, row:Int, column:Int) -> True|False :
-  ; defn in-range? (x:Int, r:Range) -> True|False:
-  ;   label<True|False> return:
-  ;     if x < start(r):
-  ;       return(false)
-  ;     if x >= end(r):
-  ;       return(inclusive?(r))
-  ;     return(true)
-  ;in-range?(row, rows(p)) and in-range?(column, columns(p))
-  ; This seems really inefficent to check this way, especially for
-  ; larger BGAs - but the `Range` object is not trivial to check
-  ; for `in-range?`
-  contains?(rows(p), row) and contains?(columns(p), column)
 
 doc: \<DOC>
 Perimeter Matrix - Full matrix with an island of pads in-active.
