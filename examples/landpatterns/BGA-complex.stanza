@@ -40,7 +40,7 @@ public defn VFBGA142 () -> VFBGA142 :
       ; Create a carve out in the top-right corner
       val grid = lead-numbering(this) as Grid-Numbering
       Perimeter-Matrix-Planner(
-        [
+        inactive = [
           PadIsland(
             to-row-range(grid, "A", "D")
             9 through 12
@@ -48,7 +48,7 @@ public defn VFBGA142 () -> VFBGA142 :
           to-pad-island(grid, "F[10]")
           to-pad-island(grid, "G[11]")
         ],
-        pad-conf
+        pad-config = pad-conf
       )
     defmethod lead-numbering (this) :
       Grid-Numbering(rows(this), columns(this))
