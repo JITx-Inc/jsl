@@ -114,6 +114,10 @@ deftest(numbering) test-grid-numbering:
 
   #EXPECT(obs == exp)
 
+  #EXPECT(to-row-index(uut, Ref("A")) == 0)
+  #EXPECT(to-row-index(uut, Ref("B")) == 1)
+  #EXPECT(to-row-index(uut, Ref("C")) == 2)
+
   expect-throw({to-pad-id(uut, -1, 0)})
   expect-throw({to-pad-id(uut, 0, -1)})
   expect-throw({to-pad-id(uut, -1, -1)})
@@ -127,6 +131,13 @@ deftest(numbering) test-grid-numbering:
   expect-throw({Grid-Numbering(1, 0)})
   expect-throw({Grid-Numbering(0, -1)})
   expect-throw({Grid-Numbering(-1, 0)})
+
+  val r = to-row-range(uut, "A", "C")
+  #EXPECT(r == 1 through 3)
+
+  val r2 = to-row-range(uut, 'B', 'C')
+  #EXPECT(r2 == 2 through 3)
+
 
 deftest(numbering) test-offset-grid-numbering:
   val rows = 3
@@ -153,6 +164,16 @@ deftest(numbering) test-offset-grid-numbering:
 
   #EXPECT(obs == exp)
 
+  #EXPECT(to-row-index(uut, Ref("C")) == 0)
+  #EXPECT(to-row-index(uut, Ref("D")) == 1)
+  #EXPECT(to-row-index(uut, Ref("E")) == 2)
+
+  expect-throw({to-row-index(uut, Ref("A"))})
+
+  val r = to-row-range(uut, "D", "E")
+  #EXPECT(r == 2 through 3)
+
+
 deftest(numbering) test-omits-grid-numbering:
 
   val rows = 3
@@ -176,6 +197,18 @@ deftest(numbering) test-omits-grid-numbering:
   ]
 
   #EXPECT(obs == exp)
+
+  #EXPECT(to-row-index(uut, Ref("D")) == 0)
+  #EXPECT(to-row-index(uut, Ref("E")) == 1)
+  #EXPECT(to-row-index(uut, Ref("F")) == 2)
+
+  expect-throw({to-row-index(uut, Ref("A"))})
+  expect-throw({to-row-index(uut, Ref("C"))})
+  expect-throw({to-row-index(uut, Ref("G"))})
+
+  val r = to-row-range(uut, "D", "E")
+  #EXPECT(r == 1 through 2)
+
 
 deftest(numbering) test-row-rollover-grid-numbering:
 
@@ -202,6 +235,21 @@ deftest(numbering) test-row-rollover-grid-numbering:
   ]
 
   #EXPECT(obs == exp)
+
+  #EXPECT(to-row-index(uut, Ref("A")) == 0)
+  #EXPECT(to-row-index(uut, Ref("B")) == 1)
+  #EXPECT(to-row-index(uut, Ref("C")) == 2)
+  #EXPECT(to-row-index(uut, Ref("AA")) == 3)
+  #EXPECT(to-row-index(uut, Ref("AB")) == 4)
+
+  expect-throw({to-row-index(uut, Ref("D"))})
+  expect-throw({to-row-index(uut, Ref("AC"))})
+  expect-throw({to-row-index(uut, Ref("Z"))})
+  expect-throw({to-row-index(uut, Ref("A1"))})
+  expect-throw({to-row-index(uut, Ref("A0"))})
+
+  val r = to-row-range(uut, "C", "AB")
+  #EXPECT(r == 3 through 5)
 
 deftest(numbering) test-uneven-column-major-numbering:
 
