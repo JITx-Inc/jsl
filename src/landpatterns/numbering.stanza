@@ -1,6 +1,8 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/numbering:
   import core
+  import math
+
   import jitx
   import jsl/ensure
   import jsl/landpatterns/helpers
@@ -284,6 +286,68 @@ public defmethod to-pad-id (g:Grid-Numbering, row:Int, column:Int) -> Int|Ref :
   val index = ( (row * cols) + column)
   pad-lookup(g)[index]
 
+doc: \<DOC>
+Given a Row Letter, convert to an Int offset in 0-index form
+
+@param g Grid Numbering Scheme
+@param row identifies which row we are attempting to convert
+@param Offset which will take into a account the omitted
+<DOC>
+public defn to-row-index (g:Grid-Numbering, row:Ref|String) -> Int :
+  val raw-letters = compute-letters(omit-rows(g))
+  val start = start-row(g)
+  val end = min(start + rows(g), length(raw-letters))
+  val letters = raw-letters[start to end]
+
+  val row*:String = to-string $ match(row):
+    (r:VarRef): name(r)
+    (r:IndexRef): name $ (ref(r) as VarRef)
+    (s:String): s
+
+  val offsets = to-tuple $ for i in 0 to length(row*) seq:
+    val curr-letter = row*[i]
+    val id = for letter in letters index-when :
+      letter == curr-letter
+    match(id):
+      (x:Int): x
+      (x:False):
+        throw $ ValueError("Row Letter '%_' Is Invalid - Expected: %, " % [curr-letter, letters])
+
+  val num-letters = to-double $ length(letters)
+  val ret = to-int $ sum $ for (offset in in-reverse(offsets), i in 0 to false) seq:
+    to-double(offset + 1) * pow(num-letters, to-double(i))
+
+  if ret > rows(g):
+    throw $ ValueError("Row Letter '%_' is Out of Range" % [row])
+
+  ret - 1
+
+doc: \<DOC>
+Compute the row range based on the start and end character.
+
+This is a utility function for constructing the `Range` for the
+row offsets (ie, Int values) from the character values.
+
+@param grid Grid Numbering Scheme
+@param start First row as a character or sequence of characters.
+@param end Inclusive end row as a character or sequence of characters.
+@return The resultant range is a 1-based index to match the `PadIsland`
+constructor interface.
+<DOC>
+public defn to-row-range (grid:Grid-Numbering, start:Char|String, end:Char|String) -> Range :
+  val s = to-string(start)
+  val e = to-string(end)
+
+  val row-start = to-row-index(grid, s)
+  val row-end = to-row-index(grid, e)
+
+  (row-start + 1) through (row-end + 1)
+
+defn compute-letters (omit-rows:String) -> Tuple<Char> :
+  val omits = upper-case(omit-rows)
+  to-tuple $ for ch in make-letter-seq('A', 'Z') filter:
+      not contains?(omits, ch)
+
 defn create-pad-lookup (
   rows:Int,
   columns:Int,
@@ -291,10 +355,7 @@ defn create-pad-lookup (
   start-col:Int = 0,
   omit-rows:String = DEF-ROW-OMITS
   ) -> Tuple<Ref> :
-  val omits = upper-case $ omit-rows
-  val letters = to-tuple $
-    for ch in make-letter-seq('A', 'Z') filter:
-      not contains?(omits, ch)
+  val letters = compute-letters(omit-rows)
   ; Pre-compute the lookup table for the
   ;  grid of references.
   val pad-names = to-tuple $
