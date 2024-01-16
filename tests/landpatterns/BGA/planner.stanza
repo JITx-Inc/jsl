@@ -144,7 +144,7 @@ deftest(BGA) test-equilat-tri-odd-matrix:
 
 deftest(BGA) test-perim-matrix :
   val uut = Perimeter-Matrix-Planner(
-    PadIsland(
+    inactive = PadIsland(
       2 through 4,
       3 through 3,
     )
@@ -187,11 +187,11 @@ deftest(BGA) test-perim-matrix :
 
 deftest(BGA) test-therm-enh-matrix :
   val uut = ThermallyEnhanced-Matrix-Planner(
-    PadIsland(
+    inactive = PadIsland(
       2 through 4,
       2 through 4,
     ),
-    PadIsland(
+    active = PadIsland(
       3 through 3,
       3 through 3,
     )

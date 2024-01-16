@@ -50,8 +50,8 @@ pcb-component test-BGA:
 
   val planner = Perimeter-Matrix-Planner(
     ; Pad A2 is not present
-    to-pad-island(grid, "A[2]"),
-    PadConfig-D(
+    inactive = to-pad-island(grid, "A[2]"),
+    pad-config = PadConfig-D(
       copper-D-adj = ipc-bga-copper(
         NonSolderMaskDefined,
         density-level = DensityLevelC

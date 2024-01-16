@@ -176,6 +176,15 @@ public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
     as-method => true
     default => DEF-PAD-CONFIG
     )
+with:
+  constructor => #Perimeter-Matrix-Planner
+
+public defn Perimeter-Matrix-Planner (
+  --
+  inactive:PadIsland|Tuple<PadIsland>,
+  pad-config:PadConfig = DEF-PAD-CONFIG
+  ) -> Perimeter-Matrix-Planner :
+  #Perimeter-Matrix-Planner(inactive, pad-config)
 
 defn not-inactive? (inactive:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
   match(inactive):
@@ -219,6 +228,17 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
     as-method => true
     default => DEF-PAD-CONFIG
     )
+with:
+  constructor => #ThermallyEnhanced-Matrix-Planner
+
+public defn ThermallyEnhanced-Matrix-Planner (
+  --
+  inactive:PadIsland|Tuple<PadIsland>,
+  active:PadIsland|Tuple<PadIsland>,
+  pad-config:PadConfig = DEF-PAD-CONFIG
+  ) -> ThermallyEnhanced-Matrix-Planner :
+  #ThermallyEnhanced-Matrix-Planner(inactive, active, pad-config)
+
 
 defn is-active? (active:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
   match(active):
