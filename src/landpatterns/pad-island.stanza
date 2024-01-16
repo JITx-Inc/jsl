@@ -1,0 +1,96 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/pad-island:
+  import core
+  import jitx
+
+  import jsl/errors
+  import jsl/landpatterns/numbering
+
+doc: \<DOC>
+Define a contiguous region of pads in a BGA matrix
+This allows us to define regions where the pads are
+either active or inactive.
+<DOC>
+public defstruct PadIsland :
+  rows:Range, ; the range of rows to depopulate, zero-indexed
+  columns:Range, ; the range of columns to depopulate, zero-indexed
+with:
+  constructor => #PadIsland
+
+defn to-zero-index (r:Range) -> Range :
+  val l = to-tuple(r)
+  switch(length(l)):
+    0: throw $ ValueError("Invalid Range for Pad Island: %_" % [r])
+    1:
+      val single = l[0] - 1
+      single through single
+    else:
+      val start = l[0] - 1
+      val end = l[ length(l) - 1 ] - 1
+      start through end
+
+doc: \<DOC>
+Construct a PadIsland Using 1-indexed ranges.
+
+Users are likely going to find it easier to
+use 1-indexed values because that is more consistent
+with the rest of JITX.
+
+@param rows 1-Index'd rows
+@param columsn 1-index'd columns
+<DOC>
+public defn PadIsland (rows:Range, columns:Range) -> PadIsland :
+  #PadIsland(
+    to-zero-index(rows),
+    to-zero-index(columns),
+  )
+
+doc: \<DOC>
+Check if a row, column in the grid is a member of the Pad Island.
+<DOC>
+public defn in-range? (p:PadIsland, row:Int, column:Int) -> True|False :
+  ; defn in-range? (x:Int, r:Range) -> True|False:
+  ;   label<True|False> return:
+  ;     if x < start(r):
+  ;       return(false)
+  ;     if x >= end(r):
+  ;       return(inclusive?(r))
+  ;     return(true)
+  ;in-range?(row, rows(p)) and in-range?(column, columns(p))
+  ; This seems really inefficent to check this way, especially for
+  ; larger BGAs - but the `Range` object is not trivial to check
+  ; for `in-range?`
+  contains?(rows(p), row) and contains?(columns(p), column)
+
+doc: \<DOC>
+Convert a Grid Numbering Reference into a PadIsland
+
+@param grid Grid Numbering Scheme
+@param r Index Reference that indicates a particular pad to convert to a PadIsland
+<DOC>
+public defn to-pad-island (grid:Grid-Numbering, r:IndexRef) -> PadIsland :
+  val colNum = index(r) - 1
+  if colNum < 0 :
+    throw $ ValueError("Invalid Column Index - Expected Column Index > 0")
+  val rowNum = to-row-index(grid, ref(r))
+  ; Zero-based indices so we use the underlying
+  ;  constructor.
+  #PadIsland(rowNum through rowNum, colNum through colNum)
+
+
+defn to-index-ref (s:String) -> IndexRef :
+  val comps = to-tuple $ split(s, "[", 2)
+  if length(comps) != 2:
+    throw $ ValueError("Failed to Parse Index Ref: %_" % [s])
+  val name = comps[0]
+  val comps* = to-tuple $ split(comps[1], "]", 2)
+  val index? = to-int(comps*[0])
+  val index = match(index?):
+    (x:Int): x
+    (x:False):
+      throw $ ValueError("Failed to Parse Index from Pad Ref: %_" % [s])
+  IndexRef(Ref(name), index)
+
+public defn to-pad-island (grid:Grid-Numbering, s:String) -> PadIsland :
+  val iref = to-index-ref(s)
+  to-pad-island(grid, iref)

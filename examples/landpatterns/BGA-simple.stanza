@@ -5,6 +5,8 @@ defpackage jsl/examples/landpatterns/BGA-simple:
   import jitx/commands
   import jsl/design/settings
   import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-island
+  import jsl/landpatterns/numbering
   import jsl/landpatterns/BGA
   import jsl/examples/landpatterns/board
 
@@ -42,13 +44,13 @@ pcb-component test-BGA:
   ;  https://www.ti.com/lit/ml/mpbg144c/mpbg144c.pdf
   ;
   ; NSMD
+  val rows = 3
+  val cols = 3
+  val grid = Grid-Numbering(rows, cols)
 
   val planner = Perimeter-Matrix-Planner(
     ; Pad A2 is not present
-    PadIsland(
-      0 through 0 ; Row A
-      1 through 1 ; Pin 2
-    )
+    to-pad-island(grid, "A[2]"),
     PadConfig-D(
       copper-D-adj = ipc-bga-copper(
         NonSolderMaskDefined,
@@ -66,15 +68,17 @@ pcb-component test-BGA:
 
   val pkg = BGA(
     num-leads = 9,
-    rows = 3,
-    columns = 3,
+    rows = rows,
+    columns = cols,
     lead-diam = 0.3,
     pitch = 0.5,
     package-body = body,
-    pad-planner = planner
+    lead-numbering = grid,
+    pad-planner = planner,
+    density-level = DensityLevelB
   )
 
-  val lp = create-landpattern(pkg, density-level = DensityLevelB)
+  val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
 pcb-module test-design:
