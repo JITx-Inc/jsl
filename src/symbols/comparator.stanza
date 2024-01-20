@@ -1,0 +1,55 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/comparator:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/hysteresis
+  import jsl/symbols/op-amps
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/SymbolDefn
+
+
+var DEF_COMP_PARAMS = OpAmpSymbolParams()
+public defn get-default-comparator-symbol-params () -> OpAmpSymbolParams :
+  DEF_COMP_PARAMS
+
+public defn set-default-comparator-symbol-params (v:OpAmpSymbolParams) -> False :
+  DEF_COMP_PARAMS = v
+
+
+public defstruct ComparatorSymbol <: OpAmpSymbol :
+  doc: \<DOC>
+  Pos/Neg Terminal Pitch
+  <DOC>
+  pitch:Double with: (
+    ensure => ensure-positive!
+    default => DEF_OPAMP_PITCH
+    as-method => true
+  )
+
+  params:OpAmpSymbolParams with: (
+    default => get-default-comparator-symbol-params()
+    as-method => true
+  )
+with:
+  constructor => #ComparatorSymbol
+
+public defn ComparatorSymbol (
+  --
+  pitch:Double = DEF_OPAMP_PITCH,
+  params:OpAmpSymbolParams = get-default-comparator-symbol-params()
+  ) -> ComparatorSymbol :
+  #ComparatorSymbol(pitch, params)
+
+
+public defmethod name (x:ComparatorSymbol) -> String :
+  "Comparator"
+
+public defmethod build-artwork (x:ComparatorSymbol, node:SymbolNode) :
+  val g = OpAmpGlyph(x, params = params(x))
+  append(node, g)
+
+  val hyst-params = HysteresisParams()
+  val hyst-g = HysteresisGlyph(params = hyst-params)
+  append(node, hyst-g)

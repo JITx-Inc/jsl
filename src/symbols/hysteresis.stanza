@@ -1,0 +1,110 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/hysteresis:
+  import core
+  import math
+  import jitx
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/design/Classable
+  import jsl/symbols/SymbolNode
+
+defn ensure-valid-angle! (
+  field:String,
+  value:Double
+  ) :
+  if value < 0.0 or value > 45.0 :
+    throw $ ValueError("%_: Invalid Angle: 0.0 < %_ < 45.0" % [field, value])
+
+doc: \<DOC>
+Hysteresis Symbol Parameterization
+
+TODO - Diagram here explaining the parameterization of the
+hysteresis symbol.
+<DOC>
+public defstruct HysteresisParams <: Equalable :
+  size:Dims with: (
+    ensure => ensure-positive!
+  )
+  band-width:Double with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Angle in degrees of the hysteresis band as measured from the Y-axis.
+  <DOC>
+  angle:Double with: (
+    ensure => ensure-valid-angle!
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+  )
+with:
+  constructor => #HysteresisParams
+  equalable => true
+  printer => true
+
+val DEF_HYST_SIZE = Dims(1.5, 0.75)
+val DEF_HYST_BAND_WIDTH = 0.3
+val DEF_HYST_ANGLE = 20.0
+val DEF_HYST_LINE_WIDTH = 0.05
+
+
+public defn HysteresisParams (
+  --
+  size:Dims = DEF_HYST_SIZE,
+  band-width:Double = DEF_HYST_BAND_WIDTH
+  angle:Double = DEF_HYST_ANGLE
+  line-width:Double = DEF_HYST_LINE_WIDTH
+) -> HysteresisParams :
+  #HysteresisParams(size, band-width, angle, line-width)
+
+public defn to-tuple (p:HysteresisParams) -> [Dims, Double, Double, Double] :
+  [size(p), band-width(p), angle(p), line-width(p)]
+
+public defn construct-hysteresis-shape (params:HysteresisParams) -> Shape :
+  val [d, bw, ang, lw] = to-tuple(params)
+  val h = y(d)
+  val w = x(d)
+  ; Shape is drawn centered around the origin.
+  ; We first consider a line drawn through the origin with angle `ang` from the
+  ;   Y axis. At the min and max height locations, this is the mid-point of
+  ;   the hysteresis band lines.
+
+  defn yx-line (y:Double) -> Double :
+    val m = tan( to-radians(ang))
+    m * y
+
+  val MP-y = h / 2.0
+  val MP-top = Point(yx-line(MP-y), MP-y)
+  val MP-bot = Point(yx-line((- MP-y)), (- MP-y))
+
+  val top-L = MP-top - Point(bw / 2.0, 0.0)
+  val top-R = MP-top + Point(bw / 2.0, 0.0)
+
+  val bot-L = MP-bot - Point(bw / 2.0, 0.0)
+  val bot-R = MP-bot + Point(bw / 2.0, 0.0)
+
+  val hyst-span = x(top-R) - x(bot-L)
+
+  val wing-len = (w - (hyst-span)) / 2.0
+  if wing-len < 0.0 :
+    throw $ ValueError("Invalid Hysteresis Parameters for Glyph Generation: Band span (%_) is wider than total Hysteresis Symbol width (%_)" % [hyst-span, w])
+
+  val top-wing = top-R + Point(wing-len, 0.0)
+  val bot-wing = bot-L - Point(wing-len, 0.0)
+
+  val hyst-line = Line(lw, [
+    bot-wing, bot-R,
+    top-R, top-wing,
+    top-L, bot-L
+  ])
+  hyst-line
+
+public defn HysteresisGlyph (
+  --
+  params:HysteresisParams = HysteresisParams()
+  name:String = "hysteresis"
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+  val art = construct-hysteresis-shape(params)
+  Glyph(art, name? = One(name), class = to-class-vector(class))

@@ -1,0 +1,139 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/instrumentation-amp:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/op-amps
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+
+
+; Increased pitch so that we can insert
+;   the gain resistor pins between the
+;   +/- pins
+val DEF_IAMP_PITCH = 4.0
+doc: \<DOC>
+Default pitch for the Gain Resistor terminals
+<DOC>
+val DEF_IAMP_RG_PITCH = 2.0
+
+
+var DEF_IAMP_PARAMS = OpAmpSymbolParams(tri-width = DEF_IAMP_PITCH + 2.5)
+public defn get-default-iamp-symbol-params () -> OpAmpSymbolParams :
+  DEF_IAMP_PARAMS
+
+public defn set-default-iamp-symbol-params (v:OpAmpSymbolParams) -> False :
+  DEF_IAMP_PARAMS = v
+
+
+
+public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
+  doc: \<DOC>
+  Pos/Neg Terminal Pitch
+  <DOC>
+  pitch:Double with: (
+    ensure => ensure-positive!
+    default => DEF_IAMP_PITCH
+    as-method => true
+  )
+
+  doc: \<DOC>
+  Gain Resistor Terminal Pitch
+  <DOC>
+  rg-pitch:Double with: (
+    ensure => ensure-positive!
+    default => DEF_IAMP_RG_PITCH
+  )
+
+  params:OpAmpSymbolParams with: (
+    default => get-default-iamp-symbol-params()
+    as-method => true
+  )
+with:
+  constructor => #InstrumentationAmpSymbol
+
+public defn InstrumentationAmpSymbol (
+  --
+  pitch:Double = DEF_IAMP_PITCH,
+  rg-pitch:Double = DEF_IAMP_RG_PITCH
+  params:OpAmpSymbolParams = get-default-iamp-symbol-params()
+  ) -> InstrumentationAmpSymbol :
+  if rg-pitch > pitch :
+    throw $ ValueError("Invalid Pitch Configuration for Instrumentation Amp Symbol: pitch %_ > rg-pitch %_" % [pitch, rg-pitch])
+  #InstrumentationAmpSymbol(pitch, rg-pitch, params)
+
+public defmethod name (x:InstrumentationAmpSymbol) -> String :
+  "InstrumentationAmp"
+
+val IAMP_RG_REF = Ref("Rg")
+
+public defn add-iamp-rg-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  val p = params(x)
+
+  ; Add the Gain Resistor Terminals
+  val rg-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p)
+    pad-ref-size = pad-ref-size(p)
+  )
+  val w = rg-pitch(x) / 2.0
+  val h2 = tri-height(p) / 2.0
+
+  add-pin(node, IAMP_RG_REF[0], [(- h2), w], params = rg-params, name = "pin-rg-0")
+  add-pin(node, IAMP_RG_REF[1], [(- h2), (- w)], params = rg-params, name = "pin-rg-1")
+
+val IAMP_VREF_REF = Ref("REF")
+
+public defn add-iamp-ref-pin (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  val p = params(x)
+
+  ; Add the Gain Resistor Terminals
+  val ref-params = VirtualPinParams(
+    direction = Down,
+    pin-length = pin-length(p)
+    pad-ref-size = pad-ref-size(p)
+  )
+  val w = tri-width(p)
+  ; If you compute the geometry, the
+  ;   y intercept of the triangle edge at x = 0.0
+  ;   is (w / 4)
+  val y = 0.25 * w
+
+  add-pin(node, IAMP_VREF_REF, [0.0, (- y)], params = ref-params, name = "pin-ref")
+
+
+public defmethod build-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  add-opamp-pins(x, node)
+  add-iamp-rg-pins(x, node)
+  add-iamp-ref-pin(x, node)
+
+public defn add-iamp-gain-indicator (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  val p = params(x)
+  val lw = line-width(p)
+  val rg-p = rg-pitch(x)
+  val w = rg-p / 2.0
+  val h2 = tri-height(p) / 2.0
+
+  val indent = (h2 - 0.5)
+
+  val pts = [
+    [(- h2), w]
+    [(- indent), w],
+    [(- indent), w - 0.25],
+  ]
+  line(node, pts, lw)
+  val pts2 = [
+    [(- h2), (- w)]
+    [(- indent), (- w)],
+    [(- indent), (- (w - 0.25))],
+  ]
+  line(node, pts2, lw)
+  text(node, [(- indent), 0.0] "G", font-size = 8)
+
+public defmethod build-artwork (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  val g = OpAmpGlyph(x, params = params(x))
+  append(node, g)
+
+  add-iamp-gain-indicator(x, node)

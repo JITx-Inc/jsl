@@ -1,0 +1,199 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/op-amps:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/design/Classable
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+
+doc: \<DOC>
+Op-Amp Triangle Symbol Parameterization
+<DOC>
+public defstruct OpAmpSymbolParams <: Equalable :
+  tri-height:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-tri-height
+  )
+  tri-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-tri-width
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+  )
+with:
+  constructor => #OpAmpSymbolParams
+  equalable => true
+  printer => true
+
+val DEF_TRI_HEIGHT = 4.0
+val DEF_TRI_WIDTH = 4.0
+val DEF_LINE_WIDTH = 0.05
+
+val DEF_PIN_LENGTH = 1.0
+val DEF_PAD_REF_SIZE = 0.75
+
+public defn OpAmpSymbolParams (
+  --
+  tri-height:Double = DEF_TRI_HEIGHT,
+  tri-width:Double = DEF_TRI_WIDTH,
+  line-width:Double = DEF_LINE_WIDTH,
+  pin-length:Double = DEF_PIN_LENGTH,
+  pad-ref-size:Double = DEF_PAD_REF_SIZE
+  ) -> OpAmpSymbolParams :
+  #OpAmpSymbolParams(tri-height, tri-width, line-width, pin-length, pad-ref-size)
+
+
+public defn to-tuple (p:OpAmpSymbolParams) -> [Double, Double, Double, Double, Double] :
+  [tri-height(p), tri-width(p), line-width(p), pin-length(p), pad-ref-size(p)]
+
+var DEF_OPAMP_PARAMS = OpAmpSymbolParams()
+public defn get-default-opamp-symbol-params () -> OpAmpSymbolParams :
+  DEF_OPAMP_PARAMS
+
+public defn set-default-opamp-symbol-params (v:OpAmpSymbolParams) -> False :
+  DEF_OPAMP_PARAMS = v
+
+
+public defn construct-opamp-shape (
+  pitch:Double,
+  params:OpAmpSymbolParams
+  ) -> Shape:
+
+  val [tri-height, tri-width, line-width, pin-length, pad-ref-size] = to-tuple(params)
+
+  val body = Line(line-width, [
+    Point(tri-height / 2.0, 0.0),
+    Point(tri-height / -2.0, tri-width / 2.0),
+    Point(tri-height / -2.0, tri-width / -2.0),
+    Point(tri-height / 2.0, 0.0)
+  ])
+
+  ; Input pins will be on the left side and spaced
+  ;   `pitch` distance a part.
+  val plus-len = tri-height * (10 %)
+  val arm = plus-len / 2.0
+
+  val x-pos = (tri-height / 2.0) - arm - (5.0 * line-width)
+  val y-pos = (pitch / 2.0)
+  val plus-pose = loc((- x-pos), y-pos)
+  val plus = plus-pose * Union([Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
+         Line(line-width, [Point(0.0,     (- arm)), Point(0.0, arm)])])
+
+  val minus-pose = loc((- x-pos), (- y-pos))
+  val minus = minus-pose * Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
+
+  Union([body, plus, minus])
+
+
+public defn OpAmpGlyph (
+  symb:OpAmpSymbol,
+  --
+  params:OpAmpSymbolParams = get-default-opamp-symbol-params()
+  name:String = ?
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val art = construct-opamp-shape(
+    pitch(symb),
+    params
+  )
+  Glyph(art, name? = name, class = to-class-vector(class))
+
+
+doc: \<DOC>
+Best for this value to be divisible by 2. This will
+make the output pin resolve on the same grid in the Y
+axis.
+<DOC>
+public val DEF_OPAMP_PITCH = 2.0
+
+public defstruct OpAmpSymbol <: SymbolDefn :
+  pitch:Double with: (
+    ensure => ensure-positive!
+    default => DEF_OPAMP_PITCH
+  )
+  params:OpAmpSymbolParams with: (
+    default => get-default-opamp-symbol-params()
+  )
+with:
+  constructor => #OpAmpSymbol
+
+public defn OpAmpSymbol (
+  --
+  pitch:Double = DEF_OPAMP_PITCH,
+  params:OpAmpSymbolParams = get-default-opamp-symbol-params()
+  ) -> OpAmpSymbol :
+  #OpAmpSymbol(pitch, params)
+
+public defmethod name (x:OpAmpSymbol) -> String :
+  "OpAmp"
+
+public val OPAMP_IN+_REF = Ref("in+")
+public val OPAMP_IN-_REF = Ref("in-")
+public val OPAMP_OUT_REF = Ref("out")
+
+public defn add-opamp-pins (x:OpAmpSymbol, node:SymbolNode) :
+
+  val w = pitch(x) / 2.0
+  val p = params(x)
+  val h2 = tri-height(p) / 2.0
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+
+  add-pin(node, OPAMP_IN+_REF, [(- h2), w], params = input-params, name = "pin-in+")
+  add-pin(node, OPAMP_IN-_REF, [(- h2), (- w)], params = input-params, name = "pin-in-")
+
+  val output-params = VirtualPinParams(
+    direction = Right,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  add-pin(node, OPAMP_OUT_REF, [h2, 0.0], params = output-params, name = "pin-out")
+
+public defmethod build-pins (x:OpAmpSymbol, node:SymbolNode) :
+  add-opamp-pins(x, node)
+
+public defmethod build-artwork (x:OpAmpSymbol, node:SymbolNode) :
+  val g = OpAmpGlyph(x, params = params(x))
+  append(node, g)
+
+public defmethod build-designator (x:OpAmpSymbol, sn:SymbolNode) :
+  val p = params(x)
+  val w = tri-width(p)
+
+  ; If you compute the geometry, the
+  ;   y intercept of the triangle edge at x = 0.0
+  ;   is (w / 4)
+  ; We then pad on this a bit for the ref point.
+  val y = 0.25 * w
+
+  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
+
+public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
+  val p = params(x)
+  val w = tri-width(p)
+
+  ; If you compute the geometry, the
+  ;   y intercept of the triangle edge at x = 0.0
+  ;   is (w / 4)
+  ; We then pad on this a bit for the ref point.
+  val y = 0.25 * w
+
+  text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
+
