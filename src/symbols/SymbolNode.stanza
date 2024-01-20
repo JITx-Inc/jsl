@@ -13,6 +13,7 @@ defpackage jsl/symbols/SymbolNode:
   import jitx
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/Classable
   import jsl/geometry/basics
 
@@ -25,22 +26,56 @@ Base Type for all SymbolNode types
 <DOC>
 public deftype SymbolElement <: Classable
 
-public defstruct VirtualPin <: SymbolElement :
-  ; Virtual Pin is going to be implemented as `pin` statements in the
-  ;  `pcb-symbol` but without the `PinProperties` - ie, like this:
-  ;
-  ;  pin `name at Point(0.0, 0.0)
-  ;
-  ; and Not like this:
-  ;
-  ;  pin `name at Point(0.0, 0.0):
-  ;    direction = Left
-  ;    length = 1.0
-  ;    ...
-  ;
-  ;  This will give us the control over the pin symbol that we would otherwise
-  ;  lack.
+doc: \<DOC>
+Pin Statement Optional Parameters
 
+The `pin` statement in a `pcb-symbol` can be a standalone
+point or it can have some parameterizations. This
+struct defines the parameterization so that the user can
+optionally include this in pin definitions.
+<DOC>
+public defstruct VirtualPinParams <: Equalable :
+  direction:Dir
+  pin-length:Double with: ( ensure => ensure-positive! )
+  doc: \<DOC>
+  Pad Id/Ref Text Size
+  This parameter is optional and if set to `None` then
+  no pad Ref text will be generated
+  <DOC>
+  pad-ref-size:Maybe<Double> with: ( ensure => ensure-positive! )
+  doc: \<DOC>
+  Pin Name Text Size
+  This parameter is optional and if set to `None` then
+  no pin name text will be generated
+  <DOC>
+  pin-name-size:Maybe<Double> with: ( ensure => ensure-positive! )
+with:
+  equalable => true
+  constructor => #VirtualPinParams
+
+public defn VirtualPinParams (
+  --
+  direction:Dir,
+  pin-length:Double
+  pad-ref-size:Double = ?
+  pin-name-size:Double = ?
+  ) -> VirtualPinParams :
+  #VirtualPinParams(direction, pin-length, pad-ref-size, pin-name-size)
+
+doc: \<DOC>
+Virtual Pin in the Symbol Node Frame of Reference
+
+This type allows the user to define a pin to be placed
+in the symbol node frame a reference. The pin can be created
+either as a single point or as a parameterized pin like one
+might consider in legacy CAD.
+
+The single point pin version is often useful for two-pin
+components like resistors, capacitors, etc. The fully
+parameterized pin is often useful when you want to be
+explicit about pad reference or pin names.
+<DOC>
+public defstruct VirtualPin <: SymbolElement :
   doc: \<DOC>
   Pin Name
   This must be a valid symbol reference in JITX
@@ -55,6 +90,11 @@ public defstruct VirtualPin <: SymbolElement :
   <DOC>
   position:Point
 
+  doc: \<DOC>
+  Optional Pin Statement Parameters
+  <DOC>
+  params:Maybe<VirtualPinParams>
+
   ; SymbolElement
   name?:Maybe<String> with: (as-method => true)
   class:Vector<String> with: (as-method => true)
@@ -67,19 +107,14 @@ public defn VirtualPin (
   pin-name:String|Ref,
   position:Point
   --
+  params:Maybe<VirtualPinParams> = None()
   name?:Maybe<String> = None()
   class:Seqable<String>|String = []
   ) -> VirtualPin :
   val pin-name* = match(pin-name):
     (x:Ref):x
     (x:String): Ref(x)
-  #VirtualPin(pin-name*, position, name?, to-class-vector(class))
-
-; public defmethod make-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
-;   inside pcb-symbol:
-;     ; TODO - apply scale
-;     val pin-r = pin-name(vp)
-;     pin (pin-r) at pose * position(vp)
+  #VirtualPin(pin-name*, position, params, name?, to-class-vector(class))
 
 
 doc: \<DOC>
@@ -114,12 +149,6 @@ defn build-layer-name (name:Maybe<String>) -> String :
   match(name):
     (x:One<String>): value(x)
     (x:None): DEF_LAYER_NAME
-
-; public defmethod make-symbol (g:Glyph, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
-;   inside pcb-symbol:
-;     ; TODO - Apply scale
-;     val lname = build-layer-name $ name?(g)
-;     layer( lname ) = pose * art(g)
 
 doc: \<DOC>
 Scene Graph Builder for Schematic Symbols
@@ -244,11 +273,12 @@ public defn add-pin (
   pin-name:String|Ref,
   position:Point|[Double, Double]|[Int, Int]
   --
+  params:VirtualPinParams = ?
   name:String = ?
   class:Seqable<String>|String = []
   ) -> VirtualPin :
   val p* = to-point(position)
-  val ret = VirtualPin(pin-name, p*, name? = name, class = class)
+  val ret = VirtualPin(pin-name, p*, params = params, name? = name, class = class)
   append(sn, ret)
   ret
 
@@ -303,11 +333,40 @@ public defn elements (sn:SymbolNode) -> Seq<SymbolElement> :
 
 ; Generators
 
+doc: \<DOC>
+Create a full pin statement with pararmeters
+
+This allows the creation of pins with parameterization
+for length, direction, and text size.
+<DOC>
+defn make-full-vpin (vp:VirtualPin, scale:Double, pose:Pose) :
+  val pin-r = pin-name(vp)
+  val pt = scale * position(vp)
+  val p = value! $ params(vp)
+
+  defn convert-maybe (x:Maybe<Double>) -> Double :
+    match(x):
+      (_:None): 0.0
+      (x:One<Double>): value(x)
+
+  inside pcb-symbol:
+    pin (pin-r) at pose * pt with:
+      direction = direction(p)
+      length = scale * pin-length(p)
+      name-size = scale * convert-maybe $ pad-ref-size(p)
+      number-size = scale * convert-maybe $ pin-name-size(p)
+
 public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
   val pin-r = pin-name(vp)
   val pt = scale * position(vp)
   inside pcb-symbol:
-    pin (pin-r) at pose * pt
+    match(params(vp)):
+      (_:None):
+        ; This is the simplfied single-point pin representation
+        ;   useful for two-pin components
+        pin (pin-r) at pose * pt
+      (x:One<VirtualPinParams>):
+        make-full-vpin(vp, scale, pose)
 
 public defn make-glyph-symbol (g:Glyph, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
   inside pcb-symbol:
