@@ -2,6 +2,7 @@ defpackage jsl/geometry/box :
   import core
   import collections
   import jitx
+  import jitx/commands
   import jitx/geometry/shapes/arc-utils
   import jitx/geometry/shapes/offset
 
@@ -136,4 +137,15 @@ defn _bounds (e:Shape, ignore-width?: True|False) -> Box :
     (s:Difference) : bounds(shape1(s))
     (s:Offset) : fatten(amount(s), bounds(shape(s)))
     (t:Text):
-      throw $ ValueError("Text Boundary Box Not Implemented")
+      val rect = pose(t) * (Rectangle $ dims(t))
+      val [vt, hr] = components(anchor(t))
+      val dx = match(hr) :
+        (hr:W) : width(rect) / 2.0
+        (hr:C) : 0.0
+        (hr:E) : width(rect) / -2.0
+      val dy = match(vt) :
+        (vt:S) : height(rect) / 2.0
+        (vt:C) : 0.0
+        (vt:N) : height(rect) / -2.0
+      val rect* = loc(dx, dy) * rect
+      bounds(rect*)
