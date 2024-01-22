@@ -20,9 +20,12 @@ public defstruct InductorSymbolParams <: Equalable:
     updater => sub-core-style
   )
   porch-width:Double with: (
-    ensure => ensure-positive!,
+    ensure => ensure-non-negative!,
     updater => sub-porch-width
   )
+  doc: \<DOC>
+  Number of half-circles in the inductor winding shape.
+  <DOC>
   periods:Int with: (
     ensure => ensure-positive!
     updater => sub-periods
