@@ -16,6 +16,7 @@ defpackage jsl/symbols/SymbolNode:
   import jsl/ensure
   import jsl/design/Classable
   import jsl/geometry/basics
+  import jsl/geometry/box
 
 val DEF_SYMNODE_POSE = loc(0.0, 0.0)
 
@@ -267,6 +268,13 @@ public defn get-glyphs (sn:SymbolNode) -> Tuple<Glyph> :
     get-glyphs(child)
   val local-glyphs = glyphs(sn)
   to-tuple $ cat(local-glyphs, kid-glyphs)
+
+doc: \<DOC>
+Compute the bounding box around the glyphs of this symbol.
+<DOC>
+public defn glyph-bounds (sn:SymbolNode) -> Box :
+  reduce{union, _} $ for glyph in get-glyphs(sn) seq:
+    bounds $ art(glyph)
 
 public defn add-pin (
   sn:SymbolNode,
