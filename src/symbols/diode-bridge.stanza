@@ -1,0 +1,162 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/diode-bridge:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/geometry/box
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/diodes
+
+doc: \<DOC>
+Parameters for building a Diode Bridge Schematic Symbol
+This parameterization re-uses the `DiodeSymbolParams` for
+constructing the individual elements.
+<DOC>
+public defstruct DiodeBridgeSymbolParams <: Equalable :
+  doc: \<DOC>
+  Parameters applied to the Diode glyphs that make up the bridge.
+  <DOC>
+  params:DiodeSymbolParams
+  doc: \<DOC>
+  The length of a side of the diode bridge square
+  The diode bridge symbol consists of a square (or regular diamond) with a diode
+  in each side. This sets the side length of that square.
+  <DOC>
+  side-length:Double
+  doc: \<DOC>
+  Sets the target pin length of the pin radiating from each corner of the diode bridge
+  This sets the target length but not the explicit length. This length will be
+  modulated so that the resulting pin is on the schematic symbol grid.
+  <DOC>
+  pin-length:Double
+  doc: \<DOC>
+  Sets the size of the text for the pad references on the pins.
+  By default the pin names are not shown.
+  <DOC>
+  pad-ref-size:Double
+with:
+  constructor => #DiodeBridgeSymbolParams
+  equalable => true
+  printer => true
+
+val MIN_DB_SIZE_LEN = 4.0
+val DEF_DB_PIN_LEN = 2.0
+val DEF_DB_PAD_REF = 0.75
+
+doc: \<DOC>
+Compute the default side length depending on the Diode Symbol
+
+This function checks the diode symbol params and computes based
+on the body size of constituent diode.
+
+If this is too small, we set a minimum size.
+<DOC>
+defn get-default-side-length (params:DiodeSymbolParams) -> Double :
+  val h = body-height(params)
+  max(2.0 * h, MIN_DB_SIZE_LEN)
+
+public defn DiodeBridgeSymbolParams (
+  --
+  params:DiodeSymbolParams = get-default-diode-symbol-params()
+  side-length:Double = get-default-side-length(params),
+  pin-length:Double = DEF_DB_PIN_LEN
+  pad-ref-size:Double = DEF_DB_PAD_REF
+  ) -> DiodeBridgeSymbolParams :
+  #DiodeBridgeSymbolParams(params, side-length, pin-length, pad-ref-size)
+
+public defn to-tuple (p:DiodeBridgeSymbolParams) -> [DiodeSymbolParams, Double, Double, Double] :
+  [params(p), side-length(p), pin-length(p), pad-ref-size(p)]
+
+var DEF_DB_PARAMS = DiodeBridgeSymbolParams()
+public defn get-default-diode-bridge-symbol-params () -> DiodeBridgeSymbolParams :
+  DEF_DB_PARAMS
+
+public defn set-default-diode-bridge-symbol-params (v:DiodeBridgeSymbolParams) -> False :
+  DEF_DB_PARAMS = v
+
+doc: \<DOC>
+Diode Bridge Schematic Symbol Generator
+These symbols will be generated with the following pins:
+
+```
+; AC Interface
+V-ac.p[1]
+V-ac.p[2]
+; DC Interface
+V-dc.p[1]   ; Positive
+V-dc.p[2]   ; Negative
+```
+<DOC>
+public defstruct DiodeBridgeSymbol <: SymbolDefn
+
+public defmethod name (x:DiodeBridgeSymbol) -> String :
+  "DiodeBridge"
+
+val V-ac = Ref("V-ac")
+val V-dc = Ref("V-dc")
+val P = Ref("p")
+
+public defmethod build-pins (x:DiodeBridgeSymbol, node:SymbolNode) :
+  val params = get-default-diode-bridge-symbol-params()
+  val [_, side, pin-len, pad-ref-size] = to-tuple(params)
+
+  val r = side * cos(to-radians(45.0))
+  val pin-end = ceil(r + pin-len)
+  val pin-len* = pin-end - r
+
+  val pin-set = [
+    [FieldRef(V-ac, P)[1], Point(0.0, r), Up]
+    [FieldRef(V-ac, P)[2], Point(0.0, (- r)), Down]
+    [FieldRef(V-dc, P)[1], Point(r, 0.0), Right]
+    [FieldRef(V-dc, P)[2], Point((- r), 0.0), Left]
+  ]
+  for pin-info in pin-set do:
+    val [pin-ref, pos, direction] = pin-info
+
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-len*
+      pad-ref-size = pad-ref-size
+    )
+
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(node, pin-ref, pos, params = pin-params, name = name)
+
+public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
+  val params = get-default-diode-bridge-symbol-params()
+  val [dp, side, pin-len, _] = to-tuple(params)
+  val diode = construct-diode-shape(side, dp)
+
+  ; The diode bridge consists of 4 of the `diode` shapes
+  ;  rotated and positioned along the edge of the diamond.
+  val xy = (side / 2.0) * cos(to-radians(45.0))
+
+  val poses = [
+    loc(xy, xy) * loc(0.0, 0.0, -135.0),
+    loc((- xy), xy) * loc(0.0, 0.0, -45.0)
+    loc((- xy), (- xy)) * loc(0.0, 0.0, -135.0)
+    loc(xy, (- xy)) * loc(0.0, 0.0, -45.0)
+  ]
+  for pose in poses do:
+    val diode-side = pose * diode
+    add-glyph(node, diode-side, class = "diode")
+
+  ; Add Text Labels for the AC and DC sides
+  val r = side * cos(to-radians(45.0))
+
+  val fs = 8
+  val inset = 1.0
+  text(node, [r - inset, 0.0], "+", font-size = fs)
+  text(node, [(- (r - inset)), 0.0], "-", font-size = fs)
+
+  text(node, [0.0, r - inset], "~", font-size = fs)
+  text(node, [0.0, (- (r - inset))], "~", font-size = fs)
+
+public defmethod build-params (x:DiodeBridgeSymbol, node:SymbolNode) :
+  val overall = glyph-bounds(node)
+  text(node, [right(overall), up(overall)], ">REF", anchor = W, font-size = 8)
+  text(node, [right(overall), down(overall)], ">VALUE", anchor = W, font-size = 8)
