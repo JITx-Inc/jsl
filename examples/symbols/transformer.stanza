@@ -1,0 +1,87 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/transformer:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/transformer
+  import jsl/symbols/inductors
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SOIC
+  import jsl/examples/landpatterns/board
+
+
+val indParams1 = InductorSymbolParams(
+  porch-width = 0.0
+  periods = 4
+)
+
+val indParams2 = InductorSymbolParams(
+  porch-width = 0.0
+  periods = 6
+)
+
+val p = TransformerSymbolParams(
+  coils = [
+    1 => CoilParams(params = indParams1, taps = [1], direction = Left, polarized = Up),
+    2 => CoilParams(params = indParams2, taps = [3], direction = Right, polarized = Up)
+    3 => CoilParams(params = indParams1, direction = Left, polarized = Up),
+    4 => CoilParams(params = indParams1, direction = Right, polarized = Up),
+  ],
+  core-style = DoubleBarCore
+  pin-pitch = 2.0
+)
+val symb-defn = TransformerSymbol(params = p)
+val symb = create-symbol(symb-defn)
+
+; view(symb)
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-Transformer:
+  manufacturer = "Wurth"
+  mpn = "00123412"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ N1.p[1] | p[1] ]
+    [ N1.p[2] | p[2] ]
+    [ N1.tap[1] | p[3] ]
+    [ N2.p[1] | p[4] ]
+    [ N2.p[2] | p[5] ]
+    [ N2.tap[1] | p[6] ]
+    [ N3.p[1] | p[7] ]
+    [ N3.p[2] | p[8] ]
+    [ N4.p[1] | p[9] ]
+    [ N4.p[2] | p[10] ]
+
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-Transformer
+  place(c) at loc(0.0, 0.0) on Top
+
+  net (c.N1.p[1], c.N1.p[2])
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("TRANSFORMER-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; View the results
+view-schematic()

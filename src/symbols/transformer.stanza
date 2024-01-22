@@ -1,0 +1,484 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/transformer:
+  import core
+  import math
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/geometry/basics
+  import jsl/geometry/box
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/inductors
+
+public defn ensure-left-right! (
+  field:String,
+  direction:Dir
+  ):
+  match(direction):
+    (x:Up|Down): throw $ ValueError("Invalid Direction for Transformer Coil '%_' - Expect Left or Right" % [x])
+    (x): false
+
+public defn ensure-up-down! (
+  field:String,
+  direction?:Maybe<Dir>
+  ):
+  match(direction?):
+    (x:One<Dir>):
+      match(value(x)):
+        (_:Left|Right):
+          throw $ ValueError("Invalid Direction for Transformer Coil Polarization '%_' - Expect Up or Down" % [x])
+        (_): false
+    (x): false
+
+doc: \<DOC>
+Specifications for the Coil Symbol
+Typically a transformer will need at least two of
+these specifications to provide the two ports of a minimal
+transformer.
+
+TODO - Diagram that shows the tap locations and other parameters.
+<DOC>
+public defstruct CoilParams <: Equalable :
+  doc: \<DOC>
+  Inductor Parameters for the coil.
+  Note that the `core-style` parameter will be ignored
+  at the coil level. The user can specify this at the
+  `TransformerParams` level.
+  <DOC>
+  params:InductorSymbolParams
+  doc: \<DOC>
+  Tap Locations for this coil if any.
+  The indices in this list are dependent on the number of `periods`
+  in the `params`.
+  The max number of taps is 1 less than the number
+  of periods.
+  These indices are zero-based.
+  <DOC>
+  taps:Tuple<Int>
+  doc: \<DOC>
+  Set the direction for this coil - either Left or Right.
+  <DOC>
+  direction:Dir with: (
+    ensure => ensure-left-right!
+  )
+  doc: \<DOC>
+  Optional polarization marker - This adds a dot near either the top or bottom pin.
+  This value expects either an `Up` (top) or `Down` (bottom) to indicate where to
+  place the polarized marker if not `None`.
+  <DOC>
+  polarized:Maybe<Dir> with: (
+    ensure => ensure-up-down!
+  )
+with:
+  constructor => #CoilParams
+  equalable => true
+  printer => true
+
+public defn CoilParams (
+  --
+  params:InductorSymbolParams
+  direction:Dir
+  taps:Tuple<Int> = []
+  polarized:Dir = ?
+  ) -> CoilParams :
+  val max-taps = periods(params) - 1
+  for tap in taps do:
+    if not (tap < max-taps) :
+      throw $ ValueError("Invalid Tap Offset: %_ is Invalid" % [tap])
+  #CoilParams(params, taps, direction, polarized)
+
+public defn get-pin-count (p:CoilParams) -> Int :
+  2 + length(taps(p))
+
+public defn get-coil-height (p:CoilParams) -> Double :
+  to-double $ periods $ params(p)
+
+doc: \<DOC>
+Default Transformer Pitch
+The idea is that this defines the scale of the winding half-circle
+shapes. I'm generally trying to use 1.0 here because this allows the
+taps of the windings to extract on the schematic grid.
+<DOC>
+public val DEF_TFR_PITCH = 1.0
+public val DEF_TFR_PIN_LEN = 2.0
+public val DEF_TFR_REF_SIZE = 0.65
+public val DEF_TFR_TAP_LEN = 1.0
+
+doc: \<DOC>
+Parameters that define a Transformer Symbol
+<DOC>
+public defstruct TransformerSymbolParams <: Equalable :
+  doc: \<DOC>
+  The coils are an ordered list of Coil Number and Coil Parameters
+  The coils are separated into left and right coils while maintaining
+  their order in this collection.
+  The coils are then rendered on their appropriate side in that order.
+  The Coil Number is intended to be a 1-based index that will be used to
+  define the coil reference as `N[i]` where `i` is the coil number.
+  <DOC>
+  coils:Tuple<KeyValue<Int,CoilParams>>
+  doc: \<DOC>
+  Style for the graphical representation of the transformer's core.
+  This is typically used to indicate features like "Air Core",
+  "Iron Core", "Ferrite Core", etc.
+  <DOC>
+  core-style:InductorCoreStyle with: (
+    updater => sub-core-style
+  )
+  doc: \<DOC>
+  The tap length is the extra line added in the X direction to extend the connection points away from the winding.
+  This value is optional but can be useful for clearer symbols when using windings with one or more taps.
+  This extends the tap position line either to the left or right depending on the coil parameters.
+  Integral values are highly suggested to maintain the schematic grid.
+  <DOC>
+  tap-length:Double with: (
+    ensure => ensure-non-negative!,
+    default => DEF_TFR_TAP_LEN
+  )
+  doc: \<DOC>
+  Pin pitch defines the size of the winding half-circle shapes
+  <DOC>
+  pin-pitch:Double with: (
+    ensure => ensure-positive!
+    default => DEF_TFR_PITCH
+  )
+  doc: \<DOC>
+  Pin Length is used in defining the pins used for the ends and taps of the transformer windings.
+  <DOC>
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_TFR_PIN_LEN
+  )
+  doc: \<DOC>
+  Pad Reference Size defines the Text size for the pad id/reference as shown above the pin.
+  <DOC>
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+  )
+with:
+  constructor => #TransformerSymbolParams
+  equalable => true
+  printer => true
+
+public defn TransformerSymbolParams (
+  --
+  coils:Tuple<KeyValue<Int,CoilParams>>
+  core-style:InductorCoreStyle = NoBarCore
+  tap-length:Double = DEF_TFR_TAP_LEN
+  pin-pitch:Double = DEF_TFR_PITCH
+  pin-length:Double = DEF_TFR_PIN_LEN
+  pad-ref-size:Double = DEF_TFR_REF_SIZE
+  ) -> TransformerSymbolParams :
+  if not (length(coils) > 1):
+    throw $ ValueError("TransformerSymbolParams Requires at least 2 Coil Parameters to construct a transformer symbol")
+
+  val ret = #TransformerSymbolParams(coils, core-style, tap-length, pin-pitch, pin-length, pad-ref-size)
+
+  val left = get-coils(ret, Left)
+  val right = get-coils(ret, Right)
+  if not ((length(left) > 0) and (length(right) > 0)) :
+    throw $ ValueError("TransformerParams Requires at least one Left and one Right coil to form a transformer symbol")
+  ret
+
+public defn get-coils (p:TransformerSymbolParams, side:Dir) -> Tuple<KeyValue<Int, CoilParams>> :
+  to-tuple $ for kvp in coils(p) filter:
+    val coil = value(kvp)
+    direction(coil) == side
+
+doc: \<DOC>
+Compute the end to end distance of the inductor symbol that makes up this coil.
+<DOC>
+defn compute-ind-pitch (tp:TransformerSymbolParams, cp:CoilParams) -> Double :
+  val indParams = params(cp)
+  val pin-pitch = pin-pitch(tp)
+  (get-coil-height(cp) * pin-pitch) + (porch-width(indParams) * 2.0)
+
+doc: \<DOC>
+Compute to positions where the tap's on a transformer will be found.
+
+These points are where the pins for the tap points will be located. No
+that this list will not include the start or end terminals of the coil.
+<DOC>
+defn compute-tap-endpoints (tp:TransformerSymbolParams, cp:CoilParams) -> Tuple<Point> :
+  val pw = porch-width $ params(cp)
+  val pin-pitch = pin-pitch(tp)
+  val tl = tap-length(tp)
+
+  val p2 = compute-ind-pitch(tp, cp) / 2.0
+
+  to-tuple $ for tapIndex in taps(cp) seq:
+    val y = pw + (to-double(tapIndex + 1) * pin-pitch)
+    Point(tl, p2 - y)
+
+doc: \<DOC>
+Construct a coil shape with tap lines for a `Right` facing coil
+
+This function does not take the direction into account. The user
+needs to manage flipping/positioning if a `Left` facing coil is needed.
+<DOC>
+public defn construct-coil-shape (tp:TransformerSymbolParams, cp:CoilParams) -> Shape :
+
+  val sh = Vector<Shape>()
+
+  val indParams = params(cp)
+  val pin-pitch = pin-pitch(tp)
+  val indPitch = compute-ind-pitch(tp, cp)
+  val induct = construct-inductor-shape(indPitch, indParams)
+  add(sh, induct)
+  val p2 = pin-pitch / 2.0
+  val ip2 = indPitch / 2.0
+
+  ; Construct the end & tap lines if present
+  val lw = line-width(indParams)
+  val tl = tap-length(tp)
+  if tl > 0.0 :
+    add{sh, _} $ Line(lw, [
+      Point(0.0, ip2)
+      Point(tl, ip2)
+    ])
+    add{sh, _} $ Line(lw, [
+      Point(0.0, (- ip2))
+      Point(tl, (- ip2))
+    ])
+
+    ; This part become a little tricky - we want to add the tap
+    ;  lines off of specific winding positions. We need to be careful
+    ;  about whether there is a porch-width specified because this will
+    ;  throw off the calculations from the grid.
+    val tap-pts = compute-tap-endpoints(tp, cp)
+    for tap-pt in tap-pts do:
+      add{sh, _} $ Line(lw, [
+        Point(0.0, y(tap-pt))
+        tap-pt
+      ])
+
+  ; Add a small dot at the prescribed end for the
+  ;  polarization indicator.
+  match( polarized(cp) ):
+    (_:None): false
+    (x:One<Dir>):
+      val pw = porch-width $ params(cp)
+      val pol-size = pin-pitch * (40 %)
+      val dot-y = ip2 - (pw + p2)
+      add{sh, _} $ match(value(x)):
+        (up:Up):
+          (loc(0.0, dot-y) * Circle(to-radius(pol-size)))
+        (dn:Down):
+          (loc(0.0, (- dot-y)) * Circle(to-radius(pol-size)))
+
+  Union(to-tuple(sh))
+
+doc: \<DOC>
+Parameterized Transformer Symbol
+
+User can select the form of this transformer using the
+`TransformerSymbolParams` type.
+
+*  N1.p[1], N1.p[2] => Coil 1, End Pins p1=positive, p2=negative
+*  N1.tap[1] => First tap starting from the top of Coil #1
+
+The `N1` is the coil identifier and will map to the `Int` value in
+the `coils` of the `TransformerSymbolParams` type.
+
+The `p[1]/p[2]` pins are the endpoints of the coil. `p[1]` is always
+the positive pin (pin with marker).
+
+The `tap[...]` array is a set of pins that map to the generated taps for
+this coil. This list is 1-indexed. It starts from he top of the coil.
+<DOC>
+public defstruct TransformerSymbol <: SymbolDefn :
+  params:TransformerSymbolParams
+with:
+  constructor => #TransformerSymbol
+
+public defn TransformerSymbol (
+  --
+  params:TransformerSymbolParams
+  ) -> TransformerSymbol :
+  #TransformerSymbol(params)
+
+doc: \<DOC>
+Construct a Transformer Symbol
+
+This type allows the user to construct a transformer
+symbol with a parameterized number of coils.
+
+The pins for the generated coils will come in the form:
+
+<DOC>
+public defmethod name (x:TransformerSymbol) -> String :
+  "Transformer"
+
+
+public val TFR_GRP_REF = Ref("N")
+
+; Note: I wanted to do the references for the pins
+;  of the coils of the transformer like this:
+;
+;  N[1].p[1] - Positive Side
+;  N[1].p[2] - Negative Side
+;  N[1].tap[1] - Ordered taps from top to bottom for this coil
+;  N[2]...
+;  N[3]...
+;
+;  But I ran into a problem with JITX where I was getting an error:
+;
+;   Uncaught Exception: Inconsistent port array. The port N[0] has
+;      a different child structure than port N[1].
+;
+;  Basically, it was preventing me from creating a transformer with a tap
+;  on one of the coils and no tap on the other.
+;
+;  So I've fallen back to just constructing the coil reference as a string
+;  and the pins and taps can be separate arrays.
+;
+;  N1.p[1], N1.p[2] => Coil 1, End Pins p1=positive, p2=negative
+;  N2.p[1], N2.p[2] => Coil 2, End Pins p1=positive, p2=negative
+;  N1.tap[1] => First tap starting from the top of Coil #1
+
+defn parent-ref (n:Int) -> Ref:
+  Ref("N%_" % [n])
+
+defn tap-ref (n:Int, tap:Int) -> Ref :
+  val parent = parent-ref(n)
+  FieldRef(parent, Ref("tap"))[tap]
+
+defn pin-ref (n:Int, p:Int) -> Ref :
+  val parent = parent-ref(n)
+  FieldRef(parent, Ref("p"))[p]
+
+public defmethod build-pins (x:TransformerSymbol, node:SymbolNode) :
+  val tp = params(x)
+  for side in [Left, Right] do:
+    val coils = get-coils(tp, side)
+
+    val [offsets, sh, start-y, end-y] = compute-coil-offsets(coils, tp)
+
+    val pin-params = VirtualPinParams(
+      direction = side,
+      pin-length = pin-length(tp),
+      pad-ref-size = pad-ref-size(tp)
+    )
+    val flip? = loc(Point(0.0, 0.0), 0.0, side is Left)
+    for (kvp in coils, offset in offsets) do:
+      val [coil-id, coil] = [key(kvp), value(kvp)]
+
+      ; Endpoint Pins of the Transformer
+      val h = compute-ind-pitch(tp, coil)
+      val top-pos = flip? * loc(offset) * Point(tap-length(tp), (h / 2.0))
+      val bot-pos = flip? * loc(offset) * Point(tap-length(tp), (h / -2.0))
+
+      ; I need to take into account the direction of polarization so
+      ;  that p[1] is the positive (side with the dot) and p[2] is
+      ;  the negative.
+      val pin-ids = match(polarized(coil)):
+        (f:None): [1, 2]
+        (d:One<Dir>):
+          match(value(d)):
+            (up:Up): [1, 2]
+            (dn:Down): [2, 1]
+
+      for (pos in [top-pos, bot-pos], ref-i in 0 to false) do:
+        val pin-id = pin-ids[ref-i]
+        val pref = pin-ref(coil-id, pin-id)
+        val name = to-string("pin-%_" % [pref])
+        add-pin(node, pref, pos, params = pin-params, name = name)
+
+      ; Tap Point Pins
+      val tap-pts = compute-tap-endpoints(tp, coil)
+      for (tap-pt in tap-pts, i in 1 to false) do:
+        val pos = flip? * loc(offset) * tap-pt
+        val pref = tap-ref(coil-id, i)
+        val name = to-string("pin-%_" % [pref])
+        add-pin(node, pref, pos, params = pin-params, name = name)
+
+doc: \<DOC>
+Compute the offset positions of centered coils for the coils on one side.
+
+For each side of the transformer, we look at only the coils on that side. Then
+we determine how much space each coil shape takes and then center the coils
+vertically on that side. This function computes the offsets for where the coils
+should be.
+
+@return [Offsets, Shapes, start-y, end-y]
+<DOC>
+defn compute-coil-offsets (coils:Tuple<KeyValue<Int, CoilParams>>, tp:TransformerSymbolParams) -> [Tuple<Point>, Tuple<Shape>, Double, Double] :
+  val shapes = to-tuple $ for kvp in coils seq:
+    val coil = value(kvp)
+    construct-coil-shape(tp, coil)
+
+  val coil-heights = to-tuple $ for kvp in coils seq:
+    val coil = value(kvp)
+    compute-ind-pitch(tp, coil)
+
+  val coil-pad = 1.0
+  val total-height = sum(coil-heights) + (coil-pad * to-double((length(coils) - 1)))
+
+  ; We want to space out the coils on this side so that they are
+  ; centered around the Y = 0
+  val y-start-off-grid = total-height / 2.0
+  ; I'm rounding to the nearest whole number so that the
+  ;  coil end wires and taps start on the grid.
+  val y-start-origin = round(y-start-off-grid)
+  var y-start = y-start-origin
+  ; If the user make the pin-length larger - then
+  ;   we need more space in the X direction
+  val x-offset = max(1.0, pin-pitch(tp))
+  val offsets = to-tuple $ for coil-height in coil-heights seq:
+    val h = coil-height
+    val o = Point(x-offset, y-start - (h / 2.0))
+    y-start = y-start - (h + coil-pad)
+    o
+  [offsets, shapes, y-start-origin, y-start-origin - total-height]
+
+public defmethod build-artwork (x:TransformerSymbol, node:SymbolNode) :
+  val tp = params(x)
+
+  val height-spans = to-tuple $ for side in [Left, Right] seq:
+    val coils = get-coils(tp, side)
+    val [offsets, shapes, start-y, end-y] = compute-coil-offsets(coils, tp)
+
+    for (coil in coils, offset in offsets, shape in shapes) do:
+      val id = key(coil)
+      val art* = loc(Point(0.0, 0.0), 0.0, side is Left) *  loc(offset) * shape
+      add-glyph(node, art*, name? = One(to-string("N%_" % [id])) class = ["coil"])
+
+    [start-y, end-y]
+
+  ; Draw the Core Style lines if any
+  val max-start = maximum $ for span in height-spans seq:
+    span[0]
+  val min-end = minimum $ for span in height-spans seq:
+    span[1]
+
+  val lw = 0.05
+  match(core-style(tp)):
+    (_:NoBarCore): false
+    (_:SingleBarCore):
+      line(node, [Point(0.0, max-start), Point(0.0, min-end)], lw)
+
+    (_:DoubleBarCore):
+      val x-off = lw * 3.0
+      line(node, [Point(x-off, max-start), Point(x-off, min-end)], lw)
+      line(node, [Point((- x-off), max-start), Point((- x-off), min-end)], lw)
+
+
+public defmethod build-designator (x:TransformerSymbol, sn:SymbolNode) :
+  val tp = params(x)
+  val overall = glyph-bounds(sn)
+  text(sn, [left(overall), up(overall) + 0.5], ">REF", anchor = W, font-size = 8)
+  ; Note - this is a bit of a hack because the `Box` implementation doesn't
+  ;   handle `Text` objects at the moment. This means that if I put this
+  ;   in the `build-params` method - it will fail because the glyphs will contain
+  ;   the `>REF` text.
+  val ref-size = pad-ref-size(tp) * (130 %)
+  text(sn, [left(overall), down(overall) - ref-size], ">VALUE", anchor = NW, font-size = 8)
+
+public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
+  false
