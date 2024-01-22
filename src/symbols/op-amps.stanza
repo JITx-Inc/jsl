@@ -173,18 +173,6 @@ public defmethod build-artwork (x:OpAmpSymbol, node:SymbolNode) :
   val g = OpAmpGlyph(x, params = params(x))
   append(node, g)
 
-public defmethod build-designator (x:OpAmpSymbol, sn:SymbolNode) :
-  val p = params(x)
-  val w = tri-width(p)
-
-  ; If you compute the geometry, the
-  ;   y intercept of the triangle edge at x = 0.0
-  ;   is (w / 4)
-  ; We then pad on this a bit for the ref point.
-  val y = 0.25 * w
-
-  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
-
 public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
   val p = params(x)
   val w = tri-width(p)
@@ -195,5 +183,6 @@ public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
   ; We then pad on this a bit for the ref point.
   val y = 0.25 * w
 
+  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
   text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
 

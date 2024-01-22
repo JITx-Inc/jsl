@@ -468,17 +468,9 @@ public defmethod build-artwork (x:TransformerSymbol, node:SymbolNode) :
       line(node, [Point(x-off, max-start), Point(x-off, min-end)], lw)
       line(node, [Point((- x-off), max-start), Point((- x-off), min-end)], lw)
 
-
-public defmethod build-designator (x:TransformerSymbol, sn:SymbolNode) :
+public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
   val tp = params(x)
   val overall = glyph-bounds(sn)
   text(sn, [left(overall), up(overall) + 0.5], ">REF", anchor = W, font-size = 8)
-  ; Note - this is a bit of a hack because the `Box` implementation doesn't
-  ;   handle `Text` objects at the moment. This means that if I put this
-  ;   in the `build-params` method - it will fail because the glyphs will contain
-  ;   the `>REF` text.
   val ref-size = pad-ref-size(tp) * (130 %)
   text(sn, [left(overall), down(overall) - ref-size], ">VALUE", anchor = NW, font-size = 8)
-
-public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
-  false

@@ -52,18 +52,11 @@ public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
 public defmethod build-pins (x:TwoPinSymbol, node:SymbolNode) :
   two-pin-build-pins(x, node)
 
-public defmethod build-designator (x:TwoPinSymbol, sn:SymbolNode) :
+public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
   ; TODO - I want to be able to find the bounds of the
   ;  symbol artwork and construct the reference designator
   ;  in the appropriate spot that avoids all of the artwork.
   ; TODO - make `font-size` parametric and configurable.
   text(sn, [0.5, 0.5], ">REF", anchor = W, font-size = 8)
-
-
-public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
-  ; Same Idea as above- I want to detect where the
-  ;  default designator location should be and place it
-  ;  there.
-  ; TODO - fix anchor and font-size here.
   text(sn, [0.5, -0.5], ">VALUE")
 
