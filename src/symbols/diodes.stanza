@@ -77,6 +77,11 @@ public defn body-width (p:DiodeSymbolParams) -> Double :
     (w:Double): w
     (d:Dims): x(d)
 
+public defn body-height (p:DiodeSymbolParams) -> Double :
+  match(body-dims(p)):
+    (h:Double): h
+    (d:Dims): y(d)
+
 var DEF_DIODE_PARAMS = DiodeSymbolParams()
 public defn get-default-diode-symbol-params () -> DiodeSymbolParams :
   DEF_DIODE_PARAMS
