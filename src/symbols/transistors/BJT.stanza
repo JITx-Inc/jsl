@@ -1,0 +1,269 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/transistors/BJT:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/geometry/basics
+  import jsl/symbols/ThreePinSymbol
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/arrows
+
+public defenum BJT-Junction :
+  NPN
+  PNP
+
+val DEF_BJT_PORCH_WIDTH = 0.25
+val DEF_BJT_PIN_LEN = 2.0
+val DEF_BJT_BASE_LINE = 2.3
+val DEF_BJT_LINE_WIDTH = 0.1
+val DEF_BJT_ARROW_PARAMS = ArrowSymbolParams(
+  style = OpenArrow
+  shaft-length = 1.0,
+  head-dims = Dims(0.3, 0.5)
+  line-width = DEF_BJT_LINE_WIDTH
+  )
+val DEF_BJT_OUTLINE = true
+val DEF_BJT_PAD_REF_SIZE = 0.75
+
+public defstruct BJTSymbolParams <: Equalable :
+  doc: \<DOC>
+  Length of the vertical line on the Emmiter and collector pins
+  The emitter and collector pins have a angled line that
+  extends from the base. The `porch-width` then inserts a
+  vertical line from the end of these angled lines to where the
+  pin starts.
+  This value can be 0.0 if no porch-width is desired and the pin
+  will start immediately from the end of the angled line.
+  <DOC>
+  porch-width:Double with: (
+    ensure => ensure-non-negative!
+    updater => sub-porch-width
+    default => DEF_BJT_PORCH_WIDTH
+  )
+
+  doc: \<DOC>
+  Sets the base line length
+  This is the vertical line that the base connection
+  intersects with at a 90 degree angle, and the collector/emitter
+  intersect with at a 45 degree angle.
+  <DOC>
+  base-line:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-base-line
+    default => DEF_BJT_BASE_LINE
+  )
+  doc: \<DOC>
+  Set the style and parameters of the arrow leg of the transistor.
+  The arrow leg is the line from the base to the emitter.
+  On NPN it points away from the base. For PNP, it
+  points toward the base.
+  By default, the `ArrowSymbolParams` shaft-length data member
+  will also be used to control the length of the base-collector line
+  primarily for symmetry reasons.
+  <DOC>
+  arrow-params:ArrowSymbolParams with: (
+    default => DEF_BJT_ARROW_PARAMS
+  )
+  doc: \<DOC>
+  Add the outline circle around the transistor
+  Often for power transistors, the BJT symbol
+  will have a circle outline
+  <DOC>
+  outline:True|False with: (
+    updater => sub-outline
+    default => DEF_BJT_OUTLINE
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_BJT_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_BJT_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_BJT_PAD_REF_SIZE
+  )
+with:
+  constructor => #BJTSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn BJTSymbolParams (
+  --
+  porch-width:Double = DEF_BJT_PORCH_WIDTH
+  base-line:Double = DEF_BJT_BASE_LINE
+  arrow-params:ArrowSymbolParams = DEF_BJT_ARROW_PARAMS
+  outline-diam:True|False = DEF_BJT_OUTLINE
+  line-width:Double = DEF_BJT_LINE_WIDTH
+  pin-length:Double = DEF_BJT_PIN_LEN
+  pad-ref-size:Double = DEF_BJT_PAD_REF_SIZE
+  ) -> BJTSymbolParams:
+  #BJTSymbolParams(
+    porch-width
+    base-line
+    arrow-params
+    outline-diam
+    line-width
+    pin-length
+  )
+
+public defn construct-bjt-shape (
+  junction-type:BJT-Junction
+  pitch:Double,
+  width:Double,
+  p:BJTSymbolParams
+  ) -> Shape :
+
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  ; Construct the Emitter Arrow
+  val ap = sub-line-width(arrow-params(p), line-width(p))
+  val arrow = construct-arrow(ap)
+  ; Rotate the arrow such that it points in the right direction
+  ;   for the NPN or PNP case.
+  val a-offset = p2 - porch
+  val a-len = shaft-length(ap)
+  val angle = 45.0
+  val angle-rad = to-radians(angle)
+  val emit-arrow = match(junction-type):
+    (_:NPN):
+      loc(0.0, (- a-offset)) * loc(0.0, 0.0, 180.0 - angle) * arrow
+    (_:PNP):
+      val adjust = loc((- a-len * sin(angle-rad)), (- a-len * cos(angle-rad)))
+      adjust * loc(0.0, a-offset) * loc(0.0, 0.0, angle) * arrow
+
+  ; Construct the Collector Line
+  val line = Line(lw, [Point(0.0, 0.0), Point(a-len, 0.0)])
+  val col-line = match(junction-type):
+    (_:NPN):
+      loc(0.0, a-offset) * loc(0.0, 0.0, (- (180.0 - angle))) * line
+    (_:PNP):
+      loc(0.0, (- a-offset)) * loc(0.0, 0.0, (180.0 - angle)) * line
+
+  val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
+
+  ; I'm using NPN convention here just for convenience -
+  ;   it doesn't really matter for the subsequent computations.
+  val [Cp, Ep, Bp] = pin-positions(pitch, width)
+
+  val top-porch = loc(Cp, 180.0) * porch-line
+  val bot-porch = loc(Ep) * porch-line
+
+  ; Construct the base line
+  val base-x = (- (a-len * cos(angle-rad)))
+  val b-len = base-line(p)
+  val base-line = Line(lw, [Point(base-x, b-len / 2.0), Point(base-x, b-len / -2.0)])
+
+  ; Base Connection Line
+  val base-conn = Line(lw, [Point(base-x, 0.0), Bp])
+
+  ; Construct Circle (Optional)
+  val opt-shapes = if outline(p):
+    val circle = compute-circle(Bp, Ep, Cp)
+    ; We can't use the circle because by default, it is filled. We need to use a
+    ; Polyline and an arc to get the construction we are looking for.
+    val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
+    [Polyline(lw, [arc])]
+  else:
+    []
+
+  val symb-shapes = cat(
+    [top-porch, emit-arrow, col-line, bot-porch, base-line, base-conn]
+    opt-shapes
+  )
+  Union(symb-shapes)
+
+var DEF_BJT_PARAMS = BJTSymbolParams()
+public defn get-default-bjt-symbol-params () -> BJTSymbolParams :
+  DEF_BJT_PARAMS
+
+public defn set-default-bjt-symbol-params (v:BJTSymbolParams) -> False :
+  DEF_BJT_PARAMS = v
+
+
+public defstruct BJTSymbol <: ThreePinSymbol :
+  junction-type:BJT-Junction
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+    as-method => true
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+    as-method => true
+  )
+with:
+  constructor => #BJTSymbol
+
+defn pin-positions (pitch:Double, width:Double) -> [Point, Point, Point] :
+  val p2 = pitch / 2.0
+  [
+    Point(0.0, p2)           ; C/E
+    Point(0.0, (- p2))       ; E/C
+    Point((- width), 0.0) ; Base
+  ]
+
+public defn BJTSymbol (
+  --
+  junction-type:BJT-Junction
+  pitch:Double = THREE_PIN_DEF_PITCH
+  width:Double = THREE_PIN_DEF_WIDTH
+  ) -> BJTSymbol :
+  #BJTSymbol(junction-type, pitch, width)
+
+public defmethod name (x:BJTSymbol) -> String :
+  "BJT"
+
+val BJT_BASE_REF = Ref("B")
+val BJT_COLLECTOR_REF = Ref("C")
+val BJT_EMITTER_REF = Ref("E")
+
+public defmethod build-pins (
+  x:BJTSymbol, sn:SymbolNode
+  ):
+  val p = get-default-bjt-symbol-params()
+
+  val refs = match(junction-type(x)):
+    (_:PNP): [BJT_EMITTER_REF, BJT_COLLECTOR_REF, BJT_BASE_REF]
+    (_:NPN): [BJT_COLLECTOR_REF, BJT_EMITTER_REF, BJT_BASE_REF]
+
+  val dirs = [Up, Down, Left]
+  val positions = pin-positions(pitch(x), width(x))
+
+  for (pin-ref in refs, direction in dirs, pos in positions) do:
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-length(p),
+      pad-ref-size = pad-ref-size(p)
+    )
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(sn, pin-ref, pos, params = pin-params, name = name)
+
+public defmethod build-artwork (
+  x:BJTSymbol, sn:SymbolNode
+  ):
+  val params = get-default-bjt-symbol-params()
+  val art = construct-bjt-shape(junction-type(x), pitch(x), width(x), params)
+  add-glyph(sn, art, name? = One("BJT"), class = ["transistor"])
+
+public defmethod build-params (
+  x:BJTSymbol, sn:SymbolNode
+  ):
+  val p = get-default-bjt-symbol-params()
+  val overall = glyph-bounds(sn)
+  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+
