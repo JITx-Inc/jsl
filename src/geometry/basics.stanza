@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/geometry/basics:
   import core
+  import math
   import jitx
   import jitx/commands
 
@@ -164,3 +165,38 @@ public defn scale-shape (s:Shape, scale:Double) -> Shape :
     (obj):
       throw $ NotImplementedYet("Shape: %_" % [obj])
     ; (obj:LineRectangle):
+
+
+doc: \<DOC>
+Given 3 Points - compute the circle
+See here:
+https://math.stackexchange.com/questions/2836274/3-point-to-circle-and-get-radius
+<DOC>
+public defn compute-circle (b:Point, e:Point, c:Point) -> Circle :
+
+  val dE = e - b
+  val dC = c - b
+
+  val dX2 = x(dE)
+  val dY2 = y(dE)
+
+  val dX3 = x(dC)
+  val dY3 = y(dC)
+
+  val dX2_sq = (dX2 * dX2)
+  val dY2_sq = (dY2 * dY2)
+  val dX3_sq = (dX3 * dX3)
+  val dY3_sq = (dY3 * dY3)
+
+  val dXc-num = (dX2_sq * dY3) - (dX3_sq * dY2) + (dY2_sq * dY3) - (dY3_sq * dY2)
+  val dXc = dXc-num / (2.0 * ((dX2 * dY3) - (dX3 * dY2)))
+
+  val dYc-num = (dX2_sq * dX3) - (dX3_sq * dX2) + (dY2_sq * dX3) - (dY3_sq * dX2)
+  val dYc = dYc-num / (2.0 * ((dX3 * dY2) - (dX2 * dY3)))
+
+  val Xc = x(b) + dXc
+  val Yc = y(b) + dYc
+
+  val r = sqrt( (dXc * dXc) + (dYc * dYc) )
+
+  Circle(Point(Xc, Yc), r)
