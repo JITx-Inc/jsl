@@ -1,0 +1,49 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/ThreePinSymbol:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+
+
+public val THREE_PIN_DEF_PITCH = 3.0
+public val THREE_PIN_DEF_WIDTH = 2.0
+
+
+doc: \<DOC>
+Three Pin Device Symbol Base Class
+Three pin devices are BJTs, MOSFETS, SCR, etc
+where there are 2 pins that are typically a current
+conduction channel and a control pin that enables
+or disables the current conduction channel.
+
+The point of this type is to define a default
+pitch and height so that all 3-pin devices have the
+same dimensions. The user can always override this
+behavior if they wish, but it may have ramifications
+on the generated schematic layouts.
+
+TODO - Insert diagram here
+
+The 3-pin symbols are constructed with two parameters
+that control their general layout:
+
+1.  Pitch - Distance between the two pins of the conduction channel.
+  These two connections are typically inline vertically
+2.  Width - Distance from the inline vertical pins of the conduction
+  channel to the control pin. Typically the control pin points
+  in the negative X direction by default. This pin is typically centered
+  vertically  between the two conduction channel pins, but this is not a
+  requirement (see SCR symbols)
+<DOC>
+public defstruct ThreePinSymbol <: SymbolDefn :
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+  )
