@@ -13,7 +13,7 @@ JITX environment. The goals for this project are:
 
 1.  Clone [jitx-client](https://github.com/JITx-Inc/jitx-client) and build `jstanza`
     1.  `source scripts/setup-env.bash` - You will need to run this in every new shell.
-    2.  `./scripts/mask.bash jstanza` - You should only have to do this once.
+    2.  `./scripts/make.bash jstanza` - You should only have to do this once.
 2.  Check that `jstanza` is on your path
     1.  `whereis jstanza`
     2.  You should see `jstanza: $HOME/src/jitx-client/build/bin/jstanza` or something similar.
