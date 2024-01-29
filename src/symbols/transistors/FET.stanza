@@ -1,0 +1,315 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/transistors/FET:
+  import core
+  import math
+  import collections
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/geometry/basics
+  import jsl/symbols/ThreePinSymbol
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/arrows
+
+public defenum FET-Junction :
+  N-Channel
+  P-Channel
+
+public defenum FET-Mode :
+  Enhancement
+  Depletion
+
+val DEF_FET_PORCH_WIDTH = 0.5
+val DEF_FET_PIN_LEN = 2.0
+val DEF_FET_BASE_LINE = 2.3
+val DEF_FET_LINE_WIDTH = 0.1
+val DEF_FET_ARROW_PARAMS = ArrowSymbolParams(
+  style = OpenArrow
+  shaft-length = 0.8,
+  head-dims = Dims(0.3, 0.5)
+  line-width = DEF_FET_LINE_WIDTH
+  )
+val DEF_FET_OUTLINE = true
+val DEF_FET_PAD_REF_SIZE = 0.75
+
+public defstruct FETSymbolParams <: Equalable :
+  doc: \<DOC>
+  Length of the vertical line on the source and drain pins
+  The source and drain have a leader line between the channel
+  portion of the symbol and the actual pin locations.
+  The `porch-width` sets the length of this leader-line.
+  This value can be 0.0 if no porch-width is desired and the pin
+  will start immediately from the end of the channel structure.
+  <DOC>
+  porch-width:Double with: (
+    ensure => ensure-non-negative!
+    updater => sub-porch-width
+    default => DEF_FET_PORCH_WIDTH
+  )
+
+  doc: \<DOC>
+  Sets the base line length for the channel structure.
+  This is the vertical line that the gate, source, and drain
+  connections, all intersect at 90 degreess.
+  <DOC>
+  base-line:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-base-line
+    default => DEF_FET_BASE_LINE
+  )
+  doc: \<DOC>
+  Set the style and parameters of the arrow leg of the channel.
+  The arrow leg is the line from the base to the body. It also
+  defines the length of the lines from the channel to the source
+  and drain pins.
+  On N-channel, it points from body to channel
+  On P-Channel, it points  from channel to body.
+  <DOC>
+  arrow-params:ArrowSymbolParams with: (
+    default => DEF_FET_ARROW_PARAMS
+    updater => sub-arrow-params
+  )
+  doc: \<DOC>
+  Add the outline circle around the transistor
+  Often for power transistors, the BJT symbol
+  will have a circle outline
+  <DOC>
+  outline:True|False with: (
+    updater => sub-outline
+    default => DEF_FET_OUTLINE
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_FET_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_FET_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_FET_PAD_REF_SIZE
+  )
+with:
+  constructor => #FETSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn FETSymbolParams (
+  --
+  porch-width:Double = DEF_FET_PORCH_WIDTH
+  base-line:Double = DEF_FET_BASE_LINE
+  arrow-params:ArrowSymbolParams = DEF_FET_ARROW_PARAMS
+  outline-diam:True|False = DEF_FET_OUTLINE
+  line-width:Double = DEF_FET_LINE_WIDTH
+  pin-length:Double = DEF_FET_PIN_LEN
+  pad-ref-size:Double = DEF_FET_PAD_REF_SIZE
+  ) -> FETSymbolParams:
+  #FETSymbolParams(
+    porch-width
+    base-line
+    arrow-params
+    outline-diam
+    line-width
+    pin-length
+  )
+
+public defn construct-fet-shape (
+  junction-type:FET-Junction
+  mode-type:FET-Mode
+  pitch:Double,
+  width:Double,
+  p:FETSymbolParams
+  ) -> Shape :
+
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  val art = Vector<Shape>()
+
+  ; Construct the body Arrow
+  val ap = sub-line-width(arrow-params(p), line-width(p))
+  val arrow = construct-arrow(ap)
+  ; Rotate the arrow such that it points in the right direction
+  ;   for the N-channel or P-Channel case
+  val a-offset = 0.0
+  val a-len = shaft-length(ap)
+  val body-arrow = match(junction-type):
+    (_:N-Channel): loc((- a-len), 0.0) * arrow
+    (_:P-Channel): loc(0.0, 0.0, 180.0) * arrow
+
+  add(art, body-arrow)
+
+  val [Dp, Sp, Gp] = FET-pin-positions(junction-type, pitch, width, porch)
+  val Dp-Porch = Dp - Point(0.0, porch)
+  val Sp-Porch = Sp + Point(0.0, porch)
+
+  ; Construct the Drain/Source Lines
+  val line = Line(lw, [Point(0.0, 0.0), Point((- a-len), 0.0)])
+
+  val d-line = loc(0.0, y(Dp-Porch)) * line
+  add(art, d-line)
+
+  val s-line = loc(0.0, y(Sp-Porch)) * line
+  add(art, s-line)
+
+  val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
+
+  val d-porch = loc(0.0, y(Dp-Porch)) * porch-line
+  add(art, d-porch)
+
+  val s-porch = loc(0.0, y(Sp-Porch), 180.0) * porch-line
+  add(art, s-porch)
+
+  ; Construct the Body to source line depending on
+  ;  junction type.
+  val inv-porch-len = abs(y(Sp-Porch))
+  val sb-line-raw = Line(lw, [Point(0.0, 0.0), Point(0.0, inv-porch-len)])
+  val sb-line = match(junction-type):
+    (_:N-Channel): loc(0.0, 0.0, 180.0) * sb-line-raw
+    (_:P-Channel): sb-line-raw
+  add(art, sb-line)
+
+  ;  FET-Mode style and the gate
+  val b-len = base-line(p)
+  val base-x = (- a-len)
+  val base-sh = match(mode-type):
+    (_:Enhancement):
+      ; Dashed line for the channel
+      val gap = 0.25
+      val dash-len = (b-len - (2.0 * gap)) / 3.0
+      val d2 = dash-len / 2.0
+      val dash = Line(lw, [Point(0.0, 0.0), Point(0.0, dash-len)])
+      val middle = loc(base-x, (- d2)) * dash
+      val top = loc(base-x, (d2 + gap)) * dash
+      val bot = loc(base-x, (- ((3.0 * d2) + gap))) * dash
+      Union([top, middle, bot])
+    (_:Depletion):
+      ; Solid Line for the channel
+      Line(lw, [Point(base-x, (b-len / 2.0)), Point(base-x, (- b-len / 2.0))])
+
+  add(art, base-sh)
+
+  ; Add the gate representation
+  val gate-x = base-x - 0.3
+  val gate-len = 2.0 * inv-porch-len
+  val g2 = gate-len / 2.0
+  val gate-flash = Line(lw, [Point(gate-x, g2), Point(gate-x, (- g2))])
+  add(art, gate-flash)
+
+  ; Add the gate connection
+  val gate-conn = match(junction-type):
+    (_:N-Channel):
+      Line(lw, [Point(gate-x, (- g2)), Point(x(Gp), (- g2))])
+    (_:P-Channel):
+      Line(lw, [Point(gate-x, g2), Point(x(Gp), g2)])
+  add(art, gate-conn)
+
+
+  ; Construct Circle (Optional)
+  val opt-shapes = if outline(p):
+    val circle = compute-circle(Gp, Dp, Sp)
+    ; We can't use the circle because by default, it is filled. We need to use a
+    ; Polyline and an arc to get the construction we are looking for.
+    val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
+    add(art, Polyline(lw, [arc]))
+
+  val symb-shapes = to-tuple(art)
+  Union(symb-shapes)
+
+var DEF_FET_PARAMS = FETSymbolParams()
+public defn get-default-fet-symbol-params () -> FETSymbolParams :
+  DEF_FET_PARAMS
+
+public defn set-default-fet-symbol-params (v:FETSymbolParams) -> False :
+  DEF_FET_PARAMS = v
+
+
+public defstruct FETSymbol <: ThreePinSymbol :
+  junction-type:FET-Junction
+  mode-type:FET-Mode
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+    as-method => true
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+    as-method => true
+  )
+with:
+  constructor => #FETSymbol
+
+public defn FET-pin-positions (junction-type:FET-Junction, pitch:Double, width:Double, porch-width:Double) -> [Point, Point, Point] :
+  val p2 = pitch / 2.0
+  val gate-y-raw = (p2 - porch-width)
+
+  val gate-y = match(junction-type):
+    (_:N-Channel): (- gate-y-raw)
+    (_:P-Channel): (gate-y-raw)
+  [
+    Point(0.0, p2)           ; S/D
+    Point(0.0, (- p2))       ; D/S
+    Point((- width), gate-y) ; Gate
+  ]
+
+public defn FETSymbol (
+  --
+  junction-type:FET-Junction
+  mode-type:FET-Mode
+  pitch:Double = THREE_PIN_DEF_PITCH
+  width:Double = THREE_PIN_DEF_WIDTH
+  ) -> FETSymbol :
+  #FETSymbol(junction-type, mode-type, pitch, width)
+
+public defmethod name (x:FETSymbol) -> String :
+  "FET"
+
+public val FET_GATE_REF = Ref("G")
+public val FET_DRAIN_REF = Ref("D")
+public val FET_SOURCE_REF = Ref("S")
+
+public defmethod build-pins (
+  x:FETSymbol, sn:SymbolNode
+  ):
+  val p = get-default-fet-symbol-params()
+
+  val refs = match(junction-type(x)):
+    (_:N-Channel): [FET_DRAIN_REF, FET_SOURCE_REF, FET_GATE_REF]
+    (_:P-Channel): [FET_SOURCE_REF, FET_DRAIN_REF, FET_GATE_REF]
+
+  val dirs = [Up, Down, Left]
+  val positions = FET-pin-positions(junction-type(x), pitch(x), width(x), porch-width(p))
+
+  for (pin-ref in refs, direction in dirs, pos in positions) do:
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-length(p),
+      pad-ref-size = pad-ref-size(p)
+    )
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(sn, pin-ref, pos, params = pin-params, name = name)
+
+public defmethod build-artwork (
+  x:FETSymbol, sn:SymbolNode
+  ):
+  val params = get-default-fet-symbol-params()
+  val art = construct-fet-shape(junction-type(x), mode-type(x), pitch(x), width(x), params)
+  add-glyph(sn, art, name? = One("FET"), class = ["transistor"])
+
+public defmethod build-params (
+  x:FETSymbol, sn:SymbolNode
+  ):
+  val p = get-default-fet-symbol-params()
+  val overall = glyph-bounds(sn)
+  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+
