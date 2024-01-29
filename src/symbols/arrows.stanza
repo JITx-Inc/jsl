@@ -32,7 +32,9 @@ doc: \<DOC>
 Arrow Symbol Parameterization
 <DOC>
 public defstruct ArrowSymbolParams <: Equalable:
-  style:ArrowStyle
+  style:ArrowStyle with: (
+    updater => sub-style
+  )
   head-dims:Dims with: (
     ensure => ensure-positive!,
     updater => sub-head-dims,
