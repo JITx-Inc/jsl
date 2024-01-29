@@ -1,0 +1,296 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/transistors/JFET:
+  import core
+  import math
+  import collections
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/geometry/basics
+  import jsl/symbols/ThreePinSymbol
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/arrows
+  import jsl/symbols/transistors/FET
+
+val DEF_JFET_PORCH_WIDTH = 0.5
+val DEF_JFET_PIN_LEN = 2.0
+val DEF_JFET_BASE_LINE = 2.4
+val DEF_JFET_LINE_WIDTH = 0.1
+val DEF_JFET_ARROW_PARAMS = ArrowSymbolParams(
+  style = OpenArrow
+  shaft-length = 0.8,
+  head-dims = Dims(0.5, 0.5)
+  line-width = DEF_JFET_LINE_WIDTH
+  )
+val DEF_JFET_OUTLINE = true
+val DEF_JFET_PAD_REF_SIZE = 0.75
+val DEF_JFET_SD_CH_WIDTH = 0.8
+val DEF_JFET_ARROW_OFFSET = (10 %)
+
+doc: \<DOC>
+JFET Symbol Parameters
+
+These parameters set the features of the JFET symbol.
+
+TODO - Drawing Here
+<DOC>
+public defstruct JFETSymbolParams <: Equalable :
+  doc: \<DOC>
+  Length of the vertical line on the source and drain pins
+  The source and drain have a leader line between the channel
+  portion of the symbol and the actual pin locations.
+  The `porch-width` sets the length of this leader-line.
+  This value can be 0.0 if no porch-width is desired and the pin
+  will start immediately from the end of the channel structure.
+  <DOC>
+  porch-width:Double with: (
+    ensure => ensure-non-negative!
+    updater => sub-porch-width
+    default => DEF_JFET_PORCH_WIDTH
+  )
+
+  doc: \<DOC>
+  Sets the base line length for the channel structure.
+  This is the vertical line that the base connection
+  intersects with at a 90 degree angle, and the collector/emitter
+  intersect with at a 45 degree angle.
+  <DOC>
+  base-line:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-base-line
+    default => DEF_JFET_BASE_LINE
+  )
+  doc: \<DOC>
+  Sets the width of the line from the channel to the porch lines of the source and drain.
+  Unlike in the FET symbol, the arrow doesn't set this length so we need an explicit
+  value that sets the width of the channel body.
+  <DOC>
+  sd-channel-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-sd-channel-width
+    default => DEF_JFET_SD_CH_WIDTH
+  )
+  doc: \<DOC>
+  Set the style and parameters of the base arrow into channel.
+  The arrow leg is the line from the gate to the channel.
+  On N-channel, it points from gate to channel
+  On P-Channel, it points  from channel to gate.
+  The `shaft-length` parameter will be disregarded
+  and replaced with the computed shaft length based on the symbol
+  parameters.
+  <DOC>
+  arrow-params:ArrowSymbolParams with: (
+    default => DEF_JFET_ARROW_PARAMS
+    updater => sub-arrow-params
+  )
+  doc: \<DOC>
+  Arrow offset moves the head of the arrow along the line from channel to gate pin position
+  Without an offset, the arrow can often interfere with the outline circle for the P-channel
+  JFET symbol. This parameter allows the user to move the arrow more towards the center of the
+  line for easier read-ability and clarity. This parameter may not be desirable for the N-Channel
+  representation. In this case - `(0 %)` is effectively "No Offset"
+  <DOC>
+  arrow-offset:Percentage with: (
+    default => DEF_JFET_ARROW_OFFSET
+    updater => sub-arrow-offset
+  )
+  doc: \<DOC>
+  Add the outline circle around the transistor
+  Often for power transistors, the BJT symbol
+  will have a circle outline
+  <DOC>
+  outline:True|False with: (
+    updater => sub-outline
+    default => DEF_JFET_OUTLINE
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_JFET_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_JFET_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_JFET_PAD_REF_SIZE
+  )
+with:
+  constructor => #JFETSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn JFETSymbolParams (
+  --
+  porch-width:Double = DEF_JFET_PORCH_WIDTH
+  base-line:Double = DEF_JFET_BASE_LINE
+  sd-channel-width:Double = DEF_JFET_SD_CH_WIDTH
+  arrow-params:ArrowSymbolParams = DEF_JFET_ARROW_PARAMS
+  arrow-offset:Percentage = DEF_JFET_ARROW_OFFSET
+  outline-diam:True|False = DEF_JFET_OUTLINE
+  line-width:Double = DEF_JFET_LINE_WIDTH
+  pin-length:Double = DEF_JFET_PIN_LEN
+  pad-ref-size:Double = DEF_JFET_PAD_REF_SIZE
+  ) -> JFETSymbolParams:
+  #JFETSymbolParams(
+    porch-width
+    base-line
+    sd-channel-width
+    arrow-params
+    arrow-offset
+    outline-diam
+    line-width
+    pin-length
+  )
+
+public defn construct-jfet-shape (
+  junction-type:FET-Junction
+  pitch:Double,
+  width:Double,
+  p:JFETSymbolParams
+  ) -> Shape :
+
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  val art = Vector<Shape>()
+
+  val [Dp, Sp, Gp] = FET-pin-positions(junction-type, pitch, width, porch)
+  val Dp-Porch = Dp - Point(0.0, porch)
+  val Sp-Porch = Sp + Point(0.0, porch)
+
+  ; Construct the Drain/Source Lines
+  val sd-len = sd-channel-width(p)
+  val line = Line(lw, [Point(0.0, 0.0), Point((- sd-len), 0.0)])
+
+  val d-line = loc(0.0, y(Dp-Porch)) * line
+  add(art, d-line)
+
+  val s-line = loc(0.0, y(Sp-Porch)) * line
+  add(art, s-line)
+
+  val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
+
+  val d-porch = loc(0.0, y(Dp-Porch)) * porch-line
+  add(art, d-porch)
+
+  val s-porch = loc(0.0, y(Sp-Porch), 180.0) * porch-line
+  add(art, s-porch)
+
+  ; JFET is only a depletion mode device so the
+  ;  baseline is a solid line.
+  val b-len = base-line(p)
+  val base-x = (- sd-len)
+  val base-sh = Line(lw, [Point(base-x, (b-len / 2.0)), Point(base-x, (- b-len / 2.0))])
+  add(art, base-sh)
+
+  ; Add the gate connection - we use an arrow pointing
+  ; into or out of the channel.
+  val ap-lw = sub-line-width(arrow-params(p), lw)
+  val total-len = abs(x(Gp)) - sd-len
+  val offset = total-len * arrow-offset(p)
+  val shaft-len = total-len - offset
+  val ap = sub-shaft-length(ap-lw, shaft-len)
+  val arrow = construct-arrow(ap)
+  val arrow* = loc(offset, 0.0) * arrow
+  val shaft-sh = Union([
+    Line(lw, [Point(0.0, 0.0), Point(offset, 0.0)]),
+    arrow*
+  ])
+
+
+  val gate-arrow = match(junction-type):
+    (_:N-Channel):
+      loc((- sd-len), y(Gp), 180.0) * shaft-sh
+    (_:P-Channel):
+      loc((- sd-len) - total-len, y(Gp)) * shaft-sh
+  add(art, gate-arrow)
+
+
+  ; Construct Circle (Optional)
+  val opt-shapes = if outline(p):
+    val circle = compute-circle(Gp, Dp, Sp)
+    ; We can't use the circle because by default, it is filled. We need to use a
+    ; Polyline and an arc to get the construction we are looking for.
+    val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
+    add(art, Polyline(lw, [arc]))
+
+  val symb-shapes = to-tuple(art)
+  Union(symb-shapes)
+
+var DEF_JFET_PARAMS = JFETSymbolParams()
+public defn get-default-jfet-symbol-params () -> JFETSymbolParams :
+  DEF_JFET_PARAMS
+
+public defn set-default-jfet-symbol-params (v:JFETSymbolParams) -> False :
+  DEF_JFET_PARAMS = v
+
+public defstruct JFETSymbol <: ThreePinSymbol :
+  junction-type:FET-Junction
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+    as-method => true
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+    as-method => true
+  )
+with:
+  constructor => #JFETSymbol
+
+public defn JFETSymbol (
+  --
+  junction-type:FET-Junction
+  pitch:Double = THREE_PIN_DEF_PITCH
+  width:Double = THREE_PIN_DEF_WIDTH
+  ) -> JFETSymbol :
+  #JFETSymbol(junction-type, pitch, width)
+
+public defmethod name (x:JFETSymbol) -> String :
+  "JFET"
+
+public defmethod build-pins (
+  x:JFETSymbol, sn:SymbolNode
+  ):
+  val p = get-default-jfet-symbol-params()
+
+  val refs = match(junction-type(x)):
+    (_:N-Channel): [FET_DRAIN_REF, FET_SOURCE_REF, FET_GATE_REF]
+    (_:P-Channel): [FET_SOURCE_REF, FET_DRAIN_REF, FET_GATE_REF]
+
+  val dirs = [Up, Down, Left]
+  val positions = FET-pin-positions(junction-type(x), pitch(x), width(x), porch-width(p))
+
+  for (pin-ref in refs, direction in dirs, pos in positions) do:
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-length(p),
+      pad-ref-size = pad-ref-size(p)
+    )
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(sn, pin-ref, pos, params = pin-params, name = name)
+
+public defmethod build-artwork (
+  x:JFETSymbol, sn:SymbolNode
+  ):
+  val params = get-default-jfet-symbol-params()
+  val art = construct-jfet-shape(junction-type(x), pitch(x), width(x), params)
+  add-glyph(sn, art, name? = One("JFET"), class = ["transistor"])
+
+public defmethod build-params (
+  x:JFETSymbol, sn:SymbolNode
+  ):
+  val p = get-default-jfet-symbol-params()
+  val overall = glyph-bounds(sn)
+  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+
