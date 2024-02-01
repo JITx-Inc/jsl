@@ -461,12 +461,12 @@ public defmethod build-artwork (x:TransformerSymbol, node:SymbolNode) :
   match(core-style(tp)):
     (_:NoBarCore): false
     (_:SingleBarCore):
-      line(node, [Point(0.0, max-start), Point(0.0, min-end)], lw)
+      line(node, [Point(0.0, max-start), Point(0.0, min-end)], width = lw)
 
     (_:DoubleBarCore):
       val x-off = lw * 3.0
-      line(node, [Point(x-off, max-start), Point(x-off, min-end)], lw)
-      line(node, [Point((- x-off), max-start), Point((- x-off), min-end)], lw)
+      line(node, [Point(x-off, max-start), Point(x-off, min-end)], width = lw)
+      line(node, [Point((- x-off), max-start), Point((- x-off), min-end)], width = lw)
 
 public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
   val tp = params(x)

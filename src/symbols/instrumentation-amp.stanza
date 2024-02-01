@@ -123,13 +123,13 @@ public defn add-iamp-gain-indicator (x:InstrumentationAmpSymbol, node:SymbolNode
     [(- indent), w],
     [(- indent), w - 0.25],
   ]
-  line(node, pts, lw)
+  line(node, pts, width = lw)
   val pts2 = [
     [(- h2), (- w)]
     [(- indent), (- w)],
     [(- indent), (- (w - 0.25))],
   ]
-  line(node, pts2, lw)
+  line(node, pts2, width = lw)
   text(node, [(- indent), 0.0] "G", font-size = 8)
 
 public defmethod build-artwork (x:InstrumentationAmpSymbol, node:SymbolNode) :
