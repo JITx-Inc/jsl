@@ -403,8 +403,8 @@ public defn make-symbol (sn:SymbolNode, parent-pose:Pose = DEF_SYMNODE_POSE) :
 public defn line (
   sn:SymbolNode,
   pts:Collection<Point|[Double, Double]|[Int, Int]>,
-  width:Double = 0.05
   --
+  width:Double = 0.05
   name:String = ?,
   class:Seqable<String>|String = []
   ) -> Glyph :
