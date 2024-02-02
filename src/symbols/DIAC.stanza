@@ -1,0 +1,133 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/DIAC:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/SymbolNode
+
+
+val DEF_PORCH_WIDTH = 0.5
+val DEF_OVERHANG = 0.25
+val DEF_LINE_WIDTH = 0.1
+val DEF_FILLED? = true
+
+public defstruct DiacSymbolParams <: Equalable :
+  doc: \<DOC>
+  Porch width is the leader line length from pin to body of the symbol
+  <DOC>
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width
+  )
+  doc: \<DOC>
+  Overhang defines the extra line lengths that exceed the triangle
+  <DOC>
+  overhang:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-overhang,
+  )
+  doc: \<DOC>
+  Line width defines the width of the lines used for drawing the shapes of the symbol
+  <DOC>
+  line-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-line-width
+  )
+  doc: \<DOC>
+  Determines if the triangle shapes are filled polygons or just lines.
+  <DOC>
+  filled?:True|False with: (
+    updater => sub-filled?
+  )
+with:
+  constructor => #DiacSymbolParams
+  equalable => true
+  printer => true
+
+public defn DiacSymbolParams (
+  --
+  porch-width:Double = DEF_PORCH_WIDTH
+  overhang:Double = DEF_OVERHANG
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+  ) -> DiacSymbolParams :
+  #DiacSymbolParams(porch-width, overhang, line-width, filled?)
+
+var DEF_DIAC_PARAMS = DiacSymbolParams()
+public defn get-default-diac-symbol-params () -> DiacSymbolParams :
+  DEF_DIAC_PARAMS
+
+public defn set-default-diac-symbol-params (v:DiacSymbolParams) -> False :
+  DEF_DIAC_PARAMS = v
+
+public defn build-diac-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  p:DiacSymbolParams
+  ) :
+
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  val porch-end = p2 - porch
+  ; Porches
+  line(node, [Point(0.0, p2), Point(0.0, porch-end)], width = lw)
+  line(node, [Point(0.0, (- p2)), Point(0.0, (- porch-end))], width = lw)
+
+  ; The diac symbols is kind of like two back to back diodes:
+  ;
+  ;            |
+  ;  ----------------------
+  ;      / \      \     /
+  ;     /   \      \   /
+  ;    /     \      \ /
+  ;  ----------------------
+  ;            |
+  val h = pitch - (2.0 * porch)
+  val tri-w = h * sqrt(3.0)
+  ; We compute the width based on the triangle geometry
+  ;  and then add the overhang component for styling.
+  val tri-total-w = tri-w * 2.0
+  val total-w = tri-total-w + (2.0 * overhang(p))
+  val w2 = total-w / 2.0
+
+  line(node, [Point((- w2), porch-end), Point(w2, porch-end)], width = lw)
+  line(node, [Point((- w2), (- porch-end)), Point(w2, (- porch-end))], width = lw)
+
+  val pts-L = [Point(0.0, (- porch-end)), Point((- (tri-w / 2.0)), porch-end), Point((- tri-w), (- porch-end))]
+  val pts-R = [Point(0.0, porch-end), Point((tri-w / 2.0), (- porch-end)), Point(tri-w, porch-end)]
+
+  match(filled?(p)):
+    (_:True):
+      polygon(node, pts-L)
+      polygon(node, pts-R)
+    (_:False):
+      line(node, pts-L, width = lw)
+      line(node, pts-R, width = lw)
+
+
+public defstruct DiacSymbol <: TwoPinSymbol :
+  pitch:Double with: (
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  )
+
+public defmethod name (x:DiacSymbol) -> String :
+  "DIAC"
+
+public defmethod build-artwork (
+  x:DiacSymbol, sn:SymbolNode
+  ):
+  val p = get-default-diac-symbol-params()
+  val ch = create-child(sn, name = "diac")
+  build-diac-glyphs(ch, pitch(x), p)
+
+var CURR-DIAC-SYMBOL:TwoPinSymbol = DiacSymbol()
+public defn get-default-diac-symbol () : CURR-DIAC-SYMBOL
+public defn set-default-diac-symbol (symb:TwoPinSymbol) :
+  CURR-DIAC-SYMBOL = symb

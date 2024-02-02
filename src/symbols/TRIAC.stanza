@@ -1,0 +1,175 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/TRIAC:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/ThreePinSymbol
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/DIAC
+
+val DEF_PORCH_WIDTH = 1.0
+val DEF_OVERHANG = 0.25
+val DEF_LINE_WIDTH = 0.1
+val DEF_FILLED? = true
+val DEF_GATE_HEIGHT = 1.0
+val DEF_TRIAC_PIN_LEN = 2.0
+val DEF_TRIAC_PAD_REF_SIZE = 0.75
+
+public defstruct TriacSymbolParams <: DiacSymbolParams :
+
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width
+    as-method => true
+  )
+  overhang:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-overhang,
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-line-width
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?
+    as-method => true
+  )
+
+  doc: \<DOC>
+  Sets the Y-offset from the Diac Body for the gate pin
+  <DOC>
+  gate-height:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-gate-height
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+  )
+
+with:
+  constructor => #TriacSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn TriacSymbolParams (
+  --
+  porch-width:Double = DEF_PORCH_WIDTH
+  overhang:Double = DEF_OVERHANG
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+  gate-height:Double = DEF_GATE_HEIGHT
+  pin-length:Double = DEF_TRIAC_PIN_LEN
+  pad-ref-size:Double = DEF_TRIAC_PAD_REF_SIZE
+  ) -> TriacSymbolParams :
+  #TriacSymbolParams(porch-width, overhang, line-width, filled?, gate-height, pin-length, pad-ref-size)
+
+var DEF_TRIAC_PARAMS = TriacSymbolParams()
+public defn get-default-triac-symbol-params () -> TriacSymbolParams :
+  DEF_TRIAC_PARAMS
+
+public defn set-default-triac-symbol-params (v:TriacSymbolParams) -> False :
+  DEF_TRIAC_PARAMS = v
+
+public defn build-triac-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  width:Double,
+  p:TriacSymbolParams
+  ) :
+  build-diac-glyphs(node, pitch, p as DiacSymbolParams)
+
+  ; Now add the gate
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  val porch-end = p2 - porch
+  val h = porch-end * 2.0
+  val tri-w = h * sqrt(3.0)
+
+  val gh = gate-height(p)
+  val Gp = gate-position(pitch, width, p)
+
+  val start = Point((- (tri-w / 2.0)), porch-end)
+  line(node, [
+    start
+    Point(x(start) - gh, y(Gp))
+    Gp
+  ], width = lw)
+
+public defstruct TriacSymbol <: ThreePinSymbol :
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+    as-method => true
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+    as-method => true
+  )
+
+public defmethod name (x:TriacSymbol) -> String :
+  "TRIAC"
+
+defn gate-position (pitch:Double, width:Double, p:TriacSymbolParams) -> Point :
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+
+  val porch-end = p2 - porch
+  Point((- width), porch-end + gate-height(p))
+
+public defmethod build-pins (
+  x:TriacSymbol, sn:SymbolNode
+  ):
+  val p = get-default-triac-symbol-params()
+  val p2 = pitch(x) / 2.0
+
+  val dirs = [Up, Down, Left]
+  val positions = [
+    Point(0.0, p2),
+    Point(0.0, (- p2)),
+    gate-position(pitch(x), width(x), p)
+  ]
+  val pin-ref = Ref("p")
+  for (i in 1 through 3, direction in dirs, pos in positions) do:
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-length(p),
+      pad-ref-size = pad-ref-size(p)
+    )
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(sn, pin-ref[i], pos, params = pin-params, name = name)
+
+
+public defmethod build-artwork (
+  x:TriacSymbol, sn:SymbolNode
+  ):
+  val p = get-default-triac-symbol-params()
+  val ch = create-child(sn, name = "triac")
+  build-triac-glyphs(ch, pitch(x), width(x), p)
+
+public defmethod build-params (
+  x:TriacSymbol, sn:SymbolNode
+  ):
+  val overall = glyph-bounds(sn)
+  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+
+
+var CURR-TRIAC-SYMBOL:ThreePinSymbol = TriacSymbol()
+public defn get-default-triac-symbol () : CURR-TRIAC-SYMBOL
+public defn set-default-triac-symbol (symb:ThreePinSymbol) :
+  CURR-TRIAC-SYMBOL = symb
