@@ -120,19 +120,18 @@ public defn FETSymbolParams (
     pin-length
   )
 
-public defn construct-fet-shape (
+public defn build-fet-glyphs (
+  node:SymbolNode,
   junction-type:FET-Junction
   mode-type:FET-Mode
   pitch:Double,
   width:Double,
   p:FETSymbolParams
-  ) -> Shape :
+  ) :
 
   val p2 = pitch / 2.0
   val porch = porch-width(p)
   val lw = line-width(p)
-
-  val art = Vector<Shape>()
 
   ; Construct the body Arrow
   val ap = sub-line-width(arrow-params(p), line-width(p))
@@ -145,28 +144,28 @@ public defn construct-fet-shape (
     (_:N-Channel): loc((- a-len), 0.0) * arrow
     (_:P-Channel): loc(0.0, 0.0, 180.0) * arrow
 
-  add(art, body-arrow)
+  add-glyph(node, body-arrow, name? = One("body-arrow"))
 
   val [Dp, Sp, Gp] = FET-pin-positions(junction-type, pitch, width, porch)
   val Dp-Porch = Dp - Point(0.0, porch)
   val Sp-Porch = Sp + Point(0.0, porch)
 
   ; Construct the Drain/Source Lines
-  val line = Line(lw, [Point(0.0, 0.0), Point((- a-len), 0.0)])
+  val line-ch = Line(lw, [Point(0.0, 0.0), Point((- a-len), 0.0)])
 
-  val d-line = loc(0.0, y(Dp-Porch)) * line
-  add(art, d-line)
+  val d-line = loc(0.0, y(Dp-Porch)) * line-ch
+  add-glyph(node, d-line, name? = One("d-ch-line"))
 
-  val s-line = loc(0.0, y(Sp-Porch)) * line
-  add(art, s-line)
+  val s-line = loc(0.0, y(Sp-Porch)) * line-ch
+  add-glyph(node, s-line, name? = One("s-ch-line"))
 
   val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
 
   val d-porch = loc(0.0, y(Dp-Porch)) * porch-line
-  add(art, d-porch)
+  add-glyph(node, d-porch, name? = One("d-porch"))
 
   val s-porch = loc(0.0, y(Sp-Porch), 180.0) * porch-line
-  add(art, s-porch)
+  add-glyph(node, s-porch, name? = One("s-porch"))
 
   ; Construct the Body to source line depending on
   ;  junction type.
@@ -175,12 +174,12 @@ public defn construct-fet-shape (
   val sb-line = match(junction-type):
     (_:N-Channel): loc(0.0, 0.0, 180.0) * sb-line-raw
     (_:P-Channel): sb-line-raw
-  add(art, sb-line)
+  add-glyph(node, sb-line, name? = One("sb-line"))
 
   ;  FET-Mode style and the gate
   val b-len = base-line(p)
   val base-x = (- a-len)
-  val base-sh = match(mode-type):
+  val base-ch = match(mode-type):
     (_:Enhancement):
       ; Dashed line for the channel
       val gap = 0.25
@@ -195,34 +194,32 @@ public defn construct-fet-shape (
       ; Solid Line for the channel
       Line(lw, [Point(base-x, (b-len / 2.0)), Point(base-x, (- b-len / 2.0))])
 
-  add(art, base-sh)
+  add-glyph(node, base-ch, name? = One("base-ch"))
 
   ; Add the gate representation
   val gate-x = base-x - 0.3
   val gate-len = 2.0 * inv-porch-len
   val g2 = gate-len / 2.0
-  val gate-flash = Line(lw, [Point(gate-x, g2), Point(gate-x, (- g2))])
-  add(art, gate-flash)
+  line(node, [Point(gate-x, g2), Point(gate-x, (- g2))], width = lw, name = "gate-flash")
 
   ; Add the gate connection
-  val gate-conn = match(junction-type):
+  val gate-conn-pts = match(junction-type):
     (_:N-Channel):
-      Line(lw, [Point(gate-x, (- g2)), Point(x(Gp), (- g2))])
+      [Point(gate-x, (- g2)), Point(x(Gp), (- g2))]
     (_:P-Channel):
-      Line(lw, [Point(gate-x, g2), Point(x(Gp), g2)])
-  add(art, gate-conn)
+      [Point(gate-x, g2), Point(x(Gp), g2)]
+
+  line(node, gate-conn-pts, width = lw, name = "gate-conn")
 
 
   ; Construct Circle (Optional)
-  val opt-shapes = if outline(p):
+  if outline(p):
     val circle = compute-circle(Gp, Dp, Sp)
     ; We can't use the circle because by default, it is filled. We need to use a
     ; Polyline and an arc to get the construction we are looking for.
     val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
-    add(art, Polyline(lw, [arc]))
+    add-glyph(node, Polyline(lw, [arc]), name? = One("outline"))
 
-  val symb-shapes = to-tuple(art)
-  Union(symb-shapes)
 
 var DEF_FET_PARAMS = FETSymbolParams()
 public defn get-default-fet-symbol-params () -> FETSymbolParams :
@@ -302,8 +299,8 @@ public defmethod build-artwork (
   x:FETSymbol, sn:SymbolNode
   ):
   val params = get-default-fet-symbol-params()
-  val art = construct-fet-shape(junction-type(x), mode-type(x), pitch(x), width(x), params)
-  add-glyph(sn, art, name? = One("FET"), class = ["transistor"])
+  val child = create-child(sn, name = "FET", class = "transistor")
+  build-fet-glyphs(child, junction-type(x), mode-type(x), pitch(x), width(x), params)
 
 public defmethod build-params (
   x:FETSymbol, sn:SymbolNode
