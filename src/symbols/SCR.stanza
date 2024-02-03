@@ -1,0 +1,164 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/SCR:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/ThreePinSymbol
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/diodes
+
+val DEF_BODY_WIDTH = 1.0
+val DEF_LINE_WIDTH = 0.1
+val DEF_FILLED? = false
+val DEF_GATE_HEIGHT = 0.5
+val DEF_PIN_LEN = 2.0
+val DEF_PAD_REF_SIZE = 0.75
+
+public defstruct SCRSymbolParams <: DiodeSymbolParams :
+
+  body-dims:Dims|Double with: (
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    as-method => true
+  )
+  filled?:True|False with: (
+    updater => sub-filled?
+    as-method => true
+  )
+
+  doc: \<DOC>
+  Sets the Y-offset from the Diode Body for the gate pin
+  <DOC>
+  gate-height:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-gate-height
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+  )
+
+with:
+  constructor => #SCRSymbolParams
+  equalable => true
+  printer => true
+
+
+public defn SCRSymbolParams (
+  --
+  body-dims:Dims|Double = DEF_BODY_WIDTH
+  line-width:Double = DEF_LINE_WIDTH
+  filled?:True|False = DEF_FILLED?
+
+  gate-height:Double = DEF_GATE_HEIGHT
+  pin-length:Double = DEF_PIN_LEN
+  pad-ref-size:Double = DEF_PAD_REF_SIZE
+  ) -> SCRSymbolParams :
+  #SCRSymbolParams(body-dims, line-width, filled?, gate-height, pin-length, pad-ref-size)
+
+var DEF_SCR_PARAMS = SCRSymbolParams()
+public defn get-default-scr-symbol-params () -> SCRSymbolParams :
+  DEF_SCR_PARAMS
+
+public defn set-default-scr-symbol-params (v:SCRSymbolParams) -> False :
+  DEF_SCR_PARAMS = v
+
+public defn build-scr-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  width:Double,
+  p:SCRSymbolParams
+  ) :
+
+  ; Build Diode here
+  build-diode-glyphs(node, pitch, p as DiodeSymbolParams)
+
+  ; Now add the gate
+  val p2 = pitch / 2.0
+  val lw = line-width(p)
+
+  val porch-end = compute-body-start(p as DiodeSymbolParams)
+
+  val gh = gate-height(p)
+  val Gp = gate-position(pitch, width, p)
+
+  val start = Point(0.0, porch-end)
+  line(node, [
+    start
+    Point(x(start) - gh, y(Gp))
+    Gp
+  ], width = lw, name = "gate-wire")
+
+public defstruct SCRSymbol <: ThreePinSymbol :
+  pitch:Double with: (
+    ensure => ensure-positive!,
+    default => THREE_PIN_DEF_PITCH
+    as-method => true
+  )
+  width:Double with: (
+    ensure => ensure-positive!
+    default => THREE_PIN_DEF_WIDTH
+    as-method => true
+  )
+
+public defmethod name (x:SCRSymbol) -> String :
+  "SCR"
+
+defn gate-position (pitch:Double, width:Double, p:SCRSymbolParams) -> Point :
+  val porch-end = compute-body-start(p as DiodeSymbolParams)
+  Point((- width), porch-end + gate-height(p))
+
+public defmethod build-pins (
+  x:SCRSymbol, sn:SymbolNode
+  ):
+  val p = get-default-scr-symbol-params()
+  val p2 = pitch(x) / 2.0
+
+  val dirs = [Up, Down, Left]
+  val positions = [
+    Point(0.0, p2),
+    Point(0.0, (- p2)),
+    gate-position(pitch(x), width(x), p)
+  ]
+  val pin-refs = [Ref("C"), Ref("A"), Ref("G")]
+  for (pin-ref in pin-refs, direction in dirs, pos in positions) do:
+    val pin-params = VirtualPinParams(
+      direction = direction,
+      pin-length = pin-length(p),
+      pad-ref-size = pad-ref-size(p)
+    )
+    val name = to-string("pin-%_" % [pin-ref])
+    add-pin(sn, pin-ref, pos, params = pin-params, name = name)
+
+
+public defmethod build-artwork (
+  x:SCRSymbol, sn:SymbolNode
+  ):
+  val p = get-default-scr-symbol-params()
+  val ch = create-child(sn, name = "scr")
+  build-scr-glyphs(ch, pitch(x), width(x), p)
+
+public defmethod build-params (
+  x:SCRSymbol, sn:SymbolNode
+  ):
+  val overall = glyph-bounds(sn)
+  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+
+
+var CURR-SCR-SYMBOL:ThreePinSymbol = SCRSymbol()
+public defn get-default-scr-symbol () : CURR-SCR-SYMBOL
+public defn set-default-scr-symbol (symb:ThreePinSymbol) :
+  CURR-SCR-SYMBOL = symb
