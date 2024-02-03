@@ -321,6 +321,18 @@ public defn append (sn:SymbolNode, child:SymbolNode) -> False :
   set-parent(child, One(sn))
   add{_, child} $ children(sn)
 
+doc: \<DOC>
+Create a new child node
+
+@param sn SymbolNode parent for the new child.
+@param pose Coordinate transformation for the child.
+Note that this is applied before the scaling operation.
+@param scale Optional scale for the child glyphs. By default,
+the parent's scale factor is used.
+@param name Sets the id name for this child if any
+@param class Set class names that apply to this child.
+@returns Child node in the symbol scene graph.
+<DOC>
 public defn create-child (
   sn:SymbolNode
   --
@@ -378,9 +390,9 @@ public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNO
 
 public defn make-glyph-symbol (g:Glyph, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
   inside pcb-symbol:
-    val art* = scale-shape(art(g), scale)
+    val art* = scale-shape(pose * art(g), scale)
     val lname = build-layer-name $ name?(g)
-    layer( lname ) = pose * art*
+    layer( lname ) = art*
 
 public defn make-symbol (sn:SymbolNode, parent-pose:Pose = DEF_SYMNODE_POSE) :
   inside pcb-symbol:
