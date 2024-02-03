@@ -1,0 +1,130 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/transistors:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/transistors/FET
+  import jsl/symbols/transistors/JFET
+  import jsl/symbols/transistors/BJT
+  import jsl/symbols/arrows
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SOIC
+  import jsl/examples/landpatterns/board
+
+defn setup-fet-params () :
+  val old-params = get-default-fet-symbol-params()
+  val new-params* = sub-outline(old-params, false)
+  set-default-fet-symbol-params(new-params*)
+
+setup-fet-params()
+
+; This is just for testing and so I don't have to
+;  duplicate this code multiple times.
+val pkg = SOIC-N(
+  num-leads = 14,
+  lead-span = min-max(5.8, 6.2),
+  package-length = 4.5 +/- 0.10,
+  density-level = DensityLevelC
+)
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+defn make-FET-component (ch:FET-Junction, mode:FET-Mode) :
+  pcb-component test-FET:
+    manufacturer = "Onsemi"
+    mpn = "3905"
+    pin-properties :
+      [pin:Ref | pads:Ref ... ]
+      [ G | p[1] ]
+      [ D | p[2] ]
+      [ S | p[3] ]
+
+    val symb-defn = FETSymbol(junction-type = ch, mode-type = mode)
+    val symb = create-symbol(symb-defn)
+    assign-symbol(symb)
+
+    val lp = create-landpattern(pkg)
+    assign-landpattern(lp)
+  test-FET
+
+pcb-module FET-symbols:
+  inst Q1 : make-FET-component(N-Channel, Enhancement)
+  inst Q2 : make-FET-component(P-Channel, Enhancement)
+  inst Q3 : make-FET-component(N-Channel, Depletion)
+  inst Q4 : make-FET-component(P-Channel, Depletion)
+
+defn setup-jfet-params ():
+  val old-params = get-default-jfet-symbol-params()
+  val old-arrow = arrow-params(old-params)
+  val new-arrow = sub-style(old-arrow, ClosedArrow)
+  val new-params = sub-arrow-params(old-params, new-arrow)
+  val new-params* = sub-outline(new-params, true)
+  set-default-jfet-symbol-params(new-params*)
+
+setup-jfet-params()
+
+defn make-JFET-component (ch:FET-Junction):
+
+  pcb-component test-JFET:
+    manufacturer = "Onsemi"
+    mpn = "3905"
+    pin-properties :
+      [pin:Ref | pads:Ref ... ]
+      [ G | p[1] ]
+      [ D | p[2] ]
+      [ S | p[3] ]
+
+    val symb-defn = JFETSymbol(junction-type = ch)
+    val symb = create-symbol(symb-defn)
+
+    assign-symbol(symb)
+
+    val lp = create-landpattern(pkg)
+    assign-landpattern(lp)
+
+  test-JFET
+
+pcb-module JFET-symbols:
+  inst Q1 : make-JFET-component(N-Channel)
+  inst Q2 : make-JFET-component(P-Channel)
+
+defn make-BJT-component (junc:BJT-Junction) :
+  pcb-component test-BJT :
+    manufacturer = "Onsemi"
+    mpn = "3905"
+    pin-properties :
+      [pin:Ref | pads:Ref ... ]
+      [ B | p[1] ]
+      [ C | p[2] ]
+      [ E | p[3] ]
+
+    val symb-defn = BJTSymbol(junction-type = junc)
+    val symb = create-symbol(symb-defn)
+    assign-symbol(symb)
+
+    val lp = create-landpattern(pkg)
+    assign-landpattern(lp)
+  test-BJT
+
+pcb-module BJT-symbols :
+  inst Q1 : make-BJT-component(NPN)
+  inst Q2 : make-BJT-component(PNP)
+
+pcb-module test-design:
+  inst fets : FET-symbols
+  inst jfets : JFET-symbols
+  inst bjts : BJT-symbols
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("FET-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; View the results
+view-schematic()
