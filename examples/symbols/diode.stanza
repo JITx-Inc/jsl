@@ -8,11 +8,160 @@ defpackage jsl/examples/symbols/diode:
   import jsl/symbols/SymbolDefn
   import jsl/symbols/diodes
 
-val oldParams = get-default-photo-diode-symbol-params()
-val newParams = sub-body-dims(oldParams, Dims(0.85, 0.85)) as PhotoDiodeSymbolParams
-set-default-photo-diode-symbol-params(newParams)
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SOIC
+  import jsl/examples/landpatterns/board
 
-val symb-defn = PhotoDiodeSymbol()
-val symb = create-symbol(symb-defn)
 
-view(symb)
+pcb-component test-Diode:
+  manufacturer = "Onsemi"
+  mpn = "1N1234"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = DiodeSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-Schottky:
+  manufacturer = "Onsemi"
+  mpn = "1N1235"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = SchottkyDiodeSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Zener:
+  manufacturer = "Onsemi"
+  mpn = "1N1236"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = ZenerDiodeSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Tunnel:
+  manufacturer = "Onsemi"
+  mpn = "1N1237"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = TunnelDiodeSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-LED:
+  manufacturer = "Onsemi"
+  mpn = "1N1238"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = LEDSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Photodiode:
+  manufacturer = "Onsemi"
+  mpn = "1N1239"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ p[1] | p[1] ]
+    [ p[2] | p[2] ]
+
+  val symb-defn = PhotoDiodeSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst d1 : test-Diode
+  inst d2 : test-Schottky
+  inst d3 : test-Zener
+  inst d4 : test-Tunnel
+  inst d5 : test-LED
+  inst d6 : test-Photodiode
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("DIODES-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; View the results
+view-schematic()
