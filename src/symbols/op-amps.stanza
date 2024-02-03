@@ -41,7 +41,7 @@ val DEF_TRI_HEIGHT = 4.0
 val DEF_TRI_WIDTH = 4.0
 val DEF_LINE_WIDTH = 0.05
 
-val DEF_PIN_LENGTH = 1.0
+val DEF_PIN_LENGTH = 2.5
 val DEF_PAD_REF_SIZE = 0.75
 
 public defn OpAmpSymbolParams (
