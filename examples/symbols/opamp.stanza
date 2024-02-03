@@ -10,19 +10,85 @@ defpackage jsl/examples/symbols/opamp:
   import jsl/symbols/instrumentation-amp
   import jsl/symbols/comparator
 
-; val oldParams = get-default-opamp-symbol-params()
-; val newParams = sub-tri-width(oldParams, 5.5) as OpAmpSymbolParams
-; set-default-opamp-symbol-params(newParams)
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SOIC
+  import jsl/examples/landpatterns/board
+
+val pkg = SOIC-N(
+  num-leads = 14,
+  lead-span = min-max(5.8, 6.2),
+  package-length = 4.5 +/- 0.10,
+  density-level = DensityLevelC
+)
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-OpAmp:
+  manufacturer = "Onsemi"
+  mpn = "3905"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ in+ | p[1] ]
+    [ in- | p[2] ]
+    [ out | p[3] ]
 
 
-val symb-defn = OpAmpSymbol()
+  val symb-defn = OpAmpSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
 
-; Instrumentation Amplifier
-; val symb-defn = InstrumentationAmpSymbol()
-
-; val symb-defn = ComparatorSymbol()
-
-val symb = create-symbol(symb-defn)
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
 
 
-view(symb)
+pcb-component test-InstrumentationAmp:
+  manufacturer = "Onsemi"
+  mpn = "3905"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ in+ | p[1] ]
+    [ in- | p[2] ]
+    [ out | p[3] ]
+    [ Rg[0] | p[4] ]
+    [ Rg[1] | p[5] ]
+    [ REF | p[6] ]
+
+  val symb-defn = InstrumentationAmpSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Comparator:
+  manufacturer = "Onsemi"
+  mpn = "3905"
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ in+ | p[1] ]
+    [ in- | p[2] ]
+    [ out | p[3] ]
+
+
+  val symb-defn =  ComparatorSymbol()
+  val symb = create-symbol(symb-defn)
+  assign-symbol(symb)
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-module test-design:
+  inst U1 : test-OpAmp
+  inst U2 : test-InstrumentationAmp
+  inst U3 : test-Comparator
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("OpAmp-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; View the results
+view-schematic()
