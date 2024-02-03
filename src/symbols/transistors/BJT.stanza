@@ -117,12 +117,13 @@ public defn BJTSymbolParams (
     pin-length
   )
 
-public defn construct-bjt-shape (
+public defn build-bjt-glyphs (
+  node:SymbolNode,
   junction-type:BJT-Junction
   pitch:Double,
   width:Double,
   p:BJTSymbolParams
-  ) -> Shape :
+  ) :
 
   val p2 = pitch / 2.0
   val porch = porch-width(p)
@@ -144,13 +145,17 @@ public defn construct-bjt-shape (
       val adjust = loc((- a-len * sin(angle-rad)), (- a-len * cos(angle-rad)))
       adjust * loc(0.0, a-offset) * loc(0.0, 0.0, angle) * arrow
 
+  add-glyph(node, emit-arrow, name? = One("emitter-arrow"))
+
   ; Construct the Collector Line
-  val line = Line(lw, [Point(0.0, 0.0), Point(a-len, 0.0)])
+  val line-c = Line(lw, [Point(0.0, 0.0), Point(a-len, 0.0)])
   val col-line = match(junction-type):
     (_:NPN):
-      loc(0.0, a-offset) * loc(0.0, 0.0, (- (180.0 - angle))) * line
+      loc(0.0, a-offset) * loc(0.0, 0.0, (- (180.0 - angle))) * line-c
     (_:PNP):
-      loc(0.0, (- a-offset)) * loc(0.0, 0.0, (180.0 - angle)) * line
+      loc(0.0, (- a-offset)) * loc(0.0, 0.0, (180.0 - angle)) * line-c
+
+  add-glyph(node, col-line, name? = One("collector-line"))
 
   val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
 
@@ -159,31 +164,27 @@ public defn construct-bjt-shape (
   val [Cp, Ep, Bp] = pin-positions(pitch, width)
 
   val top-porch = loc(Cp, 180.0) * porch-line
+  add-glyph(node, top-porch, name? = One("top-porch"))
+
   val bot-porch = loc(Ep) * porch-line
+  add-glyph(node, bot-porch, name? = One("bot-porch"))
 
   ; Construct the base line
   val base-x = (- (a-len * cos(angle-rad)))
   val b-len = base-line(p)
-  val base-line = Line(lw, [Point(base-x, b-len / 2.0), Point(base-x, b-len / -2.0)])
+  line(node, [Point(base-x, b-len / 2.0), Point(base-x, b-len / -2.0)], width = lw, name = "base-line")
 
   ; Base Connection Line
-  val base-conn = Line(lw, [Point(base-x, 0.0), Bp])
+  line(node, [Point(base-x, 0.0), Bp], width = lw, name = "base-conn")
 
   ; Construct Circle (Optional)
-  val opt-shapes = if outline(p):
+  if outline(p):
     val circle = compute-circle(Bp, Ep, Cp)
     ; We can't use the circle because by default, it is filled. We need to use a
     ; Polyline and an arc to get the construction we are looking for.
     val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
-    [Polyline(lw, [arc])]
-  else:
-    []
+    add-glyph(node, Polyline(lw, [arc]), name? = One("outline"))
 
-  val symb-shapes = cat(
-    [top-porch, emit-arrow, col-line, bot-porch, base-line, base-conn]
-    opt-shapes
-  )
-  Union(symb-shapes)
 
 var DEF_BJT_PARAMS = BJTSymbolParams()
 public defn get-default-bjt-symbol-params () -> BJTSymbolParams :
@@ -256,8 +257,8 @@ public defmethod build-artwork (
   x:BJTSymbol, sn:SymbolNode
   ):
   val params = get-default-bjt-symbol-params()
-  val art = construct-bjt-shape(junction-type(x), pitch(x), width(x), params)
-  add-glyph(sn, art, name? = One("BJT"), class = ["transistor"])
+  val child = create-child(sn, name = "BJT", class = "transistor")
+  build-bjt-glyphs(child, junction-type(x), pitch(x), width(x), params)
 
 public defmethod build-params (
   x:BJTSymbol, sn:SymbolNode

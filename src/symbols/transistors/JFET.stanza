@@ -149,6 +149,81 @@ public defn JFETSymbolParams (
     pin-length
   )
 
+public defn build-jfet-glyphs (
+  node:SymbolNode,
+  junction-type:FET-Junction
+  pitch:Double,
+  width:Double,
+  p:JFETSymbolParams
+  ) :
+
+  val p2 = pitch / 2.0
+  val porch = porch-width(p)
+  val lw = line-width(p)
+
+  val [Dp, Sp, Gp] = FET-pin-positions(junction-type, pitch, width, porch)
+  val Dp-Porch = Dp - Point(0.0, porch)
+  val Sp-Porch = Sp + Point(0.0, porch)
+
+  ; Construct the Drain/Source Lines
+  val sd-len = sd-channel-width(p)
+  val line-ch = Line(lw, [Point(0.0, 0.0), Point((- sd-len), 0.0)])
+
+  val d-line = loc(0.0, y(Dp-Porch)) * line-ch
+  add-glyph(node, d-line, name? = One("d-ch-line"))
+
+  val s-line = loc(0.0, y(Sp-Porch)) * line-ch
+  add-glyph(node, s-line, name? = One("s-ch-line"))
+
+  val porch-line = Line(lw, [Point(0.0, 0.0), Point(0.0, porch)])
+
+  val d-porch = loc(0.0, y(Dp-Porch)) * porch-line
+  add-glyph(node, d-porch, name? = One("d-porch"))
+
+  val s-porch = loc(0.0, y(Sp-Porch), 180.0) * porch-line
+  add-glyph(node, s-porch, name? = One("s-porch"))
+
+  ; JFET is only a depletion mode device so the
+  ;  baseline is a solid line.
+  val b-len = base-line(p)
+  val base-x = (- sd-len)
+  line(
+    node,
+    [Point(base-x, (b-len / 2.0)), Point(base-x, (- b-len / 2.0))],
+    width = lw, name = "base-ch"
+  )
+
+  ; Add the gate connection - we use an arrow pointing
+  ; into or out of the channel.
+  val ap-lw = sub-line-width(arrow-params(p), lw)
+  val total-len = abs(x(Gp)) - sd-len
+  val offset = total-len * arrow-offset(p)
+  val shaft-len = total-len - offset
+  val ap = sub-shaft-length(ap-lw, shaft-len)
+  val arrow = construct-arrow(ap)
+  val arrow* = loc(offset, 0.0) * arrow
+  val shaft-sh = Union([
+    Line(lw, [Point(0.0, 0.0), Point(offset, 0.0)]),
+    arrow*
+  ])
+
+  val gate-arrow = match(junction-type):
+    (_:N-Channel):
+      loc((- sd-len), y(Gp), 180.0) * shaft-sh
+    (_:P-Channel):
+      loc((- sd-len) - total-len, y(Gp)) * shaft-sh
+
+  add-glyph(node, gate-arrow, name? = One("gate-arrow"))
+
+  ; Construct Circle (Optional)
+  if outline(p):
+    val circle = compute-circle(Gp, Dp, Sp)
+    ; We can't use the circle because by default, it is filled. We need to use a
+    ; Polyline and an arc to get the construction we are looking for.
+    val arc = Arc(center(circle), radius(circle), 0.0, 360.0)
+    add-glyph(node, Polyline(lw, [arc]), name? = One("outline"))
+
+
 public defn construct-jfet-shape (
   junction-type:FET-Junction
   pitch:Double,
@@ -283,8 +358,8 @@ public defmethod build-artwork (
   x:JFETSymbol, sn:SymbolNode
   ):
   val params = get-default-jfet-symbol-params()
-  val art = construct-jfet-shape(junction-type(x), pitch(x), width(x), params)
-  add-glyph(sn, art, name? = One("JFET"), class = ["transistor"])
+  val child = create-child(sn, name = "JFET", class = "transistor")
+  build-jfet-glyphs(child, junction-type(x), pitch(x), width(x), params)
 
 public defmethod build-params (
   x:JFETSymbol, sn:SymbolNode
