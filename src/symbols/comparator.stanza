@@ -47,8 +47,8 @@ public defmethod name (x:ComparatorSymbol) -> String :
   "Comparator"
 
 public defmethod build-artwork (x:ComparatorSymbol, node:SymbolNode) :
-  val g = OpAmpGlyph(x, params = params(x))
-  append(node, g)
+  val child = create-child(node, name = "amp")
+  build-opamp-glyphs(child, pitch(x), params(x))
 
   val hyst-params = HysteresisParams()
   val hyst-g = HysteresisGlyph(params = hyst-params)

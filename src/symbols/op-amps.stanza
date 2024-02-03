@@ -65,20 +65,20 @@ public defn get-default-opamp-symbol-params () -> OpAmpSymbolParams :
 public defn set-default-opamp-symbol-params (v:OpAmpSymbolParams) -> False :
   DEF_OPAMP_PARAMS = v
 
-
-public defn construct-opamp-shape (
+public defn build-opamp-glyphs (
+  node:SymbolNode,
   pitch:Double,
   params:OpAmpSymbolParams
-  ) -> Shape:
-
+  ):
   val [tri-height, tri-width, line-width, pin-length, pad-ref-size] = to-tuple(params)
 
-  val body = Line(line-width, [
+  val body-pts = [
     Point(tri-height / 2.0, 0.0),
     Point(tri-height / -2.0, tri-width / 2.0),
     Point(tri-height / -2.0, tri-width / -2.0),
     Point(tri-height / 2.0, 0.0)
-  ])
+  ]
+  line(node, body-pts, width = line-width, name = "body")
 
   ; Input pins will be on the left side and spaced
   ;   `pitch` distance a part.
@@ -90,26 +90,11 @@ public defn construct-opamp-shape (
   val plus-pose = loc((- x-pos), y-pos)
   val plus = plus-pose * Union([Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
          Line(line-width, [Point(0.0,     (- arm)), Point(0.0, arm)])])
+  add-glyph(node, plus, name? = One("plus"))
 
   val minus-pose = loc((- x-pos), (- y-pos))
   val minus = minus-pose * Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
-
-  Union([body, plus, minus])
-
-
-public defn OpAmpGlyph (
-  symb:OpAmpSymbol,
-  --
-  params:OpAmpSymbolParams = get-default-opamp-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-opamp-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
+  add-glyph(node, minus, name? = One("minus"))
 
 
 doc: \<DOC>
@@ -170,8 +155,7 @@ public defmethod build-pins (x:OpAmpSymbol, node:SymbolNode) :
   add-opamp-pins(x, node)
 
 public defmethod build-artwork (x:OpAmpSymbol, node:SymbolNode) :
-  val g = OpAmpGlyph(x, params = params(x))
-  append(node, g)
+  build-opamp-glyphs(node, pitch(x), params(x))
 
 public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
   val p = params(x)

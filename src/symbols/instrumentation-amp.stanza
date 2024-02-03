@@ -133,7 +133,7 @@ public defn add-iamp-gain-indicator (x:InstrumentationAmpSymbol, node:SymbolNode
   text(node, [(- indent), 0.0] "G", font-size = 8)
 
 public defmethod build-artwork (x:InstrumentationAmpSymbol, node:SymbolNode) :
-  val g = OpAmpGlyph(x, params = params(x))
-  append(node, g)
+  val child = create-child(node, name = "amp")
+  build-opamp-glyphs(child, pitch(x), params(x))
 
   add-iamp-gain-indicator(x, node)
