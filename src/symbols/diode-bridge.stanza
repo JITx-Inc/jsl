@@ -129,7 +129,6 @@ public defmethod build-pins (x:DiodeBridgeSymbol, node:SymbolNode) :
 public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
   val params = get-default-diode-bridge-symbol-params()
   val [dp, side, pin-len, _] = to-tuple(params)
-  val diode = construct-diode-shape(side, dp)
 
   ; The diode bridge consists of 4 of the `diode` shapes
   ;  rotated and positioned along the edge of the diamond.
@@ -141,9 +140,9 @@ public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
     loc((- xy), (- xy)) * loc(0.0, 0.0, -135.0)
     loc(xy, (- xy)) * loc(0.0, 0.0, -45.0)
   ]
-  for pose in poses do:
-    val diode-side = pose * diode
-    add-glyph(node, diode-side, class = "diode")
+  for p1 in poses do:
+    val child = create-child(node, pose = p1, class = "diode")
+    build-diode-glyphs(child, side, dp)
 
   ; Add Text Labels for the AC and DC sides
   val r = side * cos(to-radians(45.0))
