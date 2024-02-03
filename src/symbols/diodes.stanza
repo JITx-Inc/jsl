@@ -90,25 +90,11 @@ public defn set-default-diode-symbol-params (v:DiodeSymbolParams) -> False :
   DEF_DIODE_PARAMS = v
 
 
-public defn DiodeGlyph (
-  symb:DiodeSymbol,
-  --
-  params:DiodeSymbolParams = get-default-diode-symbol-params(),
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-diode-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-diode-shape (
+public defn build-diode-glyphs (
+  node:SymbolNode,
   pitch:Double,
   params:DiodeSymbolParams
-  ) -> Shape:
-
+  ) :
   val [body-dims, line-width, filled?] = to-tuple(params)
 
   val bw2 = body-width(params) / 2.0
@@ -119,17 +105,16 @@ public defn construct-diode-shape (
   if h > p2 :
     throw $ ValueError("Invalid Diode Symbol Dimension: Body is too Large: body=%_ pitch=%_" % [body-dims, pitch])
 
-  val front-porch = Line(line-width, [Point(0.0, p2), Point(0.0, h)])
-  val T-bar = Line(line-width, [ Point( (- bw2), h), Point(bw2, h)])
+  line(node, [Point(0.0, p2), Point(0.0, h)], width = line-width, name = "front-porch")
+  line(node, [Point( (- bw2), h), Point(bw2, h)], width = line-width, name = "T-bar")
 
   val tri-pts = [Point(0.0, h), Point(bw2, (- h)), Point((- bw2), (- h)), Point(0.0, h)]
-  val triangle = if filled?:
-    Polygon(tri-pts)
+  if filled?:
+    polygon(node, tri-pts, name = "triangle")
   else:
-    Line(line-width, tri-pts)
+    line(node, tri-pts, width = line-width, name = "triangle")
 
-  val back-porch = Line(line-width, [Point(0.0, (- h)), Point(0.0, (- p2))])
-  Union([front-porch, T-bar, triangle, back-porch])
+  line(node, [Point(0.0, (- h)), Point(0.0, (- p2))], width = line-width, name = "back-porch")
 
 
 public defstruct DiodeSymbol <: TwoPinSymbol :
@@ -148,9 +133,8 @@ public defmethod name (x:DiodeSymbol) -> String :
 public defmethod build-artwork (
   x:DiodeSymbol, sn:SymbolNode
   ):
-  val g = DiodeGlyph(x)
-  append(sn, g)
-
+  val p = get-default-diode-symbol-params()
+  build-diode-glyphs(sn, pitch(x), p)
 
 var CURR-DIODE-SYMBOL:TwoPinSymbol = DiodeSymbol()
 public defn get-default-diode-symbol () : CURR-DIODE-SYMBOL
@@ -224,22 +208,12 @@ public defn set-default-schottky-diode-symbol-params (v:SchottkyDiodeSymbolParam
   CUSTOM_SCHOTTKY_PARAMS = check-non-base-defaults(v)
   DEF_SCHOTTKY_DIODE_PARAMS = v
 
-public defn SchottkyDiodeGlyph (
-  symb:SchottkyDiodeSymbol,
-  --
-  params:SchottkyDiodeSymbolParams = get-default-schottky-diode-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-schottky-diode-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-schottky-diode-shape (pitch:Double, params:SchottkyDiodeSymbolParams) -> Shape :
-  val body = construct-diode-shape(pitch, params)
+public defn build-schottky-diode-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:SchottkyDiodeSymbolParams
+  ) :
+  build-diode-glyphs(node, pitch, params as DiodeSymbolParams)
 
   val [body-dims, line-width, filled?] = to-tuple(params)
   val wing-size = wing-size(params)
@@ -250,9 +224,10 @@ public defn construct-schottky-diode-shape (pitch:Double, params:SchottkyDiodeSy
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size)), Point(wing-size, (- wing-size))])
 
   val L-wing = loc((- bw2), h) * wing-shape
+  add-glyph(node, L-wing, name? = One("L-wing"))
   val R-wing = loc(bw2, h, 180.0) * wing-shape
+  add-glyph(node, R-wing, name? = One("R-wing"))
 
-  Union([L-wing, body, R-wing])
 
 public defstruct SchottkyDiodeSymbol <: TwoPinSymbol :
   doc: \<DOC>
@@ -270,8 +245,8 @@ public defmethod name (x:SchottkyDiodeSymbol) -> String :
 public defmethod build-artwork (
   x:SchottkyDiodeSymbol, sn:SymbolNode
   ):
-  val g = SchottkyDiodeGlyph(x)
-  append(sn, g)
+  val p = get-default-schottky-diode-symbol-params()
+  build-schottky-diode-glyphs(sn, pitch(x), p)
 
 var CURR-SCHOTTKY-DIODE-SYMBOL:TwoPinSymbol = SchottkyDiodeSymbol()
 public defn get-default-schottky-diode-symbol () : CURR-SCHOTTKY-DIODE-SYMBOL
@@ -349,22 +324,13 @@ public defn set-default-zener-diode-symbol-params (v:ZenerDiodeSymbolParams) -> 
   CUSTOM_ZENER_PARAMS = check-non-base-defaults(v)
   DEF_ZENER_DIODE_PARAMS = v
 
-public defn ZenerDiodeGlyph (
-  symb:ZenerDiodeSymbol,
-  --
-  params:ZenerDiodeSymbolParams = get-default-zener-diode-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
 
-  val art = construct-zener-diode-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-zener-diode-shape (pitch:Double, params:ZenerDiodeSymbolParams) -> Shape :
-  val body = construct-diode-shape(pitch, params)
+public defn build-zener-diode-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:ZenerDiodeSymbolParams
+  ) :
+  build-diode-glyphs(node, pitch, params as DiodeSymbolParams)
 
   val [body-dims, line-width, filled?] = to-tuple(params)
   val wing-size = wing-size(params)
@@ -375,9 +341,10 @@ public defn construct-zener-diode-shape (pitch:Double, params:ZenerDiodeSymbolPa
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point((- wing-size), (- wing-size))])
 
   val L-wing = loc((- bw2), h) * wing-shape
+  add-glyph(node, L-wing, name? = One("L-wing"))
   val R-wing = loc(bw2, h, 180.0) * wing-shape
+  add-glyph(node, R-wing, name? = One("R-wing"))
 
-  Union([L-wing, body, R-wing])
 
 public defstruct ZenerDiodeSymbol <: TwoPinSymbol :
   doc: \<DOC>
@@ -395,8 +362,8 @@ public defmethod name (x:ZenerDiodeSymbol) -> String :
 public defmethod build-artwork (
   x:ZenerDiodeSymbol, sn:SymbolNode
   ):
-  val g = ZenerDiodeGlyph(x)
-  append(sn, g)
+  val p = get-default-zener-diode-symbol-params()
+  build-zener-diode-glyphs(sn, pitch(x), p)
 
 var CURR-ZENER-DIODE-SYMBOL:TwoPinSymbol = ZenerDiodeSymbol()
 public defn get-default-zener-diode-symbol () : CURR-ZENER-DIODE-SYMBOL
@@ -471,22 +438,12 @@ public defn set-default-tunnel-diode-symbol-params (v:TunnelDiodeSymbolParams) -
   CUSTOM_TUNNEL_PARAMS = check-non-base-defaults(v)
   DEF_TUNNEL_DIODE_PARAMS = v
 
-public defn TunnelDiodeGlyph (
-  symb:TunnelDiodeSymbol,
-  --
-  params:TunnelDiodeSymbolParams = get-default-tunnel-diode-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-tunnel-diode-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-tunnel-diode-shape (pitch:Double, params:TunnelDiodeSymbolParams) -> Shape :
-  val body = construct-diode-shape(pitch, params)
+public defn build-tunnel-diode-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:TunnelDiodeSymbolParams
+  ) :
+  build-diode-glyphs(node, pitch, params as DiodeSymbolParams)
 
   val [body-dims, line-width, filled?] = to-tuple(params)
   val wing-size = wing-size(params)
@@ -497,9 +454,10 @@ public defn construct-tunnel-diode-shape (pitch:Double, params:TunnelDiodeSymbol
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size))])
 
   val L-wing = loc((- bw2), h) * wing-shape
+  add-glyph(node, L-wing, name? = One("L-wing"))
   val R-wing = loc(bw2, h) * wing-shape
+  add-glyph(node, R-wing, name? = One("R-wing"))
 
-  Union([L-wing, body, R-wing])
 
 public defstruct TunnelDiodeSymbol <: TwoPinSymbol :
   doc: \<DOC>
@@ -517,8 +475,8 @@ public defmethod name (x:TunnelDiodeSymbol) -> String :
 public defmethod build-artwork (
   x:TunnelDiodeSymbol, sn:SymbolNode
   ):
-  val g = TunnelDiodeGlyph(x)
-  append(sn, g)
+  val p = get-default-tunnel-diode-symbol-params()
+  build-tunnel-diode-glyphs(sn, pitch(x), p)
 
 var CURR-TUNNEL-DIODE-SYMBOL:TwoPinSymbol = TunnelDiodeSymbol()
 public defn get-default-tunnel-diode-symbol () : CURR-TUNNEL-DIODE-SYMBOL
@@ -607,22 +565,8 @@ public defn set-default-led-symbol-params (v:LEDSymbolParams) -> False :
   CUSTOM_LED_PARAMS = check-non-base-defaults(v)
   DEF_LED_PARAMS = v
 
-public defn LEDGlyph (
-  symb:LEDSymbol,
-  --
-  params:LEDSymbolParams = get-default-led-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-led-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-led-shape (pitch:Double, params:LEDSymbolParams) -> Shape :
-  val body = construct-diode-shape(pitch, params)
+public defn build-led-glyphs (node:SymbolNode, pitch:Double, params:LEDSymbolParams) :
+  build-diode-glyphs(node, pitch, params as DiodeSymbolParams)
 
   val arrow-params = arrow-params(params)
   val arrow = construct-arrow(arrow-params)
@@ -635,10 +579,11 @@ public defn construct-led-shape (pitch:Double, params:LEDSymbolParams) -> Shape 
   val x-off = (- (bw2 + (1.2 * shaft)))
   val y-off = (h / 2.0)
   val y-adj = 0.3 * y-off
-  val L-wing = loc(x-off, y-adj + y-off, angle) * arrow
-  val R-wing = loc(x-off, (y-adj - y-off), angle) * arrow
+  val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
+  add-glyph(node, arrow-1, name? = One("arrow-1"))
+  val arrow-2 = loc(x-off, (y-adj - y-off), angle) * arrow
+  add-glyph(node, arrow-2, name? = One("arrow-2"))
 
-  Union([L-wing, body, R-wing])
 
 public defstruct LEDSymbol <: TwoPinSymbol :
   doc: \<DOC>
@@ -656,8 +601,8 @@ public defmethod name (x:LEDSymbol) -> String :
 public defmethod build-artwork (
   x:LEDSymbol, sn:SymbolNode
   ):
-  val g = LEDGlyph(x)
-  append(sn, g)
+  val p = get-default-led-symbol-params()
+  build-led-glyphs(sn, pitch(x), p)
 
 var CURR-LED-SYMBOL:TwoPinSymbol = LEDSymbol()
 public defn get-default-led-symbol () : CURR-LED-SYMBOL
@@ -729,22 +674,8 @@ public defn set-default-photo-diode-symbol-params (v:PhotoDiodeSymbolParams) -> 
   CUSTOM_PHOTO_PARAMS = check-non-base-defaults(v)
   DEF_PHOTO_DIODE_PARAMS = v
 
-public defn PhotoDiodeGlyph (
-  symb:PhotoDiodeSymbol,
-  --
-  params:PhotoDiodeSymbolParams = get-default-photo-diode-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph :
-
-  val art = construct-photo-diode-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
-public defn construct-photo-diode-shape (pitch:Double, params:PhotoDiodeSymbolParams) -> Shape :
-  val body = construct-diode-shape(pitch, params)
+public defn build-photo-diode-glyphs (node:SymbolNode, pitch:Double, params:PhotoDiodeSymbolParams) :
+  build-diode-glyphs(node, pitch, params as DiodeSymbolParams)
 
   val arrow-params = arrow-params(params)
   val arrow = construct-arrow(arrow-params)
@@ -757,10 +688,11 @@ public defn construct-photo-diode-shape (pitch:Double, params:PhotoDiodeSymbolPa
   val x-off = (- (1.2 * bw2)  )
   val y-off = (h / 2.0)
   val y-adj = 0.3 * y-off
-  val L-wing = loc(x-off, y-adj + y-off, angle) * arrow
-  val R-wing = loc(x-off, (y-adj - y-off), angle) * arrow
+  val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
+  add-glyph(node, arrow-1, name? = One("arrow-1"))
+  val arrow-2 = loc(x-off, (y-adj - y-off), angle) * arrow
+  add-glyph(node, arrow-2, name? = One("arrow-2"))
 
-  Union([L-wing, body, R-wing])
 
 public defstruct PhotoDiodeSymbol <: TwoPinSymbol :
   doc: \<DOC>
@@ -778,8 +710,8 @@ public defmethod name (x:PhotoDiodeSymbol) -> String :
 public defmethod build-artwork (
   x:PhotoDiodeSymbol, sn:SymbolNode
   ):
-  val g = PhotoDiodeGlyph(x)
-  append(sn, g)
+  val p = get-default-photo-diode-symbol-params()
+  build-photo-diode-glyphs(sn, pitch(x), p)
 
 var CURR-PHOTO-DIODE-SYMBOL:TwoPinSymbol = PhotoDiodeSymbol()
 public defn get-default-photo-diode-symbol () : CURR-PHOTO-DIODE-SYMBOL
