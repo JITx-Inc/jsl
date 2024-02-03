@@ -13,14 +13,14 @@ defpackage jsl/symbols/instrumentation-amp:
 ; Increased pitch so that we can insert
 ;   the gain resistor pins between the
 ;   +/- pins
-val DEF_IAMP_PITCH = 4.0
+val DEF_IAMP_PITCH = 6.0
 doc: \<DOC>
 Default pitch for the Gain Resistor terminals
 <DOC>
 val DEF_IAMP_RG_PITCH = 2.0
 
 
-var DEF_IAMP_PARAMS = OpAmpSymbolParams(tri-width = DEF_IAMP_PITCH + 2.5)
+var DEF_IAMP_PARAMS = OpAmpSymbolParams(tri-height = 5.0, tri-width = DEF_IAMP_PITCH + 3.5)
 public defn get-default-iamp-symbol-params () -> OpAmpSymbolParams :
   DEF_IAMP_PARAMS
 
