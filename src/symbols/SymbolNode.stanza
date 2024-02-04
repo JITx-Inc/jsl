@@ -167,7 +167,9 @@ public defstruct SymbolNode <: SymbolElement :
     setter => set-parent
   )
   children:Vector<SymbolNode>
-  pose:Pose
+  pose:Pose with: (
+    updater => sub-pose
+  )
 
   doc: \<DOC>
   Converts from Symbol grid to millimeters

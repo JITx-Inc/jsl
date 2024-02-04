@@ -11,22 +11,22 @@ defpackage jsl/symbols/potentiometer:
   import jsl/symbols/resistors
   import jsl/symbols/arrows
 
-public defn PotentiometerGlyph (
-  symb:PotentiometerSymbol
-  --
+public defn build-potentiometer-glyphs (
+  node:SymbolNode,
+  pitch:Double,
   res-params:ResistorSymbolParams = get-default-resistor-symbol-params()
   arrow-params:ArrowSymbolParams = get-default-arrow-symbol-params()
-  name:String = ?
-  class:Seqable<String>|String = []
-  ) -> Glyph:
-  val r-shape = construct-resistor-shape(pitch(symb), res-params)
+  ):
+  val child = create-child(node, name = "body")
+  build-resistor-glyphs(child, pitch, res-params)
+
   val w-start = amplitude(res-params)
-  val w-end = pitch(symb) / 2.0
+  val w-end = pitch / 2.0
   val shaft-len = abs(w-end - w-start)
   val arrow* = sub-shaft-length(arrow-params, shaft-len)
   val arrow = loc((- w-start), 0.0, 180.0) * construct-arrow(arrow*)
-  val art = Union([r-shape, arrow]) as Shape
-  Glyph(art, name? = name, class = to-class-vector(class))
+  add-glyph(node, arrow, name? = One("wiper-arrow"))
+
 
 public defstruct PotentiometerSymbol <: ResistorSymbol :
   doc: \<DOC>
@@ -52,8 +52,7 @@ public defmethod build-pins (
 public defmethod build-artwork (
   x:PotentiometerSymbol, sn:SymbolNode
   ):
-  val g = PotentiometerGlyph(x)
-  append(sn, g)
+  build-potentiometer-glyphs(sn, pitch(x))
 
 var CURR-RESISTOR-SYMBOL:TwoPinSymbol = ResistorSymbol()
 public defn get-default-resistor-symbol () : CURR-RESISTOR-SYMBOL
