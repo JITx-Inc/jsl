@@ -7,16 +7,16 @@ defpackage jsl/examples/landpatterns/SMT:
   import jsl/design/settings
   import jsl/landpatterns/packages
   import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns/SOIC
 
   import jsl/symbols/SymbolDefn
   import jsl/symbols/resistors
+  import jsl/symbols/potentiometer
+
 
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
-
-val symb-defn = ResistorSymbol()
-val symb = create-symbol(symb-defn)
 
 pcb-component test-SMT:
 
@@ -36,10 +36,71 @@ pcb-component test-SMT:
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
-pcb-module test-design:
-  inst c : test-SMT
-  place(c) at loc(0.0, 0.0) on Top
+pcb-component test-Var-SMT:
 
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = VariableResistorSymbol()
+  assign-symbol(create-symbol(symb))
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Photo-SMT:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = PhotoResistorSymbol()
+  assign-symbol(create-symbol(symb))
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-Potentiometer:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [p[1] | p[1] ]
+    [p[2] | p[2] ]
+    [wiper | p[3] ]
+
+  val symb = PotentiometerSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-module test-design:
+  inst R1 : test-SMT
+  place(R1) at loc(0.0, 0.0) on Top
+  inst R2 : test-Var-SMT
+  inst R3 : test-Photo-SMT
+  inst R4 : test-Potentiometer
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("Resistor-Symb-TEST")
