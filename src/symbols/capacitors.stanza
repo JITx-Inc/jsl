@@ -160,19 +160,6 @@ public defn set-default-polarized-cap-symbol-params (p:PolarizedCapacitorSymbolP
   CUSTOM_POL_PARAMS = check-non-base-defaults(p)
   DEF_POL_PARAMS = p
 
-public defn CapacitorGlyph (
-  symb:CapacitorSymbol
-  --
-  params:CapacitorSymbolParams = get-default-cap-symbol-params(),
-  name:String = ?
-  class:Seqable<String>|String = []
-  ):
-  val art = construct-capacitor-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
-
 doc: \<DOC>
 Construct the T shape that makes up a non-polarized capacitors two plate representations.
 <DOC>
@@ -188,13 +175,16 @@ defn construct-top-plate (w:Double, top:Double, cross-y:Double, line-width:Doubl
 
 doc: \<DOC>
 Construct the Non-Polarized Capacitor Glyph Geometry
+@param node Symbol scene graph to draw glyphs in.
 @param pitch Pin to Pin Distance for two-pin component.
 @param params Configurable parameters for the generated shape.
 <DOC>
-public defn construct-capacitor-shape (
+public defn build-capacitor-glyphs (
+  node:SymbolNode,
   pitch:Double,
   params:CapacitorSymbolParams
-  ) -> Shape :
+  ):
+
   val [porch-width, width, line-width] = to-tuple(params)
   val h = pitch / 2.0
   val porch-width* = match(porch-width):
@@ -206,32 +196,23 @@ public defn construct-capacitor-shape (
   val w2 = width / 2.0
   val cross-y = h - porch-width*
   val top-plate = construct-top-plate(width, h, cross-y, line-width)
-  val bot-plate = loc(0.0, 0.0, 180.0) * top-plate
-  Union([top-plate, bot-plate])
+  add-glyph(node, top-plate, name? = One("top-plate"))
 
-public defn PolarizedCapacitorGlyph (
-  symb:PolarizedCapacitorSymbol,
-  --
-  params:PolarizedCapacitorSymbolParams = get-default-polarized-cap-symbol-params(),
-  name:String = ?
-  class:Seqable<String>|String = []
-  ):
-  val art = construct-pol-cap-shape(
-    pitch(symb),
-    params
-  )
-  Glyph(art, name? = name, class = to-class-vector(class))
+  val bot-plate = loc(0.0, 0.0, 180.0) * top-plate
+  add-glyph(node, bot-plate, name? = One("bot-plate"))
 
 doc: \<DOC>
-Construct the Polarized Capacitor Glyph Geometry
+Build the Polarized Capacitor Glyph Geometry
+@param node SymbolNode scenegraph to draw the capacitor in
 @param pitch Pin to Pin distance for this two-pin component
 @param params Configurable parameters of the polarized capacitor
   symbol shape.
 <DOC>
-public defn construct-pol-cap-shape (
+public defn build-pol-cap-glyphs (
+  node:SymbolNode,
   pitch:Double,
   params:PolarizedCapacitorSymbolParams
-  ) -> Shape :
+  ):
   val [porch-width, width, line-width] = to-tuple(params)
   val h = pitch / 2.0
   val porch-width*:Double = match(porch-width):
@@ -243,6 +224,7 @@ public defn construct-pol-cap-shape (
   val w2 = width / 2.0
   val cross-y = h - porch-width*
   val top-plate = construct-top-plate(width, h, cross-y, line-width)
+  add-glyph(node, top-plate, name? = One("top-plate"))
 
   val bot-plate = match(style(params)):
     (_:Polarized-Straight-Style):
@@ -265,6 +247,7 @@ public defn construct-pol-cap-shape (
           ]
       ] )
       pline
+  add-glyph(node, bot-plate, name? = One("bot-plate"))
 
   val plus-len = match(plus-size(params)):
     (x:Double): x
@@ -276,7 +259,8 @@ public defn construct-pol-cap-shape (
   val plus = plus-pose * Union([Line(line-width, [Point((- arm), 0.0),     Point(arm, 0.0)])
          Line(line-width, [Point(0.0,     (- arm)), Point(0.0, arm)])])
 
-  Union([top-plate, bot-plate, plus])
+  add-glyph(node, plus, name? = One("plus"))
+
 
 doc: \<DOC>
 Non-Polarized Capacitor Symbol
@@ -289,6 +273,27 @@ public defstruct CapacitorSymbol <: TwoPinSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   )
+  doc: \<DOC>
+  Optional Capacitor Symbol Parameters Override
+  If this value is not None, then we will use these
+  parameters to construct the capacitor symbol instead
+  of `get-default-cap-symbol-params()`
+  <DOC>
+  params:Maybe<CapacitorSymbolParams> with: (
+    ; NOTE: I'm not using `get-default-cap-symbol-params()` here
+    ;  because it would prevent the user from overriding the defaults
+    ;  because `CURR-CAPACITOR-SYMBOL` gets instantiate on run.
+    default => None()
+  )
+with:
+  constructor => #CapacitorSymbol
+
+public defn CapacitorSymbol (
+  --
+  pitch:Double = TWO_PIN_DEF_PITCH
+  params:CapacitorSymbolParams = ?
+  ) -> CapacitorSymbol:
+  #CapacitorSymbol(pitch, params)
 
 public defmethod name (x:CapacitorSymbol) -> String :
   "Capacitor"
@@ -296,8 +301,10 @@ public defmethod name (x:CapacitorSymbol) -> String :
 public defmethod build-artwork (
   x:CapacitorSymbol, sn:SymbolNode
   ):
-  val g = CapacitorGlyph(x)
-  append(sn, g)
+  val p = match(params(x)):
+    (_:None): get-default-cap-symbol-params()
+    (y:One<CapacitorSymbolParams>): value(y)
+  build-capacitor-glyphs(sn, pitch(x), p)
 
 var CURR-CAPACITOR-SYMBOL:TwoPinSymbol = CapacitorSymbol()
 public defn get-default-capacitor-symbol () : CURR-CAPACITOR-SYMBOL
@@ -310,6 +317,18 @@ public defstruct PolarizedCapacitorSymbol <: TwoPinSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   )
+  params:Maybe<PolarizedCapacitorSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #PolarizedCapacitorSymbol
+
+public defn PolarizedCapacitorSymbol (
+  --
+  pitch:Double = TWO_PIN_DEF_PITCH
+  params:PolarizedCapacitorSymbolParams = ?
+  ) -> PolarizedCapacitorSymbol:
+  #PolarizedCapacitorSymbol(pitch, params)
 
 public defmethod name (x:PolarizedCapacitorSymbol) -> String :
   "Polarized Capacitor"
@@ -317,9 +336,10 @@ public defmethod name (x:PolarizedCapacitorSymbol) -> String :
 public defmethod build-artwork (
   x:PolarizedCapacitorSymbol, sn:SymbolNode
   ):
-  val g = PolarizedCapacitorGlyph(x)
-  append(sn, g)
-
+  val p = match(params(x)):
+    (_:None): get-default-polarized-cap-symbol-params()
+    (y:One<PolarizedCapacitorSymbolParams>): value(y)
+  build-pol-cap-glyphs(sn, pitch(x), p)
 
 var CURR-POL-CAP-SYMBOL:TwoPinSymbol = PolarizedCapacitorSymbol()
 public defn get-default-polarized-capacitor-symbol () : CURR-POL-CAP-SYMBOL
