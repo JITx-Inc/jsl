@@ -477,11 +477,12 @@ public defn make-symbol (sn:SymbolNode, parent-pose:Pose = DEF_SYMNODE_POSE) :
   inside pcb-symbol:
     val curr-pose = parent-pose * pose(sn)
     val scale = get-scale(sn)
-    for vpin in vpins(sn) do:
-      make-vpin-symbol(vpin, scale, curr-pose)
 
     for glyph in glyphs(sn) do:
       make-glyph-symbol(glyph, scale, curr-pose)
+
+    for vpin in vpins(sn) do:
+      make-vpin-symbol(vpin, scale, curr-pose)
 
     for child in children(sn) do:
       make-symbol(child, curr-pose)
