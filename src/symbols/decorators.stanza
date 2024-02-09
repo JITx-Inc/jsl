@@ -1,0 +1,225 @@
+defpackage jsl/symbols/decorators:
+  import core
+  import collections
+  import jitx
+
+  import jsl/symbols/SymbolNode
+  import jsl/geometry/basics
+
+val DEC_OUTSIDE = "outside"
+val DEC_INSIDE = "inside"
+
+val DEF_ACTIVE_LOW_DIAM = 0.5
+val DEF_ACTIVE_LOW_NUDGE = loc(0.05, 0.0)
+
+doc: \<DOC>
+Active-Low (bubble) Pin Decorator
+
+@param diam Diameter of the bubble in symbol grid units
+@param nudge By default the bubble is placed on the external
+edge of the component body, overlapping the base of the pin.
+This value is a helper to move the bubble so that we can make
+the symbol look more aesthetically pleasing.
+<DOC>
+public defn ActiveLowDecorator (
+  --
+  diam:Double = DEF_ACTIVE_LOW_DIAM,
+  nudge:Pose = DEF_ACTIVE_LOW_NUDGE
+  ) -> PinDecorator :
+  PinDecorator(
+    nudge * Circle(E, to-radius(diam))
+    name? = One("active-low")
+    class = [DEC_OUTSIDE]
+  )
+
+doc: \<DOC>
+* `OpenCollectorSink` = Low Side Open Collector Sink. This is the most common version. This
+is created using a NPN BJT or NMOS FET.
+* `OpenCollectorSource` = High Side Open Collector Source. Less common - this is created using a PNP BJT
+or PMOS FET.
+<DOC>
+public defenum OpenCollectorType:
+  OpenCollectorSink
+  OpenCollectorSource
+
+
+val DEF_OC_DEC_SIZE = 0.35
+val DEF_OC_LINE_WIDTH = 0.05
+val DEF_OC_TYPE = OpenCollectorSink
+val DEF_OC_PULL = false
+
+public defn construct-open-collector-shape (
+  width:Double = DEF_OC_DEC_SIZE,
+  line-width:Double = DEF_OC_LINE_WIDTH,
+  oc-type:OpenCollectorType = DEF_OC_TYPE
+  pullupdown:True|False = DEF_OC_PULL
+  ) -> Shape:
+
+  val w2 = width / 2.0
+  val shapes = Vector<Shape>()
+
+  val diamond = Line(line-width, [
+    Point(0.0, w2),
+    Point(w2, 0.0),
+    Point(0.0, (- w2)),
+    Point((- w2), 0.0),
+    Point(0.0, w2)
+  ])
+  add(shapes, diamond)
+
+  val raw-hat = Line(line-width, [Point((- w2), 0.0), Point(w2, 0.0)])
+  val hat-pose = match(oc-type):
+    (pnp:OpenCollectorSource):
+      loc(0.0, w2)
+    (pnp:OpenCollectorSink):
+      loc(0.0, (- w2))
+  val hat = hat-pose * raw-hat
+  add(shapes, hat)
+
+  if pullupdown :
+    add(shapes, Line(line-width, [Point((- w2), 0.0), Point(w2, 0.0)]))
+
+  Union(to-tuple(shapes))
+
+public defn default-oc-nudge (width:Double) -> Pose :
+  loc((1.5 * (width / 2.0)), 0.0)
+
+doc: \<DOC>
+Open Collector Pin Decorator
+
+@param width Size of the symbol for both height & width
+@param line-width Stroke width for the symbol line.
+@param oc-type Determines whether this draws a PNP-sourcing
+open collector symbol or a NPN-sinking open-collector symbol
+@param pullupdown Generates the horizontal bar that indicates
+this pin has an internal pull/up down resistor.
+<DOC>
+public defn OpenCollectorDecorator (
+  --
+  width:Double = DEF_OC_DEC_SIZE,
+  line-width:Double = DEF_OC_LINE_WIDTH,
+  oc-type:OpenCollectorType = DEF_OC_TYPE
+  pullupdown:True|False = DEF_OC_PULL
+  nudge:Pose = default-oc-nudge(width)
+  ) -> PinDecorator :
+  val oc-shape = construct-open-collector-shape(width, line-width, oc-type, pullupdown)
+  val decShape = nudge * oc-shape
+
+  PinDecorator(
+    decShape
+    name? = One("open-collector")
+    class = [DEC_INSIDE]
+  )
+
+val DEF_CLOCK_SIZE = 0.55
+val DEF_CLOCK_LINE_WIDTH = 0.05
+
+doc: \<DOC>
+Clock Decorator for Internal Pin Identifier.
+
+This adds a `>` style symbol to the internal
+body of the component where the pin is instantiated.
+@param size If this value is a `Double` - then we just
+create a angle symbol with equal height and width. If
+`Dims` is passed then we can have separate heigth and width
+for the clock `>` symbol.
+<DOC>
+public defn ClockDecorator (
+  --
+  size:Double|Dims = DEF_CLOCK_SIZE,
+  line-width:Double = DEF_CLOCK_LINE_WIDTH,
+  ) -> PinDecorator :
+
+  val [w, h] = match(size):
+    (v:Double):
+      [v, v]
+    (d:Dims):
+      [x(d), y(d)]
+  val h2 = h / 2.0
+  val art = Line(line-width, [Point(0.0, h2), Point(w / 2.0, 0.0), Point(0.0, (- h2))])
+
+  PinDecorator(
+    art,
+    name? = One("clock")
+    class = [DEC_INSIDE]
+  )
+
+
+public defenum CardinalityType :
+  InputPin
+  OutputPin
+  BidirectionalPin
+
+public defn to-name-string (ct:CardinalityType):
+  match(ct):
+    (_:InputPin): "in"
+    (_:OutputPin): "out"
+    (_:BidirectionalPin): "bidir"
+
+
+val DEF_CARD_SIZE = Dims(0.55, 0.55)
+
+public defn construct-input-card-shape (
+  size:[Double, Double],
+  ) -> Shape:
+  val [w, h] = size
+  val h2 = (h / 2.0)
+  Polygon([Point(0.0, h2), Point((w / 2.0), 0.0), Point(0.0, (- h2))])
+
+public defn construct-output-card-shape (
+  size:[Double, Double],
+  ) -> Shape:
+  val [w, h] = size
+  val h2 = (h / 2.0)
+  Polygon([Point(0.0, h2), Point((w / -2.0), 0.0), Point(0.0, (- h2))])
+
+defn extract-size (size:Double|Dims) -> [Double, Double]:
+  match(size):
+    (v:Double):
+      [v, v]
+    (d:Dims):
+      [x(d), y(d)]
+
+defn default-card-nudge (
+  size:Double|Dims
+  ) -> Pose :
+  val [w, h] = extract-size(size)
+  loc((w / -2.0), 0.0)
+
+doc: \<DOC>
+Pin Cardinality Decorator
+This decorator is used to indicate if a pin is a
+input, output, or bidirectional pin.
+Note that you can use multiple decorators on a pin
+if the styling for default bidir is not to your liking.
+@param cardinality Type of symbol to draw.
+@param size Size of the constructed arrows.
+@param nudge Optional modulator of the position of the
+resulting decorator. By default, this places the shapes
+outside the symbol body.
+<DOC>
+public defn CardinalityDecorator (
+  cardinality:CardinalityType
+  --
+  size:Double|Dims = DEF_CARD_SIZE
+  nudge:Pose = default-card-nudge(size)
+  ):
+  val s = extract-size(size)
+
+  val [decShape, cls] = match(cardinality):
+    (_:InputPin):
+      [construct-input-card-shape(s), [DEC_INSIDE]]
+    (_:OutputPin):
+      [construct-output-card-shape(s), [DEC_OUTSIDE]]
+    (_:BidirectionalPin):
+      [Union([
+        construct-input-card-shape(s),
+        construct-output-card-shape(s)
+      ]), [DEC_INSIDE, DEC_OUTSIDE]]
+
+  val name = to-string $ "cardinality-%_" % [to-name-string(cardinality)]
+  PinDecorator(
+    nudge * decShape,
+    name? = One(name)
+    class = cls
+  )
