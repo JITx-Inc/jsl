@@ -491,9 +491,20 @@ public defn line-rectangle (
 
 
 public defn polyline (
-  sn:SymbolNode
-  ) -> Glyph:
-    throw $ NotImplementedYet("polyline")
+  sn:SymbolNode,
+  pts:Collection<Arc|Point|[Double, Double]|[Int, Int]>,
+  --
+  width:Double = 0.05
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> Glyph :
+
+  val pts* = to-tuple $ for pt in pts seq:
+    match(pt):
+      (a:Arc): a
+      (p:Point|[Double, Double]|[Int, Int]): to-point(p)
+  val art = Polyline(width, pts*)
+  add-glyph(sn, art, name? = name, class = class)
 
 public defn approx-arc (
   sn:SymbolNode,
