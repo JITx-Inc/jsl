@@ -1,0 +1,82 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/logic:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns/SOIC
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/logic/buffer
+
+  import jsl/examples/landpatterns/board
+
+
+pcb-component test-Buffer:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [in | p[1] | Up |  0]
+    [out | p[2] | Down | 0]
+
+  val symb = BufferSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-Inverter:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [in | p[1] | Up |  0]
+    [out | p[2] | Down | 0]
+
+  val oldParams = get-default-buffer-symbol-params()
+  val newParams = sub-filled?(oldParams, false)
+
+  val symb = BufferSymbol(inverter? = true, params = newParams)
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-module test-design:
+  inst U1 : test-Buffer
+  inst U2 : test-Inverter
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Logic-Symb-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()
+
+
+
