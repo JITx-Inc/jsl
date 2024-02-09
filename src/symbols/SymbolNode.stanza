@@ -169,6 +169,7 @@ public defstruct SymbolNode <: SymbolElement :
   children:Vector<SymbolNode>
   pose:Pose with: (
     updater => sub-pose
+    setter => set-pose
   )
 
   doc: \<DOC>
