@@ -5,14 +5,102 @@ defpackage jsl/examples/symbols/inductor:
   import jitx
   import jitx/commands
 
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns/SOIC
+
   import jsl/symbols/SymbolDefn
   import jsl/symbols/inductors
 
-val oldParams = get-default-inductor-symbol-params()
-val newParams = sub-core-style(oldParams, SingleBarCore)
-set-default-inductor-symbol-params(newParams)
+  import jsl/examples/landpatterns/board
 
-val symb-defn = InductorSymbol()
-val symb = create-symbol(symb-defn)
 
-view(symb)
+pcb-component test-Inductor-1:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = InductorSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Inductor-2:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val oldParams = get-default-inductor-symbol-params()
+  val newParams = sub-core-style(oldParams, SingleBarCore)
+
+  val symb = InductorSymbol(params = newParams)
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Inductor-3:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val oldParams = get-default-inductor-symbol-params()
+  val newParams = sub-core-style(oldParams, DoubleBarCore)
+  val newParams* = sub-periods(newParams, 4)
+
+  val symb = InductorSymbol(params = newParams*)
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-module test-design:
+  inst L1 : test-Inductor-1
+  inst L2 : test-Inductor-2
+  inst L3 : test-Inductor-3
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Inductor-Symb-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()
+
+
+

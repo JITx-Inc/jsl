@@ -63,6 +63,55 @@ public defn get-default-inductor-symbol-params () -> InductorSymbolParams :
 public defn set-default-inductor-symbol-params (v:InductorSymbolParams) -> False :
   DEF_INDUCTOR_PARAMS = v
 
+public defn build-inductor-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:InductorSymbolParams
+  ) :
+  val [core-style, porch-width, periods, line-width] = to-tuple(params)
+
+  val w = pitch / 2.0
+
+  if porch-width > w:
+    throw $ ValueError("Invalid Porch Width for Inductor Symbol")
+
+  val circ-start = w - porch-width
+  val circ-width = 2.0 * circ-start
+  val diam = circ-width / to-double(periods)
+
+  line(node, [Point(0.0, w), Point(0.0, circ-start)], width = line-width, name = "front-porch")
+  line(node, [Point(0.0, (- w)), Point(0.0, (- circ-start))], width = line-width, name = "back-porch")
+
+  val wind-r = to-radius(diam)
+  val arcs = to-tuple $ for i in 0 to periods seq:
+    Arc(
+      Point(0.0, circ-start - wind-r - (to-double(i) * diam)),
+      wind-r,
+      90.0,
+      180.0
+    )
+
+  polyline(node, arcs, width = line-width, name = "windings")
+
+  val core-x = (- (wind-r + 3. * line-width))
+  match(core-style):
+    (_:NoBarCore): false
+    (_:SingleBarCore):
+      line(node, [
+        Point(core-x, circ-start)
+        Point(core-x, (- circ-start))
+      ], width = line-width, name = "core-1", class = "core-line")
+    (_:DoubleBarCore):
+      line(node, [
+        Point(core-x, circ-start)
+        Point(core-x, (- circ-start))
+      ], width = line-width, name = "core-1", class = "core-line")
+      line(node, [
+        Point(core-x - (3. * line-width), circ-start)
+        Point(core-x  - (3. * line-width), (- circ-start))
+      ], width = line-width, name = "core-2", class = "core-line")
+
+
 
 public defn InductorGlyph (
   symb:InductorSymbol,
@@ -137,6 +186,18 @@ public defstruct InductorSymbol <: TwoPinSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   )
+  params:Maybe<InductorSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #InductorSymbol
+
+public defn InductorSymbol (
+  --
+  pitch:Double = TWO_PIN_DEF_PITCH
+  params:InductorSymbolParams = ?
+  ) -> InductorSymbol:
+  #InductorSymbol(pitch, params)
 
 public defmethod name (x:InductorSymbol) -> String :
   "Inductor"
@@ -144,8 +205,12 @@ public defmethod name (x:InductorSymbol) -> String :
 public defmethod build-artwork (
   x:InductorSymbol, sn:SymbolNode
   ):
-  val g = InductorGlyph(x)
-  append(sn, g)
+
+  val p = match(params(x)):
+    (_:None): get-default-inductor-symbol-params()
+    (prm:One<InductorSymbolParams>): value(prm)
+
+  build-inductor-glyphs(sn, pitch(x), p)
 
 
 var CURR-INDUCTOR-SYMBOL:TwoPinSymbol = InductorSymbol()

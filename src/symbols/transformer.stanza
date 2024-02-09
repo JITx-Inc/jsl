@@ -217,20 +217,22 @@ defn compute-tap-endpoints (tp:TransformerSymbolParams, cp:CoilParams) -> Tuple<
     Point(tl, p2 - y)
 
 doc: \<DOC>
-Construct a coil shape with tap lines for a `Right` facing coil
+Build the glyphs for a coil shape with tap lines for a `Right` facing coil
 
 This function does not take the direction into account. The user
 needs to manage flipping/positioning if a `Left` facing coil is needed.
 <DOC>
-public defn construct-coil-shape (tp:TransformerSymbolParams, cp:CoilParams) -> Shape :
-
-  val sh = Vector<Shape>()
+public defn build-coil-glyphs (
+  node:SymbolNode,
+  tp:TransformerSymbolParams,
+  cp:CoilParams
+  ) :
 
   val indParams = params(cp)
   val pin-pitch = pin-pitch(tp)
   val indPitch = compute-ind-pitch(tp, cp)
-  val induct = construct-inductor-shape(indPitch, indParams)
-  add(sh, induct)
+  build-inductor-glyphs(node, indPitch, indParams)
+
   val p2 = pin-pitch / 2.0
   val ip2 = indPitch / 2.0
 
@@ -238,25 +240,26 @@ public defn construct-coil-shape (tp:TransformerSymbolParams, cp:CoilParams) -> 
   val lw = line-width(indParams)
   val tl = tap-length(tp)
   if tl > 0.0 :
-    add{sh, _} $ Line(lw, [
+    line(node,[
       Point(0.0, ip2)
       Point(tl, ip2)
-    ])
-    add{sh, _} $ Line(lw, [
+    ], width = lw, name = "front-porch")
+    line(node,[
       Point(0.0, (- ip2))
       Point(tl, (- ip2))
-    ])
+    ], width = lw, name = "back-porch")
 
     ; This part become a little tricky - we want to add the tap
     ;  lines off of specific winding positions. We need to be careful
     ;  about whether there is a porch-width specified because this will
     ;  throw off the calculations from the grid.
     val tap-pts = compute-tap-endpoints(tp, cp)
-    for tap-pt in tap-pts do:
-      add{sh, _} $ Line(lw, [
+    for (tap-pt in tap-pts, i in 1 to false) do:
+      val pts = [
         Point(0.0, y(tap-pt))
         tap-pt
-      ])
+      ]
+      line(node, pts, width = lw, name = to-string("tap-%_" % [i]))
 
   ; Add a small dot at the prescribed end for the
   ;  polarization indicator.
@@ -266,13 +269,13 @@ public defn construct-coil-shape (tp:TransformerSymbolParams, cp:CoilParams) -> 
       val pw = porch-width $ params(cp)
       val pol-size = pin-pitch * (40 %)
       val dot-y = ip2 - (pw + p2)
-      add{sh, _} $ match(value(x)):
+      val dot-sh = match(value(x)):
         (up:Up):
           (loc(0.0, dot-y) * Circle(to-radius(pol-size)))
         (dn:Down):
           (loc(0.0, (- dot-y)) * Circle(to-radius(pol-size)))
+      add-glyph(node, dot-sh, name? = One("polarization-dot"))
 
-  Union(to-tuple(sh))
 
 doc: \<DOC>
 Parameterized Transformer Symbol
@@ -358,7 +361,7 @@ public defmethod build-pins (x:TransformerSymbol, node:SymbolNode) :
   for side in [Left, Right] do:
     val coils = get-coils(tp, side)
 
-    val [offsets, sh, start-y, end-y] = compute-coil-offsets(coils, tp)
+    val [offsets, start-y, end-y] = compute-coil-offsets(coils, tp)
 
     val pin-params = VirtualPinParams(
       direction = side,
@@ -398,6 +401,13 @@ public defmethod build-pins (x:TransformerSymbol, node:SymbolNode) :
         val name = to-string("pin-%_" % [pref])
         add-pin(node, pref, pos, params = pin-params, name = name)
 
+defn build-coil-nodes (node:SymbolNode, coils:Tuple<KeyValue<Int, CoilParams>>, tp:TransformerSymbolParams) :
+  to-tuple $ for kvp in coils seq:
+    val coil = value(kvp)
+    val coil-node = create-child(node, class = "coil")
+    build-coil-glyphs(coil-node, tp, coil)
+    coil-node
+
 doc: \<DOC>
 Compute the offset positions of centered coils for the coils on one side.
 
@@ -408,11 +418,7 @@ should be.
 
 @return [Offsets, Shapes, start-y, end-y]
 <DOC>
-defn compute-coil-offsets (coils:Tuple<KeyValue<Int, CoilParams>>, tp:TransformerSymbolParams) -> [Tuple<Point>, Tuple<Shape>, Double, Double] :
-  val shapes = to-tuple $ for kvp in coils seq:
-    val coil = value(kvp)
-    construct-coil-shape(tp, coil)
-
+defn compute-coil-offsets (coils:Tuple<KeyValue<Int, CoilParams>>, tp:TransformerSymbolParams) -> [Tuple<Point>, Double, Double] :
   val coil-heights = to-tuple $ for kvp in coils seq:
     val coil = value(kvp)
     compute-ind-pitch(tp, coil)
@@ -435,19 +441,21 @@ defn compute-coil-offsets (coils:Tuple<KeyValue<Int, CoilParams>>, tp:Transforme
     val o = Point(x-offset, y-start - (h / 2.0))
     y-start = y-start - (h + coil-pad)
     o
-  [offsets, shapes, y-start-origin, y-start-origin - total-height]
+  [offsets, y-start-origin, y-start-origin - total-height]
 
-public defmethod build-artwork (x:TransformerSymbol, node:SymbolNode) :
+public defmethod build-artwork (x:TransformerSymbol, sn:SymbolNode) :
   val tp = params(x)
 
   val height-spans = to-tuple $ for side in [Left, Right] seq:
     val coils = get-coils(tp, side)
-    val [offsets, shapes, start-y, end-y] = compute-coil-offsets(coils, tp)
 
-    for (coil in coils, offset in offsets, shape in shapes) do:
+    val [offsets, start-y, end-y] = compute-coil-offsets(coils, tp)
+    val nodes = build-coil-nodes(sn, coils, tp)
+
+    for (coil in coils, offset in offsets, node in nodes) do:
       val id = key(coil)
-      val art* = loc(Point(0.0, 0.0), 0.0, side is Left) *  loc(offset) * shape
-      add-glyph(node, art*, name? = One(to-string("N%_" % [id])) class = ["coil"])
+      val coil-pose = loc(Point(0.0, 0.0), 0.0, side is Left) * loc(offset)
+      set-pose(node, coil-pose)
 
     [start-y, end-y]
 
@@ -461,12 +469,12 @@ public defmethod build-artwork (x:TransformerSymbol, node:SymbolNode) :
   match(core-style(tp)):
     (_:NoBarCore): false
     (_:SingleBarCore):
-      line(node, [Point(0.0, max-start), Point(0.0, min-end)], width = lw)
+      line(sn, [Point(0.0, max-start), Point(0.0, min-end)], width = lw)
 
     (_:DoubleBarCore):
       val x-off = lw * 3.0
-      line(node, [Point(x-off, max-start), Point(x-off, min-end)], width = lw)
-      line(node, [Point((- x-off), max-start), Point((- x-off), min-end)], width = lw)
+      line(sn, [Point(x-off, max-start), Point(x-off, min-end)], width = lw)
+      line(sn, [Point((- x-off), max-start), Point((- x-off), min-end)], width = lw)
 
 public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
   val tp = params(x)
