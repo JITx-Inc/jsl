@@ -1,0 +1,187 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/logic/buffer:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/decorators
+
+val DEF_BUF_INVERTER = false
+val DEF_BUF_TRI_HEIGHT = 2.0
+val DEF_BUF_TRI_WIDTH = 2.0
+val DEF_BUF_FILLED? = false
+val DEF_BUF_LINE_WIDTH = 0.05
+val DEF_BUF_PIN_LEN = 2.0
+val DEF_BUF_PAD_REF_SIZE = 0.75
+
+
+public defstruct BufferSymbolParams <: Equalable :
+  inverter:True|False with: (
+    updater => sub-inverter
+    default => DEF_BUF_INVERTER
+  )
+  tri-height:Double with: (
+    ensure => ensure-positive!
+    updater => sub-tri-height
+    default => DEF_BUF_TRI_HEIGHT
+  )
+  tri-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-tri-width
+    default => DEF_BUF_TRI_WIDTH
+  )
+  filled?:True|False with: (
+    updater => sub-filled?
+    default => DEF_BUF_FILLED?
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_BUF_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_BUF_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_BUF_PAD_REF_SIZE
+  )
+with:
+  constructor => #BufferSymbolParams
+  printer => true
+
+public defn BufferSymbolParams (
+  --
+  inverter:True|False = DEF_BUF_INVERTER,
+  tri-height:Double = DEF_BUF_TRI_HEIGHT,
+  tri-width:Double = DEF_BUF_TRI_WIDTH,
+  filled?:True|False = DEF_BUF_FILLED?,
+  line-width:Double = DEF_BUF_LINE_WIDTH,
+  pin-length:Double = DEF_BUF_PIN_LEN,
+  pad-ref-size:Double = DEF_BUF_PAD_REF_SIZE
+  ) -> BufferSymbolParams:
+  #BufferSymbolParams(
+    inverter,
+    tri-height,
+    tri-width,
+    filled?,
+    line-width,
+    pin-length,
+    pad-ref-size
+  )
+
+var DEF_BUFFER_PARAMS = BufferSymbolParams()
+public defn get-default-buffer-symbol-params () -> BufferSymbolParams :
+  DEF_BUFFER_PARAMS
+
+public defn set-default-buffer-symbol-params (v:BufferSymbolParams) -> False :
+  DEF_BUFFER_PARAMS = v
+
+public defn build-buffer-glyphs (
+  node:SymbolNode,
+  params:BufferSymbolParams
+  ):
+  val lw = line-width(params)
+  val th = tri-height(params)
+  val tw = tri-width(params)
+
+  val th2 = th / 2.0
+  val tw2 = tw / 2.0
+
+  val body-pts = [
+    Point(th2 , 0.0),
+    Point((- th2), tw2),
+    Point((- th2), (- tw2)),
+    Point(th2, 0.0)
+  ]
+  if filled?(params):
+    polygon(node, body-pts, name = "body")
+  else:
+    line(node, body-pts, width = lw, name = "body")
+
+public val BUF_IN_REF = Ref("in")
+public val BUF_OUT_REF = Ref("out")
+
+public defstruct BufferSymbol <: SymbolDefn :
+  inverter?:True|False with: (
+    default => false
+  )
+  ; These References are used to override the default `in/out`
+  ;  references. This is needed for multi-channel inverters
+  ;  such as TI, SN74AHCU04-EP
+  in-ref:Ref with: (
+    default => BUF_IN_REF
+  )
+  out-ref:Ref with: (
+    default => BUF_OUT_REF
+  )
+  params:Maybe<BufferSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #BufferSymbol
+
+public defn BufferSymbol (
+  --
+  inverter?:True|False = false,
+  in-ref:Ref = BUF_IN_REF,
+  out-ref:Ref = BUF_OUT_REF,
+  params:BufferSymbolParams = ?
+  ) -> BufferSymbol :
+  #BufferSymbol(inverter?, in-ref, out-ref, params)
+
+defn get-params (x:BufferSymbol) -> BufferSymbolParams :
+  match(params(x)):
+    (_:None): get-default-buffer-symbol-params()
+    (v:One<BufferSymbolParams>): value(v)
+
+public defmethod name (x:BufferSymbol) -> String :
+  if inverter?(x):
+    "Inverter"
+  else:
+    "Buffer"
+
+public defmethod build-pins (x:BufferSymbol, node:SymbolNode) :
+  val p = get-params(x)
+
+  val th2 = tri-height(p) / 2.0
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  add-pin(node, in-ref(x), [(- th2), 0.0], params = input-params, name = to-string("pin-%_" % [in-ref(x)]))
+
+  val output-params = VirtualPinParams(
+    direction = Right,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  val out-pin = add-pin(node, out-ref(x), [th2, 0.0], params = output-params, name = to-string("pin-%_" % [out-ref(x)]))
+  if inverter?(x):
+    add-decorator(out-pin, ActiveLowDecorator())
+
+
+public defmethod build-artwork (x:BufferSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-buffer-glyphs(node, p)
+
+public defmethod build-params (x:BufferSymbol, sn:SymbolNode) :
+  val p = get-params(x)
+  val w = tri-width(p)
+
+  ; If you compute the geometry, the
+  ;   y intercept of the triangle edge at x = 0.0
+  ;   is (w / 4)
+  ; We then pad on this a bit for the ref point.
+  val y = 0.25 * w
+
+  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
+  text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
