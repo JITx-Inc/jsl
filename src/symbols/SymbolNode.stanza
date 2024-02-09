@@ -28,6 +28,48 @@ Base Type for all SymbolNode types
 public deftype SymbolElement <: Classable
 
 doc: \<DOC>
+Pin Decorator - add art to a pin
+
+This type is used to construct shapes that are used
+to indicate special functions for pins.
+
+For Example:
+
+*  Bubble for active-low indication
+*  Arrows for Input / Output
+*  Open-Drain Indicator
+*  Clock Angle Symbol
+<DOC>
+public defstruct PinDecorator <: SymbolElement :
+  doc: \<DOC>
+  Art to apply to the pin
+  The shape defined here will be applied in a frame of
+  reference where the pin's position is the origin.
+  It is assumed that the pin is pointed to the `Left`
+  when drawing the art. The art shape will be flipped
+  across the Y axis for `Right` pins.
+  For the `Up` pins, the Left pin version is rotated 90 degrees.
+  For the `Down` pins, the Right pin is rotated 90 degrees.
+  <DOC>
+  art:Shape
+
+  ; SymbolElement
+  name?:Maybe<String> with: (as-method => true)
+  class:Vector<String> with: (as-method => true)
+with:
+  constructor => #PinDecorator
+  printer => true
+
+public defn PinDecorator (
+  art:Shape
+  --
+  name?:Maybe<String> = None(),
+  class:Seqable<String>|String = []
+  ) -> PinDecorator :
+  #PinDecorator(art, name?, to-class-vector(class))
+
+
+doc: \<DOC>
 Pin Statement Optional Parameters
 
 The `pin` statement in a `pcb-symbol` can be a standalone
@@ -96,6 +138,11 @@ public defstruct VirtualPin <: SymbolElement :
   <DOC>
   params:Maybe<VirtualPinParams>
 
+  doc: \<DOC>
+  Optional set of decorators for this pin.
+  <DOC>
+  decorators:Vector<PinDecorator>
+
   ; SymbolElement
   name?:Maybe<String> with: (as-method => true)
   class:Vector<String> with: (as-method => true)
@@ -109,14 +156,23 @@ public defn VirtualPin (
   position:Point
   --
   params:Maybe<VirtualPinParams> = None()
+  decorators:Seqable<PinDecorator> = []
   name?:Maybe<String> = None()
   class:Seqable<String>|String = []
   ) -> VirtualPin :
   val pin-name* = match(pin-name):
     (x:Ref):x
     (x:String): Ref(x)
-  #VirtualPin(pin-name*, position, params, name?, to-class-vector(class))
+  #VirtualPin(pin-name*, position, params, to-vector<PinDecorator>(decorators), name?, to-class-vector(class))
 
+doc: \<DOC>
+Add a decorator to this pin
+User can add multiple decorators to a pin.
+Current implementation doesn't handle preventing overlap
+well.
+<DOC>
+public defn add-decorator (vp:VirtualPin, dec:PinDecorator) :
+  add(decorators(vp), dec)
 
 doc: \<DOC>
 A Glyph is a set of geometry that creates an electrical symbol
@@ -372,12 +428,24 @@ defn make-full-vpin (vp:VirtualPin, scale:Double, pose:Pose) :
       (_:None): 0.0
       (x:One<Double>): value(x)
 
+  defn dec-rot () -> Pose :
+    match(direction(p)):
+      (_:Right): loc(Point(0.0, 0.0), FlipX)
+      (_:Up): loc(Point(0.0, 0.0), 90.0)
+      (_:Down): loc(Point(0.0, 0.0), 90.0, FlipX)
+      (_:Left): loc(0.0, 0.0)
+
   inside pcb-symbol:
     pin (pin-r) at pose * pt with:
       direction = direction(p)
       length = scale * pin-length(p)
       name-size = scale * convert-maybe $ pad-ref-size(p)
       number-size = scale * convert-maybe $ pin-name-size(p)
+
+    val dec-pose =  pose * loc(pt) * dec-rot()
+    for dec in decorators(vp) do:
+      layer("decorators") =  dec-pose * scale-shape(art(dec), scale)
+
 
 public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
   val pin-r = pin-name(vp)
@@ -388,6 +456,14 @@ public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNO
         ; This is the simplfied single-point pin representation
         ;   useful for two-pin components
         pin (pin-r) at pose * pt
+        ; This isn't optimal - without the parameters - I don't know
+        ;  if the pin points to the left or the right.
+        ;  So the suggestion is that for the best decorator support
+        ;  the user should provide a parameters object
+        val dec-pose = pose * loc(pt)
+        for dec in decorators(vp) do:
+          layer("decorators") = dec-pose * scale-shape(art(dec), scale)
+
       (x:One<VirtualPinParams>):
         make-full-vpin(vp, scale, pose)
 
