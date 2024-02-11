@@ -9,7 +9,6 @@ defpackage jsl/symbols/logic/buffer:
   import jsl/symbols/SymbolNode
   import jsl/symbols/decorators
 
-val DEF_BUF_INVERTER = false
 val DEF_BUF_TRI_HEIGHT = 2.0
 val DEF_BUF_TRI_WIDTH = 2.0
 val DEF_BUF_FILLED? = false
@@ -19,10 +18,6 @@ val DEF_BUF_PAD_REF_SIZE = 0.75
 
 
 public defstruct BufferSymbolParams <: Equalable :
-  inverter:True|False with: (
-    updater => sub-inverter
-    default => DEF_BUF_INVERTER
-  )
   tri-height:Double with: (
     ensure => ensure-positive!
     updater => sub-tri-height
@@ -58,7 +53,6 @@ with:
 
 public defn BufferSymbolParams (
   --
-  inverter:True|False = DEF_BUF_INVERTER,
   tri-height:Double = DEF_BUF_TRI_HEIGHT,
   tri-width:Double = DEF_BUF_TRI_WIDTH,
   filled?:True|False = DEF_BUF_FILLED?,
@@ -67,7 +61,6 @@ public defn BufferSymbolParams (
   pad-ref-size:Double = DEF_BUF_PAD_REF_SIZE
   ) -> BufferSymbolParams:
   #BufferSymbolParams(
-    inverter,
     tri-height,
     tri-width,
     filled?,
