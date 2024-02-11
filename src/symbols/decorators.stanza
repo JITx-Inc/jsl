@@ -82,7 +82,7 @@ public defn construct-open-collector-shape (
   Union(to-tuple(shapes))
 
 public defn default-oc-nudge (width:Double) -> Pose :
-  loc((1.5 * (width / 2.0)), 0.0)
+  loc((2.0 * (width / 2.0)), 0.0)
 
 doc: \<DOC>
 Open Collector Pin Decorator
