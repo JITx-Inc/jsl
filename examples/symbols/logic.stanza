@@ -12,12 +12,19 @@ defpackage jsl/examples/symbols/logic:
 
   import jsl/symbols/SymbolDefn
   import jsl/symbols/logic/buffer
+  import jsl/symbols/logic/AND
+  import jsl/symbols/decorators
 
   import jsl/examples/landpatterns/board
 
+val SOIC-pkg = SOIC-N(
+  num-leads = 14,
+  lead-span = min-max(5.8, 6.2),
+  package-length = 4.5 +/- 0.10,
+  density-level = DensityLevelC
+)
 
 pcb-component test-Buffer:
-
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
     [in | p[1] | Up |  0]
@@ -58,11 +65,110 @@ pcb-component test-Inverter:
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
+
+pcb-component test-AND:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+
+    [out | p[3]]
+
+  val symb = ANDGateSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-NAND:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+
+    [out | p[3]]
+
+  val symb = ANDGateSymbol(inverted? = true)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-Multi-AND:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in-A[1] | p[1]]
+    [in-A[2] | p[2]]
+    [out-A | p[3]]
+    [in-B[1] | p[4]]
+    [in-B[2] | p[5]]
+    [out-B | p[6]]
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+  symbol:
+    val symb1 = create-symbol $ ANDGateSymbol(in-ref = Ref("in-A"), out-ref = Ref("out-A"), open-collector? = One(OpenCollectorSink))
+    unit(0) = symb1( self.in-A[1] => symb1.in-A[1], self.in-A[2] => symb1.in-A[2], self.out-A => symb1.out-A)
+    val symb2 = create-symbol $ ANDGateSymbol(in-ref = Ref("in-B"), out-ref = Ref("out-B"), open-collector? = One(OpenCollectorSink))
+    unit(1) = symb2( self.in-B[1] => symb2.in-B[1], self.in-B[2] => symb2.in-B[2], self.out-B => symb2.out-B)
+
+pcb-component test-NAND3:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [in[3] | p[3]]
+
+    [out | p[4]]
+
+  val symb = ANDGateSymbol(num-inputs = 3, pin-pitch = 1.0, inverted? = true)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-Crazy-AND:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [in[3] | p[3]]
+    [in[4] | p[4]]
+    [in[5] | p[5]]
+    [in[6] | p[6]]
+    [in[7] | p[7]]
+
+    [out | p[8]]
+
+  val oldParams = get-default-and-gate-symbol-params()
+  val h = 7.5
+  val newParams = sub-size(oldParams, Dims(DEF_AND_W_OVER_H_RATIO * h, h))
+
+  val symb = ANDGateSymbol(num-inputs = 7, pin-pitch = 1.0, params = newParams)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
 
 pcb-module test-design:
   inst U1 : test-Buffer
   inst U2 : test-Inverter
+  inst U3 : test-AND
+  inst U4 : test-NAND
+  inst U5 : test-Multi-AND
+  inst U6 : test-NAND3
+  inst U7 : test-Crazy-AND
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("Logic-Symb-TEST")
