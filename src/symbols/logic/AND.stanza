@@ -1,0 +1,300 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/logic/AND:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/decorators
+
+; IEEE sets the AND gate symbol w/h ratio
+;  to 32.0 / 26.0 = 1.231
+public val DEF_AND_W_OVER_H_RATIO = 32.0 / 26.0
+val DEF_AND_H = 3.0
+val DEF_AND_SIZE = Dims(DEF_AND_W_OVER_H_RATIO * DEF_AND_H, DEF_AND_H)
+val DEF_AND_FILLED? = false
+val DEF_AND_LINE_WIDTH = 0.05
+val DEF_AND_PIN_LEN = 2.0
+val DEF_AND_PAD_REF_SIZE = 0.65
+
+public defstruct ANDGateSymbolParams <: Equalable :
+  doc: \<DOC>
+  Gate Body Size
+  The Y dimension defines the diameter of the rounded portion
+  of the body. The X dimension defines the total body length from
+  input edge to output tip of the rounded end.
+  <DOC>
+  size:Double|Dims with: (
+    updater => sub-size
+    default => DEF_AND_SIZE
+  )
+  filled?:True|False with: (
+    updater => sub-filled?
+    default => DEF_AND_FILLED?
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_AND_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_AND_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_AND_PAD_REF_SIZE
+  )
+with:
+  constructor => #ANDGateSymbolParams
+  printer => true
+  equalable => true
+
+public defn ANDGateSymbolParams (
+  --
+  size:Double|Dims = DEF_AND_SIZE
+  filled?:True|False = DEF_AND_FILLED?,
+  line-width:Double = DEF_AND_LINE_WIDTH,
+  pin-length:Double = DEF_AND_PIN_LEN,
+  pad-ref-size:Double = DEF_AND_PAD_REF_SIZE
+  ) -> ANDGateSymbolParams:
+  ; Check the size - The W needs to be greater than `h/2`
+  ;   otherwise we get a borked symbol body
+  val [w, h] = get-body-size(size)
+  if w < (h / 2.0):
+    throw $ ValueError("Expected AND Gate Width to be at least Height / 2.0: w=%_ h=%_" % [w, h])
+  #ANDGateSymbolParams(size, filled?, line-width, pin-length, pad-ref-size)
+
+
+var DEF_AND_PARAMS = ANDGateSymbolParams()
+public defn get-default-and-gate-symbol-params () -> ANDGateSymbolParams :
+  DEF_AND_PARAMS
+
+public defn set-default-and-gate-symbol-params (v:ANDGateSymbolParams) -> False :
+  DEF_AND_PARAMS = v
+
+defn get-body-size (s:Double|Dims) -> [Double, Double] :
+  match(s):
+    (v:Double): [v, v]
+    (v:Dims): [x(v), y(v)]
+
+defn get-body-size (p:ANDGateSymbolParams) -> [Double, Double] :
+  get-body-size(size(p))
+
+doc: \<DOC>
+Compute the symbol grid container for the gate width
+The user can provide a symbol body width of any value. To
+support this and keep the pins on the schematic grid,
+we round the width up to the next whole number. Then we insert
+extra lines on the inputs to extend to the grid.
+<DOC>
+defn round-body-width (w:Double) -> Double :
+  ceil(w)
+
+doc: \<DOC>
+Compute the pin leader length for odd-sized symbol body
+This is the length of the line off the gate body symbol
+for adjust the pin locations to the symbol grid.
+<DOC>
+defn compute-leader-len (pin-pos:Point, width:Double) -> Double :
+  val x-offset = x(pin-pos)
+  abs(width - abs(x-offset))
+
+doc: \<DOC>
+Construct the AND Gate Symbol Glyphs
+The origin for the AND gate is the base of the
+output pin. This allows for the output pin to always
+be on grid. For the inputs, we add an extra line per
+input so that input pin lands on the grid.
+<DOC>
+public defn build-and-gate-glyphs (
+  node:SymbolNode,
+  num-inputs:Int,
+  pin-pitch:Double,
+  p:ANDGateSymbolParams
+  ):
+  val lw = line-width(p)
+  val [w, h] = get-body-size(p)
+  val h2 = h / 2.0
+  val dome-r = h2
+
+  val dome = Arc(
+    Point((- dome-r), 0.0),
+    dome-r,
+    270.0,
+    180.0
+  )
+  polyline(node, [
+    Point((- h2), h2),
+    Point((- w), h2),
+    Point((- w), (- h2)),
+    Point((- h2), (- h2)),
+    dome
+  ], width = lw, name = "body")
+
+  val W = round-body-width(w)
+
+  val inpos-set = get-input-pin-positions(num-inputs, pin-pitch, W)
+
+  val diff = compute-leader-len(inpos-set[0], w)
+  val eps = 0.01
+  ; If pin position offset is greater than epsilon
+  ;   then we want to draw leader pins for each of the pins.
+  if diff > eps :
+    for (inpos in inpos-set, i in 1 to false) do:
+      val name = to-string("leader-%_" % [i])
+      line(node, [inpos, Point((- w), y(inpos))], width = lw, name = name)
+
+public val AND_IN_REF = Ref("in")
+public val AND_OUT_REF = Ref("out")
+
+val DEF_AND_INVERTED = false
+val DEF_AND_OC_TYPE = None()
+
+val DEF_AND_NUM_INPUTS = 2
+; This default is good for 2 inputs but for 3-pins it will
+;  be too large.
+val DEF_AND_PIN_PITCH = 2.0
+
+public defstruct ANDGateSymbol <: SymbolDefn :
+  doc: \<DOC>
+  Sets a active low bubble out the output or not
+  This is how to make an NAND gate symbol.
+  <DOC>
+  inverted?:True|False with: (
+    updater => sub-inverted?,
+    default => DEF_AND_INVERTED
+  )
+  doc: \<DOC>
+  Optional open-collector symbol on output pin.
+  Default is None()
+  <DOC>
+  open-collector?:Maybe<OpenCollectorType> with: (
+    updater => sub-oc-type,
+    default => DEF_AND_OC_TYPE
+  )
+  doc: \<DOC>
+  Number of AND gate inputs
+  The default is 2 and this value must be greater than 1
+  <DOC>
+  num-inputs:Int with: (
+    updater => sub-num-inputs,
+    default => DEF_AND_NUM_INPUTS
+    ensure => ensure-greater!(1)
+  )
+  doc: \<DOC>
+  Spacing between input pins.
+  This value is in symbol grid units. The best values are
+  whole numbers or half-numbers (0.5, 1.5, etc).
+  <DOC>
+  pin-pitch:Double with: (
+    updater => sub-pin-pitch,
+    default => DEF_AND_PIN_PITCH,
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Input Base Reference
+  The symbol will construct individual `IndexRef` values from this
+  base `Ref`, starting at 1. Example: For a 2-input AND gate, the
+  input pins would be `in[1]` and `in[2]`.
+  <DOC>
+  in-ref:Ref with: (
+    default => AND_IN_REF
+  )
+  doc: \<DOC>
+  Output Reference
+  User can override the default for supporting multi-channel
+  chips.
+  <DOC>
+  out-ref:Ref with: (
+    default => AND_OUT_REF
+  )
+  params:Maybe<ANDGateSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #ANDGateSymbol
+
+public defn ANDGateSymbol (
+  --
+  inverted?:True|False = DEF_AND_INVERTED,
+  open-collector?:Maybe<OpenCollectorType> = DEF_AND_OC_TYPE,
+  num-inputs:Int = DEF_AND_NUM_INPUTS,
+  pin-pitch:Double = DEF_AND_PIN_PITCH,
+  in-ref:Ref = AND_IN_REF,
+  out-ref:Ref = AND_OUT_REF,
+  params:ANDGateSymbolParams = ?
+  ) -> ANDGateSymbol :
+  #ANDGateSymbol(inverted?, open-collector?, num-inputs, pin-pitch, in-ref, out-ref, params)
+
+defn get-params (x:ANDGateSymbol) -> ANDGateSymbolParams :
+  match(params(x)):
+    (_:None): get-default-and-gate-symbol-params()
+    (v:One<ANDGateSymbolParams>): value(v)
+
+public defmethod name (x:ANDGateSymbol) -> String :
+  if inverted?(x):
+    "NAND Gate"
+  else:
+    "AND Gate"
+
+doc: \<DOC>
+Compute the pin positions for the Gate Symbol.
+<DOC>
+defn get-input-pin-positions (num-pins:Int, pin-pitch:Double, width:Double) -> Tuple<Point> :
+  val y-start = (to-double(num-pins - 1) * pin-pitch) / 2.0
+  to-tuple $ for i in 0 to num-pins seq :
+    Point((- width), y-start - (to-double(i) * pin-pitch))
+
+defn get-output-pin-position (width:Double) -> Point :
+  Point(0.0, 0.0)
+
+public defmethod build-pins (x:ANDGateSymbol, node:SymbolNode) :
+  val p = get-params(x)
+
+  val numPins = num-inputs(x)
+  val pinPitch = pin-pitch(x)
+
+  val [w, h] = get-body-size(p)
+  val W = round-body-width(w)
+
+  val inpos-set = get-input-pin-positions(numPins, pinPitch, W)
+  val out-pos = get-output-pin-position(W)
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  for (inpos in inpos-set, i in 1 to false) do:
+    val pin-ref = in-ref(x)[i]
+    add-pin(node, pin-ref, inpos, params = input-params, name = to-string("pin-%_" % [[pin-ref]]))
+
+  val output-params = VirtualPinParams(
+    direction = Right,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  val out-pin = add-pin(node, out-ref(x), out-pos, params = output-params, name = to-string("pin-%_" % [out-ref(x)]))
+  if inverted?(x):
+    add-decorator(out-pin, ActiveLowDecorator())
+  match(open-collector?(x)):
+    (_:None): false
+    (oc-type:One<OpenCollectorType>):
+      add-decorator(out-pin, OpenCollectorDecorator(oc-type = value(oc-type)))
+
+public defmethod build-artwork (x:ANDGateSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-and-gate-glyphs(node, num-inputs(x), pin-pitch(x), p)
+
+public defmethod build-params (x:ANDGateSymbol, sn:SymbolNode) :
+  val p = get-params(x)
+  val [w, h] = get-body-size(p)
+  val h2 = h / 2.0
+  text(sn, [0.0, h2 + 0.5], ">REF", anchor = SW, font-size = 8)
+  text(sn, [0.0, (- (h2 + 0.5))], ">VALUE", anchor = NW, font-size = 8)
