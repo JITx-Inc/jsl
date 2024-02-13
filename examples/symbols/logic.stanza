@@ -13,6 +13,7 @@ defpackage jsl/examples/symbols/logic:
   import jsl/symbols/SymbolDefn
   import jsl/symbols/logic/buffer
   import jsl/symbols/logic/AND
+  import jsl/symbols/logic/OR
   import jsl/symbols/decorators
 
   import jsl/examples/landpatterns/board
@@ -161,6 +162,67 @@ pcb-component test-Crazy-AND:
   val lp = create-landpattern(SOIC-pkg)
   assign-landpattern(lp)
 
+pcb-component test-OR:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+
+    [out | p[3]]
+
+  val symb = ORGateSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+pcb-component test-NOR:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+
+    [out | p[3]]
+
+  val symb = ORGateSymbol(inverted? = true)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+pcb-component test-XOR:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+
+    [out | p[3]]
+
+  val symb = ORGateSymbol(exclusive? = true, open-collector? = One(OpenCollectorSink))
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+pcb-component test-NOR3:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [in[3] | p[3]]
+
+    [out | p[4]]
+
+  val symb = ORGateSymbol(num-inputs = 3, pin-pitch = 1.0, inverted? = true)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
 pcb-module test-design:
   inst U1 : test-Buffer
   inst U2 : test-Inverter
@@ -169,6 +231,11 @@ pcb-module test-design:
   inst U5 : test-Multi-AND
   inst U6 : test-NAND3
   inst U7 : test-Crazy-AND
+
+  inst U8 : test-OR
+  inst U9 : test-NOR
+  inst U10 : test-XOR
+  inst U11 : test-NOR3
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("Logic-Symb-TEST")
