@@ -1,0 +1,287 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/logic/MUX:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+  import jsl/symbols/decorators
+
+val DEF_MUX_FILLED? = false
+val DEF_MUX_LINE_WIDTH = 0.05
+val DEF_MUX_PIN_LEN = 2.0
+val DEF_MUX_PAD_REF_SIZE = 0.65
+
+
+public defstruct MuxSymbolParams <: Equalable :
+  filled?:True|False with: (
+    updater => sub-filled?
+    default => DEF_MUX_FILLED?
+  )
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_MUX_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_MUX_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_MUX_PAD_REF_SIZE
+  )
+with:
+  constructor => #MuxSymbolParams
+  printer => true
+  equalable => true
+
+
+public defn MuxSymbolParams (
+  --
+  filled?:True|False = DEF_MUX_FILLED?,
+  line-width:Double = DEF_MUX_LINE_WIDTH,
+  pin-length:Double = DEF_MUX_PIN_LEN,
+  pad-ref-size:Double = DEF_MUX_PAD_REF_SIZE
+  ) -> MuxSymbolParams:
+  #MuxSymbolParams(filled?, line-width, pin-length, pad-ref-size)
+
+
+var DEF_MUX_PARAMS = MuxSymbolParams()
+public defn get-default-mux-symbol-params () -> MuxSymbolParams :
+  DEF_MUX_PARAMS
+
+public defn set-default-mux-gate-symbol-params (v:MuxSymbolParams) -> False :
+  DEF_MUX_PARAMS = v
+
+
+public defn build-mux-glyphs (
+  node:SymbolNode,
+  size:Dims,
+  numCtls:Int,
+  ctlPitch:Double,
+  p:MuxSymbolParams
+  ) :
+  val w2 = x(size) / 2.0
+  val h2 = y(size) / 2.0
+  val inset = 1.0
+  val pts = [
+    Point((- w2), h2),
+    Point(w2, h2 - inset),
+    Point(w2, (- (h2 - inset)))
+    Point((- w2), (- h2))
+    Point((- w2), h2),
+  ]
+  if filled?(p):
+    polygon(node, pts, name = "body")
+  else:
+    line(node, pts, name = "body")
+
+  val ctlpos-set = get-ctl-pin-positions(numCtls, ctlPitch, size)
+  val slope = inset / x(size)
+  for (ctlpos in ctlpos-set, i in 1 to false) do:
+    ; We must calculate the intersection point with the
+    ;  trapezoid shape of the mux symbol.
+    val xp = x(ctlpos)
+    val yp = (- h2) + (slope * (w2 + xp))
+
+    val name = to-string $ "ctl-%_-leader" % [i]
+    line(node, [ctlpos, Point(xp, yp)], name = name)
+
+
+public val MUX_IN_REF = Ref("in")
+public val MUX_CTL_REF = Ref("ctl")
+public val MUX_OUT_REF = Ref("out")
+
+val DEF_MUX_NUM_INPUTS = 2
+val DEF_MUX_NUM_CTLS = None()
+; This default is good for 2 inputs but for 4-pins it will
+;  be too large - need to switch to 1.0 in that case.
+val DEF_MUX_IN_PITCH = 2.0
+val DEF_MUX_CTL_PITCH = 1.0
+
+
+public defstruct MuxSymbol <: SymbolDefn :
+  doc: \<DOC>
+  Number of Multiplexer inputs
+  The default is 2 and this value must be greater than 1
+  <DOC>
+  num-inputs:Int with: (
+    updater => sub-num-inputs,
+    default => DEF_MUX_NUM_INPUTS
+    ensure => ensure-greater!(1)
+  )
+  doc: \<DOC>
+  Optional override for the number of control lines
+  If `None()`, then this symbol will use `log2(num-inputs)` to determine
+  the number of control lines.
+  <DOC>
+  num-ctls:Maybe<Int> with: (
+    updater => sub-num-ctls,
+    default => DEF_MUX_NUM_CTLS
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Spacing between input pins.
+  This value is in symbol grid units. The best values are
+  whole numbers or half-numbers (0.5, 1.5, etc).
+  The default is 2.0.
+  <DOC>
+  input-pitch:Double with: (
+    updater => sub-input-pitch,
+    default => DEF_MUX_IN_PITCH,
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Spacing between the control pins
+  This value is in symbol grid units. The best values
+  are whole numbers. Default is 1.0.
+  <DOC>
+  ctl-pitch:Double with: (
+    updater => sub-ctl-pitch,
+    default => DEF_MUX_CTL_PITCH,
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Input Base Reference
+  The symbol will construct individual `IndexRef` values from this
+  base `Ref`, starting at 1. Example: For a 2:1 Mux, the
+  input pins would be `in[1]` and `in[2]`.
+  The user can override the default base name for supporting multi-channel
+  chips.
+  <DOC>
+  in-ref:Ref with: (
+    default => MUX_IN_REF
+  )
+  doc: \<DOC>
+  Control / Select Input Reference
+  This symbol will construct individual `IndexRef` values from this
+  base `Ref`, starting at 1. Example: For a 4:1 Mux, the
+  ctl pins would be `ctl[1]` and `ctl[2]` by default.
+  User can override the default for supporting multi-channel
+  chips.
+  <DOC>
+  ctl-ref:Ref with: (
+    default => MUX_CTL_REF
+  )
+  doc: \<DOC>
+  Output Reference
+  User can override the default for supporting multi-channel
+  chips.
+  <DOC>
+  out-ref:Ref with: (
+    default => MUX_OUT_REF
+  )
+  params:Maybe<MuxSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #MuxSymbol
+
+public defn MuxSymbol (
+  --
+  num-inputs:Int = DEF_MUX_NUM_INPUTS,
+  num-ctls:Maybe<Int> = DEF_MUX_NUM_CTLS,
+  input-pitch:Double = DEF_MUX_IN_PITCH,
+  ctl-pitch:Double = DEF_MUX_CTL_PITCH,
+  in-ref:Ref = MUX_IN_REF,
+  ctl-ref:Ref = MUX_CTL_REF,
+  out-ref:Ref = MUX_OUT_REF,
+  params:MuxSymbolParams = ?
+  ):
+  #MuxSymbol(num-inputs, num-ctls, input-pitch, ctl-pitch, in-ref, ctl-ref, out-ref, params)
+
+defn get-params (x:MuxSymbol) -> MuxSymbolParams :
+  match(params(x)):
+    (_:None): get-default-mux-symbol-params()
+    (v:One<MuxSymbolParams>): value(v)
+
+defn get-num-ctls (x:MuxSymbol) -> Int :
+  match(num-ctls(x)):
+    (_:None):
+      val numPins = num-inputs(x)
+      ceil-log2(numPins)
+    (ctls?:One<Int>): value(ctls?)
+
+defn get-body-size (x:MuxSymbol) -> Dims :
+  val numPins = num-inputs(x)
+  val pinPitch = input-pitch(x)
+  ; Add padding on top and bottom sides.
+  val h-pad = 4.0
+  val h = (to-double(numPins - 1) * pinPitch) + (2.0 * h-pad)
+
+  val numCtls = get-num-ctls(x)
+  val ctlPitch = ctl-pitch(x)
+  val w-pad = 1.0
+  val w = (to-double(numCtls - 1) * ctlPitch) + (2.0 * w-pad)
+  Dims(w, h)
+
+public defmethod name (x:MuxSymbol) -> String :
+  to-string("%_:1 Mux" % [num-inputs(x)])
+
+defn get-input-pin-positions (numPins:Int, pinPitch:Double, size:Dims) -> Tuple<Point> :
+  val y-offset = ( to-double(numPins - 1) * pinPitch ) / 2.0
+  to-tuple $ for i in 0 to numPins seq :
+    Point( (- (x(size) / 2.0)), y-offset - (to-double(i) * pinPitch) )
+
+defn get-ctl-pin-positions (numPins:Int, pinPitch:Double, size:Dims) -> Tuple<Point> :
+  val x-offset = ( to-double(numPins - 1) * pinPitch ) / 2.0
+  to-tuple $ for i in 0 to numPins seq :
+    Point( to-double(i) * pinPitch - x-offset, y(size) / -2.0 )
+
+public defmethod build-pins (m:MuxSymbol, node:SymbolNode) :
+  val p = get-params(m)
+  val numPins = num-inputs(m)
+  val pinPitch = input-pitch(m)
+  val numCtls = get-num-ctls(m)
+  val ctlPitch = ctl-pitch(m)
+
+  val size = get-body-size(m)
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pin-name-size = pad-ref-size(p)
+    pad-ref-size = pad-ref-size(p)
+  )
+  val inpos-set = get-input-pin-positions(numPins, pinPitch, size)
+  for (inpos in inpos-set, i in 1 to false) do :
+    val pin-ref = in-ref(m)[i]
+    add-pin(node, pin-ref, inpos, params = input-params, name = to-string("pin-%_" % [[pin-ref]]))
+
+  val ctl-params = VirtualPinParams(
+    direction = Down,
+    pin-length = pin-length(p),
+    pin-name-size = pad-ref-size(p)
+    pad-ref-size = pad-ref-size(p)
+  )
+  val ctlpos-set = get-ctl-pin-positions(numCtls, ctlPitch, size)
+  for (ctlpos in ctlpos-set, i in 1 to false) do :
+    val pin-ref = ctl-ref(m)[i]
+    add-pin(node, pin-ref, ctlpos, params = ctl-params, name = to-string("pin-%_" % [[pin-ref]]))
+
+  val output-params = VirtualPinParams(
+    direction = Right,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  val out-pos = Point(x(size) / 2.0, 0.0)
+  val oref = out-ref(m)
+  add-pin(node, oref, out-pos, params = output-params, name = to-string("pin-%_" % [oref]))
+
+public defmethod build-artwork (m:MuxSymbol, node:SymbolNode) :
+  val p = get-params(m)
+  val size = get-body-size(m)
+  val numCtls = get-num-ctls(m)
+  val ctlPitch = ctl-pitch(m)
+  build-mux-glyphs(node, size, numCtls, ctlPitch, p)
+
+public defmethod build-params (x:MuxSymbol, node:SymbolNode) :
+  val size = get-body-size(x)
+  val h2 = y(size) / 2.0
+  text(node, [0.0, h2 + 1.5], ">REF", anchor = SW, font-size = 8)
+  text(node, [0.0, (h2 + 0.5)], ">VALUE", anchor = NW, font-size = 8)

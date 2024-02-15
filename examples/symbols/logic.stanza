@@ -14,6 +14,7 @@ defpackage jsl/examples/symbols/logic:
   import jsl/symbols/logic/buffer
   import jsl/symbols/logic/AND
   import jsl/symbols/logic/OR
+  import jsl/symbols/logic/MUX
   import jsl/symbols/decorators
 
   import jsl/examples/landpatterns/board
@@ -223,6 +224,71 @@ pcb-component test-NOR3:
   val lp = create-landpattern(SOIC-pkg)
   assign-landpattern(lp)
 
+pcb-component test-MUX2-1:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [ctl[1] | p[3]]
+
+    [out | p[4]]
+
+  val symb = MuxSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-MUX4-1:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [in[3] | p[3]]
+    [in[4] | p[4]]
+
+    [ctl[1] | p[5]]
+    [ctl[2] | p[6]]
+
+    [out | p[7]]
+
+  val oldParams = get-default-mux-symbol-params()
+  val newParams = sub-filled?(oldParams, true)
+
+  val symb = MuxSymbol(num-inputs = 4, params = newParams)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+pcb-component test-MUX8-1:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [in[1] | p[1]]
+    [in[2] | p[2]]
+    [in[3] | p[3]]
+    [in[4] | p[4]]
+    [in[5] | p[5]]
+    [in[6] | p[6]]
+    [in[7] | p[7]]
+    [in[8] | p[8]]
+
+    [ctl[1] | p[9]]
+    [ctl[2] | p[10]]
+    [ctl[3] | p[11]]
+
+    [out | p[12]]
+
+  val symb = MuxSymbol(num-inputs = 8, input-pitch = 2.0)
+  assign-symbol(create-symbol(symb))
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
 pcb-module test-design:
   inst U1 : test-Buffer
   inst U2 : test-Inverter
@@ -236,6 +302,10 @@ pcb-module test-design:
   inst U9 : test-NOR
   inst U10 : test-XOR
   inst U11 : test-NOR3
+
+  inst U12 : test-MUX2-1
+  inst U13 : test-MUX4-1
+  inst U14 : test-MUX8-1
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("Logic-Symb-TEST")
