@@ -1,0 +1,285 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/audio:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/SymbolNode
+
+val DEF_AUDIO_LINE_WIDTH = 0.05
+val DEF_AUDIO_PIN_LEN = 2.0
+val DEF_AUDIO_PAD_REF_SIZE = 0.65
+
+public defstruct AudioSymbolParams <: Equalable :
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_AUDIO_LINE_WIDTH
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_AUDIO_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_AUDIO_PAD_REF_SIZE
+  )
+with:
+  constructor => #AudioSymbolParams
+  printer => true
+  equalable => true
+
+public defn AudioSymbolParams (
+  --
+  line-width:Double = DEF_AUDIO_LINE_WIDTH,
+  pin-length:Double = DEF_AUDIO_PIN_LEN,
+  pad-ref-size:Double = DEF_AUDIO_PAD_REF_SIZE
+  ) -> AudioSymbolParams:
+  #AudioSymbolParams(line-width, pin-length, pad-ref-size)
+
+var DEF_AUDIO_PARAMS = AudioSymbolParams()
+public defn get-default-audio-symbol-params () -> AudioSymbolParams :
+  DEF_AUDIO_PARAMS
+
+public defn set-default-audio-symbol-params (v:AudioSymbolParams) -> False :
+  DEF_AUDIO_PARAMS = v
+
+
+val DEF_AUDIO_PITCH = TWO_PIN_DEF_PITCH
+
+
+public defstruct SpeakerSymbol <: SymbolDefn :
+  pitch:Double with: (
+    default => DEF_AUDIO_PITCH
+    ensure => ensure-positive!
+  )
+  params:Maybe<AudioSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #SpeakerSymbol
+
+public defn SpeakerSymbol (
+  --
+  pitch:Double = DEF_AUDIO_PITCH
+  params:AudioSymbolParams = ?
+  ) -> SpeakerSymbol :
+  #SpeakerSymbol(pitch, params)
+
+defn get-params (x:SpeakerSymbol) -> AudioSymbolParams :
+  match(params(x)):
+    (_:None): get-default-audio-symbol-params()
+    (v:One<AudioSymbolParams>): value(v)
+
+public defmethod name (x:SpeakerSymbol) -> String :
+  "Speaker"
+
+public defmethod build-pins (x:SpeakerSymbol, node:SymbolNode) :
+  val p = get-params(x)
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+
+  val p2 = pitch(x) / 2.0
+
+  add-pin(node, PINREF[1], Point(0.0, p2), params = input-params, name = to-string("pin-1") )
+  add-pin(node, PINREF[2], Point(0.0, (- p2)), params = input-params, name = to-string("pin-2") )
+
+public defn build-speaker-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  p:AudioSymbolParams
+  ) :
+  val lw = line-width(p)
+  val h = 2.0 * pitch
+  val w = h / 2.0
+
+  val h2 = h / 2.0
+  val box = [
+    Point(0.0, h2),
+    Point(w, h2),
+    Point(w, (- h2)),
+    Point(0.0, (- h2))
+    Point(0.0, h2)
+  ]
+  line(node, box, width = lw, name = "box" )
+
+  val cone = [
+    Point(w, h2),
+    Point(2.0 * w, 2.0 * h2),
+    Point(2.0 * w, -2.0 * h2),
+    Point(w, (- h2)),
+  ]
+  line(node, cone, width = lw, name = "cone")
+
+public defmethod build-artwork (x:SpeakerSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-speaker-glyphs(node, pitch(x), p)
+
+public defmethod build-params (x:SpeakerSymbol, sn:SymbolNode) :
+  val b = glyph-bounds(sn)
+  text(sn, [0.0, down(b)], ">REF", anchor = SW, font-size = 8)
+  text(sn, [0.0, down(b) - 0.5], ">VALUE", anchor = NW, font-size = 8)
+
+
+public defstruct BuzzerSymbol <: SymbolDefn :
+  pitch:Double with: (
+    default => DEF_AUDIO_PITCH
+    ensure => ensure-positive!
+  )
+  params:Maybe<AudioSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #BuzzerSymbol
+
+public defn BuzzerSymbol (
+  --
+  pitch:Double = DEF_AUDIO_PITCH
+  params:AudioSymbolParams = ?
+  ) -> BuzzerSymbol :
+  #BuzzerSymbol(pitch, params)
+
+defn get-params (x:BuzzerSymbol) -> AudioSymbolParams :
+  match(params(x)):
+    (_:None): get-default-audio-symbol-params()
+    (v:One<AudioSymbolParams>): value(v)
+
+public defmethod name (x:BuzzerSymbol) -> String :
+  "Buzzer"
+
+public defmethod build-pins (x:BuzzerSymbol, node:SymbolNode) :
+  val p = get-params(x)
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+
+  val p2 = pitch(x) / 2.0
+
+  add-pin(node, PINREF[1], Point(0.0, p2), params = input-params, name = to-string("pin-1") )
+  add-pin(node, PINREF[2], Point(0.0, (- p2)), params = input-params, name = to-string("pin-2") )
+
+public defn build-buzzer-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  p:AudioSymbolParams
+  ):
+
+  val lw = line-width(p)
+
+  ; Compute the shape of the circle by
+  ; using the two pin locations as two of
+  ; the corners of a equilateral triangle that
+  ; are on the circle's edge. The third corner is
+  ; at the center of the circle.
+
+  val R = 2.0 * (pitch / 2.0)
+  val x-offset = sqrt(3.0) * (pitch / 2.0)
+
+  val semicirc = Arc(
+    Point(x-offset, 0.0),
+    R,
+    90.0,
+    180.0
+  )
+  polyline(node, [semicirc, Point(x-offset, R)], width = lw, name = "circle")
+
+
+public defmethod build-artwork (x:BuzzerSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-buzzer-glyphs(node, pitch(x), p)
+
+public defmethod build-params (x:BuzzerSymbol, sn:SymbolNode) :
+  val b = glyph-bounds(sn)
+  text(sn, [0.0, down(b)], ">REF", anchor = NW, font-size = 8)
+  text(sn, [0.0, down(b) - 1.5], ">VALUE", anchor = NW, font-size = 8)
+
+
+
+public defstruct MicrophoneSymbol <: SymbolDefn :
+  pitch:Double with: (
+    default => DEF_AUDIO_PITCH
+    ensure => ensure-positive!
+  )
+  params:Maybe<AudioSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #MicrophoneSymbol
+
+public defn MicrophoneSymbol (
+  --
+  pitch:Double = DEF_AUDIO_PITCH
+  params:AudioSymbolParams = ?
+  ) -> MicrophoneSymbol :
+  #MicrophoneSymbol(pitch, params)
+
+defn get-params (x:MicrophoneSymbol) -> AudioSymbolParams :
+  match(params(x)):
+    (_:None): get-default-audio-symbol-params()
+    (v:One<AudioSymbolParams>): value(v)
+
+public defmethod name (x:MicrophoneSymbol) -> String :
+  "Microphone"
+
+public defmethod build-pins (x:MicrophoneSymbol, node:SymbolNode) :
+  val p = get-params(x)
+
+  val input-params = VirtualPinParams(
+    direction = Left,
+    pin-length = pin-length(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+
+  val p2 = pitch(x) / 2.0
+
+  add-pin(node, PINREF[1], Point(0.0, p2), params = input-params, name = to-string("pin-1") )
+  add-pin(node, PINREF[2], Point(0.0, (- p2)), params = input-params, name = to-string("pin-2") )
+
+public defn build-microphone-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  p:AudioSymbolParams
+  ):
+
+  ; Compute the shape of the circle by
+  ; using the two pin locations as two of
+  ; the corners of a equilateral triangle that
+  ; are on the circle's edge. The third corner is
+  ; at the center of the circle.
+
+  val R = 2.0 * (pitch / 2.0)
+  val x-offset = sqrt(3.0) * (pitch / 2.0)
+
+  val circ = Arc(
+    Point(x-offset, 0.0),
+    R,
+    0.0,
+    360.0
+  )
+  val lw = line-width(p)
+  polyline(node, [circ], width = lw, name = "circle")
+  val line-x = x-offset + R
+
+  line(node, [Point(line-x, R), Point(line-x, (- R))], width = 3.0 * lw, name = "diagram")
+
+public defmethod build-artwork (x:MicrophoneSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-microphone-glyphs(node, pitch(x), p)
+
+public defmethod build-params (x:MicrophoneSymbol, sn:SymbolNode) :
+  val b = glyph-bounds(sn)
+  text(sn, [0.0, down(b)], ">REF", anchor = NW, font-size = 8)
+  text(sn, [0.0, down(b) - 1.5], ">VALUE", anchor = NW, font-size = 8)

@@ -1,0 +1,105 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/audio:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns/SOIC
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/audio
+
+
+  import jsl/examples/landpatterns/board
+
+val SOIC-pkg = SOIC-N(
+  num-leads = 14,
+  lead-span = min-max(5.8, 6.2),
+  package-length = 4.5 +/- 0.10,
+  density-level = DensityLevelC
+)
+
+pcb-component test-Speaker:
+  mpn = "XXXXX"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = SpeakerSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Microphone:
+  mpn = "XXXXX"
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = MicrophoneSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-Buzzer:
+  mpn = "XXXXX"
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = BuzzerSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-module test-design:
+  inst U1 : test-Speaker
+  inst U2 : test-Microphone
+  inst U3 : test-Buzzer
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Audio-Symb-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()
+
