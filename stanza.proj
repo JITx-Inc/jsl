@@ -23,5 +23,6 @@ build-test tests:
     jsl/tests/symbols/SymbolNode
     jsl/tests/bundles
     jsl/tests/pin-assignment
+    jsl/tests/layerstack
   pkg: "test-pkgs"
   o: "jsl-tests"

@@ -1,0 +1,156 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/layerstack:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/layerstack
+  import jsl/tests/utils
+
+deftest(layerstack) test-basic-symmetric:
+  val stack = LayerStack(name = "Carl's Crazy Stack")
+
+  val copper-1oz = Copper("cu", 1.0)
+  val core-FR4 = FR4("core", 1.0)
+  val prepreg-FR4 = FR4("prepreg", 0.5)
+
+  add-symmetric(copper-1oz, core-FR4,
+    add-symmetric(copper-1oz, prepreg-FR4,
+      add-symmetric(copper-1oz, core-FR4, stack)
+    )
+  )
+
+  validate!(stack)
+
+  val [prepreg-2, cu-2, core-2] = get-conductor(stack, 2)
+  #EXPECT(prepreg-2 is-not None)
+  #EXPECT(core-2 is-not None)
+
+  val [prepreg-0, cu-0, core-0] = get-conductor(stack, 0)
+  #EXPECT(prepreg-0 is None)
+  #EXPECT(core-0 is-not None)
+
+  val [prepreg-5, cu-5, core-5] = get-conductor(stack, 5)
+  #EXPECT(prepreg-5 is-not None)
+  #EXPECT(core-5 is None)
+
+  ; For debug
+  ; val pcb-stack = create-pcb-stackup(stack)
+  ; print-def(pcb-stack)
+
+deftest(layerstack) test-validate:
+
+  val empty = LayerStack(name = "Empty Stack")
+  expect-throw({validate!(empty)})
+
+  val stack = LayerStack(name = "TwoCoppers")
+
+  val copper-1oz = Copper("cu", 1.0)
+  val core-FR4 = FR4("core", 1.0)
+
+  add-symmetric(copper-1oz, core-FR4, stack)
+  add-top(copper-1oz, stack)
+
+  expect-throw({validate!(stack)})
+
+  ; Two Dielectrics in a row
+
+  val stack2 = LayerStack(name = "TwoDielectrics")
+
+  add-symmetric(copper-1oz, core-FR4, stack2)
+  add-bottom(core-FR4, stack2)
+  add-bottom(core-FR4, stack2)
+
+  expect-throw({validate!(stack2)})
+
+deftest(layerstack) test-compute-thickness:
+
+  val testvecs = [
+    [0.5,  0.0174]
+    [1.0,  0.0348]
+    [2.0,  0.0696]
+    [3.0,  0.1044]
+    [4.0,  0.1392]
+  ]
+  for testvec in testvecs do:
+    val [weight, exp-thick] = testvec
+    val thick = compute-thickness(CopperMaterial, weight)
+    #EXPECT(almost-equal?(thick, exp-thick, 0.001))
+
+deftest(layerstack) test-get-conductor:
+  val stack = LayerStack(name = "6-layer")
+
+  val w = 1.0
+  val copper-1oz = Copper("cu", w)
+  val core-FR4 = FR4("core", 1.0)
+  val prepreg-FR4 = FR4("prepreg", 0.5)
+
+  add-symmetric(copper-1oz, core-FR4,
+    add-symmetric(copper-1oz, prepreg-FR4,
+      add-symmetric(copper-1oz, core-FR4, stack)
+    )
+  )
+
+  validate!(stack)
+
+  #EXPECT(get-conductor-count(stack) == 6)
+
+  val [prepreg-2?, cu-2, core-2?] = get-conductor(stack, 2)
+  #EXPECT(prepreg-2? is-not None)
+  #EXPECT(core-2? is-not None)
+
+  val prepreg-2 = value!(prepreg-2?)
+  val core-2 = value!(core-2?)
+
+  #EXPECT(name(prepreg-2) is-not None)
+  #EXPECT(value!(name(prepreg-2)) == "prepreg")
+  #EXPECT(description(prepreg-2) is None)
+  #EXPECT(thickness(prepreg-2) == 0.5)
+
+  #EXPECT(name(core-2) is-not None)
+  #EXPECT(value!(name(core-2)) == "core")
+  #EXPECT(description(core-2) is None)
+  #EXPECT(thickness(core-2) == 1.0)
+
+  #EXPECT(name(cu-2) is-not None)
+  #EXPECT(value!(name(cu-2)) == "cu")
+  #EXPECT(description(cu-2) is None)
+
+  val exp-thick = 0.0348 ; mm
+  #EXPECT(almost-equal?(thickness(cu-2), exp-thick, 0.001))
+
+
+  ; Check the `get-copper` under failure cases:
+
+  expect-throw({get-conductor(stack, -1)})
+  expect-throw({get-conductor(stack, 10)})
+
+
+deftest(layerstack) test-with-soldermask:
+
+  val stack = LayerStack(name = "2-layer")
+
+  val w = 2.0
+  val copper-1oz = Copper("cu", w)
+  val core-FR4 = FR4("core", 1.0)
+
+  add-symmetric(copper-1oz, core-FR4, stack)
+  add-soldermask(Soldermask(0.025), stack)
+
+  validate!(stack)
+
+  #EXPECT(get-conductor-count(stack) == 2)
+
+  val [sm?, cu-0, core-0?] = get-conductor(stack, 0)
+  #EXPECT(sm? is-not None)
+  #EXPECT(core-0? is-not None)
+
+  val sm = value!(sm?)
+  val core-0 = value!(core-0?)
+
+  #EXPECT(almost-equal?(thickness(sm), 0.025))
+
+  val [core-1?, cu-1, sm2?] = get-conductor(stack, 1)
+  #EXPECT(sm2? is-not None)
+  #EXPECT(core-1? is-not None)
+
