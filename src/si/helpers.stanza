@@ -1,0 +1,26 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/helpers:
+  import core
+  import jitx
+
+
+doc: \<DOC>
+Create a net and topology segment
+
+This function connects pins/ports together with a
+combination net and topology-segment. This is useful
+for constructing signal integrity routes in the design.
+
+The pin arguments can be either single pins, pin arrays,
+or bundle-defined ports. Regardless, p1 and p2 must be
+the same type.
+
+No direction is implied by the order of p1 and p2.
+
+@param p1 Pin object
+@param p2 Pin object
+<DOC>
+public defn topo-net (p1:JITXObject, p2:JITXObject):
+  inside pcb-module:
+    net (p1, p2)
+    topology-segment(p1, p2)

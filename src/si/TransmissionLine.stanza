@@ -1,0 +1,60 @@
+doc: \<DOC>
+Transmission Line Interface
+
+The `TransmissionLine` interface is intended to provide
+a defined set of methods for constructing the parameters needed
+for a particular type of transmission line. Transmission lines in the
+context of a board may be single-ended (think microstrip or stripline) or
+differential (ie, edge-coupled microstrip lines, or edge-coupled CPWG).
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/si/TransmissionLine:
+  import core
+  import jitx
+
+
+public defenum TransmissionStructure:
+  Single-Ended
+  Differential
+
+doc: \<DOC>
+Transmission Line Interface
+
+This type is intended to be inherited and overrided to provide
+the specific constraints for a particular structure.
+<DOC>
+public defstruct TransmissionLine :
+  doc: \<DOC>
+  Sets where this transmission line applies to single-ended or differential pairs.
+  <DOC>
+  structure:TransmissionStructure
+  doc: \<DOC>
+  Effective Relative Permittivity of
+  <DOC>
+  effective-eps-r:Double
+  doc: \<DOC>
+  Characteristic Impedance of the Transmission Line
+  <DOC>
+  Z0:Double
+  doc: \<DOC>
+  Given the Effective Relative Permittivity - provide phase velocity of the signal
+  <DOC>
+  phase-velocity:Double
+  doc: \<DOC>
+  Insertion Loss Rate for this particular TransmissionLine structure.
+  <DOC>
+  insertion-loss-rate:Double
+
+doc: \<DOC>
+Solve for the Transmission Line that provides a specific Characteristic Impedance.
+
+The goal of this function is to solve for the physical features of this
+transmission line that provide an impedance close to the passed `Z` impedance.
+
+Some functions may have closed form impedance equations, others may need to use a solve.
+
+Each function must document what features are expected to be valid in the
+passed `t` object and which will be override with new values.
+<DOC>
+public defmulti solve-Z (t:TransmissionLine, Z:Double) -> TransmissionLine

@@ -1,0 +1,211 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/Microstrip:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+  import jsl/si/TransmissionLine
+  import jsl/si/physics
+  import jsl/design/solvers
+
+doc: \<DOC>
+Microstrip Transmission Line
+
+This type provides functions/methods to compute
+characteristics of the microstrip transmission line.
+
+@see Wadell, Transmission Line Design Handbook, Section 3.5.1, Microstrip Line
+
+This model is based on the work of Bogatin who recommended Wheeler's equation with
+Schneider's Effective relative permitivitty.
+
+<DOC>
+public defstruct Microstrip <: TransmissionLine :
+  doc: \<DOC>
+  Relative Permittivity of the dielectric medium.
+  <DOC>
+  eps-r:Double with: (
+    ensure => ensure-valid-rel-permittivity!
+  )
+  doc: \<DOC>
+  Dielectric Height in mm
+  <DOC>
+  dielectric-height:Double with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Trace Width in mm
+  <DOC>
+  width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-width
+  )
+  doc: \<DOC>
+  Copper layer thickness in mm
+  <DOC>
+  thickness:Double with: (
+    ensure => ensure-non-negative!
+  )
+  structure:TransmissionStructure with: (
+    default => Single-Ended,
+    as-method => true
+  )
+with:
+  constructor => #Microstrip
+  printer => true
+
+public defn Microstrip (
+  --
+  eps-r:Double
+  dielectric-height:Double
+  width:Double
+  thickness:Double
+  ) -> Microstrip :
+  #Microstrip(eps-r, dielectric-height, width, thickness)
+
+doc: \<DOC>
+Compute the Width Delta imparted due to the trace thickness.
+
+The returned value is the delta width imparted due to
+the trace thickness.
+<DOC>
+public defn compute-width-delta (m:Microstrip) -> Double:
+  val t = thickness(m)
+  val w = width(m)
+  val h = dielectric-height(m)
+  val eps-r = eps-r(m)
+
+  val PI-INV = 1.0 / PI
+  val denom = sqrt( pow((t / h), 2.0) + pow( (PI-INV / ((w / t) + 1.1)), 2.0) )
+  val inside-log = 4.0 * exp(1.0) / denom
+
+  val delta-W = (t / PI) * log(inside-log)
+  val delta-W-prime = delta-W * 0.5 * (1.0 + (1.0 / eps-r))
+  delta-W-prime
+
+public defn compute-effective-width (m:Microstrip) -> Double :
+  val w = width(m)
+  val t = thickness(m)
+  val delta-w = if t > 0.0:
+    compute-width-delta(m)
+  else:
+    ; No Modification for the thickness == 0.0 case.
+    0.0
+  ; println("DeltaW: %_" % [delta-w])
+  w + delta-w
+
+public defmethod effective-eps-r (m:Microstrip) -> Double :
+  val w = compute-effective-width(m)
+  val h = dielectric-height(m)
+
+  val eps-r = eps-r(m)
+
+  ; Limitations:
+  ; eps-r < 16.0          - ~1% error
+  ; eps-r > 16.0          - ~2% error
+
+  val r1 = 0.5 * (eps-r + 1.0)
+  val r2 = 0.5 * (eps-r - 1.0)
+
+  ;  Effective Permittivity depends on the (width / dielectric-height) ratio
+  val ratio = w / h
+
+  ; Limitations:
+  ;   ratio > 20.0        - this equation probably breaks down
+  ;   0.05 < ratio < 20.0 - ~1% error
+  ;   ratio < 0.05        -  ~2% error
+
+  ; Common Geometric Term
+  val g1 = (1.0 / sqrt( 1.0 + (12.0 / ratio)))
+
+  val eff-eps = if ratio < 1.0 :
+    val g =  g1 + (0.04 * pow((1.0 - ratio), 2.0))
+    r1 + (r2 * g)
+  else:
+    r1 + (r2 * g1)
+
+  eff-eps
+
+public defmethod Z0 (m:Microstrip) -> Double :
+  val w = compute-effective-width(m)
+  ; println("Effective Width: %_" % [w])
+
+  val h = dielectric-height(m)
+  val eps-r = effective-eps-r(m)
+  ; println("Effective Eps-R: %_" % [eps-r])
+
+  val ratio = w / h
+  val ratio-4 = 4.0 / ratio
+
+  val r1 = (14.0 + (8.0 / eps-r)) / 11.0
+  ; println("R1: %_" % [r1])
+  val g1 = ratio-4 * r1
+  ; println("G1: %_" % [g1])
+
+  val g2-1 = pow(r1 * ratio-4, 2.0)
+  val g2-2 = (0.5 * (1.0 + (1.0 / eps-r)) * PI * PI)
+  val g2 = sqrt( g2-1 + g2-2 )
+  ; println("G2: %_" % [g2])
+
+  val inside-log = 1.0 + (ratio-4 * (g1 + g2))
+
+  ; println("Nu0: %_" % [CHAR_IMPED_VAC])
+  val coeff = (CHAR_IMPED_VAC / (2.0 * sqrt(2.0) * PI * sqrt(eps-r + 1.0)))
+  ; println("Coeff: %_" % [coeff])
+  val Z = coeff * log(inside-log)
+
+  Z
+
+; Alternate Formulation
+; public defmethod Z0 (m:Microstrip) -> Double :
+;   val w = compute-effective-width(m)
+;   println("Effective Width: %_" % [w])
+
+;   val h = dielectric-height(m)
+;   val eps-r = effective-eps-r(m)
+;   println("Effective Eps-R: %_" % [eps-r])
+
+;   val ratio = w / h
+;   val g1 = (4.0 / ratio) * (14.0 + (8.0 / eps-r)) / 11.0
+;   println("G1: %_" % [g1])
+
+;   val g2 = sqrt( pow( (4.0 / ratio) * (14.0 + (8.0 / eps-r)) / 11.0, 2.0) + ((PI * PI) * 0.5 * (1.0 + (1.0 / eps-r))) )
+;   println("G2: %_" % [g2])
+;   val inside-log = 1.0 + ((4.0 / ratio) * (g1 + g2))
+;   val Z = (42.4 / sqrt(eps-r + 1.0)) * log(inside-log)
+;   Z
+
+public defmethod phase-velocity (m:Microstrip) -> Double :
+  phase-velocity(effective-eps-r(m))
+
+public defmethod insertion-loss-rate (m:Microstrip) -> Double :
+  ; TODO
+  0.008
+
+doc: \<DOC>
+Solve for the physical parameters that provide a `Z` characteristic impedance
+
+This function assumes that `m` will contain valid parameters other than
+the `width`. The passed `width` will be the starting point for the
+solve. The return object will persist those parameters and replace
+the `width` parameter with a solved width that provides characteristic
+impedance equal to `Z`
+
+This function uses an numerical solve method.
+
+@param m Starting point for the Microstrip search. The only parameter space that
+  will be searched is the width.
+@param Z Target characteristic impedance for this structure.
+@return New Microstrip with the width replaced with the solved new width. All
+  other parameters are the same as `m`
+<DOC>
+public defmethod solve-Z (m:Microstrip, Z:Double) -> Microstrip :
+
+  defn f (w:Double) -> Double :
+    val m-n = sub-width(m, w)
+    Z0(m-n) - Z
+
+  val w* = steffensen-method(f, width(m))
+  sub-width(m, w*)
+
