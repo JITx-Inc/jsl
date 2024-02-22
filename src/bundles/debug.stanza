@@ -1,0 +1,48 @@
+#use-added-syntax(jitx)
+defpackage jsl/bundles/debug:
+  import core
+  import jitx
+  import jitx/commands
+
+doc: \<DOC>
+JTAG Serial Interface Bundle
+
+Typically used for debugging/testing integrated circuits.
+
+This bundle does not include `TRSTN` or Target Reset. Use a
+separate `reset` bundle to provide that interface on a connector
+or microtroller.
+<DOC>
+public pcb-bundle jtag :
+  name = "JTAG"
+  pin tck
+  pin tdi
+  pin tdo
+  pin tms
+
+public pcb-enum jsl/bundles/debug/SWDPins :
+  SWD-SWO ; Trace Output for Serial Wire Debug
+
+pcb-bundle swd-b (pins:Collection<SWDPins>):
+  name = "SWD"
+  pin swdio
+  pin swdclk
+  for p in pins do:
+    switch(p):
+      SWD-SWO: make-pin(`swo)
+
+doc: \<DOC>
+Serial Wire Debug Bundle Generator
+
+This bundle includes the pins:
+
+`swdio` - Data line
+`swdclk` - Clock line
+
+This bundle can optionally include:
+
+`swo` - Trace Data Line
+
+<DOC>
+public defn swd (pins:SWDPins ...):
+  swd-b(pins)

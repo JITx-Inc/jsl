@@ -21,5 +21,6 @@ build-test tests:
     jsl/tests/geometry
     jsl/tests/landpatterns/QFN
     jsl/tests/symbols/SymbolNode
+    jsl/tests/bundles
   pkg: "test-pkgs"
   o: "jsl-tests"
