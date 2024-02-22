@@ -1,0 +1,201 @@
+#use-added-syntax(jitx)
+defpackage jsl/bundles/comms:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+
+doc: \<DOC>
+I2C Bundle
+Inter-Integrated Circuit (I2C) is a serial communication
+protocol
+@see https://en.wikipedia.org/wiki/I%C2%B2C
+<DOC>
+public pcb-bundle i2c:
+  name = "I2C"
+  description = "Inter-Integrated Circuit (I2C) - Serial Communication Protocol"
+  pin sda
+  pin scl
+
+doc: \<DOC>
+CAN Physical Layer Bundle
+
+This bundle defines the physical layer for the CAN interface
+which consists of a differential pair `H` / `L`
+<DOC>
+public pcb-bundle can-phy :
+  name = "CAN Physical Interface"
+  pin H
+  pin L
+
+doc: \<DOC>
+CAN Logical Interface Bundle
+
+This interface from a microcontroller to the
+PHY is typically a two wire interface consisting of a
+TX and RX line.
+
+TODO - Add optional error line ?
+<DOC>
+public pcb-bundle can-logical :
+  pin rx
+  pin tx
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SPI - Serial Peripheral Interface
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public pcb-enum jsl/bundles/comms/SPIPins :
+  SPI-CS
+  SPI-MISO
+  SPI-MOSI
+
+pcb-bundle spi-b (pins:Collection<SPIPins>):
+  name = "SPI"
+  pin sck
+  for p in pins do :
+    switch(p) :
+      SPI-CS  : make-pin(`cs)
+      SPI-MISO : make-pin(`miso)
+      SPI-MOSI : make-pin(`mosi)
+
+doc: \<DOC>
+SPI Bundle Generator
+
+Serial Peripheral Interface is a serial communication protocol.
+@see https://en.wikipedia.org/wiki/Serial_Peripheral_Interface
+
+@param pins User needs to specify which pins will be included in
+the SPI interface. Some devices don't have a `MISO` pin for example.
+<DOC>
+public defn spi (pins:SPIPins ...) :
+  spi-b(pins)
+
+doc: \<DOC>
+Standard SPI Generator
+
+This generator will construct an SPI bundle with the following
+pins:
+
+*  `sclk` - Clock Line
+*  `miso` - Master In - Slave Out
+*  `mosi` - Master Out - Slave In
+
+<DOC>
+public defn std-spi () :
+  spi(SPI-MISO, SPI-MOSI)
+
+doc: \<DOC>
+Standard SPI with Chip Select Generator
+
+This generator will construct an SPI bundle with the following
+pins:
+
+*  `sclk` - Clock Line
+*  `miso` - Master In - Slave Out
+*  `mosi` - Master Out - Slave In
+*  `cs` - Chip Select
+
+<DOC>
+public defn spi-with-cs () :
+  spi(SPI-MISO, SPI-MOSI, SPI-CS)
+
+defn to-multi-name (x:Int) -> String:
+  switch(x):
+    2: "dual-SPI"
+    4: "quad-SPI"
+    8: "octal-SPI"
+    else:
+      to-string("SPI-%_" % [x])
+
+
+doc: \<DOC>
+Multi-SPI Bundle
+
+This bundle is used to define bundles for multi-data-line
+SPI busses. These are often seen for high bandwidth comms interfaces
+or on flash chips.
+@param width Number of datalines to include in this bundle. Common
+  values are 2, 4, and 8
+@param pins Optionally allow for Chip Select pin on this interface.
+  Note MISO and MOSI are not supported.
+<DOC>
+public pcb-bundle multi-spi (width:Int, pins:Collection<SPIPins>):
+  name = to-multi-name(width)
+  pin sck
+  port data : pin[width]
+  for p in pins do :
+    switch(p):
+      SPI-CS : make-pin(`cs)
+      else:
+        throw $ ValueError("Multi-SPI does not support pin type: %_" % [p])
+
+doc: \<DOC>
+Dual SPI Bundle Generator
+<DOC>
+public defn dual-spi (pins:SPIPins ...):
+  multi-spi(2, pins)
+
+doc: \<DOC>
+Quad SPI Bundle Generator
+<DOC>
+public defn quad-spi (pins:SPIPins ...):
+  multi-spi(4, pins)
+
+doc: \<DOC>
+Octal SPI Bundle Generator
+<DOC>
+public defn octal-spi (pins:SPIPins ...):
+  multi-spi(8, pins)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; UART - Univeral Asynchronous Receiver/Transmitter
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public pcb-enum jsl/bundles/comms/UARTPins :
+  UART-DTR
+  UART-CTS
+  UART-DCD
+  UART-RI
+  UART-DST
+  UART-RTS
+  UART-CK
+  UART-DE
+  UART-RX
+  UART-TX
+
+pcb-bundle uart-b (pins:Collection<UARTPins>):
+  name = "UART"
+  for p in pins do :
+    switch(p) :
+      UART-DTR : make-pin(`dtr)
+      UART-CTS : make-pin(`cts)
+      UART-DCD : make-pin(`dcd)
+      UART-RI  : make-pin(`ri)
+      UART-DST : make-pin(`dst)
+      UART-RTS : make-pin(`rts)
+      UART-CK : make-pin(`ck)
+      UART-DE : make-pin(`de)
+      UART-RX : make-pin(`rx)
+      UART-TX : make-pin(`tx)
+
+doc: \<DOC>
+UART Bundle Generator
+Universal Asynchronous Receiver/Transmitter
+Constructs a bundle with the passed pin configuration
+@see https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
+<DOC>
+public defn uart (pins:UARTPins ...):
+  uart-b(pins)
+
+doc: \<DOC>
+Minimal UART Bundle Generator
+
+This generator constructs a UART bundle consisting of:
+
+*  `tx` - Transit Data Line
+*  `rx` - Receive Data Line
+<DOC>
+public defn minimal-uart () :
+  uart(UART-RX, UART-TX)

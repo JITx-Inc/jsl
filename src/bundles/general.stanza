@@ -1,0 +1,47 @@
+#use-added-syntax(jitx)
+defpackage jsl/bundles/general:
+  import core
+  import jitx
+
+doc: \<DOC>
+Differential Pair
+
+The differential pair is a foundation bundle type used in various
+derived bundles. Many utilities are built to reference `diff-pair`
+bundle types. It is highly suggested to use this type when constructing
+ports/bundles.
+<DOC>
+public pcb-bundle diff-pair :
+  name = "Differential Signal Pair"
+  pin N
+  pin P
+
+doc: \<DOC>
+Power Bundle define a DC power source
+
+The power bundle defines the two reference voltages
+of a DC power source.
+<DOC>
+public pcb-bundle power :
+  name = "DC Power"
+  pin V+
+  pin V-
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; General IO Classes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public pcb-bundle gpio :
+  pin p
+
+public pcb-bundle timer :
+  pin p
+
+public pcb-bundle adc :
+  pin p
+
+public pcb-bundle dac :
+  pin p
+
+public pcb-bundle reset :
+  pin p

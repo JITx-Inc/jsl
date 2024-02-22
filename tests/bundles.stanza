@@ -1,0 +1,92 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/bundles:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+
+deftest(bundles) test-general-bundles:
+  pcb-module test-general:
+    port A : diff-pair
+    port B : power
+    port C : gpio
+    port D : timer
+    port E : adc
+    port F : dac
+    port G : reset
+
+  val content = get-def-string(test-general)
+  ; println("Content: %_" % [content])
+
+  #EXPECT(index-of-chars(content, "DC Power") is-not False)
+  #EXPECT(index-of-chars(content, "Differential Signal Pair") is-not False)
+
+
+deftest(bundles) test-debug-bundles:
+  pcb-module test-debug:
+    port A : jtag
+    port B : swd(SWD-SWO)
+
+  val content = get-def-string(test-debug)
+  ; println("Content: %_" % [content])
+
+  #EXPECT(index-of-chars(content, "JTAG") is-not False)
+  #EXPECT(index-of-chars(content, "SWD") is-not False)
+
+deftest(bundles) test-comms-bundles:
+
+  pcb-module test-comms:
+    port A : i2c
+    port B : can-phy
+
+    port C1 : std-spi()
+    port C2 : spi-with-cs()
+    port C3 : quad-spi()
+
+    port D1: minimal-uart()
+    port D2: uart(UART-TX, UART-RX, UART-CTS, UART-RTS)
+
+  val content = get-def-string(test-comms)
+  ; println("Content: %_" % [content])
+
+  #EXPECT(index-of-chars(content, "I2C") is-not False)
+  #EXPECT(index-of-chars(content, "CAN") is-not False)
+  #EXPECT(index-of-chars(content, "name = \"SPI\"") is-not False)
+  #EXPECT(index-of-chars(content, "quad-SPI") is-not False)
+
+  #EXPECT(index-of-chars(content, "UART") is-not False)
+
+deftest(bundles) test-usb-bundles:
+
+  pcb-module test-usb:
+    port A1 : usb-2
+    port A2 : usb-3()
+
+    port B : usb-c-connector
+
+    port C : usb-a-superspeed-connector
+
+  val content = get-def-string(test-usb)
+  ; println("Content: %_" % [content])
+
+  #EXPECT(index-of-chars(content, "USB 2.0") is-not False)
+  #EXPECT(index-of-chars(content, "USB 3.2 Gen2x2") is-not False)
+
+  #EXPECT(index-of-chars(content, "USB Type C") is-not False)
+  #EXPECT(index-of-chars(content, "USB Type A") is-not False)
+
+deftest(bundles) test-ethernet-bundles:
+
+  pcb-module test-ethernet:
+    port A : rgmii
+    port B : miim
+    port C : gmii()
+    port D : mii()
+    port E : rmii(false)
+
+  val content = get-def-string(test-ethernet)
+  ; println("Content: %_" % [content])
+
+  #EXPECT(index-of-chars(content, "name = \"MII\"") is-not False)
+  #EXPECT(index-of-chars(content, "name = \"RMII\"") is-not False)
