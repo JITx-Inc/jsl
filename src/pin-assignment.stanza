@@ -1,0 +1,93 @@
+#use-added-syntax(jitx)
+defpackage jsl/pin-assignment:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/bundles
+
+public defn check-single-pin (p1:JITXObject):
+  match(port-type(p1)):
+    (x:SinglePin): false
+    (x):
+      throw $ ValueError("Expected SinglePin - Received: %_" % [x])
+
+
+public defn check-matching-port-types (ports:JITXObject ...):
+  val ptypes = to-tuple $ for p in ports seq:
+    port-type(p)
+
+  if length(ptypes) < 2:
+    throw $ ArgumentError("This check expects at least 2 Port arguments")
+
+  val expType = ptypes[0]
+  for (ptype in ptypes, i in 1 to false) do:
+    if ptype != expType:
+      val msg = to-string("Port List Index = %_" % [i])
+      throw $ MisMatchPortError(expType, ptype, msg = msg)
+
+doc: \<DOC>
+Construct a support that will select one of a list of options to satisfy that support.
+
+For example - lets say you have a microcontroller with two IO Ports `A` and `B`.
+Let's say that the MCU supports one timer output on either pins A[1], B[3], B[6].
+
+You could construct this support with:
+
+```
+supports timer:
+  timer.p => one-of(self.A[1], self.B[3], self.B[6])
+```
+
+@param pins list of SinglePin/PortArray/Bundle objects that will be selected from.
+<DOC>
+public defn one-of (pins:JITXObject ...) :
+  ; I define an internal bundle here because I want the
+  ;  temporary `abstract pin` to be inaccessible to the
+  ;  outside world.
+
+  check-matching-port-types(ports = pins)
+
+  pcb-bundle int-pin :
+    pin p
+  inside pcb-module : ; Works for `component` too
+    for p0 in pins do :
+      supports int-pin :
+        int-pin.p => p0
+    require something:int-pin
+    something.p
+
+
+
+doc: \<DOC>
+Generates a pin-assignment problem for a a swappable diff-pair.
+
+This function is a generator that constructs the support statements
+for a differential pair on a component or module where the ordering
+of the positive and negative terminals is not necessarily important.
+
+This is most commonly used for cases where:
+
+1.  There is no polarity - for example, an ESD chip does not care
+    whether P or N are swapped. It is going to do the same protection
+    function regardless
+2.  There is some internal circuitry (mux) that allows the user to select the
+    polarity of the signal, possibly by writing a register in firmware.
+
+@param p1 Single Pin that makes up one of the strands of the diff-pair
+@param p2 Single Pin that makes up the other strand of the diff-pair
+<DOC>
+public defn swappable-diff-pair (p1:JITXObject, p2:JITXObject):
+  check-single-pin(p1)
+  check-matching-port-types(p1, p2)
+  inside pcb-component:
+    supports diff-pair :
+      option:
+        diff-pair.N => p1
+        diff-pair.P => p2
+      option:
+        diff-pair.P => p1
+        diff-pair.N => p2
+
+

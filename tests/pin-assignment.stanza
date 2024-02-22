@@ -1,0 +1,110 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/pin-assignment:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns/SOIC
+
+  import jsl/bundles
+  import jsl/pin-assignment
+
+val NUM_IO = 8
+val text-size = 0.8
+val pin-len = 2.54
+val def-scale = 1.27
+
+pcb-symbol DummyMCU-Symb:
+  val w = 7.0 * 2.54
+  val left = (w / -2.0)
+  val right = (w / 2.0)
+
+  var offset = 0.0
+
+  pin GND at Point(left, offset ) with:
+    direction = Left
+    length = pin-len
+    number-size = text-size
+    name-size = text-size
+
+  offset = offset + (-1.0 * def-scale)
+
+  for (i in 0 to NUM_IO) do:
+    pin (Ref("PA")[i]) at Point(left, offset - (to-double(i) * def-scale) ) with:
+      direction = Left
+      length = pin-len
+      number-size = text-size
+      name-size = text-size
+
+  offset = offset - (to-double(NUM_IO) * def-scale)
+
+  val left-len = (- offset) + (3.0 * def-scale)
+
+
+  offset = 0.0
+  pin VDD at Point(right, offset ) with:
+    direction = Right
+    length = pin-len
+    number-size = text-size
+    name-size = text-size
+
+  offset = offset + (-2.0 * def-scale)
+  for (i in 0 to NUM_IO) do:
+    pin (Ref("PB")[i]) at Point(right, offset - (to-double(i) * def-scale) ) with:
+      direction = Right
+      length = pin-len
+      number-size = text-size
+      name-size = text-size
+
+  offset = offset - (to-double(NUM_IO) * def-scale)
+
+  val right-len = (- offset) + (3.0 * def-scale)
+
+  val l = max(right-len, left-len)
+  val y-offset = (- l / 2.0) + def-scale
+  layer("body") = loc(0.0, y-offset) * Rectangle(w, l)
+  preferred-orientation = PreferRotation([0])
+
+pcb-component DummyMCU :
+  name = "Dummy Microcontroller"
+
+  pin-properties :
+    [ pin: Ref | pads: Int ... | side:Dir | bank:Ref ]
+    [ VDD      | 28            | Up      | supply ]
+    [ GND      | 14            | Down   | supply ]
+    for i in 0 to NUM_IO do:
+      [ PA[i] | i + 1       | Left    | A ]
+    for i in 0 to NUM_IO do:
+      [ PB[i] | i + 15       | Right     | B ]
+
+  ; NOTE: This is not working yet and causes an exception
+  ;  ```
+  ;      Uncaught Exception: src/pin-assignment.stanza:49.6: Attempted to make a support in the wrong context.
+  ;        in jsl/tests/pin-assignment
+  ;          at tests/pin-assignment.stanza:101.2
+  ;        in jsl/tests/pin-assignment
+  ;          at tests/pin-assignment.stanza:99.8
+  ;  ```
+  ; supports i2c :
+  ;   i2c.sda => one-of(self.PA[1], self.PB[2])
+  ;   i2c.scl => one-of(self.PA[2], self.PB[3])
+
+  swappable-diff-pair(self.PA[3], self.PA[4])
+
+  val pkg = SOIC-N(
+    num-leads = 28,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 20.0 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  assign-landpattern(create-landpattern(pkg))
+  assign-symbol(DummyMCU-Symb)
+
+deftest(pin-assignment) test-one-of :
+
+  print-def(DummyMCU)
+
