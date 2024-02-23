@@ -37,3 +37,13 @@ public defn NotImplementedYet (msg:Printable) -> NotImplementedYet:
 
 public defmethod print (o:OutputStream, e:NotImplementedYet):
   print(o, "Not Implemented Yet: %_" % [msg(e)])
+
+
+public defstruct MaxIterationsExceededError <: RuntimeError :
+  msg:String
+
+public defn MaxIterationsExceededError (msg:Printable) -> MaxIterationsExceededError:
+  MaxIterationsExceededError(to-string(msg))
+
+public defmethod print (o:OutputStream, e:MaxIterationsExceededError):
+  print(o, "Max Iterations Limit Exceed: %_" % [msg(e)])
