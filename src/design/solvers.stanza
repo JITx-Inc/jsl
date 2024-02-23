@@ -1,0 +1,46 @@
+defpackage jsl/design/solvers:
+  import core
+  import jsl/errors
+
+
+doc: \<DOC>
+Iterative Root Finding via Steffensen's Method
+@param f Function f(x) for which we will find a zero
+@param x0 Starting X location
+@param step Size of the step used for computing the derivative of `f` numerically.
+  The default value is 0.001
+@param eps Epsilon is used to determine when to stop iterating, We compare `f(x)`
+  to this `eps` value and if `|f(x)| < eps` we stop iterating. Default value is 0.01
+@param max-iter Maximum number of iterations to attempt. This prevents the solver
+  from getting stuck looking for a solution. Default value is 1000
+@return Value of `x` that approximates a zero in `f(x)`
+<DOC>
+public defn steffensen-method (f:(Double -> Double), x0:Double, step:Double = 0.001, eps:Double = 0.01, max-iter:Int = 1000) -> Double :
+
+  defn g (xn:Double, fx:Double, h:Double) -> Double:
+    (f(xn + h) - fx) / h
+
+  var x:Double = x0
+  var i:Int = 0
+  label<Double> return:
+    while true:
+      val fx = f(x)
+      val gx = g(x, fx, step)
+
+      ; println("Iter[%_]: fx=%_ gx=%_ x=%_" % [i, fx, gx, x])
+      if abs(fx) < eps :
+        return(x)
+      else:
+        x = x - (fx / gx)
+
+      if i > max-iter:
+        throw $ MaxIterationsExceededError(
+          "iter=%_ fx=%_ gx=%_ x=%_" % [i, fx, gx, x]
+        )
+      i = i + 1
+
+    ; This exit is not supposed to be possible - but without
+    ;  this exception - the function's type analysis thinks it
+    ;  is trying to return a `False` from the while.
+    throw $ Exception("Invalid Exit from Steffensen's Method")
+
