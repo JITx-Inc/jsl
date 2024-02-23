@@ -24,5 +24,6 @@ build-test tests:
     jsl/tests/bundles
     jsl/tests/pin-assignment
     jsl/tests/layerstack
+    jsl/tests/ensure
   pkg: "test-pkgs"
   o: "jsl-tests"
