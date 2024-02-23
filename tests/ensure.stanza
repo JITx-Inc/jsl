@@ -1,0 +1,203 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/ensure:
+  import core
+
+  import jsl/ensure
+  import jsl/tests/utils
+
+deftest(ensure) test-greater:
+  val test-vecs = [
+    [1,  2,    false]
+    [1,  1,    true]
+    [1,  -1,   true]
+    [-1,  1,   false]
+    [-1, -3,   true]
+    [0,  2,    false]
+
+    [1L,  2L,    false]
+    [1L,  1L,    true]
+    [1L,  -1L,   true]
+    [-1L,  1L,   false]
+    [-1L, -3L,   true]
+    [0L,  2L,    false]
+
+    [1.0F,  2.0F,    false]
+    [1.0F,  1.0F,    true]
+    [1.0F,  -1.0F,   true]
+    [-1.0F,  1.0F,   false]
+    [-1.0F, -3.0F,   true]
+    [0.0F,  2.0F,    false]
+
+    [1.0,  2.0,    false]
+    [1.0,  1.0,    true]
+    [1.0,  -1.0,   true]
+    [-1.0,  1.0,   false]
+    [-1.0, -3.0,   true]
+    [0.0,  2.0,    false]
+
+  ]
+
+  for test-vec in test-vecs do:
+    val [thresh, value, expThrow] = test-vec
+
+    val msg? = try:
+      ensure-greater!(thresh)("field", value)
+      None()
+    catch (e:Exception):
+      val msg = to-string("%~" % [e])
+      One(msg)
+
+    val obsThrow = match(msg?):
+      (_:None): false
+      (_:One<String>):
+        true
+
+    #EXPECT(obsThrow == expThrow)
+
+
+deftest(ensure) test-greater-eq:
+  val test-vecs = [
+    [1,  2,    false]
+    [1,  1,    false]
+    [1,  -1,   true]
+    [-1,  1,   false]
+    [-1, -3,   true]
+    [0,  2,    false]
+
+    [1L,  2L,    false]
+    [1L,  1L,    false]
+    [1L,  -1L,   true]
+    [-1L,  1L,   false]
+    [-1L, -3L,   true]
+    [0L,  2L,    false]
+
+    [1.0F,  2.0F,    false]
+    [1.0F,  1.0F,    false]
+    [1.0F,  -1.0F,   true]
+    [-1.0F,  1.0F,   false]
+    [-1.0F, -3.0F,   true]
+    [0.0F,  2.0F,    false]
+
+    [1.0,  2.0,    false]
+    [1.0,  1.0,    false]
+    [1.0,  -1.0,   true]
+    [-1.0,  1.0,   false]
+    [-1.0, -3.0,   true]
+    [0.0,  2.0,    false]
+
+  ]
+
+  for test-vec in test-vecs do:
+    val [thresh, value, expThrow] = test-vec
+
+    val msg? = try:
+      ensure-greater-eq!(thresh)("field", value)
+      None()
+    catch (e:Exception):
+      val msg = to-string("%~" % [e])
+      One(msg)
+
+    val obsThrow = match(msg?):
+      (_:None): false
+      (_:One<String>):
+        true
+
+    #EXPECT(obsThrow == expThrow)
+
+deftest(ensure) test-less:
+  val test-vecs = [
+    [1,  2,    true]
+    [1,  1,    true]
+    [1,  -1,   false]
+    [-1,  1,   true]
+    [-1, -3,   false]
+    [0,  2,    true]
+
+    [1L,  2L,    true]
+    [1L,  1L,    true]
+    [1L,  -1L,   false]
+    [-1L,  1L,   true]
+    [-1L, -3L,   false]
+    [0L,  2L,    true]
+
+    [1.0F,  2.0F,    true]
+    [1.0F,  1.0F,    true]
+    [1.0F,  -1.0F,   false]
+    [-1.0F,  1.0F,   true]
+    [-1.0F, -3.0F,   false]
+    [0.0F,  2.0F,    true]
+
+    [1.0,  2.0,    true]
+    [1.0,  1.0,    true]
+    [1.0,  -1.0,   false]
+    [-1.0,  1.0,   true]
+    [-1.0, -3.0,   false]
+    [0.0,  2.0,    true]
+
+  ]
+
+  for test-vec in test-vecs do:
+    val [thresh, value, expThrow] = test-vec
+
+    val msg? = try:
+      ensure-less!(thresh)("field", value)
+      None()
+    catch (e:Exception):
+      val msg = to-string("%~" % [e])
+      One(msg)
+
+    val obsThrow = match(msg?):
+      (_:None): false
+      (_:One<String>):
+        true
+
+    #EXPECT(obsThrow == expThrow)
+
+deftest(ensure) test-less-eq:
+  val test-vecs = [
+    [1,  2,    true]
+    [1,  1,    false]
+    [1,  -1,   false]
+    [-1,  1,   true]
+    [-1, -3,   false]
+    [0,  2,    true]
+
+    [1L,  2L,    true]
+    [1L,  1L,    false]
+    [1L,  -1L,   false]
+    [-1L,  1L,   true]
+    [-1L, -3L,   false]
+    [0L,  2L,    true]
+
+    [1.0F,  2.0F,    true]
+    [1.0F,  1.0F,    false]
+    [1.0F,  -1.0F,   false]
+    [-1.0F,  1.0F,   true]
+    [-1.0F, -3.0F,   false]
+    [0.0F,  2.0F,    true]
+
+    [1.0,  2.0,    true]
+    [1.0,  1.0,    false]
+    [1.0,  -1.0,   false]
+    [-1.0,  1.0,   true]
+    [-1.0, -3.0,   false]
+    [0.0,  2.0,    true]
+
+  ]
+
+  for test-vec in test-vecs do:
+    val [thresh, value, expThrow] = test-vec
+
+    val msg? = try:
+      ensure-less-eq!(thresh)("field", value)
+      None()
+    catch (e:Exception):
+      val msg = to-string("%~" % [e])
+      One(msg)
+
+    val obsThrow = match(msg?):
+      (_:None): false
+      (_:One<String>):
+        true
+
+    #EXPECT(obsThrow == expThrow)
