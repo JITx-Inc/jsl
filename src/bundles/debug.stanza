@@ -11,7 +11,7 @@ Typically used for debugging/testing integrated circuits.
 
 This bundle does not include `TRSTN` or Target Reset. Use a
 separate `reset` bundle to provide that interface on a connector
-or microtroller.
+or microcontroller.
 <DOC>
 public pcb-bundle jtag :
   name = "JTAG"
