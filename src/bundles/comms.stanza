@@ -101,7 +101,7 @@ pins:
 public defn spi-with-cs () :
   spi(SPI-MISO, SPI-MOSI, SPI-CS)
 
-defn to-multi-name (x:Int) -> String:
+defn to-wide-name (x:Int) -> String:
   switch(x):
     2: "dual-SPI"
     4: "quad-SPI"
@@ -111,7 +111,7 @@ defn to-multi-name (x:Int) -> String:
 
 
 doc: \<DOC>
-Multi-SPI Bundle
+Wide-SPI Bundle
 
 This bundle is used to define bundles for multi-data-line
 SPI busses. These are often seen for high bandwidth comms interfaces
@@ -121,33 +121,33 @@ or on flash chips.
 @param pins Optionally allow for Chip Select pin on this interface.
   Note MISO and MOSI are not supported.
 <DOC>
-public pcb-bundle multi-spi (width:Int, pins:Collection<SPIPins>):
-  name = to-multi-name(width)
+public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
+  name = to-wide-name(width)
   pin sck
   port data : pin[width]
   for p in pins do :
     switch(p):
       SPI-CS : make-pin(`cs)
       else:
-        throw $ ValueError("Multi-SPI does not support pin type: %_" % [p])
+        throw $ ValueError("Wide-SPI does not support pin type: %_" % [p])
 
 doc: \<DOC>
 Dual SPI Bundle Generator
 <DOC>
 public defn dual-spi (pins:SPIPins ...):
-  multi-spi(2, pins)
+  wide-spi(2, pins)
 
 doc: \<DOC>
 Quad SPI Bundle Generator
 <DOC>
 public defn quad-spi (pins:SPIPins ...):
-  multi-spi(4, pins)
+  wide-spi(4, pins)
 
 doc: \<DOC>
 Octal SPI Bundle Generator
 <DOC>
 public defn octal-spi (pins:SPIPins ...):
-  multi-spi(8, pins)
+  wide-spi(8, pins)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UART - Univeral Asynchronous Receiver/Transmitter
