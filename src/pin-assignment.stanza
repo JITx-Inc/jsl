@@ -7,12 +7,21 @@ defpackage jsl/pin-assignment:
   import jsl/errors
   import jsl/bundles
 
-public defn check-single-pin (p1:JITXObject):
-  match(port-type(p1)):
-    (x:SinglePin): false
-    (x):
-      throw $ ValueError("Expected SinglePin - Received: %_" % [x])
+public defn check-single-pin (p-set:JITXObject ...):
+  for p1 in p-set do:
+    match(port-type(p1)):
+      (x:SinglePin): false
+      (x):
+        throw $ ArgumentError("Expected SinglePin - Received: %_" % [x])
 
+public defn check-bundle (exp:Bundle, b-set:JITXObject ...) :
+  for p1 in b-set do:
+    match(port-type(p1)):
+      (obs:Bundle):
+        if obs != exp:
+          throw $ ArgumentError("Expected Bundle '%_' - Observed Bundle '%_'" % [name(obs), name(exp)])
+      (x):
+        throw $ ArgumentError("Expected Bundle - Received: %_" % [x])
 
 public defn check-matching-port-types (ports:JITXObject ...):
   val ptypes = to-tuple $ for p in ports seq:
@@ -61,7 +70,7 @@ public defn one-of (pins:JITXObject ...) :
 
 
 doc: \<DOC>
-Generates a pin-assignment problem for a a swappable diff-pair.
+Swappable Diff-Pair Support Generator from single pins
 
 This function is a generator that constructs the support statements
 for a differential pair on a component or module where the ordering
@@ -79,8 +88,7 @@ This is most commonly used for cases where:
 @param p2 Single Pin that makes up the other strand of the diff-pair
 <DOC>
 public defn swappable-diff-pair (p1:JITXObject, p2:JITXObject):
-  check-single-pin(p1)
-  check-matching-port-types(p1, p2)
+  check-single-pin(p1, p2)
   inside pcb-component:
     supports diff-pair :
       option:
@@ -91,3 +99,120 @@ public defn swappable-diff-pair (p1:JITXObject, p2:JITXObject):
         diff-pair.N => p2
 
 
+doc: \<DOC>
+Swappable Diff-Pair Support Generator from bundle
+
+@param dp Bundle Port of type `diff-pair`. This will construct an abstract pin that
+can be satisfied by either `P/N` or `N/P` as a diff-pair.
+<DOC>
+public defn swappable-diff-pair (dp:JITXObject):
+  check-bundle(diff-pair, dp)
+  inside pcb-component:
+    supports diff-pair :
+      option:
+        diff-pair.N => dp.P
+        diff-pair.P => dp.N
+      option:
+        diff-pair.P => dp.P
+        diff-pair.N => dp.N
+
+
+doc: \<DOC>
+Reversible Diff-Pair Support Generator
+
+This function generates a `supports` statement for a
+`dual-pair`. This supports statement defines two allowable
+configurations:
+
+1.  A => B
+2.  B => A
+
+This is for supporting bidirectional diff-pair where we
+don't care which side is the input vs the output but we do
+care what the P/N ordering is.
+
+@param A diff-pair bundle port instance
+@param B diff-pair bundle port instance
+<DOC>
+public defn reversible-dual-pair (A:JITXObject, B:JITXObject):
+  check-bundle(diff-pair, A, B)
+  inside pcb-module:
+    supports dual-pair :
+      option:
+        dual-pair.A.P => A.P
+        dual-pair.A.N => A.N
+        dual-pair.B.P => B.P
+        dual-pair.B.N => B.N
+      option:
+        dual-pair.A.P => B.P
+        dual-pair.A.N => B.N
+        dual-pair.B.P => A.P
+        dual-pair.B.N => A.N
+
+
+doc: \<DOC>
+Generator to construct a Bidirectional, Swappable Dual Pair support
+
+@param A Expected to be a `diff-pair` bundle for one side of the `dual-pair`
+@param B Expected to be a `diff-pair` bundle for the other side of the `diff-pair`
+<DOC>
+public defn bidir-swappable-dual-pair (A:JITXObject, B:JITXObject):
+  check-bundle(diff-pair, A, B)
+  bidir-swappable-dual-pair(A.P, A.N, B.P, B.N)
+
+doc: \<DOC>
+Generator to construct a Bidirectional, Swappable Dual Pair support
+
+This function constructs a support statement for a dual-pair that allows
+the pairs to be swapped (A => B) or (B => A). In addition, the differential
+pairs can swap (P => N) or (N => P) as long as both sides are consistent.
+
+@param A-P Single pin for P side of a diff-pair for side A of the dual-pair
+@param A-N Single pin for N side of a diff-pair for side A of the dual-pair
+@param B-P Single pin for P side of a diff-pair for side B of the dual-pair
+@param B-N Single pin for N side of a diff-pair for side B of the dual-pair
+<DOC>
+public defn bidir-swappable-dual-pair (A-P:JITXObject, A-N:JITXObject, B-P:JITXObject, B-N:JITXObject):
+  check-single-pin(A-P, A-N, B-P, B-N)
+  inside pcb-module:
+    supports dual-pair :
+      option:
+        dual-pair.A.P => A-P
+        dual-pair.A.N => A-N
+        dual-pair.B.P => B-P
+        dual-pair.B.N => B-N
+      option:
+        dual-pair.A.P => B-P
+        dual-pair.A.N => B-N
+        dual-pair.B.P => A-P
+        dual-pair.B.N => A-N
+      option:
+        dual-pair.A.P => A-N
+        dual-pair.A.N => A-P
+        dual-pair.B.P => B-N
+        dual-pair.B.N => B-P
+      option:
+        dual-pair.A.P => B-N
+        dual-pair.A.N => B-P
+        dual-pair.B.P => A-N
+        dual-pair.B.N => A-P
+
+doc: \<DOC>
+Generate a Bidirectional `pass-through` support
+
+This function expects to be called within a `pcb-component`
+definition.
+
+@param p1 SinglePin object for one side of the pass through.
+@param p2 SinglePin object for the other side of the pass through.
+<DOC>
+public defn add-pass-through (p1:JITXObject, p2:JITXObject) :
+  check-single-pin(p1, p2)
+  inside pcb-component:
+    supports pass-through:
+      option:
+        pass-through.A => p1
+        pass-through.B => p2
+      option:
+        pass-through.A => p2
+        pass-through.B => p1
