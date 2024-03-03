@@ -25,5 +25,6 @@ build-test tests:
     jsl/tests/pin-assignment
     jsl/tests/layerstack
     jsl/tests/ensure
+    jsl/tests/si/Microstrip
   pkg: "test-pkgs"
   o: "jsl-tests"
