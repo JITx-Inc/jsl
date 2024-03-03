@@ -17,6 +17,34 @@ public pcb-bundle diff-pair :
   pin P
 
 doc: \<DOC>
+Two Differential Pairs - a Dual Pair
+
+The dual pair is useful for cases where there is a pass-through
+differential pair through a component - for example, an ESD
+diode protection device like a TI, TPD4E05.
+<DOC>
+public pcb-bundle dual-pair :
+  port A : diff-pair
+  port B : diff-pair
+
+doc: \<DOC>
+Pass Through Bundle Type
+
+This provides a mechanism of describing a pass through
+connection through a device, primarily for implementing
+the `supports/requrie` statements.
+
+Example:
+
+ESD Protection devices often have two pins that are intended
+to be shorted together to provide an ESD protected trace with
+minimal affect on the impedance of the trace.
+<DOC>
+public pcb-bundle pass-through :
+  pin A
+  pin B
+
+doc: \<DOC>
 Power Bundle define a DC power source
 
 The power bundle defines the two reference voltages
