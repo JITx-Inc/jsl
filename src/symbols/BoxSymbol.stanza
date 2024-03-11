@@ -1,0 +1,482 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/BoxSymbol:
+  import core
+  import jitx
+
+  import jsl/ensure
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/SymbolNode
+
+
+val DEF_LINE_WIDTH = 0.05
+val DEF_PIN_LEN = 2.0
+val DEF_PAD_REF_SIZE = 0.65
+
+doc: \<DOC>
+Parameters for Box Symbol Glyph Construction
+
+This type contains various parmaeters that we may
+want to apply to all box symbols. We provide default
+values for a sane consistent default look.
+<DOC>
+public defstruct BoxSymbolParams <: Equalable :
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+  )
+  pin-length:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_PIN_LEN
+  )
+  pad-ref-size:Double with: (
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_PAD_REF_SIZE
+  )
+
+  ; Others here like:
+  ; Default Head & Foot Padding
+  ;    Example: for components that only have pins on the
+  ;      left and right side - we may want to add additional
+  ;      rectangle height so that there is more body above the first
+  ;      pin and/or below the last pin.
+  ; For the future:
+  ;  Color - stroke, fill, etc.
+  ;
+with:
+  constructor => #BoxSymbolParams
+  equalable => true
+  printer => true
+
+doc: \<DOC>
+Main Type for building Box Symbols.
+<DOC>
+public defn BoxSymbolParams (
+  --
+  line-width:Double = DEF_LINE_WIDTH
+  pin-length:Double = DEF_PIN_LEN
+  pad-ref-size:Double = DEF_PAD_REF_SIZE
+  ) -> BoxSymbolParams:
+  #BoxSymbolParams(line-width)
+
+
+; Stores the default box symbols parameters so that they can
+;  be overridden by the user.
+var DEF_BOXSYMB_PARAMS = BoxSymbolParams()
+public defn get-default-box-symbol-params () -> BoxSymbolParams :
+  DEF_BOXSYMB_PARAMS
+
+public defn set-default-box-symbol-params (v:BoxSymbolParams) -> False :
+  DEF_BOXSYMB_PARAMS = v
+
+
+doc: \<DOC>
+
+<DOC>
+public defstruct BoxSymbol <: SymbolDefn :
+  doc: \<DOC>
+  This is the component from which we are building this symbol
+  This component object will provide the pins and pin properties
+  needed to construct the box symbol.
+  <DOC>
+  obj:Instantiable|Self
+
+  doc: \<DOC>
+  Optional Explicit Parameters for this Box Symbol
+
+  This is useful for testing or explicitly overriding the defaults without
+  changing them for the rest of the schematic.
+  <DOC>
+  params:Maybe<BoxSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #BoxSymbol
+
+
+public defn BoxSymbol (
+  obj:Instantiable|Self
+  --
+  params:BoxSymbolParams = ?
+  ) -> BoxSymbol:
+  #BoxSymbol(specfic-name, params)
+
+
+defn get-params (x:BoxSymbol) -> BoxSymbolParams :
+  match(params(x)):
+    (_:None): get-default-box-symbol-params()
+    (v:One<BoxSymbolParams>): value(v)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; SymbolDefn Interface
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defmethod name (x:BoxSymbol) -> String :
+  to-string("Box-%_" % [name(obj(x))])
+
+public defmethod build-pins (x:BoxSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  println("Build Pins Here")
+
+public defmethod build-artwork (x:BoxSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  println("Construct Box Symbol Glyphs Here")
+
+public defmethod build-params (x:BoxSymbol, sn:SymbolNode) :
+  val b = glyph-bounds(sn)
+  text(sn, [0.0, up(b) + 0.5], ">REF", anchor = SW, font-size = 8)
+  text(sn, [0.0, down(b) - 0.5], ">VALUE", anchor = NW, font-size = 8)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+Find a set of pins that match a particular query
+
+@param b Box Symbol object
+
+@param pattern Glob pattern used to find specific pins by the string variant of the pin reference.
+For example, if the there is a pin `D.p[0]`, `D.p[1]`, `D.p[2]`, `M.p[0]`, `M.p[1]` and `M.p[2]`
+The user could use a glob pattern `D.p[*]` to select `D.p[0]`, `D.p[1]`, `D.p[2]`
+
+@param bank Optional bank selector so that will limit query to selecting only pins from this particular bank (symbol unit).
+@param row Optional row selector that will limit query to selecting only pins from this particular row of the
+  box grid.
+@param column Optional column selector that will limit query to selecting only pins from this particular column of the box grid.
+
+@return Tuple of Pins that match the given criteria.
+<DOC>
+defn find-pins-by-pattern (
+  b:BoxSymbol, pattern:String
+  --
+  bank:Int|Ref = ?
+  row:Int|Ref = ?
+  column:Int|Ref = ?
+  ) -> Tuple<Pin> :
+  []
+
+doc: \<DOC>
+Find a set of pins that match a particular query
+
+@param b Box Symbol object
+@param pattern Regex pattern used to find specific pins by the string variant of the pin reference.
+@param bank Optional bank selector so that will limit query to selecting only pins from this particular bank (symbol unit).
+@param row Optional row selector that will limit query to selecting only pins from this particular row of the
+  box grid.
+@param column Optional column selector that will limit query to selecting only pins from this particular column of the box grid.
+
+@return Tuple of Pins that match the given criteria.
+<DOC>
+defn find-pins-by-regex (
+  b:BoxSymbol, pattern:String
+  --
+  bank:Int|Ref = ?
+  row:Int|Ref = ?
+  column:Int|Ref = ?
+  ) -> Tuple<Pin> :
+  []
+
+
+doc: \<DOC>
+Add a pin to a particular bank (symbol unit) of a component
+
+@param pin-set One Pin or a Tuple of Pins present on obj that will be added to a bank.
+@param bank This value can be either an Int or a Ref. If the user passes a String, we will
+  attempt to convert that string to a `VarRef`.
+<DOC>
+defn add-to-bank (pin-set:Tuple<Pin>|Pin, bank:Int|Ref|String) :
+  false
+
+doc: \<DOC>
+Retrieve the Bank association for a particular Pin
+@return Optionally Return an Int|Ref if a bank has been set for this pin.
+<DOC>
+defn get-bank (p:Pin) -> Maybe<Int|Ref> :
+  One(0)
+
+doc: \<DOC>
+Retrieve the Bank association for a Pin or throw
+<DOC>
+defn get-bank! (p:Pin) -> Int|Ref :
+  One(0)
+
+
+doc: \<DOC>
+Add a pin or set of pins to a pin group
+
+Adds a set of pins to an existing group. If a group by that name doesn't exist -
+then a group by that name will be created.
+
+Groups are sets meaning that a pin can only exist in a given group once. Adding a pin
+to a group twice isn't an error but the second operation is a no-op.
+
+Groups typically make the most sense when the pins of the group are found on the same bank (symbol unit).
+If the pin grid is used, it is typical for the pins of a group to all be in the same row/column.
+
+@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a group.
+@param name Name of the group that pins will be added to.
+
+<DOC>
+defn add-to-group (pin-set:Tuple<Pin>|Pin, name:String) :
+  false
+
+defn get-group (p:Pin) -> Maybe<String>:
+  One("")
+
+defn get-group! (p:Pin) -> String:
+  ""
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Pin Grid Functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+Check for an active grid
+
+Components like resistors, capacitors, etc might not have an active grid.
+
+@param b Box Symbol object
+@return Indicates of a grid is present on this symbol or not.
+<DOC>
+defn has-active-grid (b:BoxSymbol) -> True|False :
+  false
+
+doc: \<DOC>
+Set the grid for a component, optionally by symbol unit.
+
+@param b Box Symbol object
+@param grid Tuple of [row,column] where row & column must be greater than zero.
+@param bank Optional bank ID for multi-symbol unit BoxSymbols.
+<DOC>
+defn set-grid (b:BoxSymbol, grid:[Int, Int] -- bank:Int|Ref = ?) :
+  false
+
+doc: \<DOC>
+Get the total number of rows in the pin grid.
+
+This function is for components with only one symbol unit.
+
+@param b Box Symbol object
+@param bank Selects for a particular symbol unit.
+@return number of rows in the pin grid of the given `bank`. If no
+pin grid is active for this bank, this function returns 0.
+<DOC>
+defn get-rows (b:BoxSymbol) -> Int:
+  0
+
+doc: \<DOC>
+Get the total number of rows in the pin grid of a particular symbol unit.
+
+@param b Box Symbol object
+@param bank Selects for a particular symbol unit.
+@return number of rows in the pin grid of the given `bank`. If no
+pin grid is active for this bank, this function returns 0.
+<DOC>
+defn get-rows (b:BoxSymbol, bank:Int|Ref) -> Int:
+  0
+
+doc: \<DOC>
+Get the total number of columns in the pin grid.
+
+This function is for components that have only one symbol unit.
+
+@param b Box Symbol object
+@return number of columns in the pin grid of component symbol. If no
+pin grid is active, this function returns 0.
+<DOC>
+defn get-columns (b:BoxSymbol) -> Int:
+  0
+
+doc: \<DOC>
+Get the total number of columns in the pin grid of a particular symbol unit.
+
+@param b Box Symbol object
+@param bank Selects for a particular symbol unit.
+@return number of columns in the pin grid of the given `bank`. If no
+pin grid is active for this bank, this function returns 0.
+<DOC>
+defn get-columns (b:BoxSymbol, bank:Int|Ref) -> Int:
+  0
+
+doc: \<DOC>
+Set the pin grid position for a pin or set of pins.
+
+If the grid doesn't exist yet - this is an error and this function
+should throw an exception.
+
+There are only a limited set of valid row/column combinations based on the
+edges of the box symbol.
+
+@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a group.
+@param row Row index into the pin grid.
+@param column Column index into the pin grid.
+@throws IndexError If either the `row` or `column` are outside the active grid cells
+<DOC>
+defn set-grid-edge (pin-set:Tuple<Pin>|Pin, row:Int, column:Int):
+  false
+
+doc: \<DOC>
+Set the Row assignment for these pins
+
+Typically this would be used when the `side` parameter had already
+been set on these pins to `Left` or `Right`. The `side` parameter would
+then drive the column assignment to either `0` or `N-1` where N is the number of columns .
+<DOC>
+defn set-row (pin-set:Tuple<Pin>|Pin, row:Int):
+  false
+
+doc: \<DOC>
+Set the Column assignment for these pins
+
+Typically this would be used when the `side` parameter had already
+been set on these pins to `Up` or `Down`. The `side` parameter would
+then drive the row assignment to `0` or `M-1` where M is the number of rows.
+<DOC>
+defn set-column (pin-set:Tuple<Pin>|Pin, column:Int):
+  false
+
+defn get-row (p:Pin) -> Maybe<Int>:
+  One(0)
+
+defn get-row! (p:Pin) -> Int:
+  0
+
+defn get-column (p:Pin) -> Maybe<Int>:
+  One(0)
+
+defn get-column! (p:Pin) -> Int:
+  0
+
+doc: \<DOC>
+Set a horizontal line separator on the edge of a row
+
+@param b Box Symbol object
+@param row Row Index into the pin grid.
+@param pos Used to select which side of the row (N/S) to draw the separator line. Default value is S
+@param bank Optional bank (symbol unit) identifier
+@param line-width Width of the separator in symbol grid units
+<DOC>
+defn set-horz-separator (b:BoxSymbol, row:Int -- pos:Anchor = S , bank:Int|Ref = ?, line-width:Double = 0.05) :
+  false
+
+doc: \<DOC>
+Set a vertical line separator on the edge of a column
+
+@param b Box Symbol object
+@param column Column Index into the pin grid.
+@param pos Used to select which side of the column (E/W) to draw the separator line. Default value is E
+@param bank Optional bank (symbol unit) identifier
+@param line-width Width of the separator in symbol grid units
+<DOC>
+defn set-vert-separator (b:BoxSymbol, column:Int -- pos:Anchor = E , bank:Int|Ref = ?) :
+  false
+
+doc: \<DOC>
+Set the side of the box symbol to assign to a pin or set of pins
+
+This function will set the direction and side of the passed pins.
+
+If a `grid` exists - then the appropriate column/row will be selected. For example,
+The `Top` side would be given row 0. The `Left` side would be given column 0.
+A `Right` side would be given column N-1 where N is the number of columns.
+
+If the `grid` does not exist, then adding a side parameter for a set of pins would begin
+constructing the grid. For example, Adding a set of pins on the `Right` and `Left` would
+construct a grid of 1 row and 2 columns. Subsequent operations might increase the number of
+rows if `Top` and `Bottom` pin sets were added. In this case, the row & column indices for the first group
+of `Right` and `Left` pins would need to be modified. They would move from row index 0 to row index 1. The `Right`
+side pins would move to column index 2. The `Top` side pins would be in row index 0 and column index 1.
+
+NOTE: If this is too complex - we can add the constraint that the user must add the `grid` first, but in order to
+match the existing functionality, I think we would need to support this.
+
+@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a side.
+@param side Selects the edge of a box symbol on to which the pins will be drawn
+<DOC>
+defn set-side (pin-set:Tuple<Pin>|Pin, side:Dir) :
+  false
+
+defn get-side (p:Pin) -> Maybe<Side> :
+  One(Left)
+
+defn get-side! (p:Pin) -> Side :
+  Left
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Alignment
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+defn set-alignment (pin-set:Tuple<Pin>|Pin, pos:Anchor) :
+  false
+
+
+defn set-alignment (b:BoxSymbol, group:String, pos:Anchor) :
+  false
+
+
+defn get-alignment (p:Pin) -> Maybe<Anchor> :
+  One(C)
+
+defn get-alignment! (p:Pin) -> Anchor :
+  C
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Margin
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+defn set-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
+  false
+
+defn set-top-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
+  false
+
+defn set-bottom-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
+  false
+
+defn set-left-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
+  false
+
+defn set-right-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
+  false
+
+
+defn set-margin (b:BoxSymbol, group:String, margin:Double) :
+  false
+
+defn set-top-margin (b:BoxSymbol, group:String, margin:Double) :
+  false
+
+defn set-bottom-margin (b:BoxSymbol, group:String, margin:Double) :
+  false
+
+defn set-left-margin (b:BoxSymbol, group:String, margin:Double) :
+  false
+
+defn set-right-margin (b:BoxSymbol, group:String, margin:Double) :
+  false
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Decorators
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+doc: \<DOC>
+Add a particular decorator[s] to the passed pins.
+
+@param b Box Symbol Object
+@param pin-set Pin or Set of Pins to add the decorator to.
+@param decorators One or More decorators to add to these pins.
+
+NOTE: Multiple decorators may not stack well yet - WIP.
+<DOC>
+defn add-decorator (b:BoxSymbol, pin-set:Tuple<Pin>|Pin, decorators:PinDecorator ... ) :
+  false
+
+
