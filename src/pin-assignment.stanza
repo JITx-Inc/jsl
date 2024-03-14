@@ -14,6 +14,14 @@ public defn check-single-pin (p-set:JITXObject ...):
       (x):
         throw $ ArgumentError("Expected SinglePin - Received: %_" % [x])
 
+public defn check-is-bundle? (b-set:JITXObject ...) :
+  for p1 in b-set do:
+    match(port-type(p1)):
+      (obs:Bundle): false
+      (x):
+        ; TODO - consolidate exception type here
+        throw $ ArgumentError("Expected Bundle - Received %_" % [x])
+
 public defn check-bundle (exp:Bundle, b-set:JITXObject ...) :
   for p1 in b-set do:
     match(port-type(p1)):
@@ -216,3 +224,122 @@ public defn add-pass-through (p1:JITXObject, p2:JITXObject) :
       option:
         pass-through.A => p2
         pass-through.B => p1
+
+
+doc: \<DOC>
+Construct a 1:1 Support Mapping for a single, bundle, or array.
+
+This tool is used when generating a mapping inside a `supports/option`
+statement.
+
+This function is recursive.
+
+@pararm pb This object is either a bundle definition (the top level instance
+in a supports statement) or a JITXObject (ie, a pin).
+@param p2 This is the object being assigned to the supports bundle. It is
+either a single pin, bundle, or array - but must match with its counter part.
+<DOC>
+public defn one-to-one (pb:JITXObject|Bundle, p2:JITXObject) :
+  inside pcb-bundle:
+    match(pb):
+      (b:Bundle):
+        for (b1 in pins(b), pb2 in pins(p2)) do:
+          one-to-one(b1, pb2)
+      (p1:JITXObject):
+        match(port-type(p1), port-type(p2)):
+          (s1:SinglePin, s2:SinglePin):
+            ; NOTE: This is a bit of a hack because there is no
+            ;  `inside supports:` concept for creating generators
+            ;  So I'm accessing the API directly to construct the
+            ;  mappings.
+            val info = FileInfo("pin-assignment.stanza", 236, 1)
+            jitx/client/make-mapping(jitx/commands/JITX-CLIENT, info, p1, p2)
+          (b1:Bundle, b2:Bundle):
+            for (pb1 in pins(p1), pb2 in pins(p2)) do:
+              one-to-one(pb1, pb2)
+          (a1:PortArray, a2:PortArray):
+            for (pa1 in pins(p1), pa2 in pins(p2)) do:
+              one-to-one(pa1, pa2)
+
+doc: \<DOC>
+Construct a N:N crossbar of supports for these ports
+
+This is useful for constructing supports that allow
+the user to map a particular pin/bundle/etc to any
+incoming connection to a bundle of that type.
+<DOC>
+public defn cross-bar (ports:JITXObject ...) :
+  if length(ports) == 0 :
+    throw $ ArgumentError("Expected at least one port argument - Received 0")
+  check-matching-port-types(ports = ports)
+  val b-type = port-type(ports[0]) as Bundle
+  inside pcb-module:
+    for i in 0 to length(ports) do:
+      supports b-type :
+        for pt in ports do:
+          option:
+            one-to-one(b-type, pt)
+
+
+doc: \<DOC>
+Swizzle a Bus Bundle
+
+This constructs a supports statement for a bus bundle.
+A bus bundle is a bundle with one PortArray pin definition.
+The support statement then constructs a cross-bar for the
+<DOC>
+public defn swizzle-bus (bus-bundle:JITXObject -- locked:Tuple<Int>) :
+  check-is-bundle?(bus-bundle)
+  val b-type = port-type(bus-bundle) as Bundle
+
+  val b-pins = pins(b-type)
+  ; println("BPins: %_ Type: %_" % [b-pins, port-type(b-pins[0])])
+  val cnt = length(b-pins)
+  if cnt == 0:
+    throw $ ArgumentError("Bundle '%_' expects at least 1 pin: %_" % [name(b-type), cnt])
+
+  val sup-arr = b-pins ; [0]
+  val comp-arr = pins(bus-bundle) ; [0]
+  ; println("CompArr: %_" % [comp-arr])
+
+  ; Check all the lock indices are in range
+  val l-ok = for l-pin in locked all?:
+    (l-pin >= 0) and (l-pin < length(sup-arr))
+
+  if not l-ok:
+    throw $ ArgumentError("Invalid Locked Indices: length(bus)=%_ - Locked=[%,]" % [length(sup-arr), locked] )
+
+  val active = to-tuple $ for i in 0 to length(sup-arr) filter:
+    not contains?(locked, i)
+
+  ; We construct our own bundle types for the response so that
+  ;   we can have it be unique on the module.
+
+  pcb-bundle lane-bit :
+    pin p
+
+  pcb-bundle swiz-Bus :
+    port D : pin[cnt]
+
+  inside pcb-module:
+
+    ; First construct a `lane-bit` supports
+    ;  one for each of the active lane bits
+    ;  We will use these to construct the bus bundle support
+    for i in active do:
+      supports lane-bit:
+        for j in active do:
+          option:
+            lane-bit.p => comp-arr[j]
+
+    ; Construct a swizzle bus from the locked
+    ;  pins and the swizzle'd pins.
+    supports swiz-Bus :
+      for i in 0 to length(sup-arr) do:
+        if contains?(locked, i):
+          swiz-Bus.D[i] => comp-arr[i]
+        else:
+          require lb:lane-bit from self
+          swiz-Bus.D[i] => lb.p
+
+    swiz-Bus
