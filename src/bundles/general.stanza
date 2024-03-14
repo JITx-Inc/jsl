@@ -4,6 +4,15 @@ defpackage jsl/bundles/general:
   import jitx
 
 doc: \<DOC>
+Constructs a indices list for one-based indices
+
+@returns This returns a tuple like `[1,2,3,4]` for
+`num=4`
+<DOC>
+public defn make-indices (num:Int) -> Tuple<Int> :
+  to-tuple $ to-seq(1 through num)
+
+doc: \<DOC>
 Differential Pair
 
 The differential pair is a foundation bundle type used in various
