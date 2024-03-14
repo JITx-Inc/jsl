@@ -93,18 +93,30 @@ Construct a KeyValue Daisy Chain of Ports
 This function is most useful when used with an `InstanceArray` of components
 that all have the same port `child`. This constructs the `KeyValue` arguments to
 pass to `topo-net` for constructing a daisy-chain topology.
+
+@param obj Instance or InstanceArray of objects that we want to construct
+  a `KeyValue` daisy chain for.
+@param accessor Function that will be passed one of the instances from the
+`obj` Instance array (or the instance itself) to acquire the port of interest
+for constructing the `KeyValue` chain.
+@returns A recursive `KeyValue` chain of ports. This `KeyValue` object can be passed
+to `topo-net` to construct a series topology.
+
+@snippet
+
+```stanza
+  topo-net(host.ctl => daisy-chain(mem, {_.MEM.ctl}))
+```
+
 <DOC>
-public defn daisy-chain (obj:JITXObject, child:Symbol|Ref ) -> KeyValue<JITXObject, JITXObject|KeyValue>|JITXObject :
+public defn daisy-chain (obj:JITXObject, accessor:(JITXObject -> JITXObject) ) -> KeyValue<JITXObject, JITXObject|KeyValue>|JITXObject :
 
   match(instance-type(obj)):
     (s:SingleComponent|SingleModule):
-      dot(obj, child)
+      accessor(obj)
     (a:InstanceArray):
       val eps = for i in 0 to length(obj) seq:
-        ; @TODO - syntax for this kind of sucks.
-        ;   I think we should consider passing in a function
-        ;   that when applied returns the appropriate child.
-        dot(obj[i], child)
+        accessor(obj[i])
 
       ; Reduce the endpoints into a set of recursive KeyValue objects
       defn f (x:JITXObject, y:JITXObject|KeyValue) -> KeyValue :
