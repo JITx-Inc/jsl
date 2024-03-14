@@ -87,6 +87,30 @@ public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
     (p2:JITXObject):
       topo-net(p1, p2)
 
+doc: \<DOC>
+Construct a KeyValue Daisy Chain of Ports
+
+This function is most useful when used with an `InstanceArray` of components
+that all have the same port `child`. This constructs the `KeyValue` arguments to
+pass to `topo-net` for constructing a daisy-chain topology.
+<DOC>
+public defn daisy-chain (obj:JITXObject, child:Symbol|Ref ) -> KeyValue<JITXObject, JITXObject|KeyValue>|JITXObject :
+
+  match(instance-type(obj)):
+    (s:SingleComponent|SingleModule):
+      dot(obj, child)
+    (a:InstanceArray):
+      val eps = for i in 0 to length(obj) seq:
+        ; @TODO - syntax for this kind of sucks.
+        ;   I think we should consider passing in a function
+        ;   that when applied returns the appropriate child.
+        dot(obj[i], child)
+
+      ; Reduce the endpoints into a set of recursive KeyValue objects
+      defn f (x:JITXObject, y:JITXObject|KeyValue) -> KeyValue :
+        KeyValue(x, y)
+      reduce-right(f, eps)
+
 
 doc: \<DOC>
 Set a differential PinModel between two pins
@@ -143,6 +167,24 @@ public defn diff-pin-model (
   val [p1, p2] = [key(pair), value(pair)]
   diff-pin-model(p1, p2, delay = delay, loss = loss)
 
+doc: \<DOC>
+Apply pin models to all pins in a set of ports
+
+Note: This function is recursive
+
+@param delay Pin Delay in Seconds
+@param loss Pin Loss in dB
+@param ports one or more ports to apply the pin model to.
+<DOC>
+public defn apply-pin-model (delay:Toleranced, loss:Toleranced = typ(0.0), ports:JITXObject ...) :
+  val m = PinModel(delay, loss)
+  inside pcb-component:
+    for pt in ports do:
+      match(port-type(pt)):
+        (s:SinglePin):
+          pin-model(pt) = m
+        (b:Bundle|PortArray):
+          apply-pin-model(delay, loss, ports = pins(pt))
 
 doc: \<DOC>
 Construct a in-place swap of the P/N signals of a `diff-pair` bundle.
