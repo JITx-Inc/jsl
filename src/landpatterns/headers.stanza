@@ -1,0 +1,181 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/headers:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/errors
+  import jsl/ensure
+
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/silkscreen
+
+doc: \<DOC>
+Landpattern Generator for Headers
+
+This is intended to be a generator for constructing
+the land patterns for single-row and dual-row headers.
+
+Current implementation works well for standard through-hole
+headers, but likely needs refinement for SMT headers. Customized
+planner and numbering objects would likely fill the gap.
+<DOC>
+public defstruct Header <: Package :
+
+  num-leads:Int with: (
+    ensure => ensure-positive!,
+    as-method => true
+  )
+  doc: \<DOC>
+  Lead Type indicates TH vs SMT leads and their parameters.
+  <DOC>
+  lead-type:Lead
+  doc: \<DOC>
+  Set the size of the pad diameter for through-hole and width for SMT.
+  <DOC>
+  pad-diam:Double with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Number of Rows of leads on this package
+  <DOC>
+  rows:Int with: (
+    ensure => ensure-positive!
+  )
+
+  pitch:Double|Dims with: (
+    ensure => ensure-positive!
+  )
+
+  doc: \<DOC>
+  Package Body for the Header.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Planner for the Header
+  The planner determines which pads will be created in the
+  grid. See {@link PadPlanner} for more info.
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the Header
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
+
+with:
+  hashable => true
+  printer => true
+  constructor => #Header
+
+defn default-pad-planner (lead-type:Lead) -> PadPlanner :
+  PthPadPlanner(capsule-shaper)
+
+defn default-numbering (num-leads:Int, rows:Int) -> Numbering:
+  Row-Major-Numbering(num-leads, num-leads / rows)
+
+public defn Header (
+  --
+  num-leads:Int,
+  lead-type:Lead,
+  pad-diam:Double,
+  rows:Int,
+  pitch:Double|Dims,
+  package-body:PackageBody,
+  pad-planner:PadPlanner = default-pad-planner(lead-type),
+  lead-numbering:Numbering = default-numbering(num-leads, rows),
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Header :
+  #Header(num-leads, lead-type, pad-diam, rows, pitch, package-body, pad-planner, lead-numbering, density-level)
+
+public defmethod name (bga:Header) -> String:
+  "Header"
+
+public defmethod courtyard-excess (pkg:Header) -> Double :
+  0.0
+
+public defn build-vpads (
+  pkg:Header,
+  vp:VirtualLP
+  ):
+  val lt = lead-type(pkg)
+
+  ; We call them rows for convenience in the definition
+  ;  but for our grid construction - the rows are actually columns
+
+  val cols = rows(pkg)
+  val rows = num-leads(pkg) / cols
+  val pad-size = Dims(pad-diam(pkg), pad-diam(pkg))
+  val hole-size = Dims(typ $ width(lt), typ $ width(lt))
+  ; Generate the grid
+  val planner = pad-planner(pkg)
+  defn gen-pad-info () -> Seq<VirtualPad> :
+    val [xp, yp] = match(pitch(pkg)):
+      (p1:Double):
+        [p1, p1]
+      (p2:Dims):
+        [x(p2), y(p2)]
+
+    val grid = to-seq $ grid-locs(rows, cols, xp, yp)
+    for (c in 0 to cols) seq-cat :
+      for (r in 0 to rows) seq?:
+        val pos = next(grid)
+        val pad-id = to-pad-id(lead-numbering(pkg), r, c)
+        val pad-gen? = match(lt):
+          (smt:SMT-Lead):
+            pad-generator(planner, r, c)
+          (th:TH-Lead):
+            val g = th-pad-generator(planner, r, c)
+            match(g):
+              (_:False): false
+              (func): {func(hole-size, _0)}
+        match(pad-gen?):
+          (_:False): None()
+          (pad-gen):
+            val cls = [
+              "pad",
+              to-string("col-%_" % [c]),
+              to-string("row-%_" % [r])
+            ]
+            One $ VirtualPad(pad-id, pad-gen(pad-size), pos, class = cls)
+
+  append-all(vp, gen-pad-info())
+
+public defmethod build-pads (
+  pkg:Header,
+  vp:VirtualLP,
+  ) -> False :
+  build-vpads(pkg, vp)
+
+
+public defn compute-outline (
+  vp:VirtualLP,
+  density-level:DensityLevel
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  ) -> Shape:
+  val lp-pads = get-pads(vp)
+  val pad-outline = bounds(lp-pads, layer-spec = SolderMask(Top))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+  LineRectangle(pad-outline*, line-width = line-width)
+
+public defmethod build-silkscreen (
+  pkg:Header,
+  vp:VirtualLP,
+  ):
+  val outline = compute-outline(vp, density-level(pkg))
+  add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
