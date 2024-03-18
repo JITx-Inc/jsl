@@ -1,0 +1,51 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/si/couplers:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/resistors
+
+  import jsl/si/couplers
+
+pcb-component test-SMT:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = ResistorSymbol()
+  assign-symbol(create-symbol(symb))
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+deftest(couplers) test-dp-coupler:
+
+  pcb-module test-coupler:
+    port p1 : diff-pair
+    port p2 : diff-pair
+
+    inst dp : dp-coupler(test-SMT)
+
+    require pair:dual-pair from dp
+
+    net (p1, pair.A)
+    net (p2, pair.B)
+
+  set-main-module(test-coupler)
