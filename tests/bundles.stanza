@@ -5,8 +5,11 @@ defpackage jsl/tests/bundles:
   import jitx/commands
 
   import jsl/bundles
+  import jsl/errors
+  import jsl/pin-assignment
 
 deftest(bundles) test-general-bundles:
+
   pcb-module test-general:
     port A : diff-pair
     port B : power
@@ -16,23 +19,26 @@ deftest(bundles) test-general-bundles:
     port F : dac
     port G : reset
 
-  val content = get-def-string(test-general)
-  ; println("Content: %_" % [content])
+    ; check check-bundles(self.A, diff-pair)
+    check-bundle(diff-pair, A)
+    check-bundle(power, B)
+    check-bundle(gpio, C)
+    check-bundle(timer, D)
+    check-bundle(adc, E)
+    check-bundle(dac, F)
+    check-bundle(reset, G)
 
-  #EXPECT(index-of-chars(content, "DC Power") is-not False)
-  #EXPECT(index-of-chars(content, "Differential Signal Pair") is-not False)
-
+  set-main-module(test-general)
 
 deftest(bundles) test-debug-bundles:
   pcb-module test-debug:
     port A : jtag
     port B : swd(SWD-SWO)
 
-  val content = get-def-string(test-debug)
-  ; println("Content: %_" % [content])
+    check-bundle(jtag, A)
+    check-bundle(swd(SWD-SWO), B)
 
-  #EXPECT(index-of-chars(content, "JTAG") is-not False)
-  #EXPECT(index-of-chars(content, "SWD") is-not False)
+  set-main-module(test-debug)
 
 deftest(bundles) test-comms-bundles:
 
@@ -45,17 +51,18 @@ deftest(bundles) test-comms-bundles:
     port C3 : quad-spi()
 
     port D1: minimal-uart()
-    port D2: uart(UART-TX, UART-RX, UART-CTS, UART-RTS)
+    val uart-b = uart(UART-TX, UART-RX, UART-CTS, UART-RTS)
+    port D2: uart-b
 
-  val content = get-def-string(test-comms)
-  ; println("Content: %_" % [content])
+    check-bundle(i2c, A)
+    check-bundle(can-phy, B)
+    check-bundle(std-spi(), C1)
+    check-bundle(spi-with-cs(), C2)
+    check-bundle(quad-spi(), C3)
+    check-bundle(minimal-uart(), D1)
+    check-bundle(uart-b, D2)
 
-  #EXPECT(index-of-chars(content, "I2C") is-not False)
-  #EXPECT(index-of-chars(content, "CAN") is-not False)
-  #EXPECT(index-of-chars(content, "name = \"SPI\"") is-not False)
-  #EXPECT(index-of-chars(content, "quad-SPI") is-not False)
-
-  #EXPECT(index-of-chars(content, "UART") is-not False)
+  set-main-module(test-comms)
 
 deftest(bundles) test-usb-bundles:
 
@@ -67,14 +74,12 @@ deftest(bundles) test-usb-bundles:
 
     port C : usb-a-superspeed-connector
 
-  val content = get-def-string(test-usb)
-  ; println("Content: %_" % [content])
+    check-bundle(usb-2, A1)
+    check-bundle(usb-3(), A2)
+    check-bundle(usb-c-connector, B)
+    check-bundle(usb-a-superspeed-connector, C)
 
-  #EXPECT(index-of-chars(content, "USB 2.0") is-not False)
-  #EXPECT(index-of-chars(content, "USB 3.2 Gen2x2") is-not False)
-
-  #EXPECT(index-of-chars(content, "USB Type C") is-not False)
-  #EXPECT(index-of-chars(content, "USB Type A") is-not False)
+  set-main-module(test-usb)
 
 deftest(bundles) test-ethernet-bundles:
 
@@ -85,8 +90,10 @@ deftest(bundles) test-ethernet-bundles:
     port D : mii()
     port E : rmii(false)
 
-  val content = get-def-string(test-ethernet)
-  ; println("Content: %_" % [content])
+    check-bundle(rgmii, A)
+    check-bundle(miim, B)
+    check-bundle(gmii(), C)
+    check-bundle(mii(), D)
+    check-bundle(rmii(false), E)
 
-  #EXPECT(index-of-chars(content, "name = \"MII\"") is-not False)
-  #EXPECT(index-of-chars(content, "name = \"RMII\"") is-not False)
+  set-main-module(test-ethernet)

@@ -1,0 +1,397 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/helpers:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/pin-assignment
+  import jsl/bundles
+
+doc: \<DOC>
+Create a net and topology segment
+
+This function connects pins/ports together with a
+combination net and topology-segment. This is useful
+for constructing signal integrity routes in the design.
+
+The pin arguments can be either single pins, pin arrays,
+or bundle-defined ports. Regardless, p1 and p2 must be
+the same type.
+
+No direction is implied by the order of p1 and p2.
+
+This function must be used in a `pcb-module` context.
+
+@param p1 Pin object
+@param p2 Pin object
+<DOC>
+public defn topo-net (p1:JITXObject, p2:JITXObject):
+  check-matching-port-types(p1, p2)
+  inside pcb-module:
+    net (p1, p2)
+    topology-segment(p1, p2)
+
+
+doc: \<DOC>
+Construct a chained Topology net
+
+Note: This function is recursive.
+
+This function will construct a chain of topology segments
+using a sequence of key value pairs of pins (singles, bundles, or arrays)
+
+This function must be used in a `pcb-module` context.
+
+@param pair Key Value Pair (KVP) of pins or recursive KVPs of pins.
+
+@snippet
+
+```stanza
+inst MCU : components/iMX
+inst ESD : components/TPD4E05
+inst USB-C : components/USBC-conn
+
+topo-net(
+  MCU.usb2.data =>
+  ESD.D[0].A =>
+  ESD.D[0].B =>
+  USB-C.data[0] =>
+  USB-C.data[1] =>
+)
+```
+
+@snip-note 1 The MCU provides a USB 2.0 connection via a bundle named `usb2`. All of the
+referenced objects in this sequence are `diff-pair` bundles.
+@snip-note 2 The ESD protection diode is a pass through variant with two equivalent sides A & B
+@snip-note 3 The USB Type C connector has two USB 2.0 Data lines to allow reversability of the connector
+
+@snip-note 5 In this statement, the `topo-net` function constructs 4 topology segments. The terminal
+  points of the topology are `MCU.usb2.data` and `USB-C.data[1]`. There are three, ordered series nodes
+   between the terminal points.
+
+<DOC>
+public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
+  ; TODO - Make the `key` of the KeyValue a `JITXObject|KeyValue` too
+  ;  so that we can handle sequences like:
+  ;
+  ;    topo-net(A => (B => C) => D)
+  ;
+  ;  Currently the parenthesis will break this construct.
+  val [p1, o2] = [key(pair), value(pair)]
+  match(o2):
+    (kp:KeyValue):
+      val [p2, rest] = [key(kp), value(kp)]
+      topo-net(p1, p2)
+      topo-net(kp)
+    (p2:JITXObject):
+      topo-net(p1, p2)
+
+doc: \<DOC>
+Construct a KeyValue Daisy Chain of Ports
+
+This function is most useful when used with an `InstanceArray` of components
+that all have the same port `child`. This constructs the `KeyValue` arguments to
+pass to `topo-net` for constructing a daisy-chain topology.
+
+@param obj Instance or InstanceArray of objects that we want to construct
+  a `KeyValue` daisy chain for.
+@param accessor Function that will be passed one of the instances from the
+`obj` Instance array (or the instance itself) to acquire the port of interest
+for constructing the `KeyValue` chain.
+@returns A recursive `KeyValue` chain of ports. This `KeyValue` object can be passed
+to `topo-net` to construct a series topology.
+
+@snippet
+
+```stanza
+  topo-net(host.ctl => daisy-chain(mem, {_.MEM.ctl}))
+```
+
+<DOC>
+public defn daisy-chain (obj:JITXObject, accessor:(JITXObject -> JITXObject) ) -> KeyValue<JITXObject, JITXObject|KeyValue>|JITXObject :
+
+  match(instance-type(obj)):
+    (s:SingleComponent|SingleModule):
+      accessor(obj)
+    (a:InstanceArray):
+      val eps = for i in 0 to length(obj) seq:
+        accessor(obj[i])
+
+      ; Reduce the endpoints into a set of recursive KeyValue objects
+      defn f (x:JITXObject, y:JITXObject|KeyValue) -> KeyValue :
+        KeyValue(x, y)
+      reduce-right(f, eps)
+
+
+doc: \<DOC>
+Set a differential PinModel between two pins
+
+This is a simplified model of the pin characteristics of a component.
+
+This function must be used inside a `pcb-component` context.
+
+@param p1 Pin A of a differential input to this component.
+@param p2 Pin B of a differential input this this component.
+@param delay Expected delay due to the physical pin connections. This is used for computing
+the timing parameters of a topology connected to this pin.
+@param loss Expected loss due to the physical pin connections. This is primarily
+used for the insertion loss optimization on a topology.
+<DOC>
+public defn diff-pin-model (
+  p1:JITXObject, p2:JITXObject,
+  --
+  delay:Toleranced, loss:Toleranced = typ(0.0)
+  ) :
+  inside pcb-component:
+    pin-model(p1) = PinModel(delay, loss)
+    pin-model(p2) = PinModel(delay, loss)
+
+doc: \<DOC>
+Set a differential PinModel between the two pins of a `diff-pair` bundle
+
+This function must be used inside a `pcb-component` context.
+
+@param dp Bundle Port on a `pcb-component` of type `diff-pair`
+<DOC>
+public defn diff-pin-model (
+  dp:JITXObject,
+  --
+  delay:Toleranced, loss:Toleranced = typ(0.0)
+  ) :
+  inside pcb-component:
+    pin-model(dp.P) = PinModel(delay, loss)
+    pin-model(dp.N) = PinModel(delay, loss)
+
+
+doc: \<DOC>
+Set a differential PinModel between the two pins of KeyValue pair
+
+This function must be used inside a `pcb-component` context.
+
+@param pair Bundle Port on a `pcb-component` of type `diff-pair`
+<DOC>
+public defn diff-pin-model (
+  pair:KeyValue<JITXObject, JITXObject>
+  --
+  delay:Toleranced, loss:Toleranced = typ(0.0)
+  ) :
+  val [p1, p2] = [key(pair), value(pair)]
+  diff-pin-model(p1, p2, delay = delay, loss = loss)
+
+doc: \<DOC>
+Apply pin models to all pins in a set of ports
+
+Note: This function is recursive
+
+@param delay Pin Delay in Seconds
+@param loss Pin Loss in dB
+@param ports one or more ports to apply the pin model to.
+<DOC>
+public defn apply-pin-model (delay:Toleranced, loss:Toleranced = typ(0.0), ports:JITXObject ...) :
+  val m = PinModel(delay, loss)
+  inside pcb-component:
+    for pt in ports do:
+      match(port-type(pt)):
+        (s:SinglePin):
+          pin-model(pt) = m
+        (b:Bundle|PortArray):
+          apply-pin-model(delay, loss, ports = pins(pt))
+
+doc: \<DOC>
+Construct a in-place swap of the P/N signals of a `diff-pair` bundle.
+
+@param p Port of type `diff-pair` that we wish to swap P/N on
+@return A Node of type `diff-pair` that has `P/N` reversed with respect
+to the input `p` port.
+<DOC>
+defn reverse-pair (p:JITXObject) :
+  inside pcb-module:
+    node temp:diff-pair
+    topo-net(p.P, temp.N)
+    topo-net(p.N, temp.P)
+    temp
+
+
+doc: \<DOC>
+Assign a differential routing structure to a `diff-pair` topology.
+
+This function is expected to be used in a `pcb-module` context.
+
+@param route-struct DifferentialRoutingStructure type
+@param dp-pair KeyValue of two terminal ports of a `diff-pair` topology. Both
+the `key` and `value` of this KVP must be Bundle Ports of type `diff-pair
+<DOC>
+public defn diff-structure (route-struct, dp-pair:KeyValue<JITXObject, JITXObject>) :
+  inside pcb-module:
+    val [A, B] = [key(dp-pair), value(dp-pair)]
+    structure(A.P => B.P, A.N => B.N) = route-struct
+
+
+doc: \<DOC>
+Internal Tool for constructing sets of pins to operate on as KVP
+
+This tool constructs `KeyValue` objects that map a pin on `obj-A`
+to a pin on `obj-B`.
+
+Both `obj-A` and `obj-B` are expected to be of the same type.
+
+@param obj-A Expected to be a port of type `PortArray` or `Bundle`
+@param obj-B Expected to be a port of type `PortArray` or `Bundle`
+@return A sequence of `KeyValue<SinglePin, SinglePin>`
+<DOC>
+defn make-ep-set (obj-A:JITXObject, obj-B:JITXObject) -> Seq<KeyValue<JITXObject, JITXObject>>:
+  for (pA in pins(obj-A), pB in pins(obj-B)) seq:
+    KeyValue(pA, pB)
+
+doc: \<DOC>
+Construct a pair wise sequence of all passed endpoints and call `f(A,B)`
+
+NOTE: This function is recursive.
+
+@param f Function to apply to the pair wise sequence of single pins.
+@param ep-sets Sequence of KeyValue<Port, Port>. Each KVP is a set of
+topology terminals that we will pass to `f`. Each terminal can be a single pin,
+a port array, or a bundle - but it must match between key and value. We deconstruct
+each port array and bundle into single pins and recursively invoke `pair-wise{f, _}`
+until all KVPs are processed.
+<DOC>
+public defn pair-wise (f: (KeyValue<JITXObject, JITXObject> -> False), ep-sets:Seqable<KeyValue<JITXObject, JITXObject>> ) :
+  for eps in ep-sets do:
+    val [ep-A, ep-B] = [key(eps), value(eps)]
+    match(port-type(ep-A), port-type(ep-B)):
+      (a-s:SinglePin, b-s:SinglePin):
+        f(ep-A => ep-B)
+      (a-b:Bundle, b-b:Bundle): ; Expects the bundles to be the same.
+        pair-wise{f, _} $ make-ep-set(ep-A, ep-B)
+      (a-a:PortArray, b-a:PortArray):
+        pair-wise{f, _} $ make-ep-set(ep-A, ep-B)
+
+
+
+doc: \<DOC>
+Add an insertion loss limiter for a set of endpoints.
+
+This function must be called in a `pcb-module` context.
+
+@param loss-dB Loss range that this design is willing to accept in dB
+@param ep-sets a series of endpoint pairs for the routes that we wish
+  to adds limits on. Each `KeyValue` may be:
+  1.  Pin => Pin - Single pin to add constraints to
+  2.  Bundle => Bundle - Add individual constraints to each matching pin in the passed bundle. Must be the same type of bundle.
+  3.  PortArray => PortArray - Add individual constraints for each port of a port array. Each PortArray must be of equal length and type.
+
+<DOC>
+public defn insertion-loss-limit (loss-dB:Toleranced, ep-sets:KeyValue<JITXObject, JITXObject> ...) :
+  if min-value(loss-dB) < 0.0:
+    throw $ Exception("Invalid Min Loss")
+
+  val constraint = InsertionLossConstraint(loss-dB)
+  inside pcb-module:
+    for eps in ep-sets pair-wise:
+      val [A, B] = [key(eps), value(eps)]
+      insertion-loss(A => B) = constraint
+
+doc: \<DOC>
+Add a max acceptable loss to a set of topology terminals
+
+This function must be called in a `pcb-module` context.
+
+@param max-dB Maximum loss allowed for this set of terminals. Value is in `dB`
+@param ep-sets sequence of KeyValue<Port,Port> for the matching terminals of a topology.
+<DOC>
+public defn max-loss (max-dB:Double, ep-sets:KeyValue<JITXObject, JITXObject> ...):
+  insertion-loss-limit( min-max(0.0, max-dB), ep-sets = ep-sets)
+
+doc: \<DOC>
+Add a time delay limiter for a set of endpoints.
+
+This function must be called in a `pcb-module` context.
+
+@param delay-S Delay range expected for these signals in Seconds.
+@param ep-sets sequence of KeyValue<Port,Port> for the matching terminals of a topology.
+
+<DOC>
+public defn delay-limit (delay-S:Toleranced, ep-sets:KeyValue<JITXObject, JITXObject> ...):
+  val constraint = TimingConstraint(delay-S)
+  inside pcb-module:
+    for eps in ep-sets pair-wise:
+      val [A, B] = [key(eps), value(eps)]
+      timing(A => B) = constraint
+
+doc: \<DOC>
+Set the maximum delay for the signals from A -> B in Seconds
+
+This sets an absolute time delay limit for the signals on
+the board (as opposed to a differential skew constraint for example).
+
+@param max-S Maximum allowable delay in Seconds
+@param ep-sets sequence of KeyValue<Port,Port> for the matching terminals of a topology.
+<DOC>
+public defn max-delay (
+  max-S:Double,
+  ep-sets:KeyValue<JITXObject, JITXObject> ...
+  ) :
+  delay-limit(min-max(0.0, max-S), ep-sets = ep-sets)
+
+
+
+; TODO - consider keyword arguments here
+doc: \<DOC>
+Add a timing window around the guide pin
+
+This function adds a timing window around the guide topology. The goal is that all
+of the passed `topos` arguments will have a timing difference constraint that
+keeps them within the timing window around the guide.
+
+NOTE: This function is recursive.
+
+@param window Tolerance window in seconds. This would typically be a Toleranced around zero
+such as `0.0 +/- 10.0e-12`.
+@param guide Terminal Points for the Guide Topology. All timing difference constraints will
+be made in reference to this topology.
+@param topos Set of topologies to which we will apply timing difference constraints.
+Each KVP can be `SinglePin => SinglePin`, `PortArray => PortArray`, or `Bundle` => `Bundle`.
+For the `PortArray` variant, the number of pins in each port array should be equal. Note that bundles are not supported
+<DOC>
+public defn timing-window (
+  window:Toleranced,
+  guide:KeyValue<JITXObject, JITXObject>,
+  topos:KeyValue<JITXObject, JITXObject> ...
+  ) :
+  val constraint = TimingDifferenceConstraint(window)
+  inside pcb-module:
+    for topo in topos pair-wise:
+      if guide != topo :
+        timing-difference(guide, topo) = constraint
+
+doc: \<DOC>
+Add a max skew timing constraint for a differential pair.
+@param window Tolerance window in seconds. This would typically be a Toleranced around zero
+such as `0.0 +/- 10.0e-12`.
+@param pair Terminal Points for either two diff-pair bundles or two port-arrays.
+  For Diff-Pair bundles, this function adds a skew timing diff constraint between A.P => B.P / A.N => B.N
+  For Port Arrays, this function adds a skew timing diff between the first terminal pair and each of the remaining
+  pins.
+<DOC>
+public defn skew-window (
+  window:Toleranced,
+  pair:KeyValue<JITXObject, JITXObject>
+  ) :
+  val constraint = TimingDifferenceConstraint(window)
+
+  inside pcb-module:
+    val [A, B] = [key(pair), value(pair)]
+    match(port-type(A), port-type(B)):
+      (A-b:Bundle, B-b:Bundle):
+        timing-difference(A.P => B.P, A.N => B.N) = constraint
+      (A-pa:PortArray, B-pa:PortArray):
+        val pA = pins(A)
+        val pB = pins(B)
+        val A0 = pA[0]
+        val B0 = pB[0]
+        for (An in pA[1 to false], Bn in pB[1 to false]) do:
+          timing-difference(A0 => B0, An => Bn) = constraint
+      (type-A, type-B):
+        throw $ ArgumentError("Invalid Type for Skew Constraint: A=%_ B=%_" % [type-A, type-B])
+

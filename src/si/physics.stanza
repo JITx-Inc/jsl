@@ -1,0 +1,95 @@
+doc: \<DOC>
+Physics Definitions and Functions
+
+## Helpful Terms
+
+*  TEM - Transverse Electro-Magnetic (wave)
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/si/physics:
+  import core
+  import math
+  import jitx
+
+  import jsl/ensure
+
+doc: \<DOC>
+Permittivity of Free Space (Vacuum)
+@see https://en.wikipedia.org/wiki/Vacuum_permittivity
+<DOC>
+public val PERMITTIVITY_VAC = 8.85418782e-12 ;  (F / m), also (s^4 * A^2) / (kg * m^3)
+val E0 = PERMITTIVITY_VAC
+
+doc: \<DOC>
+Permeability of Free Space (Vacuum)
+@see https://en.wikipedia.org/wiki/Vacuum_permeability
+<DOC>
+public val PERMEABILITY_VAC = (PI * 4.0e-7); H / m
+; Alternative definition:
+; public val PERMEABILITY_VAC = 1.25663706212e-6 ; (N / A^2), also (kg * m) / (s^2 * A^2)
+val M0 = PERMEABILITY_VAC
+
+
+doc: \<DOC>
+Wave Impedance of a Medium.
+
+@param eps Permittivity of the medium
+@param mu Permeability of the medium.
+@return Impedance of the Medium in Ohms
+<DOC>
+public defn wave-impedance (eps:Double, mu:Double) -> Double :
+  ensure-positive!("eps", eps)
+  ensure-positive!("mu", mu)
+
+  sqrt(mu / eps)
+
+doc: \<DOC>
+Characteristics Impedance of Free Space (Vacuum)
+In this universe, this value is typically around 377 ohms.
+<DOC>
+public val CHAR_IMPED_VAC = wave-impedance(E0, M0)
+val Nu0 = CHAR_IMPED_VAC
+
+doc: \<DOC>
+Utility function for checking valid relative permittivity parameters
+<DOC>
+public val ensure-valid-rel-permittivity! = ensure-greater-eq!(1.0)
+doc: \<DOC>
+Utility function for checking valid relative permeability parameters
+<DOC>
+public val ensure-valid-rel-permeability! = ensure-greater-eq!(1.0)
+
+doc: \<DOC>
+Compute the phase velocity for a TEM wave in a specific medium.
+
+The phase velocity is the signal propagation velocity in a particular
+medium. This function assumes that the medium of propagation is homogenous.
+For non-homogenous medium, the user should compute the effective relative permittivity
+and then pass it to this function.
+
+@param Eps-r Relative Permittivity of the Medium. This value is usually greater than or equal to 1.0
+@param Mu-r Relative Magnetic Permeability of the Medium. This value is usually greater than or equal to 1.0.
+  The default value for this parameter is 1.0 - this is a typical default for non-magnetic materials.
+@return The signal propagation velocity in m / s.
+<DOC>
+public defn phase-velocity (eps-r:Double, mu-r:Double = 1.0) -> Double :
+  ensure-valid-rel-permittivity!("eps-r", eps-r)
+  ensure-valid-rel-permeability!("mu-r", mu-r)
+  1.0 / sqrt((M0 * mu-r) * (E0 * eps-r) )
+
+doc: \<DOC>
+Speed of Light in Free Space (Vacuum)
+<DOC>
+public val SPEED_OF_LIGHT_VAC = phase-velocity(1.0) ; m / s
+
+doc: \<DOC>
+Compute the Guide Wavelength for a specific frequency in a medium.
+
+The guide wavelength is the wavelength of a TEM wave in a specific medium.
+<DOC>
+public defn guide-wavelength (f:Double, eps-r:Double, mu-r:Double = 1.0) -> Double :
+  ensure-positive!("f:frequency", f)
+  val w0 = 1.0 / f
+  val phase-v = phase-velocity(eps-r, mu-r)
+  phase-v * w0
+

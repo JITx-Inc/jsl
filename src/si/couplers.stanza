@@ -1,0 +1,98 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/couplers:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/si/helpers
+  import jsl/pin-assignment
+
+doc: \<DOC>
+Extract the courtyard dimensions for the landpattern of a component.
+<DOC>
+defn get-courtyard-dims (comp:Instantiable) -> Dims:
+  val lp = landpattern(comp)
+  val topC = Courtyard(Top)
+  dims $ Union $ for lspec in layers(lp) seq?:
+    switch(specifier(lspec)):
+      Courtyard(Top):
+        One $ shape(lspec)
+      else: None()
+
+
+doc: \<DOC>
+Diff-Pair Coupler through 2-pin Component
+
+This constructs module with two components combined in a diff-pair configuration.
+By default, this function will detect the courtyard of the two components
+and place the components adjacent to one another in the X direction on the courtyard boundary.
+
+TODO: We should include a diagram here.
+
+Example: Block Capacitors for SI transmitter
+
+@param comp 2-pin component like a resistors/capacitor with `p[1]` and `p[2]`
+@param margin Additional X spacing distance between the two instantiated components.
+@param y-skew This parameter will cause the components not to be placed strictly
+adjacent to one another. The components will still be placed at the same X location,
+but the right component will be slid up (positive Y) by (y-skew/2). The left component
+will be slid down (negative Y) by (y-skew/2).
+<DOC>
+public pcb-module dp-coupler (comp:Instantiable -- margin:Double = 0.0, y-skew:Double = 0.0) :
+  port A : diff-pair
+  port B : diff-pair
+
+  inst c : comp[2]
+
+  ; TODO - I need to modify this to support `c/a`
+  ;  pin definitions.
+  topo-net(A.P, c[0].p[1])
+  topo-net(A.N, c[1].p[1])
+
+  topo-net(B.P, c[0].p[2])
+  topo-net(B.N, c[1].p[2])
+
+  ; @NOTE - I should be able to use `A` and `B` here but as of
+  ;  2024/03/12 - the module pin forwarding seems to not work.
+  bidir-swappable-dual-pair(c[0].p[1], c[1].p[1], c[0].p[2], c[1].p[2])
+
+  ; This places these components such that they are directly adjacent
+  ;  to each other. This assumes that the pads for the 2-pin component
+  ;  are aligned vertically on the Y axis.
+  val cyard = get-courtyard-dims(comp)
+  val x-off = (x(cyard) + margin) / 2.0
+
+  val y2 = y-skew / 2.0
+  place(c[0]) at loc(x-off, y2) on Top
+  place(c[1]) at loc((- x-off), (- y2)) on Top
+
+doc: \<DOC>
+Construct Aligned Symmetric Pull Down Resistors
+
+This function constructs a coulpler where two 2-pin components
+are instantiated with p[1] of both components adjacent to each other.
+The far pin (p[2]) on both components is connected to a common `GND` terminal.
+
+@param comp 2-pin component like a resistors/capacitor with `p[1]` and `p[2]`
+@param margin Additional Y spacing distance between the two instantiated components.
+
+<DOC>
+public pcb-module symmetric-pull-downs (comp:Instantiable -- margin:Double = 0.0) :
+  port A : diff-pair
+  port B : diff-pair
+  pin GND
+
+  inst R : comp[2]
+
+  topo-net(A.P => R[0].p[1] => B.P)
+  net (R[0].p[2], GND)
+
+  topo-net(A.N => R[1].p[1] => B.N)
+  net (R[1].p[2], GND)
+
+  val cyard = get-courtyard-dims(comp)
+  val y-off = (y(cyard) + margin) / 2.0
+
+  place(R[0]) at loc(0.0, y-off, 180.0) on Top
+  place(R[1]) at loc(0.0, (- y-off)) on Top

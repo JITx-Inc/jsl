@@ -4,6 +4,15 @@ defpackage jsl/bundles/general:
   import jitx
 
 doc: \<DOC>
+Constructs a indices list for one-based indices
+
+@returns This returns a tuple like `[1,2,3,4]` for
+`num=4`
+<DOC>
+public defn make-indices (num:Int) -> Tuple<Int> :
+  to-tuple $ to-seq(1 through num)
+
+doc: \<DOC>
 Differential Pair
 
 The differential pair is a foundation bundle type used in various
@@ -15,6 +24,34 @@ public pcb-bundle diff-pair :
   name = "Differential Signal Pair"
   pin N
   pin P
+
+doc: \<DOC>
+Two Differential Pairs - a Dual Pair
+
+The dual pair is useful for cases where there is a pass-through
+differential pair through a component - for example, an ESD
+diode protection device like a TI, TPD4E05.
+<DOC>
+public pcb-bundle dual-pair :
+  port A : diff-pair
+  port B : diff-pair
+
+doc: \<DOC>
+Pass Through Bundle Type
+
+This provides a mechanism of describing a pass through
+connection through a device, primarily for implementing
+the `supports/requrie` statements.
+
+Example:
+
+ESD Protection devices often have two pins that are intended
+to be shorted together to provide an ESD protected trace with
+minimal affect on the impedance of the trace.
+<DOC>
+public pcb-bundle pass-through :
+  pin A
+  pin B
 
 doc: \<DOC>
 Power Bundle define a DC power source

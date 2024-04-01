@@ -1,0 +1,150 @@
+doc: \<DOC>
+Swizzle Bus Pin Assignment Example
+
+This file contains the implementation of a simple example
+of the `swizzle-bus` pin assignment tool. The idea is that
+given a bus of signals, we want to allow the pin assignment
+solver to determine the right order of pins to use. This is a
+common tactic in DDR3 busses where the byte lane pins can
+be in any permutation of the pins.
+
+Additionally, the `swizzle-bus` function has a `locked` argument
+that allows the user to restrict the set of pins in the bus that
+are allowed to swizzle. For example, some chips require the first
+and/or last pin of the byte lane to be locked.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/examples/pin-assignment/swizzle:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/pin-assignment
+  import jsl/layerstack
+  import jsl/landpatterns/headers
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/leads
+  import jsl/si/helpers
+
+pcb-bundle header (w:Int):
+  port D : pin[w]
+
+pcb-symbol header-sym (w:Int):
+  name = "Crappy Header Symbol"
+  val scale = 2.54
+  for i in 0 to w do:
+    pin p.D[i] at Point(0.0, scale * to-double(i))
+
+pcb-component header-test (w:Int, swiz?:True|False) :
+
+  port p : header(w)
+
+  pin-properties:
+    [pin:Ref| pads:Ref ...]
+    for i in 0 to w do:
+      [p.D[i] | p[i + 1] ]
+
+
+  assign-symbol(header-sym(w))
+
+  val pkg = Header(
+    num-leads = w,
+    lead-type = TH-Lead(length = typ(2.0), width = typ(0.9)),
+    pad-diam = 1.5,
+    rows = 2,
+    pitch = 2.54
+    package-body = PackageBody(width = typ(5.0), length = typ(10.0), height = typ(5.0) )
+    )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  if swiz?:
+    val swiz-type = swizzle-bus(p, locked = [0])
+    supports header(w):
+      require swiz-bus:swiz-type
+      for i in 0 to w do:
+        header(w).D[i] => swiz-bus.D[i]
+
+
+pcb-module top-level :
+  val w = 8
+
+  inst h1 : header-test(w, false)
+
+  inst h2 : header-test(w, true)
+  require bus:header(w) from h2
+
+  topo-net(h1.p, bus)
+
+val stack = LayerStack(name = "Param-Ram Stack")
+
+val copper-1oz = Copper("cu", 1.0)
+val core-FR4 = FR4("core", 1.0)
+val prepreg-FR4 = FR4("prepreg", 0.5)
+
+add-symmetric(copper-1oz, core-FR4,
+  add-symmetric(copper-1oz, prepreg-FR4,
+    add-symmetric(copper-1oz, core-FR4, stack)
+  )
+)
+
+validate!(stack)
+
+val mem-stackup = create-pcb-stackup(stack)
+
+public pcb-via default-via :
+  name = "Default TH"
+  start = LayerIndex(0, Top)
+  stop = LayerIndex(0, Bottom)
+  diameter = 0.6
+  hole-diameter = 0.3
+  type = MechanicalDrill
+
+val board-shape = RoundedRectangle(100.0, 100.0, 1.61)
+
+public pcb-board mem-board :
+  stackup = mem-stackup
+  boundary = board-shape
+  signal-boundary = board-shape
+  vias = [default-via]
+
+public pcb-rules mem-rules :
+  min-copper-width = 0.102 ; 4mil
+  min-copper-copper-space = 0.102 ; 4mil
+  min-copper-hole-space = 0.2032 ; 8mil
+  min-copper-edge-space = 0.381 ; 10mil outer, but 15mil inner
+  min-annular-ring = 0.127 ; 5mil
+  min-drill-diameter = 0.204 ; 8mil
+  min-silkscreen-width = 0.0762 ; 3mil
+  min-pitch-leaded = 0.35 ; (guess)
+  min-pitch-bga = 0.35 ; (guess)
+  max-board-width = 403.0 ; 15.9in
+  max-board-height = 403.0 ; 15.9in
+  min-silk-solder-mask-space = 0.127 ; 5 mil, (guess)
+  min-silkscreen-text-height = 0.75 ; 29.5 mil, (guess)
+  solder-mask-registration = 0.0508 ; 2 mil
+  min-th-pad-expand-outer = 0.3048 ; 12 mil, (guess)
+  min-soldermask-opening = 0.152 ; TODO: lookup actual value
+  min-soldermask-bridge = 0.102 ; TODO: lookup actual value
+  min-hole-to-hole = 0.254 ; TODO: lookup actual value
+  min-pth-pin-solder-clearance = 3.0 ; TODO: lookup actual value
+
+defn main ():
+
+  ; Set the design name - a directory with this name will be generated under the "designs" directory
+  set-current-design("Swizzle-test")
+  set-paper(ANSI-B)
+  set-board(mem-board)
+  set-rules(mem-rules) ;manufacturing rules
+
+  ; Set the top level module (the module to be compile into a schematic and PCB)
+  set-main-module(top-level)
+
+  ; View the results
+  view-board()
+  ;view-schematic()
+  view-design-explorer()
+
+
+
+main()

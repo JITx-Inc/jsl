@@ -84,38 +84,44 @@ public defn ensure-non-negative! (
     (x:None): false
     (x:One<Int|Long|Double|Float|Toleranced|Dims|Percentage>): ensure-non-negative!(field, value(x))
 
-
-public defn ensure-greater! (
-  min-v:Int|Long|Double|Float|Toleranced|Dims|Percentage
+#for (
+  func-name in [ensure-greater!, ensure-greater-eq!, ensure-less!, ensure-less-eq!],
+  op in [greater?, greater-eq?, less?, less-eq?]
   ):
-  defn ensure-func (
-    field:String,
-    value: Int|Long|Double|Float|Toleranced|Dims|Percentage,
+
+  public defn func-name (
+    min-v:Int|Long|Double|Float|Dims
+    ):
+    defn ensure-func (
+      field:String,
+      value: Int|Long|Double|Float|Dims,
+      ) :
+      val success = match(value, min-v):
+        (x:Int, mv:Int): op(x, mv) ;  x <= mv
+        (x:Long, mv:Long): op(x, mv) ;  x <= mv
+        (x:Double, mv:Double): op(x, mv)
+        (x:Float, mv:Float): op(x, mv)
+        (d:Dims, mv:Double):
+          op(x(d), mv) and op(y(d), mv)
+      if not success:
+        throw $ ValueError("%_: Expects Number %_ > %_ " % [field, min-v, value])
+    ensure-func
+
+#for (
+  func-name in [ensure-maybe-greater!, ensure-maybe-greater-eq!, ensure-maybe-less!, ensure-maybe-less-eq!]
+  helper-name in [ensure-greater!, ensure-greater-eq!, ensure-less!, ensure-less-eq!]
+  op in [greater?, greater-eq?, less?, less-eq?]
+):
+  public defn func-name (
+    min-value:Int|Long|Double|Float|Dims
+    ):
+    val helper = helper-name(min-value)
+    defn ensure-func (
+      field:String,
+      value?:Maybe<Int|Long|Double|Float|Dims>
     ) :
-    val fail = match(value, min-v):
-      (x:Int, mv:Int): x <= mv
-      (x:Long, mv:Long): x <= mv
-      (x:Double, mv:Double): x <= mv
-      (x:Float, mv:Float): x <= mv
-      (t:Toleranced, mv:Double):
-        min-value(t) <= mv
-      (d:Dims, mv:Double):
-        x(d) <= mv or y(d) <= mv
-      (p:Percentage, mv:Double):
-        p <= mv
-    if fail:
-      throw $ ValueError("%_: Expects Number %_ > %_ " % [field, min-v, value])
-  ensure-func
+      match(value?):
+        (x:None): false
+        (x:One<Int|Long|Double|Float|Dims>): helper(field, value(x))
+    ensure-func
 
-public defn ensure-maybe-greater! (
-  min-value:Int|Long|Double|Float|Toleranced|Dims|Percentage
-  ):
-  val helper = ensure-greater!(min-value)
-  defn ensure-func (
-    field:String,
-    value?:Maybe<Int|Long|Double|Float|Toleranced|Dims|Percentage>
-  ) :
-    match(value?):
-      (x:None): false
-      (x:One<Int|Long|Double|Float|Toleranced|Dims|Percentage>): helper(field, value(x))
-  ensure-func

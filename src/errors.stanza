@@ -62,3 +62,11 @@ public defmethod print (o:OutputStream, e:MisMatchPortError) :
     (_:None): false
     (m?:One<String>): println("  %_" % [value(m?)])
 
+public defstruct MaxIterationsExceededError <: RuntimeError :
+  msg:String
+
+public defn MaxIterationsExceededError (msg:Printable) -> MaxIterationsExceededError:
+  MaxIterationsExceededError(to-string(msg))
+
+public defmethod print (o:OutputStream, e:MaxIterationsExceededError):
+  print(o, "Max Iterations Limit Exceed: %_" % [msg(e)])

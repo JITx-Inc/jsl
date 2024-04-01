@@ -1,0 +1,521 @@
+#use-added-syntax(jitx)
+defpackage jsl/layerstack:
+  import core
+  import collections
+  import jitx
+
+  import jsl/ensure
+  import jsl/errors
+
+doc: \<DOC>
+Base class for Defining the Layer Material
+<DOC>
+defstruct LayerMaterial <: Hashable:
+  name:Maybe<String>
+  type:MaterialType
+  description:Maybe<String>
+  material-def:Maybe<JITXDef> with: (
+    setter => set-material-def
+  )
+
+defmulti create-material (x:LayerMaterial) -> JITXDef
+
+; I need these accessors because the `name` and `type` tokens
+;  will get consumed by the macro before they can call the functions.
+
+defn make-name (x:LayerMaterial):
+  val v? = name(x)
+  inside pcb-material:
+    match(v?):
+      (_:None): false
+      (v:One<String>): name = value(v)
+
+defn get-type (x:LayerMaterial) -> MaterialType:
+  type(x)
+
+defn make-description (x:LayerMaterial) :
+  val v? = description(x)
+  inside pcb-material:
+    match(v?):
+      (_:None): false
+      (v:One<String>): description = value(v)
+
+
+public defstruct ConductorMaterial <: LayerMaterial:
+  name:Maybe<String> with: (
+    as-method => true
+  )
+  type:MaterialType with: (
+    as-method => true
+  )
+  description:Maybe<String> with: (
+    as-method => true
+  )
+  material-def:Maybe<JITXDef> with: (
+    setter => set-material-def
+    default => None()
+    as-method => true
+  )
+  doc: \<DOC>
+  Density of this Conductor material in g / mm^3
+  <DOC>
+  density:Double with: (
+    ensure => ensure-positive!
+  )
+  doc: \<DOC>
+  Surface roughness in mm RMS.
+  <DOC>
+  roughness:Maybe<Double>  with: (
+    ensure => ensure-positive!
+  )
+with:
+  constructor => #ConductorMaterial
+  printer => true
+  hashable => true
+
+public defn ConductorMaterial (
+  --
+  name:String = ?,
+  description:String = ?
+  density:Double
+  roughness:Double = ?
+  material-def:JITXDef = ?
+  ) -> ConductorMaterial :
+  #ConductorMaterial(name, Conductor, description, material-def, density, roughness)
+
+
+doc: \<DOC>
+Compute conductor layer thickness in mm from the layer weight (oz / ft^2)
+
+@param x Conductor Material type
+@param weight expects a value like 0.5, 1.0, 2.0 etc for the weight of
+the metal layer in oz / ft^2.
+@return Layer thickness in mm
+<DOC>
+public defn compute-thickness (x:ConductorMaterial, weight:Double) -> Double :
+  defn to-grams (oz:Double) -> Double :
+    28.3495 * oz
+
+  val g-weight = to-grams(weight) ; g / ft^2
+  val g-w-in2 = g-weight / (12.0 * 12.0) ; g / in^2
+  val g-w-mm2 = g-w-in2 / (25.4 * 25.4)
+  val ret = g-w-mm2 / density(x)
+  ret
+
+
+defn make-rough (x:ConductorMaterial) :
+  val v?  = roughness(x)
+  inside pcb-material:
+    match(v?):
+      (_:None): false
+      (v:One<Double>): roughness = value(v)
+
+public defmethod create-material (x:ConductorMaterial) -> JITXDef :
+  pcb-material custom-material :
+    make-name(x)
+    make-description(x)
+    type = get-type(x)
+    make-rough(x)
+  set-material-def(x, One(custom-material))
+  custom-material
+
+public val CopperMaterial = ConductorMaterial(
+  name = "Copper (Cu)"
+  ; Most Sources list this as the density of copper
+  ;   density = 8.93e-3
+  ; But I find this value is more consistent with the
+  ;  typical computations of the copper weight in oz/ft2
+  density = 8.77e-3 ; g / mm^3
+  roughness = 6.0e-3
+)
+
+public val AluminumMaterial = ConductorMaterial(
+  name = "Aluminum (Al)"
+  density = 2.7e-3
+  roughness = 6.0e-3
+)
+
+public defstruct DielectricMaterial <: LayerMaterial :
+  name:Maybe<String> with: (
+    as-method => true
+  )
+  type:MaterialType with: (
+    as-method => true
+  )
+  description:Maybe<String> with: (
+    as-method => true
+  )
+  material-def:Maybe<JITXDef> with: (
+    setter => set-material-def
+    default => None()
+    as-method => true
+  )
+  dielectric-coefficient:Maybe<Double> with: (
+      ensure => ensure-positive!
+  )
+  loss-tangent:Maybe<Double> with: (
+      ensure => ensure-positive!
+  )
+  is-soldermask:True|False
+with:
+  constructor => #DielectricMaterial
+  printer => true
+  hashable => true
+
+
+public defn DielectricMaterial (
+  --
+  name:String = ?,
+  description:String = ?
+  dielectric-coefficient:Double = ?
+  roughness:Double = ?
+  loss-tangent:Double = ?
+  material-def:JITXDef = ?
+  is-soldermask:True|False = false
+  ) -> DielectricMaterial:
+  #DielectricMaterial(name, Dielectric, description, material-def, dielectric-coefficient, loss-tangent, is-soldermask)
+
+defn make-di-coeff (x:DielectricMaterial) :
+  val v? = dielectric-coefficient(x)
+  inside pcb-material:
+    match(v?):
+      (_:None): false
+      (v:One<Double>): dielectric-coefficient = value(v)
+
+defn make-loss (x:DielectricMaterial) :
+  val v? = loss-tangent(x)
+  inside pcb-material:
+    match(v?):
+      (_:None): false
+      (v:One<Double>): loss-tangent = value(v)
+
+public defmethod create-material (x:DielectricMaterial) -> JITXDef :
+  pcb-material custom-material :
+    make-name(x)
+    make-description(x)
+    type = get-type(x)
+    make-di-coeff(x)
+    make-loss(x)
+  set-material-def(x, One(custom-material))
+  custom-material
+
+
+public val FR4-Material = DielectricMaterial(
+  name = "FR4 (Generic)"
+  description = "Generic FR4 for Ease of Use. For SI - you probably want to define your own"
+  dielectric-coefficient = 4.26 ; @ 1GHz
+  loss-tangent = 0.25 ; @ 1GHz
+)
+
+public val SoldermaskMaterial = DielectricMaterial(
+  name = "Soldermask (Generic)"
+  description = "Generic Soldermask material based on Taiyo BSN4000"
+  dielectric-coefficient = 3.9
+  is-soldermask = true
+)
+
+public defstruct LayerSpec:
+  name:Maybe<String>
+  description:Maybe<String>
+  material:LayerMaterial
+  thickness:Double with: (
+    ensure => ensure-positive!
+  )
+with:
+  constructor => #LayerSpec
+  printer => true
+
+public defn LayerSpec (
+  --
+  name:String = ?,
+  desc:String = ?,
+  material:LayerMaterial,
+  thickness:Double
+  ) -> LayerSpec:
+  #LayerSpec(name, desc, material, thickness)
+
+doc: \<DOC>
+Create a Copper layer
+<DOC>
+public defn Copper (name:String, weight:Double, material:ConductorMaterial = CopperMaterial) -> LayerSpec :
+  LayerSpec(name = name, thickness = compute-thickness(material, weight), material = material)
+
+public defn Copper (weight:Double, material:ConductorMaterial = CopperMaterial) -> LayerSpec :
+  LayerSpec(thickness = compute-thickness(material, weight), material = material)
+
+public defn FR4 (name:String, thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
+  LayerSpec(name = name, material = material, thickness = thickness)
+
+public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
+  LayerSpec(material = material, thickness = thickness)
+
+public defn Soldermask (name:String, thickness:Double, material:DielectricMaterial = SoldermaskMaterial) -> LayerSpec :
+  LayerSpec(name = name, material = material, thickness = thickness)
+
+public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial) -> LayerSpec :
+  LayerSpec(material = material, thickness = thickness)
+
+defn get-name (x:LayerSpec) -> Maybe<String> :
+  name(x)
+
+public defn make-layer-statement (x:LayerSpec) :
+  val name? = get-name(x)
+  val t = thickness(x)
+  val m? = material-def $ material(x)
+  val m = match(m?):
+    (_:None): create-material(material(x))
+    (d:One<JITXDef>): value(d)
+
+  inside pcb-stackup:
+    match(name?):
+      (_:None):
+        layer(t, m as Material)
+      (v:One<String>):
+        layer(t, m as Material, value(v))
+
+public defstruct LayerStack :
+  name:Maybe<String>
+  description:Maybe<String>
+
+  layers:Vector<LayerSpec> with: (
+    updater => sub-layers
+  )
+with:
+  constructor => #LayerStack
+  printer => true
+
+public defn LayerStack (
+  --
+  name:String = ?,
+  description:String = ?,
+  initial-layers:Seqable<LayerSpec> = []
+  ) -> LayerStack:
+  #LayerStack(name, description, to-vector<LayerSpec>(initial-layers))
+
+
+doc: \<DOC>
+Add one or more layers to the top of the board stackup.
+
+When used on its own, this function is useful for creating asymmetric
+pcb stackups. This function is most useful when used on a non-empty
+layer stack.
+
+@param l-set layer or set of layers to add to the top of the stack. Note
+that if this value is a collection, then the layers will be added to
+the stack one at a time. For example:
+
+```
+add-top( [dielectric, copper], stack)
+```
+
+This will add the dielectric to the top of the stack, and then the copper
+on top of that.
+
+@param s LayerStack we are adding to.
+@return The modified layer stack object
+
+<DOC>
+
+public defn add-top (l-set:LayerSpec|Collection<LayerSpec>, s:LayerStack) -> LayerStack :
+  ; I don't have a way to insert layers in the front
+  ;  So I reverse the layers and then append them to the new "back" (front)
+  reverse!(layers(s))
+  match(l-set):
+    (l:LayerSpec):
+      add( layers(s), l )
+    (ls:Collection<LayerSpec>):
+      add-all(layers(s), ls)
+  reverse!(layers(s))
+  s
+
+doc: \<DOC>
+Add one or more layers to the bottom of the board stackup.
+
+When used on its own, this function is useful for creating asymmetric
+pcb stackups. This function is most useful when used on a non-empty
+layer stack.
+
+@param l-set layer or set of layers to add to the top of the stack. Note
+that if this value is a collection, then the layers will be added to
+the stack one at a time. For example:
+
+```
+add-bottom( [dielectric, copper], stack)
+```
+
+This will add the dielectric to the bottom of the stack, and then the copper
+after the dielectric.
+
+@param s LayerStack we are adding to.
+@return The modified layer stack object
+
+
+<DOC>
+public defn add-bottom (l-set:LayerSpec|Collection<LayerSpec>, s:LayerStack) -> LayerStack :
+  match(l-set):
+    (l:LayerSpec):
+      add(layers(s), l)
+    (ls:Collection<LayerSpec>):
+      add-all(layers(s), ls)
+  s
+
+doc: \<DOC>
+Symmetrically add another copper layer with dielectric to the stackup
+
+This function takes the current stackup and adds the dielectric layer on
+both sides, followed by the copper layer on both sides.
+
+This results in a board that is built up from the center with 2 more dielectric
+layers, and 2 more copper layers. This constructs a symmetric stackup.
+
+@param copper Copper Layer to add to the top and the bottom
+@param dielectric Dielectric Layer to add to the top and the bottom.
+@param s The LayerStack object
+
+@return The LayerStack object that was passed in.
+
+@snippet
+
+```
+val stack = LayerStack(name = "6-Layer Symmetric Stackup")
+
+val copper-1oz = Copper("cu", 1.0)
+val core-FR4 = FR4("core", 1.0)
+val prepreg-FR4 = FR4("prepreg", 0.5)
+
+add-symmetric(copper-1oz, core-FR4,
+  add-symmetric(copper-1oz, prepreg-FR4,
+    add-symmetric(copper-1oz, core-FR4, stack)
+  )
+)
+```
+
+<DOC>
+public defn add-symmetric (copper:LayerSpec, dielectric:LayerSpec, s:LayerStack) -> LayerStack:
+  if length(layers(s)) > 0:
+    val ls = [dielectric, copper]
+    add-bottom(ls, s)
+    add-top(ls, s)
+  else:
+    ; If there are no layers yet - then we need to just create
+    ;  a single dielectric layer.
+    add-all(layers(s), [copper, dielectric, copper])
+  s
+
+doc: \<DOC>
+Add a soldermask layer to both sides of the board.
+<DOC>
+public defn add-soldermask (sm:LayerSpec, s:LayerStack) -> LayerStack :
+  if length(layers(s)) == 0:
+    throw $ ValueError("Invalid Layer Stack for Soldermask - Must be non-zero length")
+
+  add-top(sm, s)
+  add-bottom(sm, s)
+
+doc: \<DOC>
+Check that the LayerStack has a valid sequence of layers.
+
+This type expects the layers to be added as an alternating
+sequence of Conductors and Dielectrics. This function
+checks for this order and throws an exception if an invalid
+order is detected.
+<DOC>
+public defn validate! (stack:LayerStack) -> False :
+  if length(layers(stack)) == 0:
+    throw $ ValueError("Invalid Stack - No Layers Found")
+  var last:Maybe<LayerSpec> = None()
+  for l in layers(stack) do:
+    match(last):
+      (_:None): false
+      (o:One<LayerSpec>):
+        val err-msg = "Invalid Stackup - Expected alternating Dielectric/Conductor Layers"
+        match(material(l), material $ value(o)):
+          (prev:DielectricMaterial, curr:DielectricMaterial):
+            throw $ ValueError(err-msg)
+          (prev:ConductorMaterial, curr:ConductorMaterial):
+            throw $ ValueError(err-msg)
+          (prev, curr):
+            false
+    last = One(l)
+
+doc: \<DOC>
+Get the total number of conductor layers in the layer stack.
+
+This is the number of signal and plane layers that are available
+in this stackup.
+<DOC>
+public defn get-conductor-count (stack:LayerStack) -> Int :
+  length $ to-tuple $ for l in layers(stack) filter:
+    material(l) is ConductorMaterial
+
+doc: \<DOC>
+Retrieve the conductor LayerSpec and the adjacent dielectric layers if any
+
+When calculating trace widths, etc it is often useful to know the
+features of the copper layers those traces will be placed on. This function
+helps extract the copper layer data as well as the adjacent dielectric
+layers if any.
+@param stack LayerStack object to interrogate
+@param index Conductor layer to inspect. This is a zero-based index
+where the top layer is 0, the first inner layer is 1, etc.
+<DOC>
+public defn get-conductor (stack:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
+  if index < 0:
+    throw $ ValueError("Invalid Copper Layer Index: %_" % [index])
+  var cnt = 0
+  val ls = layers(stack)
+  val cu-index? = for l in ls index-when:
+    if material(l) is ConductorMaterial:
+      val cu-match = cnt == index
+      if not cu-match:
+        cnt = cnt + 1
+      cu-match
+
+  defn get-pre-dielectric (cu-index):
+    if cu-index > 0:
+      One(ls[cu-index - 1])
+    else:
+      None()
+
+  defn get-post-dielectric (cu-index):
+    val num = length(ls)
+    if cu-index < (num - 1):
+      One(ls[cu-index + 1])
+    else:
+      None()
+
+  match(cu-index?):
+    (_:False): throw $ ValueError("No Copper Layer with Index: %_" % [index])
+    (cu-index:Int):
+      [get-pre-dielectric(cu-index), ls[cu-index], get-post-dielectric(cu-index)]
+
+defn make-name (x:LayerStack) :
+  ; I can't use the `name` string in the pcb-stackup definition
+  ;  because the macro overrides it.
+  val v? = name(x)
+  inside pcb-stackup:
+    match(v?):
+      (_:None): false
+      (d:One<String>):
+        name = value(d)
+
+defn make-description (x:LayerStack) :
+  ; I can't use the `description` string in the pcb-stackup definition
+  ;  because the macro overrides it.
+  val v? = description(x)
+  inside pcb-stackup:
+    match(v?):
+      (_:None): false
+      (d:One<String>):
+        description = value(d)
+
+public defn create-pcb-stackup (stack:LayerStack) :
+
+  pcb-stackup custom-stackup :
+    make-name(stack)
+    make-description(stack)
+
+    for l in layers(stack) do:
+      make-layer-statement(l)
+
+  custom-stackup
