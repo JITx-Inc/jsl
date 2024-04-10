@@ -1,0 +1,19 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/pin-utils:
+  import core
+  import collections
+  import math
+  import jitx
+
+; Add a key-value pair to a HashTable where the values are Vectors
+; (convenience method for handling the no-key case)
+public defn add-to-vector-table<?K,?V> (h: HashTable<?K, Vector<?V>>, key: K, value: V) :
+  if key?(h, key) :
+    add(h[key], value)
+  else :
+    h[key] = to-vector<V> $ [value]
+
+public defn add-to-vector-table<?K,?V> (h: HashTable<?K, Vector<?V>>, key: K, values: Seqable<V>) :
+  if not key?(h, key) :
+    h[key] = to-vector<V> $ []
+  add-all(h[key], values)
