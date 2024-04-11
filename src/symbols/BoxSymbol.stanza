@@ -575,17 +575,13 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
     println("Building cell at: r%_c%_s%_" % [row, col, side])
     val rcs = RCS(row, col, side)
     within pin-info = got?(pin-info-by-rcs, rcs) :
-      val actual-size = actual-size-by-rcs[rcs]
-      var offset = DEF_TOP_BORDER_MARGIN
-      ;println("Size for cell %_" % [actual-size])
-
       defn calc-start (base:Point, offset:Double) -> Point :
         match(side) :
           (lr: Left|Right) : Point(x(base), y(base) - offset)
           (ud: Up|Down) : Point(x(base) + offset, y(base))
 
       ; push alignment group to the top
-      defn push-and-build-align-group (align:N|E|W|S, align-start:Point) :
+      defn build-edge-align-group (align:N|E|W|S, align-start:Point) :
         match(get?(pin-groups-by-align(pin-info), align)):
           (pin-groups: Vector<Ref|String>) :
             var offset = 0.0
@@ -603,55 +599,59 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
             offset
           (f) : 0.0
 
+      defn build-center-align-group (top-start:Point, top-size:Double, bottom-start:Point) :
+        within pin-order = got?(pin-groups-by-align(pin-info), C) :
+          val center-start = calc-start(top-start, top-size)
+          println("Center start %_" % [center-start])
+          val offset = 0.0
+          var above-center = 0.0
+          var below-center = 0.0
+
+          ; odd number of groups/pins, need to split center group
+          if (length(pin-order) % 2 != 0) :
+            val center-pin-group = length(pin-order) / 2
+            val group-length =
+              match(pin-order[center-pin-group]) :
+                (g: String) : length(pin-groups(pin-info)[g])
+                (p: Ref) : 1
+            val edge-to-center = to-double((group-length / 2) - ((group-length - 1) % 2)) * ppitch
+            above-center = above-center + edge-to-center
+            below-center = below-center + edge-to-center
+
+          for i in 0 to length(pin-order) / 2 do :
+            var group-pins = 0.0
+            for p in pin-order do :
+              match(p) :
+                (g: String) : group-pins = group-pins + ppitch * to-double(length(pin-groups(pin-info)[g]) - 1)
+                (r: Ref)  : false
+            c1 = c1 + DEF_PIN_INTER_GROUP_MARGIN * to-double(length(pin-order)) + group-pins
+          println("C1 %_ C2 %_" % [c1, c2])
+          val center = y(center-start) - ((y(center-start) - y(bottom-start)) / 2.0)
+          if (center + c1) <= y(center-start) and center - c2 >= y(bottom-start) :
+            offset = 0.0
+            for (pin-or-group in pin-order, i in 0 to false) do :
+              val pins =
+                match(pin-or-group) :
+                  (single: Ref) : [single]
+                  (group: String) : pin-groups(cell)[group]
+              val new-start =
+                match(side) :
+                  (lr: Left|Right) : calc-start(x(center-start), center + c1, 0.0, offset)
+                  (ud: Up|Down) : calc-start(x(center-start), y(center-start), offset, 0.0)
+              println("[fake2] Building pins %_ at %_" % [pins, new-start])
+              build-pin-group(pins, new-start, side)
+              offset = offset + to-double(length(pins)) * ppitch
+          else :
+            println("NEED TO MOVE CENTER C %_ C1 %_ C2 %_" % [center c1, c2])
+
+      val actual-size = actual-size-by-rcs[rcs]
       val top-start = calc-start(start, DEF_TOP_BORDER_MARGIN)
-      val top-size = push-and-build-align-group(top-anchor(side), top-start)
+      val top-size = build-edge-align-group(top-anchor(side), top-start)
       val bottom-start = calc-start(start, actual-size - DEF_BOTTOM_BORDER_MARGIN -
         get?(min-align-group-size(pin-info), bottom-anchor(side), 0.0))
-      val bottom-size = push-and-build-align-group(bottom-anchor(side), bottom-start)
 
-      val center-start = calc-start(top-start, top-size)
-      println("Center start %_, Bottom start %_" % [center-start, bottom-start])
-      within pin-order = got?(pin-groups-by-align(pin-info), C) :
-        val offset = 0.0
-        var c1 = 0.0
-        var c2 = 0.0
-        ; odd number of groups/pins
-        if (length(pin-order) % 2 != 0) :
-          val center-group = (length(pin-order) / 2)
-          val group-length =
-            match(pin-order[center-group]) :
-              (g: String) :
-                length(pin-groups(pin-info)[g])
-              (p: Ref) :
-                1
-          c1 = c1 + to-double((group-length / 2) - ((group-length - 1) % 2)) * ppitch
-          c2 = c2 + to-double((group-length / 2) - ((group-length - 1) % 2)) * ppitch
-        println("Pin -order %_" % [pin-order])
-        for i in 0 to length(pin-order) / 2 do :
-          var group-pins = 0.0
-          for p in pin-order do :
-            match(p) :
-              (g: String) : group-pins = group-pins + ppitch * to-double(length(pin-groups(pin-info)[g]) - 1)
-              (r: Ref)  : false
-          c1 = c1 + DEF_PIN_INTER_GROUP_MARGIN * to-double(length(pin-order)) + group-pins
-        println("C1 %_ C2 %_" % [c1, c2])
-        val center = y(center-start) - ((y(center-start) - y(bottom-start)) / 2.0)
-        if (center + c1) <= y(center-start) and center - c2 >= y(bottom-start) :
-          offset = 0.0
-          for (pin-or-group in pin-order, i in 0 to false) do :
-            val pins =
-              match(pin-or-group) :
-                (single: Ref) : [single]
-                (group: String) : pin-groups(cell)[group]
-            val new-start =
-              match(side) :
-                (lr: Left|Right) : calc-start(x(center-start), center + c1, 0.0, offset)
-                (ud: Up|Down) : calc-start(x(center-start), y(center-start), offset, 0.0)
-            println("[fake2] Building pins %_ at %_" % [pins, new-start])
-            build-pin-group(pins, new-start, side)
-            offset = offset + to-double(length(pins)) * ppitch
-        else :
-          println("NEED TO MOVE CENTER C %_ C1 %_ C2 %_" % [center c1, c2])
+      build-center-align-group(top-start, top-size, bottom-start)
+      build-edge-align-group(bottom-anchor(side), bottom-start)
 
   ; finally build pins in each cell
   defn calc-start (base:Point, x-off:Double, y-off:Double) :
@@ -878,17 +878,17 @@ public defn set-column (pins:Seqable<Pin>, col:Int) :
 public defn set-column (pin:Pin, col:Int):
   set-column([pin], col)
 
-defn get-row (p:Pin) -> Maybe<Int>:
-  One(0)
+; defn get-row (p:Pin) -> Maybe<Int>:
+;   One(0)
 
-defn get-row! (p:Pin) -> Int:
-  0
+; defn get-row! (p:Pin) -> Int:
+;   0
 
-defn get-column (p:Pin) -> Maybe<Int>:
-  One(0)
+; defn get-column (p:Pin) -> Maybe<Int>:
+;   One(0)
 
-defn get-column! (p:Pin) -> Int:
-  0
+; defn get-column! (p:Pin) -> Int:
+;   0
 
 doc: \<DOC>
 Set a horizontal line separator on the edge of a row
@@ -943,11 +943,11 @@ public defn set-side (pin-set:Seqable<Pin>, side:Dir) :
 public defn set-side (pin:Pin, side:Dir) :
   set-side([pin], side)
 
-defn get-side (p:Pin) -> Maybe<Dir> :
-  One(Left)
+; defn get-side (p:Pin) -> Maybe<Dir> :
+;   One(Left)
 
-defn get-side! (p:Pin) -> Dir :
-  Left
+; defn get-side! (p:Pin) -> Dir :
+;   Left
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Alignment
@@ -975,11 +975,11 @@ public defn set-alignment (b:BoxSymbol, group:String, pos:Anchor) :
   val group-pins = to-tuple $ pins-in-group(b, group)
   set-alignment(group-pins, pos)
 
-defn get-alignment (p:Pin) -> Maybe<Anchor> :
-  One(C)
+; defn get-alignment (p:Pin) -> Maybe<Anchor> :
+;   One(C)
 
-defn get-alignment! (p:Pin) -> Anchor :
-  C
+; defn get-alignment! (p:Pin) -> Anchor :
+;   C
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Group
