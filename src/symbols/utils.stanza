@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/symbols/pin-utils:
+defpackage jsl/symbols/utils:
   import core
   import collections
   import math

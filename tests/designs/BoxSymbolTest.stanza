@@ -49,9 +49,9 @@ pcb-component basic-test:
   #EXPECT(length(results) == 0)
 
   ; test grid init
-  #EXPECT(has-active-grid(box) == false)
+  #EXPECT(has-grid?(box) == false)
   set-grid(box, [4, 2])
-  #EXPECT(has-active-grid(box) == true)
+  #EXPECT(has-grid?(box) == true)
   for p in pins(self) do :
     #EXPECT(property(p.row) == 0)
     #EXPECT(property(p.column) == 0)
@@ -136,7 +136,7 @@ pcb-component basic-grid:
       [ GND | p[4] | Left | 4]
 
   val box = BoxSymbol(self)
-  set-active-grid(box, [5,2])
+  set-grid(box, [5,2])
   set-alignment(to-pin(self.DOUT), C)
   val symb = create-symbol(box)
   assign-symbol(symb)
@@ -171,8 +171,52 @@ pcb-component basic-grid-large:
       [ GND | p[4] | Left | 4]
 
   val box = BoxSymbol(self)
-  set-active-grid(box, [5,2])
+  set-grid(box, [5,2])
   set-alignment(to-pin(self.DOUT), C)
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 18,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component test-chip:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir]
+      [ VDD | p[8] | Right ]
+      [ DIN  | p[1] | Left ]
+      [ DIN2  | p[9] | Left ]
+      [ DIN3  | p[10] | Left ]
+      [ DIN4  | p[11] | Left ]
+      [ DIN5  | p[12] | Left ]
+      [ DIN6  | p[13] | Left ]
+      [ DIN7  | p[14] | Left ]
+      [ DIN8  | p[15] | Left ]
+      [ DIN9  | p[16] | Left ]
+      [ DIN10  | p[17] | Left ]
+      [ EN | p[2] | Left ]
+      [ CLK | p[3] | Left ]
+      [ DOUT | p[5] | Right ]
+      [ ALERT | p[6] | Right ]
+      [ NC    | p[7] | Left ]
+      [ GND | p[4] | Left ]
+
+  val box = BoxSymbol(self)
+
+  val din-pins = find-pins-by-regex(box, "DIN.*")
+  set-row(din-pins, 1)
+  set-row(to-pins $ [self.CLK, self.EN], 1)
+  set-row(to-pin(self.NC), 3)
+  set-row(to-pin(self.GND), 4)
+  set-row(to-pin(self.DOUT), 1)
+  set-row(to-pin(self.ALERT), 2)
+  set-grid(box, [5,2])
+  set-alignment(to-pin(self.DOUT), C)
+
   val symb = create-symbol(box)
   assign-symbol(symb)
 
@@ -189,6 +233,7 @@ pcb-module test-design:
   inst c1: basic
   inst c2: basic-grid
   inst c3: basic-grid-large
+  inst c4: test-chip
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 
