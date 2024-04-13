@@ -4,7 +4,7 @@ defpackage jsl/symbols/BoxSymbol:
   import collections
   import pcre
   import jitx
-  import jitx/api
+  ;import jitx/api
   import jitx/commands
   import jitx/utils/got
   import jitx/schematic/analysis
@@ -75,6 +75,21 @@ defmethod print (o:OutputStream, e:BoxSymbolApiError) :
 
 defmethod print (o:OutputStream, e:BoxSymbolParamError) :
   print(o, "BoxSymbol invalid param: %_" % [message(e)])
+
+defn check-port-type (objs: Seqable<JITXObject>) -> Tuple<JITXObject> :
+  val non-ports = Vector<JITXObject>()
+  val ports = Vector<JITXObject>()
+  for o in objs do :
+    match(o) :
+      (s:Self) : add(non-ports, s)
+      (ns) :
+        match(port-type(ns)) :
+          (p:PortType) : add(ports, o)
+          (f): add(non-ports, o)
+  if length(non-ports) > 0 :
+    throw $ BoxSymbolApiError("Object(s) %_ are not of expected PortType"
+      % [non-ports])
+  to-tuple $ ports
 
 public defn to-pins (objs:Seqable<JITXObject>) -> Tuple<Pin> :
   to-tuple $ for o in objs seq : Pin(local(o))
@@ -871,12 +886,9 @@ edges of the box symbol.
 @param column Column index into the pin grid.
 @throws IndexError If either the `row` or `column` are outside the active grid cells
 <DOC>
-public defn set-grid-edge (pins:Seqable<Pin>, row:Int, col:Int) :
-  set-row(pins, row)
-  set-column(pins, col)
-
-public defn set-grid-edge (pin:Pin, row:Int, col:Int) :
-  set-grid-edge([pin], row, col)
+public defn set-grid-edge (row:Int, col:Int, pins: JITXObject ...) :
+  set-row(row, pins = pins)
+  set-column(to-pins(pins), col)
 
 doc: \<DOC>
 Set the Row assignment for these pins
@@ -885,13 +897,11 @@ Typically this would be used when the `side` parameter had already
 been set on these pins to `Left` or `Right`. The `side` parameter would
 then drive the column assignment to either `0` or `N-1` where N is the number of columns .
 <DOC>
-public defn set-row (pins:Seqable<Pin>, row:Int):
+public defn set-row (row:Int, pins: JITXObject ...) :
+  val valid-pins = check-port-type(pins)
   check-non-neg(ROW_PROP, row)
-  for p in pins do :
+  for p in valid-pins do :
     set-property(p, ROW_PROP, row)
-
-public defn set-row (pin:Pin, row:Int) :
-  set-row([pin], row)
 
 doc: \<DOC>
 Set the Column assignment for these pins

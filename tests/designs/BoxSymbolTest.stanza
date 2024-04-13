@@ -61,7 +61,7 @@ pcb-component basic-test:
   ; tests set-row/set-column
   val [row, col] = [3,3]
   test-pins = to-pins(pins(self))
-  set-row(test-pins, row)
+  set-row(row, pins = pins(self))
   set-column(test-pins, col)
   for p in pins(self) do :
     #EXPECT(property(p.row) == row)
@@ -80,11 +80,11 @@ pcb-component basic-test:
     else :
       #EXPECT(get-property?(p, ALIGN_PROP) == None())
 
-  set-row(pins-in-group(box, "inputs"), 0)
+  set-row(0, pins = pins-in-group(box, "inputs"))
   for p in group1 do :
     #EXPECT(property(p.row) == 0)
 
-  set-row(to-pin(self.VDD), 0)
+  set-row(0, self.VDD)
   set-alignment(to-pin(self.VDD), S)
 
   val symb = create-symbol(box)
@@ -208,12 +208,12 @@ pcb-component test-chip:
   val box = BoxSymbol(self)
 
   val din-pins = find-pins-by-regex(box, "DIN.*")
-  set-row(din-pins, 1)
-  set-row(to-pins $ [self.CLK, self.EN], 1)
-  set-row(to-pin(self.NC), 3)
-  set-row(to-pin(self.GND), 4)
-  set-row(to-pin(self.DOUT), 1)
-  set-row(to-pin(self.ALERT), 2)
+  set-row(1, pins = din-pins)
+  set-row(1, self.CLK, self.EN)
+  set-row(3, self.NC)
+  set-row(4, self.GND)
+  set-row(1, self.DOUT)
+  set-row(2, self.ALERT)
   set-grid(box, [5,2])
   set-alignment(to-pin(self.DOUT), C)
 
