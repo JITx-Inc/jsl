@@ -245,6 +245,9 @@ defstruct BoxSymbolInfo :
       default => [], setter => set-pin-order
     )
 
+  decorator-by-pin:HashTable<Ref, Vector<PinDecorator>>
+    with: (default => HashTable<Ref,Vector<PinDecorator>>())
+
 ; ============== Helper Functions ================
 ;
 defn get-params (x:BoxSymbol) -> BoxSymbolParams :
@@ -414,7 +417,6 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
           to-double(min-row-width(params))
         (ud: Up|Down):
           to-double(min-col-width(params))
-    println("CELL DIMENSION: %_, %_, min %_" % [c, align-to-size, max(total, min-size)])
     CellSizeInfo(align-to-size, max(total, min-size))
 
   defn build-cell-info (rcs:RCS, pins:Vector<Ref>) :
@@ -513,7 +515,6 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
   for p-ref in pin-order-bs do :
     val p-info = pin-info-bs[p-ref]
     val rcs = calc-rcs(p-info)
-    println("PIN %_ HAS PROPS %_" % [p-ref, p-info])
     add-to-vector-table(pins-by-rcs, rcs, p-ref)
 
   ; build cell-info for each grid cell
@@ -556,7 +557,32 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
         (ud:Up|Down) :
           for i in 0 to length(pins) seq : Point(x(start) + to-double(i) * ppitch, y(start))
     for (p in pins, pos in positions) do :
-      add-pin(node, p, pos, params = create-default-vpin-params())
+      val decs = get?(decorator-by-pin(box-info(bs)), p, [])
+      val dec-offset =
+        if length(decs) == 0 : pos
+        else :
+          match(side) :
+            (l:Left) : loc(0.6 0.0) * pos
+            (r:Right) : loc((-1.0), 0.0) * pos
+            (u:Up) : pos
+            (d:Down) : pos
+
+      val custom-params =
+        if length(decs) == 0 :
+          create-default-vpin-params()
+        else :
+          VirtualPinParams(
+            direction = side,
+            pin-length = pin-length(params),
+            pad-ref-size = pad-ref-size(params)
+          )
+
+      val vpin = add-pin(node, p, pos, params = custom-params)
+      if length(decs) > 0 :
+        text(node, dec-offset, to-string(p), font-size = 2)
+      for d in decs do :
+        add-decorator(vpin, d)
+
     to-double(length(pins)) * ppitch
 
   defn build-cell (row:Int, col:Int, side:Dir, start:Point) :
@@ -637,7 +663,7 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
 
       val actual-size = actual-size-by-rcs[rcs]
       val size-info = size-info-by-rcs[rcs]
-      println("BUILDING %_, %_ %_" % [rcs, size-info, actual-size])
+      println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
       val top-start = calc-start(start, DEF_CELL_TOP_MARGIN)
       val top-size = build-edge-align-group(top-anchor(side), top-start)
       val bottom-start = calc-start(start, actual-size - DEF_CELL_BOTTOM_MARGIN -
@@ -650,7 +676,6 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
   defn calc-start (base:Point, x-off:Double, y-off:Double) :
     Point(x(base) + x-off, y(base) - y-off)
 
-  println("DEBUG %_" % [actual-size-by-rcs])
   var row-offset = 0.0
   for i in 0 to num-rows do :
     val cols =
@@ -1046,5 +1071,9 @@ Add a particular decorator[s] to the passed pins.
 
 NOTE: Multiple decorators may not stack well yet - WIP.
 <DOC>
-defn add-decorator (b:BoxSymbol, pin-set:Tuple<Pin>|Pin, decorators:PinDecorator ... ) :
-  false
+public defn add-decorator (b:BoxSymbol, pin-set:Tuple<Pin>, decorators:Seqable<PinDecorator>) :
+  for p in pin-set do :
+    add-to-vector-table(decorator-by-pin(box-info(b)), ref(p), decorators)
+
+public defn add-decorator (b:BoxSymbol, p:Pin, decorator:PinDecorator) :
+  add-decorator(b, [p], [decorator])

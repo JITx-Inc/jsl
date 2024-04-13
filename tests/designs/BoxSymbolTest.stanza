@@ -16,6 +16,7 @@ defpackage jsl/tests/designs/BoxSymbolTest:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/symbols/SymbolDefn
+  import jsl/symbols/decorators
 
 
 pcb-component basic-test:
@@ -216,6 +217,9 @@ pcb-component test-chip:
   set-row(to-pin(self.ALERT), 2)
   set-grid(box, [5,2])
   set-alignment(to-pin(self.DOUT), C)
+
+  add-decorator(box, to-pin(self.ALERT), OpenCollectorDecorator())
+  add-decorator(box, to-pin(self.CLK), ClockDecorator())
 
   val symb = create-symbol(box)
   assign-symbol(symb)
