@@ -18,7 +18,6 @@ defpackage jsl/tests/designs/BoxSymbolTest:
   import jsl/symbols/SymbolDefn
   import jsl/symbols/decorators
 
-
 pcb-component basic-test:
   pin-properties:
     [pin:Ref | pads:Ref ... | side:Dir]

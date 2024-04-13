@@ -260,7 +260,7 @@ defn get-params (x:BoxSymbol) -> BoxSymbolParams :
 defn save-pin-info (x:BoxSymbol) :
   val pin-infos = HashTable<Ref, HashTable<Symbol, ?>>()
   val pin-order = Vector<Ref>()
-  for p in pins(obj(x)) do :
+  for p in sort-by-row-index(pins(obj(x))) do :
     val props = HashTable<Symbol, ?>()
     for pr in SYM_PROPS do :
       match(get-property?(p, pr)) :
@@ -1077,3 +1077,20 @@ public defn add-decorator (b:BoxSymbol, pin-set:Tuple<Pin>, decorators:Seqable<P
 
 public defn add-decorator (b:BoxSymbol, p:Pin, decorator:PinDecorator) :
   add-decorator(b, [p], [decorator])
+
+;Sort the given pins by their .pin-properties-row-index field.
+defn sort-by-row-index (pins:Tuple<JITXObject>) -> Tuple<JITXObject> :
+  ;Compare pin[i0] versus pin[i1].
+  ;Indices are used, instead of the pin directly, in order to perform a
+  ;stable sort.
+  ;All pins without a .pin-properties-row-index are put in the beginning.
+  defn compare-index (i0:Int, i1:Int) :
+    val ai = value?(property?(pins[i0].pin-properties-row-index))
+    val bi = value?(property?(pins[i1].pin-properties-row-index))
+    match(ai, bi) :
+      (ai:Int, bi:Int) : compare(ai, bi)
+      (ai:Int, bi) : 1
+      (ai, bi:Int) : -1
+      (ai, bi) : compare(i0,i1)
+  val indices = qsort(0 to length(pins), compare-index)
+  map({pins[_]}, indices)
