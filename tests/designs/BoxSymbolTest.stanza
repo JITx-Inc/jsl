@@ -289,23 +289,23 @@ pcb-component test-24AA025:
   manufacturer = "Microchip"
   mpn = "24AA025UIDT-I/OT"
 
-  ; port bus : i2c
-  ; port rail : power
-  ; port ADDR : pin[2]
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
 
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
-    [self.bus.scl | p[1] | Left | 0 | "SCL" ]
-    [self.bus.sda | p[3] | Left | 0 | "SDA" ]
-    [self.rail.v+ | p[6] | Right | 0 | "VCC" ]
-    [self.rail.v- | p[2] | Left | 1 | "VSS" ]
-    [self.ADDR[0] | p[5] | Right | 1 | "A0" ]
-    [self.ADDR[1] | p[4] | Right | 1 | "A1" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
 
   val box = BoxSymbol(self)
   set-grid(box, [2,2])
-  set-alignment(N, self.rail.v+)
-  set-alignment(S, self.rail.v-)
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
 
   val symb = create-symbol(box)
   assign-symbol(symb)
@@ -325,7 +325,7 @@ pcb-module test-design:
   inst c3: basic-grid-large
   inst c4: test-chip
   inst c5: test-chip-right
-  ;inst c6: test-24AA025
+  inst c6: test-24AA025
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 

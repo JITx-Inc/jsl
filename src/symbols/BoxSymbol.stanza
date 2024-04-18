@@ -1013,8 +1013,8 @@ public defn set-alignment (pos:Anchor, pins: JITXObject ...)  :
 
 public defn set-alignment (pos:Anchor, pins: Seqable<JITXObject>)  :
   val valid-pins = check-port-type(pins)
-    for p in valid-pins do :
-      set-property(p, ALIGN_PROP, pos)
+  for p in valid-pins do :
+    set-property(p, ALIGN_PROP, pos)
 
 ; defn get-alignment (p:Pin) -> Maybe<Anchor> :
 ;   One(C)
