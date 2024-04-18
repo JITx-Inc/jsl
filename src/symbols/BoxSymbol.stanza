@@ -76,7 +76,7 @@ defmethod print (o:OutputStream, e:BoxSymbolApiError) :
 defmethod print (o:OutputStream, e:BoxSymbolParamError) :
   print(o, "BoxSymbol invalid param: %_" % [message(e)])
 
-defn check-port-type (objs: Seqable<JITXObject>) -> Tuple<JITXObject> :
+defn check-port-type (objs: Seqable<JITXObject>) -> Vector<JITXObject> :
   val non-ports = Vector<JITXObject>()
   val ports = Vector<JITXObject>()
   for o in objs do :
@@ -89,7 +89,7 @@ defn check-port-type (objs: Seqable<JITXObject>) -> Tuple<JITXObject> :
   if length(non-ports) > 0 :
     throw $ BoxSymbolApiError("Object(s) %_ are not of expected PortType"
       % [non-ports])
-  to-tuple $ ports
+  ports
 
 public defn to-pins (objs:Seqable<JITXObject>) -> Tuple<Pin> :
   to-tuple $ for o in objs seq : Pin(local(o))
@@ -715,9 +715,8 @@ public defmethod build-artwork (x:BoxSymbol, node:SymbolNode) :
 
 public defmethod build-params (x:BoxSymbol, sn:SymbolNode) :
   val b = glyph-bounds(sn)
-  text(sn, [0.0, up(b) + 0.5], ">REF", anchor = SW, font-size = 8)
-  text(sn, [0.0, down(b) - 0.5], ">VALUE", anchor = NW, font-size = 8)
-
+  text(sn, [left(b), up(b) + 0.5], ">REF", anchor = SW, font-size = 8)
+  text(sn, [left(b), down(b) - 0.5], ">VALUE", anchor = NW, font-size = 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Functions
@@ -757,7 +756,7 @@ public defn find-pins-by-regex (
   bank:Int|Ref = ?
   row:Int|Ref = ?
   column:Int|Ref = ?
-  ) -> Tuple<Pin> :
+  ) -> Vector<JITXObject> :
 
   val matches = Vector<Pin>()
 
@@ -769,7 +768,7 @@ public defn find-pins-by-regex (
       and not empty?(regex-match(pattern, to-string(ref(p))))
     ) :
       add(matches, Pin(local(p)))
-  to-tuple $ matches
+  matches
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Pin Grid Functions
@@ -887,8 +886,8 @@ edges of the box symbol.
 @throws IndexError If either the `row` or `column` are outside the active grid cells
 <DOC>
 public defn set-grid-edge (row:Int, col:Int, pins: JITXObject ...) :
-  set-row(row, pins = pins)
-  set-column(to-pins(pins), col)
+  set-row(row, pins)
+  set-column(col, pins)
 
 doc: \<DOC>
 Set the Row assignment for these pins
@@ -898,6 +897,9 @@ been set on these pins to `Left` or `Right`. The `side` parameter would
 then drive the column assignment to either `0` or `N-1` where N is the number of columns .
 <DOC>
 public defn set-row (row:Int, pins: JITXObject ...) :
+  set-row(row, pins)
+
+public defn set-row (row:Int, pins: Seqable<JITXObject>) :
   val valid-pins = check-port-type(pins)
   check-non-neg(ROW_PROP, row)
   for p in valid-pins do :
@@ -910,13 +912,14 @@ Typically this would be used when the `side` parameter had already
 been set on these pins to `Up` or `Down`. The `side` parameter would
 then drive the row assignment to `0` or `M-1` where M is the number of rows.
 <DOC>
-public defn set-column (pins:Seqable<Pin>, col:Int) :
-  check-non-neg(COL_PROP, col)
-  for p in pins do :
-    set-property(p, COL_PROP, col)
+public defn set-column (col:Int, pins: JITXObject ...) :
+  set-column(col, pins)
 
-public defn set-column (pin:Pin, col:Int):
-  set-column([pin], col)
+public defn set-column (col:Int, pins: Seqable<JITXObject>) :
+  val valid-pins = check-port-type(pins)
+    check-non-neg(COL_PROP, col)
+    for p in valid-pins do :
+      set-property(p, ROW_PROP, col)
 
 ; defn get-row (p:Pin) -> Maybe<Int>:
 ;   One(0)
@@ -976,12 +979,13 @@ match the existing functionality, I think we would need to support this.
 @param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a side.
 @param side Selects the edge of a box symbol on to which the pins will be drawn
 <DOC>
-public defn set-side (pin-set:Seqable<Pin>, side:Dir) :
-  for p in pin-set do :
-    set-property(p, SIDE_PROP, side)
+public defn set-side (side:Dir, pins: JITXObject ...)  :
+  set-side(side, pins)
 
-public defn set-side (pin:Pin, side:Dir) :
-  set-side([pin], side)
+public defn set-side (side:Dir, pins: Seqable<JITXObject>)  :
+  val valid-pins = check-port-type(pins)
+  for p in valid-pins do :
+    set-property(p, SIDE_PROP, side)
 
 ; defn get-side (p:Pin) -> Maybe<Dir> :
 ;   One(Left)
@@ -1004,16 +1008,13 @@ public defn pins-in-group (b:BoxSymbol, group:String) -> Tuple<Pin> :
       (none:None) :
         None()
 
-public defn set-alignment (pin-set:Seqable<Pin>, pos:Anchor) :
-  for p in pin-set do :
-    set-property(p, ALIGN_PROP, pos)
+public defn set-alignment (pos:Anchor, pins: JITXObject ...)  :
+  set-alignment(pos, pins)
 
-public defn set-alignment (pin:Pin, pos:Anchor) :
-  set-alignment([pin], pos)
-
-public defn set-alignment (b:BoxSymbol, group:String, pos:Anchor) :
-  val group-pins = to-tuple $ pins-in-group(b, group)
-  set-alignment(group-pins, pos)
+public defn set-alignment (pos:Anchor, pins: Seqable<JITXObject>)  :
+  val valid-pins = check-port-type(pins)
+    for p in valid-pins do :
+      set-property(p, ALIGN_PROP, pos)
 
 ; defn get-alignment (p:Pin) -> Maybe<Anchor> :
 ;   One(C)
@@ -1024,12 +1025,10 @@ public defn set-alignment (b:BoxSymbol, group:String, pos:Anchor) :
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Group
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-public defn set-group (pin-set:Tuple<Pin>, group:String) :
-  for p in pin-set do :
+public defn set-group (group:String, pins: JITXObject ...)  :
+  val valid-pins = check-port-type(pins)
+  for p in valid-pins do :
     set-property(p, GROUP_PROP, group)
-
-public defn set-group (pin:Pin, group:String) :
-  set-group([pin], group)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Margin
