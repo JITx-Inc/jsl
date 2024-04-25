@@ -4,7 +4,6 @@ defpackage jsl/symbols/BoxSymbol:
   import collections
   import pcre
   import jitx
-  ;import jitx/api
   import jitx/commands
   import jitx/utils/got
   import jitx/schematic/analysis
@@ -24,14 +23,13 @@ val DEF_PIN_NAME_SIZE = 0.25
 val DEF_PIN_PITCH = 0.5
 ; min length of rows/columns
 val DEF_COL_WIDTH = 2
-val DEF_ROW_WIDTH = 0
+val DEF_ROW_WIDTH = 1
 ; padding for top and bottom of a cell
-val DEF_CELL_TOP_MARGIN = 0.5
-val DEF_CELL_BOTTOM_MARGIN = 0.5
+val DEF_CELL_TOP_MARGIN = 0.0
+val DEF_CELL_BOTTOM_MARGIN = 0.0
 ; length between groups/singleton pins
-val DEF_INTER_PIN_GROUP_MARGIN = 0.5
-val LR_DEF_ALIGN = S
-val UD_DEF_ALIGN = E
+val DEF_PIN_PADDING = 0.5
+val DESIGNATOR_MARGIN = 1.0
 
 public :
   val ROW_PROP = `row
@@ -39,12 +37,14 @@ public :
   val ALIGN_PROP = `alignment
   val SIDE_PROP = `side
   val GROUP_PROP = `group
+  val TOP_MARGIN_PROP = `top-margin
+  val BOTTOM_MARGIN_PROP = `bottom-margin
 
 val SIDES = [Left, Right, Up, Down]
-val SYM_PROPS = [ROW_PROP, COL_PROP, ALIGN_PROP, SIDE_PROP, GROUP_PROP]
+val SYM_PROPS = [ROW_PROP, COL_PROP, ALIGN_PROP, SIDE_PROP, GROUP_PROP, TOP_MARGIN_PROP, BOTTOM_MARGIN_PROP]
 
 val LR_ANCHORS = [N, C, S]
-val UD_ANCHORS = [E, C, W]
+val UD_ANCHORS = [W, C, E]
 
 defn anchors (s: Dir) :
   match(s) :
@@ -54,12 +54,17 @@ defn anchors (s: Dir) :
 defn top-anchor (s: Dir) :
   match(s) :
     (lr: Left|Right) : N
-    (ud: Up|Down) : E
+    (ud: Up|Down) : W
 
 defn bottom-anchor (s: Dir) :
   match(s) :
     (lr: Left|Right) : S
-    (ud: Up|Down) : W
+    (ud: Up|Down) : E
+
+defn default-anchor (s: Dir) :
+  match(s) :
+    (lr:Left|Right) : S
+    (ud:Up|Down) : E
 
 deftype BoxSymbolError <: Exception
 defmulti message (e: BoxSymbolError) -> ?
@@ -84,7 +89,8 @@ defn check-port-type (objs: Seqable<JITXObject>) -> Vector<JITXObject> :
       (s:Self) : add(non-ports, s)
       (ns) :
         match(port-type(ns)) :
-          (p:PortType) : add(ports, o)
+          (s:SinglePin) : add(ports, ns)
+          (b:Bundle|PortArray) : add-all(ports, pins(ns))
           (f): add(non-ports, o)
   if length(non-ports) > 0 :
     throw $ BoxSymbolApiError("Object(s) %_ are not of expected PortType"
@@ -275,6 +281,7 @@ defn get-params (x:BoxSymbol) -> BoxSymbolParams :
 defn save-pin-info (x:BoxSymbol) :
   val pin-infos = HashTable<Ref, HashTable<Symbol, ?>>()
   val pin-order = Vector<Ref>()
+  check-properties(x)
   for p in sort-by-row-index(pins(obj(x))) do :
     val props = HashTable<Symbol, ?>()
     for pr in SYM_PROPS do :
@@ -287,6 +294,31 @@ defn save-pin-info (x:BoxSymbol) :
     add(pin-order, ref(p))
   set-pin-info(box-info(x), pin-infos)
   set-pin-order(box-info(x), to-tuple $ pin-order)
+
+defn check-properties (x:BoxSymbol) :
+  val b = box-info(x)
+  for p in pins(obj(x)) do :
+    val side? = get-property?(p, SIDE_PROP)
+    match(side?, get-property?(p, ALIGN_PROP)) :
+      (o1:One, o2:One) :
+        if ((value(o1) == Left or value(o1) == Right)
+            and not contains?(LR_ANCHORS, value(o2)))
+          or ((value(o1) == Up or value(o1) == Down)
+            and not contains?(UD_ANCHORS, value(o2))) :
+          throw $ BoxSymbolParamError("Side %_ and Alignment %_ not compatible \
+            for pin %_" % [value(o1), value(o2), ref(p)])
+      (f1, f2) :
+        false
+
+    ; check rows and cols are valid
+    val max-row = get-rows(x) - 1
+    match(get-property?(p, ROW_PROP), side?) :
+      (o1:One, side:One):
+        if (value(side) == Up and value(o1) != 0)
+          or (value(side) == Down and value(o1) != max-row) :
+          throw $ BoxSymbolParamError("Invalid row %_ (should be 0 or %_) \
+            for pin %_ on side %_" % [value(o1), max-row, ref(p), value(side)])
+      (f1, f2): false
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; SymbolDefn Interface
@@ -333,8 +365,8 @@ with :
 ; this may not be the final size because cells in the same row
 ; or column may require larger sizing
 defstruct CellSizeInfo :
-  ; size of eacha alignment group
-  min-align-group-size: HashTable<Anchor, Double>
+  ; position offsets for each pin in each alignment group
+  align-group-offsets: HashTable<Anchor, KeyValue<Double,Vector<Double>>>
   min-total-size: Double
 with :
   printer => true
@@ -349,6 +381,14 @@ with :
   equalable => true
   hashable => true
 
+defn min-cell-size (s: Dir, params: BoxSymbolParams) :
+  DEF_CELL_TOP_MARGIN + DEF_CELL_BOTTOM_MARGIN +
+    match(s) :
+      (lr: Left|Right):
+        to-double(min-row-width(params))
+      (ud: Up|Down):
+        to-double(min-col-width(params))
+
 public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
   val params = get-params(bs)
   val ppitch = pin-pitch(params)
@@ -362,14 +402,16 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
   val size-info-by-rcs = HashTable<RCS, CellSizeInfo>()
   val actual-size-by-rcs = HashTable<RCS, Double>()
 
-  ; determine row/col for a specific pin given properties for that pin
+  ; =========== Calcuate row/col/side for pins ============
+  ;
+  ; determine row col and side for specific pin given properties for that pin
   ; 'Top' gets row = 0
   ; 'Bottom' gets row = num-rows
   ; 'Left' gets col = 0
   ; 'Right' gets col = num-cols
   ; Defaults :
   ;   side = 'Left', row = 0, col = 0
-  defn calc-rcs (props: Table<Symbol,?>) -> RCS:
+  defn calc-rcs-for-pin (ref: Ref, props: Table<Symbol,?>) -> RCS:
     val side = get?(props, SIDE_PROP, Left)
     val has-row? = key?(props, ROW_PROP)
     val has-col? = key?(props, COL_PROP)
@@ -380,61 +422,35 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
       else :
         if has-row? :
           val row = props[ROW_PROP]
-          if row < 0 : 0
-          else if row >= num-rows : num-rows - 1
-          else : row
-        else : 0
+          if row < 0 or row >= num-rows :
+            throw $ BoxSymbolParamError("Invalid row %_ for pin %_" % [row, ref])
+          row
+        else :
+          0
     val col =
       if side == Left : 0
       else if side == Right : num-cols - 1
       else :
         if has-col? :
           val col = props[COL_PROP]
-          if col < 0 : 0
-          else if col >= num-cols : num-cols - 1
-          else : col
-        else : 0
+          if col < 0 or col >= num-cols :
+            throw $ BoxSymbolParamError("Invalid col %_ for pin %_" % [col, ref])
+          col
+        else :
+          0
     RCS(row, col, side)
 
-  ; calculate the minimum length of a given cell
-  defn calc-min-cell-dimension (c:CellPinInfo) -> CellSizeInfo :
-    defn calc-pin-to-pin-length (pin-group: Vector<Ref|String>) -> Double :
-      var total = 0.0
-      for p in pin-group do :
-        match(p) :
-          (single: Ref) : false
-          (group: String) :
-            total = total + ppitch * to-double(length(pin-groups(c)[group]) - 1)
-      total = total + DEF_INTER_PIN_GROUP_MARGIN * to-double(length(pin-group) - 1)
-      total
+  ; group pins by cell and side
+  for p-ref in pin-order-bs do :
+    val p-info = pin-info-bs[p-ref]
+    val rcs = calc-rcs-for-pin(p-ref, p-info)
+    add-to-vector-table(pins-by-rcs, rcs, p-ref)
 
-    ; for a given alignment group, get the dimension of the group
-    val align-to-size = HashTable<Anchor,Double>()
-    for a in anchors(side(c)) do :
-      match(get?(pin-groups-by-align(c), a)) :
-        (pins: Vector<Ref|String>) : align-to-size[a] = calc-pin-to-pin-length(pins)
-        (f) : false
-
-    val edge-padding =
-      match(side(c)) :
-        (lr: Left|Right): DEF_CELL_TOP_MARGIN + DEF_CELL_BOTTOM_MARGIN
-        (ud: Up|Down): DEF_CELL_TOP_MARGIN + DEF_CELL_BOTTOM_MARGIN
-
-    ; count padding between align groups
-    val num-align-groups = to-double(length(to-tuple $ keys(pin-groups-by-align(c))))
-    val align-group-padding = (num-align-groups - 1.0)
-      * (DEF_CELL_TOP_MARGIN + DEF_CELL_BOTTOM_MARGIN)
-
-    val total = sum(values(align-to-size)) + align-group-padding + edge-padding
-    val min-size = edge-padding +
-      match(side(c)) :
-        (lr: Left|Right):
-          to-double(min-row-width(params))
-        (ud: Up|Down):
-          to-double(min-col-width(params))
-    CellSizeInfo(align-to-size, max(total, min-size))
-
-  defn build-cell-info (rcs:RCS, pins:Vector<Ref>) :
+  ; ================ align pins in cell ===============
+  ;
+  ; Run logic to figure out the pin groupings and alignment within each cell
+  ;
+  defn align-pins-for-rcs (rcs:RCS, pins:Vector<Ref>) -> CellPinInfo :
     val aligned-pin-groups = HashTable<Anchor,Vector<Ref|String>>()
     val pin-groups = HashTable<String,Vector<Ref>>()
 
@@ -444,10 +460,7 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
     val seen-groups = HashSet<String>()
 
     val side = side(rcs)
-    val default-anchor =
-      match(side) :
-        (lr:Left|Right) : LR_DEF_ALIGN
-        (ud:Up|Down) : UD_DEF_ALIGN
+    val def-anchor = default-anchor(side)
 
     ; multiple alignments in a group are not allowed
     defn check-group-align (group:String, align:Anchor|False) :
@@ -459,8 +472,8 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
         (f) : false
 
     ; go through all the pins in a cell, bookkeeping the following :
-    ;   * grouping pins by group
-    ;   * bucketing pins and groups of pins by alignment
+    ;   * bucketing pins by group
+    ;   * bucketing singleton pins and groups by alignment
     ;     - if one or more pins in a group has a specific alignment
     ;       that alignment is used for the whole group
     ;     - multiple alignments in a group not allowed
@@ -468,7 +481,6 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
     ; need two passes, first pass is to validate and assign explicitly
     ; specified alignments to groups. second pass is to assign pins that were
     ; unspecified or added to a group after the user assigned an alignment to a group
-    ; (since we don't keep a data structure explicitly tracking group info)
     for p in pins do :
       match(get?(pin-info-bs[p], GROUP_PROP)) :
         (g: String) :
@@ -488,16 +500,72 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
       match(get?(pin-info-bs[p], GROUP_PROP)) :
         (g: String) :
           if add(seen-groups, g) :
-            val a = get?(group-anchors, g, default-anchor)
+            val a = get?(group-anchors, g, def-anchor)
             add-to-vector-table(aligned-pin-groups, a, g)
         (f) :
-          val a = get?(pin-info-bs[p], ALIGN_PROP, default-anchor)
+          val a = get?(pin-info-bs[p], ALIGN_PROP, def-anchor)
           add-to-vector-table(aligned-pin-groups, a, p)
 
-    pin-info-by-rcs[rcs] = CellPinInfo(aligned-pin-groups, pin-groups, side)
-    size-info-by-rcs[rcs] = calc-min-cell-dimension(pin-info-by-rcs[rcs])
+    CellPinInfo(aligned-pin-groups, pin-groups, side)
+
+  ; figure out pin alignment groups for each cell
+  for rcs+pins in pins-by-rcs do :
+    val rcs = key(rcs+pins)
+    pin-info-by-rcs[rcs] = align-pins-for-rcs(rcs, value(rcs+pins))
+
+  ; ================ calculate min size for each cell ==================
+  ;
+  ; calculate size for each alignment section in cell
+  ;
+  defn calc-min-cell-dimension (c:CellPinInfo) -> CellSizeInfo :
+    defn get-top-margin-for-pin (p: Ref) -> Double :
+      match(get?(pin-info-bs[p], TOP_MARGIN_PROP)) :
+        (m:Double) : round-to-grid(m)
+        (f) : DEF_CELL_TOP_MARGIN
+
+    defn get-bottom-margin-for-pin (p: Ref) -> Double :
+      match(get?(pin-info-bs[p], BOTTOM_MARGIN_PROP)) :
+        (m:Double) : round-to-grid(m)
+        (f) : DEF_CELL_BOTTOM_MARGIN
+
+    defn calc-section-offsets (pin-group: Vector<Ref|String>) -> [Double, Vector<Double>] :
+      var total = DEF_PIN_PADDING
+      val pos = Vector<Double>()
+      for (p in pin-group, i in 0 to false) do :
+        match(p) :
+          (single: Ref) :
+            total = total + get-top-margin-for-pin(single)
+            add(pos, total)
+            total = total + get-bottom-margin-for-pin(single)
+            total = total + DEF_PIN_PADDING
+          (group: String) :
+            for p in pin-groups(c)[group] do :
+              total = total + get-top-margin-for-pin(p)
+              add(pos, total)
+              total = total + get-bottom-margin-for-pin(p)
+              total = total + DEF_PIN_PADDING
+      [total, pos]
+
+    ; for a given alignment section, calculate the size of the entire section
+    val align-to-offsets = HashTable<Anchor,KeyValue<Double,Vector<Double>>>()
+    var total = 0.0
+    for a in anchors(side(c)) do :
+      match(get?(pin-groups-by-align(c), a)) :
+        (pins: Vector<Ref|String>) :
+          val [size, offsets] = calc-section-offsets(pins)
+          total = total + size
+          align-to-offsets[a] = size => offsets
+        (f) : false
+    CellSizeInfo(align-to-offsets, max(total, min-cell-size(side(c), params)))
+
+  for rcs+pin-info in pin-info-by-rcs do :
+    val rcs = key(rcs+pin-info)
+    size-info-by-rcs[rcs] = calc-min-cell-dimension(value(rcs+pin-info))
 
   defn calc-width-height () -> [Double, Double] :
+    var max-text-width = 0.0
+    var max-text-length = 0.0
+
     defn calc-side (side:Left|Up, len:Int) -> Double :
       var total-size = 0.0
       val min-cell-size =
@@ -508,7 +576,7 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
         val [start-edge, end-edge] =
           match(side) :
             (l:Left) : [RCS(i,0,Left),RCS(i,(num-cols - 1),Right)]
-            (u:Up) : [RCS(0,i,Up),RCS(len,i,Down)]
+            (u:Up) : [RCS(0,i,Up),RCS((num-rows - 1),i,Down)]
         val cell-size =
           match(
             get?(size-info-by-rcs, start-edge)
@@ -524,20 +592,6 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
       total-size
     [calc-side(Up, num-cols), calc-side(Left, num-rows)]
 
-  ; =========== Start processing ============
-  ;
-  ; group pins by cell and side
-  for p-ref in pin-order-bs do :
-    val p-info = pin-info-bs[p-ref]
-    val rcs = calc-rcs(p-info)
-    add-to-vector-table(pins-by-rcs, rcs, p-ref)
-
-  ; build cell-info for each grid cell
-  for rcs+pins in pins-by-rcs do :
-    build-cell-info(key(rcs+pins), value(rcs+pins))
-
-  defn calc-snap-grid-buffer (dim: Double) -> Double :
-    ceil(dim / 0.5) * 0.5 - (dim)
 
   ; calculate and draw rectangle
   val [width, height] = calc-width-height()
@@ -553,84 +607,88 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
   rectangle(node, width, height, pose = box-pose)
   println("Rectangle w%_, h%_, pose %_" % [width, height, box-pose])
 
-  defn build-pin-group (
-    pins:Vector<Ref>|Tuple<Ref>,
-    start:Point
-    side:Dir
-  ) -> Double :
-    defn create-default-vpin-params () -> VirtualPinParams :
-      VirtualPinParams(
-        direction = side,
-        pin-length = pin-length(params),
-        pad-ref-size = pad-ref-size(params),
-        pin-name-size = pin-name-size(params)
-      )
-    val positions =
-      match(side) :
-        (lr:Left|Right) :
-          for i in 0 to length(pins) seq : Point(x(start), y(start) - to-double(i) * ppitch)
-        (ud:Up|Down) :
-          for i in 0 to length(pins) seq : Point(x(start) + to-double(i) * ppitch, y(start))
-    for (p in pins, pos in positions) do :
-      val decs = get?(decorator-by-pin(box-info(bs)), p, [])
-      val dec-offset =
-        if length(decs) == 0 : pos
-        else :
-          match(side) :
-            (l:Left) : loc(0.6 0.0) * pos
-            (r:Right) : loc((-1.0), 0.0) * pos
-            (u:Up) : pos
-            (d:Down) : pos
-
-      val custom-params =
-        if length(decs) == 0 :
-          create-default-vpin-params()
-        else :
-          VirtualPinParams(
-            direction = side,
-            pin-length = pin-length(params),
-            pad-ref-size = pad-ref-size(params)
-          )
-
-      val vpin = add-pin(node, p, pos, params = custom-params)
-      if length(decs) > 0 :
-        text(node, dec-offset, to-string(p), font-size = 2)
-      for d in decs do :
-        add-decorator(vpin, d)
-
-    to-double(length(pins)) * ppitch
-
   defn build-cell (row:Int, col:Int, side:Dir, start:Point) :
     println("Building cell at: r%_c%_s%_" % [row, col, side])
     val rcs = RCS(row, col, side)
     within pin-info = got?(pin-info-by-rcs, rcs) :
+      val actual-size = actual-size-by-rcs[rcs]
+      val size-info = size-info-by-rcs[rcs]
+      println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
+
       defn calc-start (base:Point, offset:Double) -> Point :
         match(side) :
           (lr: Left|Right) : Point(x(base), y(base) - offset)
           (ud: Up|Down) : Point(x(base) + offset, y(base))
+      defn create-default-vpin-params () -> VirtualPinParams :
+        VirtualPinParams(
+          direction = side,
+          pin-length = pin-length(params),
+          pad-ref-size = pad-ref-size(params),
+          pin-name-size = pin-name-size(params)
+        )
 
-      ; push alignment group to the top
+      defn build-alignment-section (
+        groups:Vector<Ref|String>
+        offsets:Vector<Double>
+        start:Point
+      ) :
+        val pins = Vector<Ref>()
+        for g in groups do :
+          match(g) :
+            (p:Ref) : add(pins, p)
+            (g:String) : add-all(pins, pin-groups(pin-info)[g])
+        val positions =
+          match(side) :
+            (lr:Left|Right) :
+              for i in 0 to length(pins) seq : Point(x(start), y(start) - offsets[i])
+            (ud:Up|Down) :
+              for i in 0 to length(pins) seq : Point(x(start) + offsets[i], y(start))
+        for (p in pins, pos in positions) do :
+          val decs = get?(decorator-by-pin(box-info(bs)), p, [])
+          val dec-offset =
+            if length(decs) == 0 : pos
+            else :
+              match(side) :
+                (l:Left) : loc(0.6 0.0) * pos
+                (r:Right) : loc((-1.0), 0.0) * pos
+                (u:Up) : loc(loc(0.0, (- 1.0)) * pos, 90.0)
+                (d:Down) : loc(loc(0.0, 0.6) * pos, 90.0)
+          val custom-params =
+            if length(decs) == 0 :
+              create-default-vpin-params()
+            else :
+              VirtualPinParams(
+                direction = side,
+                pin-length = pin-length(params),
+                pad-ref-size = pad-ref-size(params)
+              )
+          val vpin = add-pin(node, p, pos, params = custom-params)
+          if length(decs) > 0 :
+            text(node, dec-offset, to-string(p), font-size = 2)
+          for d in decs do :
+            add-decorator(vpin, d)
+
+      ; build an alignment group that's not the center
       defn build-edge-align-group (align:N|E|W|S, align-start:Point) :
         match(get?(pin-groups-by-align(pin-info), align)):
           (groups: Vector<Ref|String>) :
-            var offset = 0.0
-            println("alignment group %_ starts %_"
-                % [align, align-start])
-            for (pin-or-group in groups) do :
-              val pins =
-                match(pin-or-group) :
-                  (single: Ref) : [single]
-                  (group: String) : pin-groups(pin-info)[group]
-              val pins-start = calc-start(align-start, offset)
-              println("Building pins %_ at %_" % [pins, pins-start])
-              offset = offset + build-pin-group(pins, pins-start, side)
-            println("alignment group ends at %_" % [calc-start(align-start, offset)])
-            offset
-          (f) : 0.0
+            println("alignment group %_ starts %_" % [align, align-start])
+            val offsets = value(align-group-offsets(size-info)[align])
+            build-alignment-section(groups, offsets, align-start)
+          (f) : false
 
-      defn build-center-align-group (top-start:Point, top-size:Double, bottom-start:Point,
-        top:Point, cell-size:Double) :
+      ; returns true if p1 is after p2
+      defn after? (p1: Point, p2: Point) -> True|False :
+        match(side) :
+          (lr: Left|Right) :
+            y(p2) > y(p1)
+          (ud: Up|Down) :
+            x(p2) < x(p1)
+
+      defn build-center-align-group (center-start:Point, bottom-start:Point) :
         within pin-order = got?(pin-groups-by-align(pin-info), C) :
+          val size = key(align-group-offsets(size-info)[C])
+          val offsets = value(align-group-offsets(size-info)[C])
           var above-center = 0.0
           var below-center = 0.0
           val center-pin-group = length(pin-order) / 2
@@ -645,46 +703,34 @@ public defmethod build-pins (bs:BoxSymbol, node:SymbolNode) :
             above-center = above-center + edge-to-center
             below-center = below-center + edge-to-center
 
-          ; calculate size of chunk above center pin
-          for i in 0 to center-pin-group do :
-            match(pin-order[i]) :
-              (g: String) : above-center = above-center + ppitch * to-double(length(pin-groups(pin-info)[g]) - 1)
-              (r: Ref)  : false
-          ; add in the pin-group margins
-          above-center = above-center + DEF_INTER_PIN_GROUP_MARGIN * to-double(center-pin-group)
+          above-center = above-center + offsets[center-pin-group]
+          below-center = below-center + size - offsets[center-pin-group]
+          ; Place in the true center of cell first
+          val true-center = calc-start(center-start, round-to-grid(actual-size / 2.0))
+          var adjusted-center = true-center
+          ; check if crosses bottom threshold
+          while after?(calc-start(adjusted-center, below-center), bottom-start) :
+            adjusted-center = calc-start(adjusted-center, (- DEF_PIN_PADDING))
+          ; check if crosses top threshold
+          while after?(center-start, calc-start(adjusted-center, (- above-center))) :
+            adjusted-center = calc-start(adjusted-center, DEF_PIN_PADDING)
+          val adjusted-center-start = calc-start(adjusted-center, (- above-center))
+          build-alignment-section(pin-order, offsets, adjusted-center-start)
 
-          ; calculate size of chunk below center pin
-          for i in (center-pin-group + mod2) to length(pin-order) do :
-            match(pin-order[i]) :
-              (g: String) : above-center = above-center + ppitch * to-double(length(pin-groups(pin-info)[g]) - 1)
-              (r: Ref)  : false
-          below-center = below-center + DEF_INTER_PIN_GROUP_MARGIN * to-double(center-pin-group)
-
-          println("above-center %_, below-center %_" % [above-center, below-center])
-          val center-start = calc-start(top-start, top-size)
-          val true-center = calc-start(top, floor((cell-size / 2.0) / 0.5) * 0.5)
-          ; val center = y(center-start) - ((y(center-start) - y(bottom-start)) / 2.0)
-          ; if (center + c1) <= y(center-start) and center - c2 >= y(bottom-start) :
-          var offset = 0.0
-          for (pin-or-group in pin-order, i in 0 to false) do :
-            val pins =
-              match(pin-or-group) :
-                (single: Ref) : [single]
-                (group: String) : pin-groups(pin-info)[group]
-            val new-start = calc-start(true-center, offset)
-            println("[fake2] Building pins %_ at %_" % [pins, new-start])
-            build-pin-group(pins, new-start, side)
-            offset = offset + to-double(length(pins)) * ppitch
-
-      val actual-size = actual-size-by-rcs[rcs]
-      val size-info = size-info-by-rcs[rcs]
-      println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
-      val top-start = calc-start(start, DEF_CELL_TOP_MARGIN)
-      val top-size = build-edge-align-group(top-anchor(side), top-start)
-      val bottom-start = calc-start(start, actual-size - DEF_CELL_BOTTOM_MARGIN -
-        get?(min-align-group-size(size-info), bottom-anchor(side), 0.0))
-
-      build-center-align-group(top-start, top-size, bottom-start, start, actual-size)
+      val top-size =
+        match(get?(align-group-offsets(size-info), top-anchor(side))) :
+          (kv: KeyValue<Double,Vector<Double>>) :
+            key(kv)
+          (f): 0.0
+      val bottom-start = calc-start(start, actual-size -
+        match(get?(align-group-offsets(size-info), bottom-anchor(side))) :
+          (kv: KeyValue<Double,Vector<Double>>) :
+            key(kv)
+          (f): 0.0
+      )
+      val center-start = calc-start(start, top-size)
+      build-edge-align-group(top-anchor(side), start)
+      build-center-align-group(center-start, bottom-start)
       build-edge-align-group(bottom-anchor(side), bottom-start)
 
   ; finally build pins in each cell
@@ -715,8 +761,8 @@ public defmethod build-artwork (x:BoxSymbol, node:SymbolNode) :
 
 public defmethod build-params (x:BoxSymbol, sn:SymbolNode) :
   val b = glyph-bounds(sn)
-  text(sn, [left(b), up(b) + 0.5], ">REF", anchor = SW, font-size = 8)
-  text(sn, [left(b), down(b) - 0.5], ">VALUE", anchor = NW, font-size = 8)
+  text(sn, [left(b), up(b) + DESIGNATOR_MARGIN], ">REF", anchor = SW, font-size = 8)
+  text(sn, [left(b), down(b) - DESIGNATOR_MARGIN], ">VALUE", anchor = NW, font-size = 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Functions
@@ -985,6 +1031,7 @@ public defn set-side (side:Dir, pins: JITXObject ...)  :
 public defn set-side (side:Dir, pins: Seqable<JITXObject>)  :
   val valid-pins = check-port-type(pins)
   for p in valid-pins do :
+    println("Test pins %_" % [ref(p)])
     set-property(p, SIDE_PROP, side)
 
 ; defn get-side (p:Pin) -> Maybe<Dir> :
@@ -1037,11 +1084,15 @@ public defn set-group (group:String, pins: JITXObject ...)  :
 defn set-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
   false
 
-defn set-top-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
-  false
+public defn set-top-margin (margin:Double, pins: JITXObject ...) :
+  val valid-pins = check-port-type(pins)
+  for p in valid-pins do :
+    set-property(p, TOP_MARGIN_PROP, margin)
 
-defn set-bottom-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
-  false
+public defn set-bottom-margin (margin:Double, pins: JITXObject ...) :
+  val valid-pins = check-port-type(pins)
+  for p in valid-pins do :
+    set-property(p, BOTTOM_MARGIN_PROP, margin)
 
 defn set-left-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
   false
@@ -1103,3 +1154,9 @@ defn sort-by-row-index (pins:Tuple<JITXObject>) -> Tuple<JITXObject> :
       (ai, bi) : compare(i0,i1)
   val indices = qsort(0 to length(pins), compare-index)
   map({pins[_]}, indices)
+
+defn round-to-grid (d: Double) -> Double :
+  to-double(to-int(d / 0.5)) * 0.5
+
+defn calc-snap-grid-buffer (dim: Double) -> Double :
+  ceil(dim / 0.5) * 0.5 - (dim)

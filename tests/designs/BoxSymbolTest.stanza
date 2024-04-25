@@ -185,6 +185,43 @@ pcb-component basic-grid-large:
   )
   assign-landpattern(lp)
 
+pcb-component basic-grid-large-rotate:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Up | 0]
+      [ DIN  | p[1] | Down | 4]
+      [ DIN2  | p[9] | Down | 4]
+      [ DIN3  | p[10] | Down | 4]
+      [ DIN4  | p[11] | Down | 4]
+      [ DIN5  | p[12] | Down | 4]
+      [ DIN6  | p[13] | Down | 4]
+      [ DIN7  | p[14] | Down | 4]
+      [ DIN8  | p[15] | Down | 4]
+      [ DIN9  | p[16] | Down | 4]
+      [ DIN10  | p[17] | Down | 4]
+      [ EN | p[2] | Down | 4]
+      [ CLK | p[3] | Down | 4]
+      [ DOUT | p[5] | Up | 0]
+      [ ALERT | p[6] | Up | 0]
+      [ NC    | p[7] | Down | 4]
+      [ GND | p[4] | Down | 4]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [5,1])
+  set-alignment(C, self.DOUT)
+  add-decorator(box, to-pin(self.ALERT), OpenCollectorDecorator())
+  add-decorator(box, to-pin(self.CLK), ClockDecorator())
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 18,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
 pcb-component test-chip:
   pin-properties:
     [pin:Ref | pads:Ref ... | side:Dir]
@@ -251,6 +288,8 @@ pcb-component test-chip-right:
       [ EN | p[2] | Left ]
       [ CLK | p[3] | Left ]
       [ DOUT | p[5] | Right ]
+      [ VDD2 | p[18] | Right ]
+      [ DOUT2 | p[19] | Left ]
       [ ALERT | p[6] | Right ]
       [ NC    | p[7] | Left ]
       [ GND | p[4] | Left ]
@@ -262,12 +301,17 @@ pcb-component test-chip-right:
   set-row(1, self.CLK, self.EN)
   set-row(3, self.NC)
   set-row(4, self.GND)
-  set-row(1, self.DOUT)
+  set-row(1, find-pins-by-regex(box, "DOUT.*"))
   set-row(2, self.ALERT)
   set-grid(box, [5,2])
-  set-alignment(C, self.DOUT)
-
-  val d-pins = find-pins-by-regex(box, "D.*")
+  set-alignment(C, find-pins-by-regex(box, "DOUT.*"))
+  set-top-margin(2.0,self.VDD)
+  set-bottom-margin(2.0,self.VDD)
+  set-alignment(C, self.VDD2)
+  set-alignment(C, self.VDD)
+  set-top-margin(2.0, self.DIN10)
+  set-bottom-margin(2.0, self.DIN10)
+  val d-pins = find-pins-by-regex(box, "DIN.*")
   set-side(Right, d-pins)
   set-side(Left, self.DOUT)
 
@@ -278,7 +322,7 @@ pcb-component test-chip-right:
   assign-symbol(symb)
 
   val lp = create-landpattern $ SOIC-N(
-    num-leads = 18,
+    num-leads = 20,
     lead-span = min-max(5.8, 6.2),
     package-length = 4.5 +/- 0.10,
     density-level = DensityLevelC
@@ -295,17 +339,20 @@ pcb-component test-24AA025:
 
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
-    [bus.scl | p[1] | Left | 0 | "SCL" ]
-    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Up | 0 | "SCL" ]
+    [bus.sda | p[3] | Up | 0 | "SDA" ]
     [rail.V+ | p[6] | Right | 0 | "VCC" ]
     [rail.V- | p[2] | Left | 1 | "VSS" ]
-    [ADDR[0] | p[5] | Right | 1 | "A0" ]
-    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+    [ADDR[0] | p[5] | Down | 1 | "A0" ]
+    [ADDR[1] | p[4] | Down | 1 | "A1" ]
 
   val box = BoxSymbol(self)
-  set-grid(box, [2,2])
+  set-grid(box, [2,1])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
+  set-side(Right, self.rail)
+  set-alignment(C, self.bus)
+  set-alignment(C, self.ADDR)
 
   val symb = create-symbol(box)
   assign-symbol(symb)
@@ -323,6 +370,7 @@ pcb-module test-design:
   inst c1: basic
   inst c2: basic-grid
   inst c3: basic-grid-large
+  inst c3a: basic-grid-large-rotate
   inst c4: test-chip
   inst c5: test-chip-right
   inst c6: test-24AA025

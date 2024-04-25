@@ -434,8 +434,8 @@ defn make-full-vpin (vp:VirtualPin, scale:Double, pose:Pose) :
   defn dec-rot () -> Pose :
     match(direction(p)):
       (_:Right): loc(Point(0.0, 0.0), FlipX)
-      (_:Up): loc(Point(0.0, 0.0), 90.0)
-      (_:Down): loc(Point(0.0, 0.0), 90.0, FlipX)
+      (_:Up): loc(Point(0.0, 0.0), 90.0, FlipX)
+      (_:Down): loc(Point(0.0, 0.0), 90.0)
       (_:Left): loc(0.0, 0.0)
 
   inside pcb-symbol:
@@ -605,7 +605,7 @@ val FONT-TO-UNIT = 10.0 / 72.0
 
 public defn text (
   sn:SymbolNode,
-  p:Point|[Double, Double]|[Int, Int],
+  p:Pose|Point|[Double, Double]|[Int, Int],
   content:String|Printable,
   --
   font-size:Int = 12
@@ -613,7 +613,10 @@ public defn text (
   name:String = ?,
   class:Seqable<String>|String = []
   ):
-  val p* = to-point(p)
+  val l =
+    match(p):
+      (pose:Pose): pose
+      (point:Point|[Double Double]|[Int Int]): loc(to-point(point))
   val size = to-double(font-size) * FONT-TO-UNIT
-  val art = Text(to-string(content), size, anchor, loc(p*))
+  val art = Text(to-string(content), size, anchor, l)
   add-glyph(sn, art, name? = name, class = class)
