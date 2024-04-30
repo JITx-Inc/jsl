@@ -20,97 +20,17 @@ defpackage jsl/tests/designs/BoxSymbolTest:
   import jsl/bundles/comms
   import jsl/bundles/general
 
-pcb-component basic-test:
-  pin-properties:
-    [pin:Ref | pads:Ref ... | side:Dir]
-      [ VDD | p[8] | Right]
-      [ DIN  | p[1] | Left]
-      [ EN | p[2] | Left]
-      [ CLK | p[3] | Left]
-      [ DOUT | p[5] | Right ]
-      [ ALERT | p[6] | Right ]
-      [ NC    | p[7] | Left ]
-      [ GND | p[4] | Left]
-
-  val box = BoxSymbol(self)
-  var results = []
-  var test-pins = []
-
-  ; test regex
-  results = to-tuple $ seq({to-string(ref(_))}, find-pins-by-regex(box, ".*D"))
-  val expected = ["VDD", "DIN", "DOUT", "GND"]
-  for e in expected do :
-    #EXPECT(contains?(results, e) == true)
-
-  ; test row filtering
-  results = find-pins-by-regex(box, ".*D", row = 0)
-  #EXPECT(length(results) == 0)
-  results = find-pins-by-regex(box, ".*D", bank = 0)
-  #EXPECT(length(results) == 0)
-  results = find-pins-by-regex(box, ".*D", column = 0)
-  #EXPECT(length(results) == 0)
-
-  ; test grid init
-  #EXPECT(has-grid?(box) == false)
-  set-grid(box, [4, 2])
-  #EXPECT(has-grid?(box) == true)
-  for p in pins(self) do :
-    #EXPECT(property(p.row) == 0)
-    #EXPECT(property(p.column) == 0)
-  #EXPECT(get-rows(box) == 4)
-  #EXPECT(get-columns(box) == 2)
-
-  ; tests set-row/set-column
-  val [row, col] = [3,3]
-  set-row(row, pins = pins(self))
-  set-column(col, pins(self))
-  for p in pins(self) do :
-    #EXPECT(property(p.row) == row)
-    #EXPECT(property(p.column) == col)
-  val group1 = [self.EN, self.DIN, self.CLK]
-  set-group("inputs", pins = group1)
-  for p in group1 do :
-    #EXPECT(property(p.group) == "inputs")
-
-  ; test pins-in-group
-  test-pins = find-pins-by-regex(box, ".*D")
-  set-alignment(N, test-pins)
-  for p in pins(self) do :
-    if contains?(test-pins, to-pin(p)) :
-      #EXPECT(property(p.alignment) == N)
-    else :
-      #EXPECT(get-property?(p, ALIGN_PROP) == None())
-
-  set-row(0, pins = pins-in-group(box, "inputs"))
-  for p in group1 do :
-    #EXPECT(property(p.row) == 0)
-
-  set-row(0, self.VDD)
-  set-alignment(S, self.VDD)
-
-  val symb = create-symbol(box)
-  assign-symbol(symb)
-
-  val lp = create-landpattern $ SOIC-N(
-    num-leads = 8,
-    lead-span = min-max(5.8, 6.2),
-    package-length = 4.5 +/- 0.10,
-    density-level = DensityLevelC
-  )
-  assign-landpattern(lp)
-  ;make-box-symbol()
-
 pcb-component basic:
   pin-properties:
-    [pin:Ref | pads:Ref ... | side:Dir]
-      [ VDD | p[8] | Right]
-      [ DIN  | p[1] | Left]
-      [ EN | p[2] | Left]
-      [ CLK | p[3] | Left]
-      [ DOUT | p[5] | Right ]
-      [ ALERT | p[6] | Right ]
-      [ NC    | p[7] | Left ]
-      [ GND | p[4] | Left]
+    [pin:Ref | pads:Ref ...]
+      [ VDD | p[8]]
+      [ DIN  | p[1]]
+      [ EN | p[2]]
+      [ CLK | p[3]]
+      [ DOUT | p[5]]
+      [ ALERT | p[6]]
+      [ NC    | p[7]]
+      [ GND | p[4]]
 
   val box = BoxSymbol(self)
   val symb = create-symbol(box)
@@ -127,21 +47,91 @@ pcb-component basic:
 pcb-component basic-grid:
   pin-properties:
     [pin:Ref | pads:Ref ... | side:Dir | row:Int]
-      [ VDD | p[8] | Right | 0]
+      [ VDD | p[8] | Right | 3]
+      [ VDD2 | p[9] | Right | 3]
       [ DIN  | p[1] | Left | 1]
       [ EN | p[2] | Left | 1]
       [ CLK | p[3] | Left | 1]
       [ DOUT | p[5] | Right | 1]
       [ ALERT | p[6] | Right | 2]
       [ NC    | p[7] | Left | 3]
-      [ GND | p[4] | Left | 4]
+      [ GND | p[4] | Right | 0]
+      [ GND2 | p[10] | Right | 0]
 
   val box = BoxSymbol(self)
-  set-grid(box, [5,2])
-  set-alignment(C, self.DOUT)
-  val symb = create-symbol(box)
-  assign-symbol(symb)
+  set-grid(box, [4,2])
+  set-row(3, find-pins-by-regex(box, "GND.*"))
+  set-row(0, self.VDD, self.VDD2)
+  set-row(3, [self.CLK])
 
+  assign-symbol(create-symbol(box))
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 10,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-margin:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Right | 3]
+      [ VDD2 | p[9] | Right | 3]
+      [ DIN  | p[1] | Left | 1]
+      [ EN | p[2] | Left | 1]
+      [ CLK | p[3] | Left | 1]
+      [ DOUT | p[5] | Right | 1]
+      [ ALERT | p[6] | Right | 2]
+      [ NC    | p[7] | Left | 3]
+      [ GND | p[4] | Right | 0]
+      [ GND2 | p[10] | Right | 0]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [4,2])
+  set-row(3, find-pins-by-regex(box, "GND.*"))
+
+  val vdd = set-group("vdd", [self.VDD, self.VDD2])
+  set-top-margin(2.0, pins-in-group(box, "vdd"))
+  set-bottom-margin(2.0, [self.GND])
+  set-row(0, self.VDD, self.VDD2)
+  set-row(3, [self.CLK])
+
+  assign-symbol(create-symbol(box))
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 10,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-bank:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir]
+      [ VDD | p[8] | Right]
+      [ DIN  | p[1] | Left]
+      [ EN | p[2] | Left]
+      [ CLK | p[3] | Left]
+      [ DOUT | p[5] | Right ]
+      [ ALERT | p[6] | Right ]
+      [ NC    | p[7] | Left ]
+      [ GND | p[4] | Left]
+
+  val box = BoxSymbol(self)
+  ; first set all banks to some default bank
+  val gnd-ref = Ref("GND")
+  val d-ref = Ref("D")
+  set-bank(0, pins(self))
+  set-bank(gnd-ref, find-pins-by-regex(box, "GND.*"))
+  set-bank(d-ref, find-pins-by-regex(box, "^D.*"))
+  assign-symbols(
+    [
+      0 => create-symbol(box, 0)
+      gnd-ref => create-symbol(box, gnd-ref)
+      d-ref => create-symbol(box, d-ref)
+    ]
+  )
   val lp = create-landpattern $ SOIC-N(
     num-leads = 8,
     lead-span = min-max(5.8, 6.2),
@@ -150,128 +140,7 @@ pcb-component basic-grid:
   )
   assign-landpattern(lp)
 
-pcb-component basic-grid-large:
-  pin-properties:
-    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
-      [ VDD | p[8] | Right | 0]
-      [ DIN  | p[1] | Left | 1]
-      [ DIN2  | p[9] | Left | 1]
-      [ DIN3  | p[10] | Left | 1]
-      [ DIN4  | p[11] | Left | 1]
-      [ DIN5  | p[12] | Left | 1]
-      [ DIN6  | p[13] | Left | 1]
-      [ DIN7  | p[14] | Left | 1]
-      [ DIN8  | p[15] | Left | 1]
-      [ DIN9  | p[16] | Left | 1]
-      [ DIN10  | p[17] | Left | 1]
-      [ EN | p[2] | Left | 1]
-      [ CLK | p[3] | Left | 1]
-      [ DOUT | p[5] | Right | 1]
-      [ ALERT | p[6] | Right | 2]
-      [ NC    | p[7] | Left | 3]
-      [ GND | p[4] | Left | 4]
-
-  val box = BoxSymbol(self)
-  set-grid(box, [5,2])
-  set-alignment(C, self.DOUT)
-  val symb = create-symbol(box)
-  assign-symbol(symb)
-
-  val lp = create-landpattern $ SOIC-N(
-    num-leads = 18,
-    lead-span = min-max(5.8, 6.2),
-    package-length = 4.5 +/- 0.10,
-    density-level = DensityLevelC
-  )
-  assign-landpattern(lp)
-
-pcb-component basic-grid-large-rotate:
-  pin-properties:
-    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
-      [ VDD | p[8] | Up | 0]
-      [ DIN  | p[1] | Down | 4]
-      [ DIN2  | p[9] | Down | 4]
-      [ DIN3  | p[10] | Down | 4]
-      [ DIN4  | p[11] | Down | 4]
-      [ DIN5  | p[12] | Down | 4]
-      [ DIN6  | p[13] | Down | 4]
-      [ DIN7  | p[14] | Down | 4]
-      [ DIN8  | p[15] | Down | 4]
-      [ DIN9  | p[16] | Down | 4]
-      [ DIN10  | p[17] | Down | 4]
-      [ EN | p[2] | Down | 4]
-      [ CLK | p[3] | Down | 4]
-      [ DOUT | p[5] | Up | 0]
-      [ ALERT | p[6] | Up | 0]
-      [ NC    | p[7] | Down | 4]
-      [ GND | p[4] | Down | 4]
-
-  val box = BoxSymbol(self)
-  set-grid(box, [5,1])
-  set-alignment(C, self.DOUT)
-  add-decorator(box, to-pin(self.ALERT), OpenCollectorDecorator())
-  add-decorator(box, to-pin(self.CLK), ClockDecorator())
-  val symb = create-symbol(box)
-  assign-symbol(symb)
-
-  val lp = create-landpattern $ SOIC-N(
-    num-leads = 18,
-    lead-span = min-max(5.8, 6.2),
-    package-length = 4.5 +/- 0.10,
-    density-level = DensityLevelC
-  )
-  assign-landpattern(lp)
-
-pcb-component test-chip:
-  pin-properties:
-    [pin:Ref | pads:Ref ... | side:Dir]
-      [ VDD | p[8] | Right ]
-      [ DIN  | p[1] | Left ]
-      [ DIN2  | p[9] | Left ]
-      [ DIN3  | p[10] | Left ]
-      [ DIN4  | p[11] | Left ]
-      [ DIN5  | p[12] | Left ]
-      [ DIN6  | p[13] | Left ]
-      [ DIN7  | p[14] | Left ]
-      [ DIN8  | p[15] | Left ]
-      [ DIN9  | p[16] | Left ]
-      [ DIN10  | p[17] | Left ]
-      [ EN | p[2] | Left ]
-      [ CLK | p[3] | Left ]
-      [ DOUT | p[5] | Right ]
-      [ ALERT | p[6] | Right ]
-      [ NC    | p[7] | Left ]
-      [ GND | p[4] | Left ]
-
-  val box = BoxSymbol(self)
-
-  val din-pins = find-pins-by-regex(box, "DIN.*")
-  set-row(1, din-pins)
-  set-row(1, self.CLK, self.EN)
-  set-row(3, self.NC)
-  set-row(4, self.GND)
-  set-row(1, self.DOUT)
-  set-row(2, self.ALERT)
-  set-grid(box, [5,2])
-  set-alignment(C, self.DOUT)
-
-  add-decorator(box, to-pin(self.ALERT), OpenCollectorDecorator())
-  add-decorator(box, to-pin(self.CLK), ClockDecorator())
-
-  val symb = create-symbol(box)
-  assign-symbol(symb)
-
-  val lp = create-landpattern $ SOIC-N(
-    num-leads = 18,
-    lead-span = min-max(5.8, 6.2),
-    package-length = 4.5 +/- 0.10,
-    density-level = DensityLevelC
-  )
-  assign-landpattern(lp)
-
-pcb-component test-chip-right:
-  mpn = "24AA025UIDT-I/OT"
-
+pcb-component basic-align:
   pin-properties:
     [pin:Ref | pads:Ref ... | side:Dir]
       [ VDD | p[8] | Right ]
@@ -315,14 +184,51 @@ pcb-component test-chip-right:
   set-side(Right, d-pins)
   set-side(Left, self.DOUT)
 
-  add-decorator(box, to-pin(self.ALERT), OpenCollectorDecorator())
-  add-decorator(box, to-pin(self.CLK), ClockDecorator())
+  add-decorator(box, self.ALERT, OpenCollectorDecorator())
+  add-decorator(box, self.CLK, ClockDecorator())
 
   val symb = create-symbol(box)
   assign-symbol(symb)
 
   val lp = create-landpattern $ SOIC-N(
     num-leads = 20,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-align-rotate:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Up | 0]
+      [ DIN  | p[1] | Down | 4]
+      [ DIN2  | p[9] | Down | 4]
+      [ DIN3  | p[10] | Down | 4]
+      [ DIN4  | p[11] | Down | 4]
+      [ DIN5  | p[12] | Down | 4]
+      [ DIN6  | p[13] | Down | 4]
+      [ DIN7  | p[14] | Down | 4]
+      [ DIN8  | p[15] | Down | 4]
+      [ DIN9  | p[16] | Down | 4]
+      [ DIN10  | p[17] | Down | 4]
+      [ EN | p[2] | Down | 4]
+      [ CLK | p[3] | Down | 4]
+      [ DOUT | p[5] | Up | 0]
+      [ ALERT | p[6] | Up | 0]
+      [ NC    | p[7] | Down | 4]
+      [ GND | p[4] | Down | 4]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [5,1])
+  set-alignment(C, self.DOUT)
+  add-decorator(box, self.ALERT, OpenCollectorDecorator())
+  add-decorator(box, self.CLK, ClockDecorator())
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 18,
     lead-span = min-max(5.8, 6.2),
     package-length = 4.5 +/- 0.10,
     density-level = DensityLevelC
@@ -366,13 +272,12 @@ pcb-component test-24AA025:
   assign-landpattern(create-landpattern(SOIC-pkg))
 
 pcb-module test-design:
-  inst c : basic-test
-  inst c1: basic
-  inst c2: basic-grid
-  inst c3: basic-grid-large
-  inst c3a: basic-grid-large-rotate
-  inst c4: test-chip
-  inst c5: test-chip-right
+  inst c0 : basic
+  inst c1 : basic-grid
+  inst c2 : basic-margin
+  inst c3: basic-align
+  inst c4: basic-align-rotate
+  inst c5: basic-bank
   inst c6: test-24AA025
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
