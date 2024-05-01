@@ -104,11 +104,34 @@ axis.
 <DOC>
 public val DEF_OPAMP_PITCH = 2.0
 
+
+public val OPAMP_IN_BASE_REF = Ref("in")
+public val OPAMP_OUT_REF = Ref("out")
+
 public defstruct OpAmpSymbol <: SymbolDefn :
   pitch:Double with: (
     ensure => ensure-positive!
     default => DEF_OPAMP_PITCH
   )
+
+  doc: \<DOC>
+  Input Base Reference
+  The symbol will construct individual `Ref` values from this
+  base `Ref` for the positive and negative inputs to the opamp. By default,
+  the reference `in` will be used, resulting in the default inputs, `in+` and `in-`.
+  <DOC>
+  in-ref:Ref with: (
+    default => OPAMP_IN_BASE_REF
+  )
+  doc: \<DOC>
+  Output Reference
+  User can override the default for supporting multi-channel
+  chips. The default expected output pin ref is `out`
+  <DOC>
+  out-ref:Ref with: (
+    default => OPAMP_OUT_REF
+  )
+
   params:OpAmpSymbolParams with: (
     default => get-default-opamp-symbol-params()
   )
@@ -118,16 +141,20 @@ with:
 public defn OpAmpSymbol (
   --
   pitch:Double = DEF_OPAMP_PITCH,
+  in-ref:Ref = OPAMP_IN_BASE_REF,
+  out-ref:Ref = OPAMP_OUT_REF
   params:OpAmpSymbolParams = get-default-opamp-symbol-params()
   ) -> OpAmpSymbol :
-  #OpAmpSymbol(pitch, params)
+  #OpAmpSymbol(pitch, in-ref, out-ref, params)
 
 public defmethod name (x:OpAmpSymbol) -> String :
   "OpAmp"
 
-public val OPAMP_IN+_REF = Ref("in+")
-public val OPAMP_IN-_REF = Ref("in-")
-public val OPAMP_OUT_REF = Ref("out")
+public defn get-input-refs (x:OpAmpSymbol) -> [Ref, Ref]:
+  val base = in-ref(x)
+  val neg-ref = Ref("%_-" % [to-string(base)])
+  val pos-ref = Ref("%_+" % [to-string(base)])
+  [pos-ref, neg-ref]
 
 public defn add-opamp-pins (x:OpAmpSymbol, node:SymbolNode) :
 
@@ -141,15 +168,17 @@ public defn add-opamp-pins (x:OpAmpSymbol, node:SymbolNode) :
     pad-ref-size = pad-ref-size(p)
   )
 
-  add-pin(node, OPAMP_IN+_REF, [(- h2), w], params = input-params, name = "pin-in+")
-  add-pin(node, OPAMP_IN-_REF, [(- h2), (- w)], params = input-params, name = "pin-in-")
+  val [pos-ref, neg-ref] = get-input-refs(x)
+
+  add-pin(node, pos-ref, [(- h2), w], params = input-params, name = "pin-in+")
+  add-pin(node, neg-ref, [(- h2), (- w)], params = input-params, name = "pin-in-")
 
   val output-params = VirtualPinParams(
     direction = Right,
     pin-length = pin-length(p),
     pad-ref-size = pad-ref-size(p)
   )
-  add-pin(node, OPAMP_OUT_REF, [h2, 0.0], params = output-params, name = "pin-out")
+  add-pin(node, out-ref(x), [h2, 0.0], params = output-params, name = "pin-out")
 
 public defmethod build-pins (x:OpAmpSymbol, node:SymbolNode) :
   add-opamp-pins(x, node)
