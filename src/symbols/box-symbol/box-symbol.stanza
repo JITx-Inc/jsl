@@ -32,6 +32,7 @@ val DEF_CELL_BOTTOM_MARGIN = 0.0
 ; length between groups/singleton pins
 val DEF_PIN_PADDING = 0.5
 val DESIGNATOR_MARGIN = 1.0
+val DEF_SHOW_GRID = false
 
 ; Property constants
 public :
@@ -54,6 +55,9 @@ val SYM_PROPS = [
   TAIL_MARGIN_PROP
   BANK_PROP
 ]
+
+val DEBUG_DIVIDER = "%_%_--------"
+val DEBUG_FONT_SIZE = 3
 
 ; Valid anchors for Left/Right, Up/Down pins
 val LR_ANCHORS = [N, C, S]
@@ -156,6 +160,10 @@ public defstruct BoxSymbolParams <: Equalable :
   pin-name-size:Double with: (
     ensure => ensure-positive!
   )
+  doc: \<DOC>
+  Show row/col grid lines for debugging.
+  <DOC>
+  show-grid:True|False
   ; Others here like:
   ; Default Head & Foot Padding
   ;    Example: for components that only have pins on the
@@ -165,6 +173,7 @@ public defstruct BoxSymbolParams <: Equalable :
   ; For the future:
   ;  Color - stroke, fill, etc.
   ;
+
 with:
   constructor => #BoxSymbolParams
   equalable => true
@@ -182,6 +191,7 @@ public defn BoxSymbolParams (
   pad-ref-size:Double = DEF_PAD_REF_SIZE
   pin-pitch:Double = DEF_PIN_PITCH
   pin-name-size:Double = DEF_PIN_NAME_SIZE
+  show-grid:True|False = DEF_SHOW_GRID
   ) -> BoxSymbolParams:
   #BoxSymbolParams(
     col-width
@@ -191,6 +201,7 @@ public defn BoxSymbolParams (
     pad-ref-size
     pin-pitch
     pin-name-size
+    show-grid
   )
 
 ; Stores the default box symbols parameters so that they can
@@ -801,7 +812,12 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       )
       val center-start = calc-start(start, top-size)
 
-      ; Build pns for each section
+      ; print debug lines if set
+      if show-grid(params) :
+        text(node, start, to-string(DEBUG_DIVIDER % ["row", row]), font-size = DEBUG_FONT_SIZE)
+        text(node, loc(x(start), y(start), 90.0), to-string(DEBUG_DIVIDER % ["col", col]), font-size = DEBUG_FONT_SIZE)
+
+      ; Build pins for each section
       build-edge-align-group(first-anchor, start)
       build-center-align-group(center-start, bottom-start)
       build-edge-align-group(last-anchor, bottom-start)

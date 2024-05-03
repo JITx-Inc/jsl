@@ -163,7 +163,8 @@ pcb-component basic-align:
       [ NC    | p[7] | Left ]
       [ GND | p[4] | Left ]
 
-  val box = BoxSymbol(self)
+  val box = BoxSymbol(self,
+    params = BoxSymbolParams(show-grid = true))
 
   val din-pins = find-pins-by-regex(box, "DIN.*")
   set-row(1, din-pins)
