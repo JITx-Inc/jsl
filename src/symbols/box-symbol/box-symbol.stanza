@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/symbols/BoxSymbol:
+defpackage jsl/symbols/box-symbol/box-symbol:
   import algorithm/utils
   import core
   import collections
@@ -13,6 +13,7 @@ defpackage jsl/symbols/BoxSymbol:
   import jsl/symbols/utils
   import jsl/symbols/SymbolDefn
   import jsl/symbols/SymbolNode
+  import jsl/symbols/box-symbol/utils
   import jsl/geometry/box
   import math
 
@@ -39,8 +40,8 @@ public :
   val ALIGN_PROP = `alignment
   val SIDE_PROP = `side
   val GROUP_PROP = `group
-  val TOP_MARGIN_PROP = `top-margin
-  val BOTTOM_MARGIN_PROP = `bottom-margin
+  val HEAD_MARGIN_PROP = `head-margin
+  val TAIL_MARGIN_PROP = `tail-margin
   val BANK_PROP = `bank
 
 val SYM_PROPS = [
@@ -49,8 +50,8 @@ val SYM_PROPS = [
   ALIGN_PROP
   SIDE_PROP
   GROUP_PROP
-  TOP_MARGIN_PROP
-  BOTTOM_MARGIN_PROP
+  HEAD_MARGIN_PROP
+  TAIL_MARGIN_PROP
   BANK_PROP
 ]
 
@@ -95,18 +96,18 @@ defn check-port-type (objs: Seqable<JITXObject>) -> Vector<JITXObject> :
           (b:Bundle|PortArray) : add-all(ports, pins(ns))
           (f): add(non-ports, o)
   if length(non-ports) > 0 :
-    throw $ BoxSymbolApiError("Object(s) %_ are not of expected PortType"
+    throw $ InvalidPortObject("Object(s) %_ are not of expected PortType"
       % [non-ports])
   ports
 
 defn check-non-neg (prop:Symbol, arg:Int) :
   if arg < 0 :
-    throw $ BoxSymbolParamError("negative val %_ for prop '%_'" % [arg, prop])
+    throw $ NegativeValueProperty("negative val %_ for prop '%_'" % [arg, prop])
 
 defn check-valid-anchor (side:Dir, anchor:Anchor) :
   val valid-anchors = anchors(side)
   if not contains?(valid-anchors, anchor) :
-    throw $ BoxSymbolParamError("anchor %_ not compatible with side %_. Expect one of %_",
+    throw $ InvalidAlignProperty("anchor %_ not compatible with side %_. Expect one of %_",
       % [anchor, side, valid-anchors])
 
 doc: \<DOC>
@@ -231,7 +232,7 @@ public defstruct BoxSymbol <: SymbolDefn :
   decorator-by-pin:HashTable<Ref, Vector<PinDecorator>>
     with: (default => HashTable<Ref,Vector<PinDecorator>>())
 
-  ; for multi-bank box symbols
+  ; for multi-bank box symbols, empty table for non-banked box symbols
   banks:HashTable<Int|Ref,GridInfo>
     with: (default => HashTable<Int|Ref,GridInfo>())
 with:
@@ -278,6 +279,7 @@ defstruct BoxSymbolBank <: SymbolDefn :
     with: (default => HashTable<Ref,Vector<PinDecorator>>())
 with :
   printer => true
+
 ; ============== Helper Functions ================
 ;
 defn get-params (x:BoxSymbol) -> BoxSymbolParams :
@@ -352,7 +354,7 @@ defn check-properties (pins:Seqable<JITXObject>, grid: GridInfo) :
             and not contains?(LR_ANCHORS, value(o2)))
           or ((value(o1) == Up or value(o1) == Down)
             and not contains?(UD_ANCHORS, value(o2))) :
-          throw $ BoxSymbolParamError("Side %_ and Alignment %_ not compatible \
+          throw $ InvalidAlignProperty("Side %_ and Alignment %_ not compatible \
             for pin %_" % [value(o1), value(o2), ref(p)])
       (f1, f2) :
         false
@@ -363,9 +365,21 @@ defn check-properties (pins:Seqable<JITXObject>, grid: GridInfo) :
       (o1:One, side:One):
         if (value(side) == Up and value(o1) != 0)
           or (value(side) == Down and value(o1) != max-row) :
-          throw $ BoxSymbolParamError("Invalid row %_ (should be 0 or %_) \
+          throw $ InvalidAlignProperty("Invalid row %_ (should be 0 or %_) \
             for pin %_ on side %_" % [value(o1), max-row, ref(p), value(side)])
       (f1, f2): false
+
+defn check-prop (prop: ?, filter: ?) -> True|False :
+    match(prop, filter) :
+      (n: None, f: One<?>) :
+        false
+      (n, f: None) :
+        true
+      (v: One<Int|Ref>, p) :
+        value(v) == p
+      (n, f) :
+        throw $ GenericBoxSymbolError("Unsupported args to check-prop %_ %_"
+          % [prop, filter])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; SymbolDefn Interface
@@ -479,7 +493,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         if has-row? :
           val row = props[ROW_PROP]
           if row < 0 or row >= num-rows :
-            throw $ BoxSymbolParamError("Invalid row %_ for pin %_" % [row, ref])
+            throw $ InvalidGridDimension("Invalid row %_ for pin %_" % [row, ref])
           row
         else :
           0
@@ -490,7 +504,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         if has-col? :
           val col = props[COL_PROP]
           if col < 0 or col >= num-cols :
-            throw $ BoxSymbolParamError("Invalid col %_ for pin %_" % [col, ref])
+            throw $ InvalidGridDimension("Invalid col %_ for pin %_" % [col, ref])
           col
         else :
           0
@@ -523,7 +537,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       match(get?(group-anchors, group)) :
         (a: Anchor) :
           if align != a :
-            throw $ BoxSymbolParamError("multiple alignments found in same group:
+            throw $ InvalidAlignProperty("multiple alignments found in same group:
               group:%_ [%_ %_]" % [group, align, a])
         (f) : false
 
@@ -576,13 +590,13 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   ; Note: Margin properties are added on top of default pin padding
   ;
   defn calc-min-cell-dimension (c:CellPinInfo) -> CellSizeInfo :
-    defn get-top-margin-for-pin (p: Ref) -> Double :
-      match(get?(pin-info-bs[p], TOP_MARGIN_PROP)) :
+    defn get-head-margin-for-pin (p: Ref) -> Double :
+      match(get?(pin-info-bs[p], HEAD_MARGIN_PROP)) :
         (m:Double) : round-to-grid(m)
         (f) : DEF_CELL_TOP_MARGIN
 
-    defn get-bottom-margin-for-pin (p: Ref) -> Double :
-      match(get?(pin-info-bs[p], BOTTOM_MARGIN_PROP)) :
+    defn get-tail-margin-for-pin (p: Ref) -> Double :
+      match(get?(pin-info-bs[p], TAIL_MARGIN_PROP)) :
         (m:Double) : round-to-grid(m)
         (f) : DEF_CELL_BOTTOM_MARGIN
 
@@ -592,15 +606,15 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       for (p in pin-group, i in 0 to false) do :
         match(p) :
           (single: Ref) :
-            total = total + get-top-margin-for-pin(single)
+            total = total + get-head-margin-for-pin(single)
             add(pos, total)
-            total = total + get-bottom-margin-for-pin(single)
+            total = total + get-tail-margin-for-pin(single)
             total = total + DEF_PIN_PADDING
           (group: String) :
             for p in pin-groups(c)[group] do :
-              total = total + get-top-margin-for-pin(p)
+              total = total + get-head-margin-for-pin(p)
               add(pos, total)
-              total = total + get-bottom-margin-for-pin(p)
+              total = total + get-tail-margin-for-pin(p)
               total = total + DEF_PIN_PADDING
       [total, pos]
 
@@ -848,18 +862,6 @@ The user could use a glob pattern `D.p[*]` to select `D.p[0]`, `D.p[1]`, `D.p[2]
 
 @return Tuple of Pins that match the given criteria.
 <DOC>
-defn check-prop (prop: ?, filter: ?) -> True|False :
-    match(prop, filter) :
-      (n: None, f: One<?>) :
-        false
-      (n, f: None) :
-        true
-      (v: One<Int|Ref>, p) :
-        value(v) == p
-      (n, f) :
-        throw $ BoxSymbolApiError("Unsupported args to check-prop %_ %_"
-          % [prop, filter])
-
 public defn find-pins-by-regex (
   b:BoxSymbol, pattern:String
   --
@@ -890,7 +892,7 @@ Check for an active grid
 Components like resistors, capacitors, etc might not have an active grid.
 
 @param b Box Symbol object
-@return Indicates of a grid is present on this symbol or not.
+@returns boolean that indicates of a grid is present on this symbol or not.
 <DOC>
 public defn has-grid? (b:BoxSymbol) -> True|False :
   active-grid?(grid(b))
@@ -910,7 +912,7 @@ public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
     for p in pins(obj(b)) do :
       set-pin-grid-default(p)
   else :
-    throw $ BoxSymbolApiError("Active grid already set to %_" % [grid(b)])
+    throw $ InvalidGridDimension("Active grid already set to %_" % [grid(b)])
   false
 
 public defn set-grid (b:BoxSymbol, dims:[Int, Int], bank:Int|Ref) :
@@ -987,7 +989,7 @@ public defn get-columns (b:BoxSymbol, bank:Int|Ref) -> Int:
 doc: \<DOC>
 Set the pin grid position for a pin or set of pins.
 
-If the grid doesn't exist yet - this is an error and this function
+If the grid does not exist yet - this is an error and this function
 should throw an exception.
 
 There are only a limited set of valid row/column combinations based on the
@@ -1033,18 +1035,6 @@ public defn set-column (col:Int, pins: Seqable<JITXObject>) :
     check-non-neg(COL_PROP, col)
     for p in valid-pins do :
       set-property(p, ROW_PROP, col)
-
-; defn get-row (p:Pin) -> Maybe<Int>:
-;   One(0)
-
-; defn get-row! (p:Pin) -> Int:
-;   0
-
-; defn get-column (p:Pin) -> Maybe<Int>:
-;   One(0)
-
-; defn get-column! (p:Pin) -> Int:
-;   0
 
 doc: \<DOC>
 Set a horizontal line separator on the edge of a row
@@ -1160,44 +1150,21 @@ public defn set-group (group:String, pins: Seqable<JITXObject>)  :
 ; Margin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-public defn set-top-margin (margin:Double, pins: JITXObject ...) :
-  set-top-margin(margin, pins)
+public defn set-head-margin (margin:Double, pins: JITXObject ...) :
+  set-head-margin(margin, pins)
 
-public defn set-top-margin (margin:Double, pins: Seqable<JITXObject>) :
+public defn set-head-margin (margin:Double, pins: Seqable<JITXObject>) :
   val valid-pins = check-port-type(pins)
   for p in valid-pins do :
-    set-property(p, TOP_MARGIN_PROP, margin)
+    set-property(p, HEAD_MARGIN_PROP, margin)
 
-public defn set-bottom-margin (margin:Double, pins: JITXObject ...) :
-  set-bottom-margin(margin, pins)
+public defn set-tail-margin (margin:Double, pins: JITXObject ...) :
+  set-tail-margin(margin, pins)
 
-public defn set-bottom-margin (margin:Double, pins: Seqable<JITXObject>) :
+public defn set-tail-margin (margin:Double, pins: Seqable<JITXObject>) :
   val valid-pins = check-port-type(pins)
   for p in valid-pins do :
-    set-property(p, BOTTOM_MARGIN_PROP, margin)
-
-defn set-left-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
-  false
-
-defn set-right-margin (pin-set:Tuple<Pin>|Pin, margin:Double) :
-  false
-
-
-defn set-margin (b:BoxSymbol, group:String, margin:Double) :
-  false
-
-defn set-top-margin (b:BoxSymbol, group:String, margin:Double) :
-  false
-
-defn set-bottom-margin (b:BoxSymbol, group:String, margin:Double) :
-  false
-
-defn set-left-margin (b:BoxSymbol, group:String, margin:Double) :
-  false
-
-defn set-right-margin (b:BoxSymbol, group:String, margin:Double) :
-  false
-
+    set-property(p, TAIL_MARGIN_PROP, margin)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Decorators
@@ -1221,258 +1188,25 @@ public defn add-decorator (b:BoxSymbol, pin-set: Seqable<JITXObject>, decorators
 public defn add-decorator (b:BoxSymbol, p:JITXObject, decorator:PinDecorator) :
   add-decorator(b, [p], [decorator])
 
-;Sort the given pins by their .pin-properties-row-index field.
-defn sort-by-row-index (pins:Tuple<JITXObject>) -> Tuple<JITXObject> :
-  ;Compare pin[i0] versus pin[i1].
-  ;Indices are used, instead of the pin directly, in order to perform a
-  ;stable sort.
-  ;All pins without a .pin-properties-row-index are put in the beginning.
-  defn compare-index (i0:Int, i1:Int) :
-    val ai = value?(property?(pins[i0].pin-properties-row-index))
-    val bi = value?(property?(pins[i1].pin-properties-row-index))
-    match(ai, bi) :
-      (ai:Int, bi:Int) : compare(ai, bi)
-      (ai:Int, bi) : 1
-      (ai, bi:Int) : -1
-      (ai, bi) : compare(i0,i1)
-  val indices = qsort(0 to length(pins), compare-index)
-  map({pins[_]}, indices)
-
 defn round-to-grid (d: Double) -> Double :
   to-double(to-int(d / 0.5)) * 0.5
 
 defn calc-snap-grid-buffer (dim: Double) -> Double :
   ceil(dim / 0.5) * 0.5 - (dim)
 
-public defn assign-symbols (banks:Tuple<KeyValue<Int|Ref, UnitSymbol>>) :
-  defn ensure-non-empty-banks! () :
-    if empty?(banks) :
-      throw(EmptyBanks(""))
-  defn ensure-unique-bank-arguments! () :
-    val seen-banks = HashSet<Int|Ref>()
-    val duplicate-banks = Vector<Int|Ref>()
-    for bank-kv in banks do :
-      val bank = key(bank-kv)
-      if not add(seen-banks, bank) :
-        add(duplicate-banks, bank)
-    if not empty?(duplicate-banks) :
-      throw(DuplicateBanks(to-tuple(duplicate-banks)))
-  defn ensure-banks-exist! (pin-banks:Tuple<Maybe>) :
-    val banks* = map(key, banks)
-    val pin-banks* = unique-banks(pin-banks)
-    val extra-banks = difference(banks*, pin-banks*)
-    if not empty?(extra-banks) :
-      throw(MissingRequestedBanks(qsort(extra-banks)))
-    val missing-banks = difference(pin-banks*, banks*)
-    if not empty?(missing-banks) :
-      throw(MissingBankArguments(qsort(missing-banks)))
-  defn ensure-symbol-pins! (pins:Tuple<JITXObject>, pin-banks:Tuple<Maybe>) :
-    val bad-matches = to-tuple $
-      for bank in banks seq? :
-        match(value(bank)) :
-          (box:BoxSymbol) : None()
-          (symbol:SchematicSymbol) :
-            val symbol-pins = to-hashset(ref, /pins(symbol))
-            val mismatched-pins = to-tuple $
-              for (p in pins, b in pin-banks) seq? :
-                val pin-ref = ref(p)
-                if value!(b) == bank and not symbol-pins[pin-ref] :
-                  One(pin-ref)
-                else :
-                  None()
-            if not empty?(mismatched-pins) :
-              One(name(symbol) => to-tuple(mismatched-pins))
-            else :
-              None()
-    if not empty?(bad-matches) :
-      throw(MissingSymbolPins(bad-matches))
-  ensure-non-empty-banks!()
-  ensure-unique-bank-arguments!()
-  inside pcb-component :
-    val pins = sort-by-row-index(pins(self))
-    val pin-sides0 = map({property?(_.side)}, pins)
-    val pin-banks = map({property?(_.bank)}, pins)
-    val pin-sides = ensure-good-sides!(pins, pin-sides0)
-    ensure-good-banks!(pins, pin-banks, true)
-    ensure-banks-exist!(pin-banks)
-    ensure-symbol-pins!(pins, pin-banks)
-    val wrapped-banks =
-      for [bank, symbol?] in kvs(banks) seq :
-        match(symbol?) :
-          (box:BoxSymbol) :
-            val entries = for (p in pins, s in pin-sides, b in pin-banks) seq? :
-              if value!(b) == bank : One(s => p)
-              else : None()
-            BoxBank(to-tuple(entries))
-          (symbol:SchematicSymbol) :
-            val pin-mappings = for (p in pins, b in pin-banks) seq? :
-              if value!(b) == bank :
-                One(p => dot(symbol, ref(p)))
-              else :
-                None()
-            StandardBank(symbol, to-tuple(pin-mappings))
-    make-box-symbol(wrapped-banks)
-
 public deftype UnitSymbol :
   BoxSymbol <: UnitSymbol
   SchematicSymbol <: UnitSymbol
 
-public defstruct BoxBank :
-  entries: Collection<KeyValue<Dir,JITXObject|Seqable<JITXObject>>>
+public defn assign-symbols (banks: KeyValue<Int|Ref, UnitSymbol> ...) -> False :
+  assign-symbols(banks)
 
-public defstruct StandardBank :
-  symbol: SchematicSymbol
-  pin-mappings: Tuple<KeyValue<JITXObject, JITXObject>>
-
-public defn make-box-symbol (banks:Seqable<BoxBank|StandardBank>) :
-  inside pcb-component :
-    symbol :
-      for (bank in banks, u in 0 to false) do :
-        val [sym, mapping] =
-          match(bank) :
-            ;(bank:BoxBank) : generate-box-symbol-unit(flatten-pin-entries(entries(bank)))
-            (bank:StandardBank) : [symbol(bank), pin-mappings(bank)]
-        unit(u) = sym(
-          for e in mapping do :
-            key(e) => value(e))
-
-public pcb-struct ocdb/utils/box-symbol/MissingBankProperty <: Exception :
-  pins: Tuple<Ref>
-
-defmethod print (o:OutputStream, e:MissingBankProperty) :
-  print(o, "Pins %, do not have a .bank property." % [pins(e)])
-
-public pcb-struct ocdb/utils/box-symbol/MissingBankArguments <: Exception :
-  banks: Tuple<Int|Ref>
-
-defmethod print (o:OutputStream, e:MissingBankArguments) :
-  print(o, "Banks %, are not found in `make-box-symbol` arguments." % [banks(e)])
-
-public pcb-struct ocdb/utils/box-symbol/MissingRequestedBanks <: Exception :
-  banks: Tuple<Int|Ref>
-
-defmethod print (o:OutputStream, e:MissingRequestedBanks) :
-  print(o, "Banks %, are not found in any .bank properties." % [banks(e)])
-
-;[TODO] Allow pcb-structs to have no fields.
-public pcb-struct ocdb/utils/box-symbol/EmptyBanks <: Exception :
-  e: ?
-
-defmethod print (o:OutputStream, e:EmptyBanks) :
-  print(o, "`make-box-symbol` bank arguments cannot be empty.")
-
-public pcb-struct ocdb/utils/box-symbol/DuplicateBanks <: Exception :
-  banks: Tuple<Int|Ref>
-
-defmethod print (o:OutputStream, e:DuplicateBanks) :
-  print(o, "Banks %, are duplicate in `make-box-symbol` arguments." % [banks(e)])
-
-public pcb-struct ocdb/utils/box-symbol/MissingSymbolPins <: Exception :
-  missing: Tuple<KeyValue<String, Tuple<Ref>>>
-
-defmethod print (o:OutputStream, e:MissingSymbolPins) :
-  defn format (kv:KeyValue<String, Tuple<Ref>>) -> Printable :
-    "pcb-symbol %~ is missing pin(s) %," % [key(kv), value(kv)]
-  val error-str = \<S>`make-box-symbol` requires component pin names to match symbol pin names:
-%n<S> % [map(Indented{format(_)}, missing(e))]
-  print(o, error-str)
-
-defn ensure-good-banks! (pins:Tuple<JITXObject>,
-                         banks:Tuple<Maybe>,
-                         require-banks?:True|False) :
-  ;Check that all pins.banks are either Int|Ref or not given.
-  for (p in pins, b in banks) do :
-    ;[TODO] Why is `false` allowed?
-    if value?(b) is-not Int|Ref|False :
-      throw(IncorrectBankProperty(ref(p), object-type(value?(b))))
-  ;Check that all banks given or no banks given (if not required).
-  if none?(empty?, banks) :
-    false
-  else :
-    val ps = to-tuple $ for (p in pins, b in banks) seq? :
-      if empty?(b) : One(ref(p))
-      else : None()
-    if require-banks? and empty?(ps) :
-      throw(MissingBankProperty(ps))
-
-defn ensure-good-sides! (pins:Tuple<JITXObject>, sides:Tuple<Maybe>) -> Tuple<Dir> :
-  ;Check that all pins.side is either Dir or not given.
-  for (p in pins, s in sides) do :
-    ;[TODO] Why is `false` allowed?
-    if value?(s) is-not Dir|False :
-      throw(IncorrectSideProperty(ref(p), object-type(value?(s))))
-  ;Default side is Right
-  if all?(empty?, sides) :
-    map({Right}, pins)
-  else if none?(empty?, sides) :
-    map(value!, sides)
-  else :
-    val ps = for (p in pins, s in sides) seq? :
-      if empty?(s) : One(ref(p))
-      else : None()
-    throw(MissingSideProperty(to-tuple(ps)))
-
-defn flatten-pin-entries (es:Seqable<KeyValue<Dir,JITXObject|Seqable<JITXObject>>>) -> Vector<KeyValue<Dir,Pin>> :
-  val entries = Vector<KeyValue<Dir,Pin>>()
-  for e in es do :
-    match(value(e)) :
-      (p:Pin) : add(entries, key(e) => p)
-      (ps:Seqable<Pin>) : do(add{entries, key(e) => _}, ps)
-  entries
-
-;============================================================
-;====================== Errors ==============================
-;============================================================
-deftype BoxSymbolError <: Exception
-defmulti message (e: BoxSymbolError) -> ?
-
-defstruct BoxSymbolApiError <: BoxSymbolError :
-  message: ? with : (as-method => true)
-
-defstruct BoxSymbolParamError <: BoxSymbolError :
-  message: ? with : (as-method => true)
-
-defmethod print (o:OutputStream, e:BoxSymbolApiError) :
-  print(o, "BoxSymbol API error: %_" % [message(e)])
-
-defmethod print (o:OutputStream, e:BoxSymbolParamError) :
-  print(o, "BoxSymbol invalid param: %_" % [message(e)])
-
-public pcb-struct ocdb/utils/box-symbol/IncorrectSideProperty <: Exception :
-  pin: Ref
-  actual-type: String
-
-defmethod print (o:OutputStream, e:IncorrectSideProperty) :
-  print(o, "Property %_.side is expected to be a Dir object but is instead of type %_." % [
-    pin(e), actual-type(e)])
-
-public pcb-struct ocdb/utils/box-symbol/MissingSideProperty <: Exception :
-  pins: Tuple<Ref>
-
-defmethod print (o:OutputStream, e:MissingSideProperty) :
-  print(o, "Pins %, do not have a .side property." % [pins(e)])
-
-public pcb-struct ocdb/utils/box-symbol/IncorrectBankProperty <: Exception :
-  pin: Ref
-  actual-type: String
-
-defmethod print (o:OutputStream, e:IncorrectBankProperty) :
-  print(o, "Property %_.bank is expected to be a Int|Ref object but is instead of type %_." % [
-    pin(e), actual-type(e)])
-
-defn unique-banks (banks:Tuple<Maybe>) :
-  val banks* = to-vector<Int|Ref> $ to-hashset<Int|Ref> $
-    for b in banks seq :
-      match(b) :
-        (o:One) : value(o)
-        (n:None) : throw $ Exception("One or more pins found with no banks")
-  defn compare-bank (x:Int|Ref, y:Int|Ref) -> Int :
-    defn rank (x:Int|Ref) :
-      match(x) :
-        (x:Int) : 0
-        (x:Ref) : 1
-    val c = compare(rank(x), rank(y))
-    if c == 0 : compare(x, y)
-    else : c
-  qsort!(banks*, compare-bank)
-  banks*
+public defn assign-symbols (banks: Seqable<KeyValue<Int|Ref, UnitSymbol>>) -> False :
+  val schem-syms = Vector<KeyValue<Int|Ref, SchematicSymbol>>()
+  for [bank, symbol] in kvs(banks) do :
+    add(schem-syms, bank =>
+      match(symbol) :
+        (b: BoxSymbol) : create-symbol(b, bank)
+        (s: SchematicSymbol) : s
+    )
+  assign-schematic-symbols(to-tuple $ schem-syms)

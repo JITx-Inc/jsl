@@ -6,7 +6,7 @@ defpackage jsl/tests/designs/BoxSymbolTest:
   import jitx/commands
 
   import jsl/symbols/audio
-  import jsl/symbols/BoxSymbol
+  import jsl/symbols/box-symbol
   import jsl/design/settings
   import jsl/landpatterns/two-pin/SMT
   import jsl/examples/landpatterns/board
@@ -92,8 +92,8 @@ pcb-component basic-margin:
   set-row(3, find-pins-by-regex(box, "GND.*"))
 
   val vdd = set-group("vdd", [self.VDD, self.VDD2])
-  set-top-margin(2.0, pins-in-group(box, "vdd"))
-  set-bottom-margin(2.0, [self.GND])
+  set-head-margin(2.0, pins-in-group(box, "vdd"))
+  set-tail-margin(2.0, [self.GND])
   set-row(0, self.VDD, self.VDD2)
   set-row(3, [self.CLK])
 
@@ -127,9 +127,9 @@ pcb-component basic-bank:
   set-bank(d-ref, find-pins-by-regex(box, "^D.*"))
   assign-symbols(
     [
-      0 => create-symbol(box, 0)
-      gnd-ref => create-symbol(box, gnd-ref)
-      d-ref => create-symbol(box, d-ref)
+      0 => box
+      gnd-ref => box
+      d-ref => box
     ]
   )
   val lp = create-landpattern $ SOIC-N(
@@ -174,12 +174,12 @@ pcb-component basic-align:
   set-row(2, self.ALERT)
   set-grid(box, [5,2])
   set-alignment(C, find-pins-by-regex(box, "DOUT.*"))
-  set-top-margin(2.0,self.VDD)
-  set-bottom-margin(2.0,self.VDD)
+  set-head-margin(2.0,self.VDD)
+  set-tail-margin(2.0,self.VDD)
   set-alignment(C, self.VDD2)
   set-alignment(C, self.VDD)
-  set-top-margin(2.0, self.DIN10)
-  set-bottom-margin(2.0, self.DIN10)
+  set-tail-margin(2.0, self.DIN10)
+  set-tail-margin(2.0, self.DIN10)
   val d-pins = find-pins-by-regex(box, "DIN.*")
   set-side(Right, d-pins)
   set-side(Left, self.DOUT)
@@ -224,6 +224,8 @@ pcb-component basic-align-rotate:
   set-alignment(C, self.DOUT)
   add-decorator(box, self.ALERT, OpenCollectorDecorator())
   add-decorator(box, self.CLK, ClockDecorator())
+  set-head-margin(1.0, self.CLK)
+  set-tail-margin(1.0, self.CLK)
   val symb = create-symbol(box)
   assign-symbol(symb)
 

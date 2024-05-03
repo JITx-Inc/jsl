@@ -17,20 +17,3 @@ public defn add-to-vector-table<?K,?V> (h: HashTable<?K, Vector<?V>>, key: K, va
   if not key?(h, key) :
     h[key] = to-vector<V> $ []
   add-all(h[key], values)
-
-val DEJA-VU-SANS-MONO-CHAR-WIDTH = 0.6
-
-; Returns the length of the text in mm
-; FIXME: This code is shared by the schematic and the board in passes, text-kind(text) is actually StrokeFont|TrueTypeFont|BarCode
-; Look into implementing those? Note that the default is TrueTypeFont while in teh schematic it is DejaVuSansMono
-public defn text-length (text: Text) -> Double :
-  text-length(string(text), font-size = size(text))
-
-; Returns the length of the text in mm given a font-size
-public defn text-length (text: String -- font-size: Double) -> Double :
-  text-length(length(text), font-size, DEJA-VU-SANS-MONO-CHAR-WIDTH)
-
-;Returns the length (in grid units) of a text string with the given number
-;of characters.
-defn text-length (num-chars:Int, font-height:Double, char-width:Double) -> Double :
-  to-double(num-chars) * font-height * char-width
