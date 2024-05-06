@@ -74,6 +74,16 @@ public pcb-bundle pcie-control :
   pin PERST#          ; PCI-E Reset signal
   pin CLKREQ#         ; clock request
 
+
+doc: \<DOC>
+The connect-pci-e() function connects two equivalent pcie bundles together by
+connecting the tx pairs on the first bundle to the rx pairs on the second bundle and 
+vice versa. It also connects the control sub-bundle together without constraints.
+For the data lines, the constraints on intra-pair skew, max loss and trace impedance
+need to be verified by the user. Some defaults in the table are derived from the references
+listed below.
+<DOC>
+
 public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
     defn constraint (gen:PCIeVersion, half:True|False, a:JITXObject, b:JITXObject) :
