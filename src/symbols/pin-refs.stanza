@@ -1,0 +1,28 @@
+#use-added-syntax(jitx)
+doc: \<DOC>
+Pin Reference Helper Functions
+
+This package contains functions to help with the construction
+of the `Ref` names for symbol pins.
+<DOC>
+defpackage jsl/symbols/pin-refs:
+  import core
+  import jitx
+
+doc: \<DOC>
+Produce signed Ref names - usually for symbol pins.
+
+This function expects a base Ref name and then will produce
+two Refs in the format `base+` and `base-`. This is primarily for
+producing different signal inputs and outputs.
+
+@param base The base name of the Refs to be constructed. Both
+constructed refs will have this as a prefix.
+@returns Tuple of two Refs `[PosRef, NegRef]` where `PosRef`
+is the reference for the positive input and `NegReg` is the
+reference for the negative input.
+<DOC>
+public defn get-signed-refs (base:Ref) -> [Ref, Ref]:
+  val neg-ref = Ref("%_-" % [to-string(base)])
+  val pos-ref = Ref("%_+" % [to-string(base)])
+  [pos-ref, neg-ref]
