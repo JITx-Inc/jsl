@@ -24,14 +24,18 @@ defn ensure-valid (lanes) -> True|False:
     8  : true
     16 : true
     32 : true
-    else : false
+    else : throw $ Exception("Invalid Lane Configuration for PCIe Bundle")
   res
 
-public pcb-bundle pcie (-- lanes:Int = 4, _varg:True|False = ensure-valid(lanes)) :
-  name = "PCI-E"
-  description = "PCI-E Serial Communications Link"
-  port control : pcie-control
-  port data : pcie-data(lanes)
+public defn pcie (-- lanes:Int = 4) :
+  ; This still throws
+  ensure-valid(lanes)
+  pcb-bundle pcie_b :
+    name = "PCI-E"
+    description = "PCI-E Serial Communications Link"
+    port control : pcie-control
+    port data : pcie-data(lanes)
+  pcie_b
 
 doc: \<DOC>
 PCI-E Data Bundle
