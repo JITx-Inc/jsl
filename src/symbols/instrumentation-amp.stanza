@@ -51,12 +51,10 @@ public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
   )
 
   doc: \<DOC>
-  Input Base Reference
-  The symbol will construct individual `Ref` values from this
-  base `Ref` for the positive and negative inputs to the amp. By default,
-  the reference `in` will be used, resulting in the default inputs, `in+` and `in-`.
+  Input Base Reference or Explicit Input References.
+  @see OpAmpSymbol for more Information.
   <DOC>
-  in-ref:Ref with: (
+  in-ref:Ref|[Ref, Ref] with: (
     default => OPAMP_IN_BASE_REF,
     as-method => true
   )
@@ -100,7 +98,7 @@ public defn InstrumentationAmpSymbol (
   --
   pitch:Double = DEF_IAMP_PITCH,
   rg-pitch:Double = DEF_IAMP_RG_PITCH
-  in-ref:Ref = OPAMP_IN_BASE_REF,
+  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
   out-ref:Ref = OPAMP_OUT_REF,
   rg-ref:Ref = IAMP_RG_REF_DEF,
   vref-ref:Ref = IAMP_VREF_REF_DEF,

@@ -29,12 +29,10 @@ public defstruct ComparatorSymbol <: OpAmpSymbol :
   )
 
   doc: \<DOC>
-  Input Base Reference
-  The symbol will construct individual `Ref` values from this
-  base `Ref` for the positive and negative inputs to the comparator. By default,
-  the reference `in` will be used, resulting in the default inputs, `in+` and `in-`.
+  Input Base Reference or Explicit Input Refs.
+  @see OpAmpSymbol for more Information.
   <DOC>
-  in-ref:Ref with: (
+  in-ref:Ref|[Ref, Ref] with: (
     default => OPAMP_IN_BASE_REF,
     as-method => true
   )
@@ -58,7 +56,7 @@ with:
 public defn ComparatorSymbol (
   --
   pitch:Double = DEF_OPAMP_PITCH,
-  in-ref:Ref = OPAMP_IN_BASE_REF,
+  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
   out-ref:Ref = OPAMP_OUT_REF,
   params:OpAmpSymbolParams = get-default-comparator-symbol-params()
   ) -> ComparatorSymbol :
