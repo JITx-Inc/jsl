@@ -16,6 +16,15 @@ PCI-E is a serial communication supporting high speed data links
 @see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
+public defenum PCIeVersion:
+  PCIE-V1
+  PCIE-V2
+  PCIE-V3
+  PCIE-V4
+  PCIE-V5
+  PCIE-V6
+  PCIE-V7
+
 defn ensure-valid (lanes) -> True|False:
   val res = switch(lanes) :
     1  : true
@@ -65,9 +74,9 @@ public pcb-bundle pcie-control :
   pin PERST#          ; PCI-E Reset signal
   pin CLKREQ#         ; clock request
 
-public defn connect-pci-e (gen:Int, cap:Instantiable, x:JITXObject, y:JITXObject) : 
+public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
-    defn constraint (gen:Int, a:JITXObject, b:JITXObject) :
+    defn constraint (gen:PCIeVersion, half:True|False, a:JITXObject, b:JITXObject) :
       ; some references for the data in the following table:
       ; https://pcisig.com/pci-express%C2%AE-50-architecture-channel-insertion-loss-budget-0
       ; 
@@ -89,32 +98,33 @@ public defn connect-pci-e (gen:Int, cap:Instantiable, x:JITXObject, y:JITXObject
       ; 
       val [sw, ml, ti] = 
         switch(gen) :
-          1 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   2.5 GT/s
-          2 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   5.0 GT/s
-          3 : [0.0 +/-  5.0e-12,  10.3,  85.0 +/- (5 %)]  ;   8.0 GT/s
-          4 : [0.0 +/- 0.850e-12, 13.5,  85.0 +/- (5 %)]  ;  16.0 GT/s
-          5 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  32.0 GT/s
-          6 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  64.0 GT/s
-          7 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ; 128.0 GT/s
+          PCIE-V1 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   2.5 GT/s
+          PCIE-V2 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   5.0 GT/s
+          PCIE-V3 : [0.0 +/-  5.0e-12,  10.3,  85.0 +/- (5 %)]  ;   8.0 GT/s
+          PCIE-V4 : [0.0 +/- 0.850e-12, 13.5,  85.0 +/- (5 %)]  ;  16.0 GT/s
+          PCIE-V5 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  32.0 GT/s
+          PCIE-V6 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  64.0 GT/s
+          PCIE-V7 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ; 128.0 GT/s
 
       topo-net(a => b)
       diff-structure(diff(ti), a => b)
-      skew-window(sw, a => b)
+      val swf = sw * if (half): typ(0.50) else: typ(1.00)
+      skew-window(swf, a => b)
       max-loss(ml, a => b)
 
     for (i in 0 to length(x.data.tx)) do : 
       inst bl-x-y-cap : dp-coupler(cap)
       require tx1 : dual-pair from bl-x-y-cap
-      constraint(gen, x.data.tx[i], tx1.A)
-      constraint(gen, tx1.B, y.data.rx[i])
+      constraint(gen, true, x.data.tx[i], tx1.A)
+      constraint(gen, true, tx1.B, y.data.rx[i])
 
     for (i in 0 to length(y.data.tx)) do : 
       inst bl-y-x-cap : dp-coupler(cap)
       require tx1 : dual-pair from bl-y-x-cap
-      constraint(gen, y.data.tx[i], tx1.A)
-      constraint(gen, tx1.B, x.data.rx[i])
+      constraint(gen, true, y.data.tx[i], tx1.A)
+      constraint(gen, true, tx1.B, x.data.rx[i])
 
-    constraint(gen, x.data.refclk, y.data.refclk)
+    constraint(gen, false, x.data.refclk, y.data.refclk)
 
     net (x.control y.control)
 
