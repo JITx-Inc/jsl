@@ -620,3 +620,12 @@ public defn text (
   val size = to-double(font-size) * FONT-TO-UNIT
   val art = Text(to-string(content), size, anchor, l)
   add-glyph(sn, art, name? = name, class = class)
+
+public defn text-size (
+  content:String|Printable,
+  --
+  font-size:Int = 12
+) -> Dims :
+  val size = to-double(font-size) * FONT-TO-UNIT
+  val art = Text(to-string(content), size, C, loc(0.0, 0.0))
+  to-Dims(bounds(art))

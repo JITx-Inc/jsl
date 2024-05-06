@@ -147,6 +147,31 @@ defmethod print (o:OutputStream, e:MissingSymbolPins) :
 %n<S> % [map(Indented{format(_)}, missing(e))]
   print(o, error-str)
 
+public defstruct InvalidPortObject <: BoxSymbolError :
+  invalid-ports: Seqable<JITXObject>
+
+defmethod print (o:OutputStream, e:InvalidPortObject) :
+  print("Object(s) %_ are not of expected PortType"
+      % [invalid-ports(e)])
+
+public defstruct InvalidSideType <: BoxSymbolError :
+  pin: Ref
+  actual-type: String
+
+public defstruct MissingSideProperty <: BoxSymbolError :
+  pins: Tuple<Ref>
+
+defmethod print (o:OutputStream, e:MissingSideProperty) :
+  print(o, "Pins %, do not have a .side property." % [pins(e)])
+
+public defstruct InvalidBankType <: BoxSymbolError :
+  pin: Ref
+  actual-type: String
+
+defmethod print (o:OutputStream, e:InvalidBankType) :
+  print(o, "Property %_.bank is expected to be a Int|Ref object but is instead of type %_." % [
+    pin(e), actual-type(e)])
+
 defn ensure-good-banks! (pins:Tuple<JITXObject>,
                          banks:Tuple<Maybe>,
                          require-banks?:True|False) :
@@ -199,7 +224,7 @@ defmulti message (e: BoxSymbolError) -> ?
 public defstruct GenericBoxSymbolError <: BoxSymbolError :
   message: ? with : (as-method => true)
 
-public defstruct InvalidPortObject <: BoxSymbolError :
+public defstruct BoxSymbolParamError <: BoxSymbolError :
   message: ? with : (as-method => true)
 
 public defstruct NegativeValueProperty <: BoxSymbolError :
@@ -214,28 +239,8 @@ public defstruct InvalidGridDimension <: BoxSymbolError :
 public defstruct MultiAlignGroup <: BoxSymbolError :
   message: ? with : (as-method => true)
 
-public defstruct InvalidSideType <: BoxSymbolError :
-  pin: Ref
-  actual-type: String
-
-defmethod print (o:OutputStream, e:InvalidSideType) :
-  print(o, "Property %_.side is expected to be a Dir object but is instead of type %_." % [
-    pin(e), actual-type(e)])
-
-
-public defstruct MissingSideProperty <: BoxSymbolError :
-  pins: Tuple<Ref>
-
-defmethod print (o:OutputStream, e:MissingSideProperty) :
-  print(o, "Pins %, do not have a .side property." % [pins(e)])
-
-public defstruct InvalidBankType <: BoxSymbolError :
-  pin: Ref
-  actual-type: String
-
-defmethod print (o:OutputStream, e:InvalidBankType) :
-  print(o, "Property %_.bank is expected to be a Int|Ref object but is instead of type %_." % [
-    pin(e), actual-type(e)])
+defmethod print (o:OutputStream, e:BoxSymbolError) :
+  print(o, message(e))
 
 defn unique-banks (banks:Tuple<Maybe>) :
   val banks* = to-vector<Int|Ref> $ to-hashset<Int|Ref> $

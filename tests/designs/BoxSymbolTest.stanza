@@ -173,7 +173,7 @@ pcb-component basic-align:
   set-row(4, self.GND)
   set-row(1, find-pins-by-regex(box, "DOUT.*"))
   set-row(2, self.ALERT)
-  set-grid(box, [5,2])
+  set-grid(box, [6,2])
   set-alignment(C, find-pins-by-regex(box, "DOUT.*"))
   set-head-margin(2.0,self.VDD)
   set-tail-margin(2.0,self.VDD)
@@ -254,8 +254,11 @@ pcb-component test-24AA025:
     [rail.V- | p[2] | Left | 1 | "VSS" ]
     [ADDR[0] | p[5] | Down | 1 | "A0" ]
     [ADDR[1] | p[4] | Down | 1 | "A1" ]
+    [in | p[7] | Left | 0 | "IN1" ]
+    [in2 | p[8] | Left | 1 | "IN2" ]
 
-  val box = BoxSymbol(self)
+  val box = BoxSymbol(self, params =
+    BoxSymbolParams(show-grid = false))
   set-grid(box, [2,1])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
@@ -267,7 +270,7 @@ pcb-component test-24AA025:
   assign-symbol(symb)
 
   val SOIC-pkg = SOIC-N(
-    num-leads = 6,
+    num-leads = 8,
     lead-span = min-max(5.8, 6.2),
     package-length = 4.5 +/- 0.10,
     density-level = DensityLevelC

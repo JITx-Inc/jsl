@@ -19,6 +19,7 @@ defpackage jsl/symbols/box-symbol/box-symbol:
 
 val DEF_LINE_WIDTH = 0.05
 val DEF_PIN_LEN = 1.0
+val DEF_FONT_SIZE = 2
 val DEF_PAD_REF_SIZE = 0.25
 val DEF_PIN_NAME_SIZE = 0.25
 ; length between pins
@@ -100,8 +101,7 @@ defn check-port-type (objs: Seqable<JITXObject>) -> Vector<JITXObject> :
           (b:Bundle|PortArray) : add-all(ports, pins(ns))
           (f): add(non-ports, o)
   if length(non-ports) > 0 :
-    throw $ InvalidPortObject("Object(s) %_ are not of expected PortType"
-      % [non-ports])
+    throw $ InvalidPortObject(non-ports)
   ports
 
 defn check-non-neg (prop:Symbol, arg:Int) :
@@ -260,7 +260,10 @@ public defn BoxSymbol (
 defstruct GridInfo :
   ; 1-indexed dimensions
   dims:[Int, Int]
-    with: (default => [1,1], setter => set-dims)
+    with: (
+      default => [1,1]
+      setter => set-dims
+  )
   ; whether the user has explicitly set a grid or not
   active-grid?:True|False
     with: (default => false, setter => set-active-grid?)
@@ -483,6 +486,8 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   val size-info-by-rcs = HashTable<RCS, CellSizeInfo>()
   val actual-size-by-rcs = HashTable<RCS, Double>()
 
+  val text-size-by-side = HashTable<Dir, Double>()
+
   ; =========== Calcuate row/col/side for pins ============
   ;
   ; determine row col and side for specific pin given properties for that pin
@@ -526,7 +531,15 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     val p-info = pin-info-bs[p-ref]
     val rcs = calc-rcs-for-pin(p-ref, p-info)
     add-to-vector-table(pins-by-rcs, rcs, p-ref)
+    val text-length = x $ text-size(to-string(p-ref), font-size = DEF_FONT_SIZE)
+    val prev-length = get?(text-size-by-side, side(rcs), 0.0)
+    if text-length > prev-length :
+      text-size-by-side[side(rcs)] = text-length
 
+  val text-buffer-bottom = round-to-grid $ get?(text-size-by-side, Down, 0.0)
+  val text-buffer-top = round-to-grid $ get?(text-size-by-side, Up, 0.0)
+  val text-buffer-left = round-to-grid $ get?(text-size-by-side, Left, 0.0)
+  val text-buffer-right = round-to-grid $ get?(text-size-by-side, Right, 0.0)
   ; ================ align pins in cell ===============
   ;
   ; Run logic to figure out the pin groupings and alignment within each cell
@@ -548,7 +561,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       match(get?(group-anchors, group)) :
         (a: Anchor) :
           if align != a :
-            throw $ InvalidAlignProperty("multiple alignments found in same group:
+            throw $ BoxSymbolParamError("multiple alignments found in same group:
               group:%_ [%_ %_]" % [group, align, a])
         (f) : false
 
@@ -677,16 +690,18 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
 
   ; calculate and draw rectangle
   val [width, height] = calc-width-height()
-  val top = height / 2.0
-  val top-buffer = calc-snap-grid-buffer(top)
+  val adj-height = height + text-buffer-top + text-buffer-bottom
+  val adj-width = width + text-buffer-left + text-buffer-right
+  val top = adj-height / 2.0
+  val top-buffer = calc-snap-grid-buffer(top + text-buffer-top)
   val top-snap-grid = top + top-buffer
-  val left = (- 1.0) * (width / 2.0)
-  val side-buffer = calc-snap-grid-buffer(left)
+  val left = (- 1.0) * (adj-width / 2.0)
+  val side-buffer = calc-snap-grid-buffer(left + text-buffer-left)
   val left-snap-grid = left + side-buffer
   val top-left = Point(left-snap-grid, top-snap-grid)
 
   val base-box-pose = loc(side-buffer, top-buffer)
-  rectangle(node, width, height, pose = base-box-pose)
+  rectangle(node, adj-width, adj-height, pose = base-box-pose)
   ;println("Rectangle w%_, h%_, pose %_" % [width, height, base-box-pose])
 
   defn build-cell (row:Int, col:Int, side:Dir, start:Point) :
@@ -826,7 +841,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   defn calc-start (base:Point, x-off:Double, y-off:Double) :
     Point(x(base) + x-off, y(base) - y-off)
 
-  var row-offset = 0.0
+  var row-offset = text-buffer-top
   for i in 0 to num-rows do :
     val cols =
       if i == 0 or i == num-rows - 1 :
@@ -835,18 +850,18 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         [0]
       else :
         [0, num-cols - 1]
-    var col-offset = 0.0
+    var col-offset = text-buffer-left
     val down = actual-size-by-rcs[RCS(i,0,Left)] + row-offset
     for j in cols do :
       val right = actual-size-by-rcs[RCS(0,j,Up)] + col-offset
       if i == 0 :
-        build-cell(i, j, Up, calc-start(top-left, col-offset, row-offset))
+        build-cell(i, j, Up, calc-start(top-left, col-offset, 0.0))
       if i == num-rows - 1 :
-        build-cell(i, j, Down, calc-start(top-left, col-offset, down))
+        build-cell(i, j, Down, calc-start(top-left, col-offset, adj-height))
       if j == 0 :
-        build-cell(i, j, Left, calc-start(top-left, col-offset, row-offset))
+        build-cell(i, j, Left, calc-start(top-left, 0.0, row-offset))
       if j == num-cols - 1 :
-        build-cell(i, j, Right, calc-start(top-left, right, row-offset))
+        build-cell(i, j, Right, calc-start(top-left, adj-width, row-offset))
       col-offset = right
     row-offset = down
 
@@ -922,6 +937,8 @@ Set the grid for a component
 <DOC>
 public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
   if not has-grid?(b) :
+    if dims[0] <= 0 or dims[1] <= 0 :
+      throw $ InvalidGridDimension("grid a dims must be >= 1, %_" % [dims])
     set-dims(grid(b), dims)
     set-active-grid?(grid(b), true)
       ; default unspecified pins to 0, 0
