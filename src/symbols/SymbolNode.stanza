@@ -603,6 +603,9 @@ public defn approx-arc (
 
 val FONT-TO-UNIT = 10.0 / 72.0
 
+public defn font-to-unit (i: Int) -> Double :
+  to-double(i) * FONT-TO-UNIT
+
 public defn text (
   sn:SymbolNode,
   p:Pose|Point|[Double, Double]|[Int, Int],
@@ -617,15 +620,12 @@ public defn text (
     match(p):
       (pose:Pose): pose
       (point:Point|[Double Double]|[Int Int]): loc(to-point(point))
-  val size = to-double(font-size) * FONT-TO-UNIT
-  val art = Text(to-string(content), size, anchor, l)
+  val art = Text(to-string(content), font-to-unit(font-size), anchor, l)
   add-glyph(sn, art, name? = name, class = class)
 
 public defn text-size (
   content:String|Printable,
-  --
-  font-size:Int = 12
+  unit-size:Double
 ) -> Dims :
-  val size = to-double(font-size) * FONT-TO-UNIT
-  val art = Text(to-string(content), size, C, loc(0.0, 0.0))
+  val art = Text(to-string(content), unit-size, C, loc(0.0, 0.0))
   to-Dims(bounds(art))

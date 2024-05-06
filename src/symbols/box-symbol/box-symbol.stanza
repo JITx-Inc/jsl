@@ -82,8 +82,8 @@ defn last-anchor (s: Dir) :
 
 defn default-anchor (s: Dir) :
   match(s) :
-    (lr:Left|Right) : S
-    (ud:Up|Down) : E
+    (lr:Left|Right) : C
+    (ud:Up|Down) : C
 
 ; Takes a seqable of JITXObject and checks that every one of them has
 ; a port type. They are returned in a vector (stable order) but an exception
@@ -475,7 +475,6 @@ defn min-cell-size (s: Dir, params: BoxSymbolParams) :
 
 public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   val params = params(bb)
-  val ppitch = pin-pitch(params)
   val num-rows = dims(grid(bb))[0]
   val num-cols = dims(grid(bb))[1]
   val pin-info-bs = pin-info(bb)
@@ -485,9 +484,10 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   val pin-info-by-rcs = HashTable<RCS, CellPinInfo>()
   val size-info-by-rcs = HashTable<RCS, CellSizeInfo>()
   val actual-size-by-rcs = HashTable<RCS, Double>()
-
   val text-size-by-side = HashTable<Dir, Double>()
 
+  val pin-pitch = maximum([
+    DEF_PIN_PADDING, pad-ref-size(params), pin-name-size(params), pin-pitch(params)])
   ; =========== Calcuate row/col/side for pins ============
   ;
   ; determine row col and side for specific pin given properties for that pin
@@ -531,7 +531,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     val p-info = pin-info-bs[p-ref]
     val rcs = calc-rcs-for-pin(p-ref, p-info)
     add-to-vector-table(pins-by-rcs, rcs, p-ref)
-    val text-length = x $ text-size(to-string(p-ref), font-size = DEF_FONT_SIZE)
+    val text-length = x $ text-size(to-string(p-ref), pad-ref-size(params))
     val prev-length = get?(text-size-by-side, side(rcs), 0.0)
     if text-length > prev-length :
       text-size-by-side[side(rcs)] = text-length
@@ -625,7 +625,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         (f) : DEF_CELL_BOTTOM_MARGIN
 
     defn calc-section-offsets (pin-group: Vector<Ref|String>) -> [Double, Vector<Double>] :
-      var total = DEF_PIN_PADDING
+      var total = pin-pitch
       val pos = Vector<Double>()
       for (p in pin-group, i in 0 to false) do :
         match(p) :
@@ -633,13 +633,13 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
             total = total + get-head-margin-for-pin(single)
             add(pos, total)
             total = total + get-tail-margin-for-pin(single)
-            total = total + DEF_PIN_PADDING
+            total = total + pin-pitch
           (group: String) :
             for p in pin-groups(c)[group] do :
               total = total + get-head-margin-for-pin(p)
               add(pos, total)
               total = total + get-tail-margin-for-pin(p)
-              total = total + DEF_PIN_PADDING
+              total = total + pin-pitch
       [total, pos]
 
     ; for a given alignment section, calculate the size of the entire section
@@ -652,6 +652,8 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
           total = total + size
           align-to-offsets[a] = size => offsets
         (f) : false
+    ; if length(anchors(side(c))) > 0 :
+    ;   total = total + pin-pitch
     CellSizeInfo(align-to-offsets, max(total, min-cell-size(side(c), params)))
 
   for rcs+pin-info in pin-info-by-rcs do :
@@ -795,7 +797,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
               match(pin-order[center-pin-group]) :
                 (g: String) : length(pin-groups(pin-info)[g])
                 (p: Ref) : 1
-            val edge-to-center = to-double((group-length / 2) - ((group-length - 1) % 2)) * ppitch
+            val edge-to-center = to-double((group-length / 2) - ((group-length - 1) % 2))
             above-center = above-center + edge-to-center
             below-center = below-center + edge-to-center
 
