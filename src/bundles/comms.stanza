@@ -18,6 +18,19 @@ public pcb-bundle i2c:
   pin sda
   pin scl
 
+
+doc: \<DOC>
+SMBus Bundle
+System Management Bus (SMBus) is a two wire serial communication protocol
+@see http://smbus.org/specs/
+<DOC>
+public pcb-bundle smbus:
+  name = "SMBus"
+  description = "System Management Bus (SMBus) - Serial Communication Protocol"
+  pin smbclk
+  pin smbdat
+
+
 doc: \<DOC>
 CAN Physical Layer Bundle
 

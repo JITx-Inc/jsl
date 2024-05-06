@@ -1,0 +1,154 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/pcie:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/si/helpers
+  import jsl/si/couplers
+  import jsl/pin-assignment
+
+doc: \<DOC>
+PCI-E Bundle
+PCI-E is a serial communication supporting high speed data links
+@see https://en.wikipedia.org/wiki/PCI_Express
+<DOC>
+
+defn ensure-valid (lanes) -> True|False:
+  val res = switch(lanes) :
+    1  : true
+    2  : true
+    4  : true 
+    8  : true
+    16 : true
+    32 : true
+    else : false
+  res
+
+public pcb-bundle pcie (-- lanes:Int = 4, _varg:True|False = ensure-valid(lanes)) :
+  name = "PCI-E"
+  description = "PCI-E Serial Communications Link"
+  port control : pcie-control
+  port data : pcie-data(lanes)
+
+doc: \<DOC>
+PCI-E Data Bundle
+PCI-E is a serial communication supporting high speed data links
+@see https://en.wikipedia.org/wiki/PCI_Express
+<DOC>
+
+public pcb-bundle pcie-data (lanes:Int) :
+  name = "PCI-E Data"
+  description = "PCI-E Serial Communications Link Data"
+  port rx : diff-pair[lanes] 
+  port tx : diff-pair[lanes] 
+  port refclk : diff-pair
+
+
+doc: \<DOC>
+PCI-E Control Bundle
+PCI-E is a serial communication supporting high speed data links
+@see https://en.wikipedia.org/wiki/PCI_Express
+<DOC>
+
+public pcb-bundle pcie-control :
+  name = "PCI-E Control"
+  description = "PCI-E Serial Communications Link Control"
+  pin PEWAKE#
+  pin PRSNT#          ; hot plug detection
+  pin PERST#          ; PCI-E Reset signal
+  pin CLKREQ#         ; clock request
+
+public defn connect-pci-e (gen:Int, cap:Instantiable, x:JITXObject, y:JITXObject) : 
+  inside pcb-module :
+    defn constraint (gen:Int, a:JITXObject, b:JITXObject) :
+      ; some references for the data in the following table:
+      ; https://pcisig.com/pci-express%C2%AE-50-architecture-channel-insertion-loss-budget-0
+      ; 
+
+      ; there are also very loose lane to lane skew spec:
+      ; the following lane-to-lane (inter pair) skews are tolerable for different lane rates:
+      ; Parameter	       2.5 GT/s	5.0 GT/s	8.0 GT/s	16.0 GT/s Unit
+      ; Lane to Lane Skew	20	     8	        6	          5 ns
+      ;
+      ; tpd 170ps/in to 147 ps/in -> 170fs/mil to 147 fs/mil
+      ; @  5 mils that is a intra-pair skew of 850 fs to 750 fs
+      ; @ 10 mils that is a intra-pair skew of 1.70ps to 1.50ps
+      ; for system board skew match: https://docs.broadcom.com/doc/pcie-pcb-layout-review page 2
+      ; 
+      ; https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/1/AN307_TP_HARDWARE_DESIGN_PCI_SMGIII.pdf
+      ; P/N swapping is ok per pair
+      ; all lanes being swapped is ok as well
+      ; this will be handled in the component level I think
+      ; 
+      val [sw, ml, ti] = 
+        switch(gen) :
+          1 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   2.5 GT/s
+          2 : [0.0 +/-  5.0e-12,  12.0, 100.0 +/- (5 %)]  ;   5.0 GT/s
+          3 : [0.0 +/-  5.0e-12,  10.3,  85.0 +/- (5 %)]  ;   8.0 GT/s
+          4 : [0.0 +/- 0.850e-12, 13.5,  85.0 +/- (5 %)]  ;  16.0 GT/s
+          5 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  32.0 GT/s
+          6 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  64.0 GT/s
+          7 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ; 128.0 GT/s
+
+      topo-net(a => b)
+      diff-structure(diff(ti), a => b)
+      skew-window(sw, a => b)
+      max-loss(ml, a => b)
+
+    for (i in 0 to length(x.data.tx)) do : 
+      inst bl-x-y-cap : dp-coupler(cap)
+      require tx1 : dual-pair from bl-x-y-cap
+      constraint(gen, x.data.tx[i], tx1.A)
+      constraint(gen, tx1.B, y.data.rx[i])
+
+    for (i in 0 to length(y.data.tx)) do : 
+      inst bl-y-x-cap : dp-coupler(cap)
+      require tx1 : dual-pair from bl-y-x-cap
+      constraint(gen, y.data.tx[i], tx1.A)
+      constraint(gen, tx1.B, x.data.rx[i])
+
+    constraint(gen, x.data.refclk, y.data.refclk)
+
+    net (x.control y.control)
+
+; need a function like this (dependent on the board stackup, of course)
+public pcb-routing-structure se-50 :
+  name = "50 Ohm single-ended"
+  layer(Top) :
+    trace-width = 0.15    ; mm
+    clearance = 0.15     ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz 
+    neck-down = NeckDown(
+      trace-width = 0.156 
+      clearance = 0.1 
+    )
+
+  layer(Bottom) :
+    trace-width = 0.15    ; mm
+    clearance = 0.15         ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz 
+    neck-down = NeckDown(
+      trace-width = 0.156 
+      clearance = 0.1 
+    )
+
+; @TODO - Compute from the JSL Stackup and Strip Line
+public pcb-differential-routing-structure diff (eff-imp:Toleranced) :
+  name = "85/100 Ohm differential impedance - PCIe"
+  val tw = switch(typ(eff-imp)) :
+     85.0  : 0.1400
+     100.0 : 0.1510
+
+  layer(LayerIndex(1, Top)) :
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.300    ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz 
+
+  uncoupled-region = se-50
