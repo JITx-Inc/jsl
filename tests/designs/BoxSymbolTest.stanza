@@ -485,7 +485,7 @@ pcb-component test-even-row:
     ;col-width = 1
     row-width = 5
   ))
-  set-grid(box, [2, 2])
+  set-grid(box, [2, 1])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
 

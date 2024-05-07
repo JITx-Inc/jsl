@@ -35,7 +35,7 @@ val DEF_PIN_PADDING = 0.5
 val DESIGNATOR_MARGIN = 1.0
 val DEF_SHOW_GRID = false
 
-val MAGIC_SCALE_FACTOR = 1.27
+val GRID_SCALE = UNIT-TO-MM / 2.0
 val SHOW_GRID_ROW = "ROW %_"
 val SHOW_GRID_COL = "COL %_"
 
@@ -389,10 +389,23 @@ defn check-properties (pins:Seqable<JITXObject>, grid: GridInfo) :
     val max-row = dims(grid)[0] - 1
     match(get-property?(p, ROW_PROP), side?) :
       (o1:One, side:One):
-        if (value(side) == Up and value(o1) != 0)
-          or (value(side) == Down and value(o1) != max-row) :
-          throw $ InvalidAlignProperty("Invalid row %_ (should be 0 or %_) \
+        if (value(side) == Up and value(o1) != 0) :
+          throw $ InvalidGridDimension("Invalid row %_ (should be 0) \
+            for pin %_ on side %_" % [value(o1), ref(p), value(side)])
+        if (value(side) == Down and value(o1) != max-row) :
+          throw $ InvalidGridDimension("Invalid row %_ (should be %_) \
             for pin %_ on side %_" % [value(o1), max-row, ref(p), value(side)])
+      (f1, f2): false
+
+    val max-col = dims(grid)[1] - 1
+    match(get-property?(p, COL_PROP), side?) :
+      (o1:One, side:One):
+        if (value(side) == Left and value(o1) != 0) :
+          throw $ InvalidGridDimension("Invalid col %_ (should be 0) \
+            for pin %_ on side %_" % [value(o1), ref(p), value(side)])
+        if (value(side) == Right and value(o1) != max-col) :
+          throw $ InvalidGridDimension("Invalid col %_ (should be %_) \
+            for pin %_ on side %_" % [value(o1), max-col, ref(p), value(side)])
       (f1, f2): false
 
 defn check-prop (prop: ?, filter: ?) -> True|False :
@@ -539,16 +552,11 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     RCS(row, col, side)
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
-    val base = 1.27 * (x $ text-size(to-string(p-ref), pin-name-size(params)))
+    val base = GRID_SCALE * (x $ text-size(to-string(p-ref), pin-name-size(params)))
     if key?(dec-info-by-pin(bb), p-ref) :
       (x $ ddims(dec-info-by-pin(bb)[p-ref])) + base
     else :
       base
-      ; val scale = (pin-name-size(params) / DEF_PIN_NAME_SIZE)
-      ; if scale > 1.0 :
-      ;   MAGIC_SCALE_FACTOR * scale * base
-      ; else :
-      ;   base
 
   ; group pins by cell and side
   for p-ref in pin-order-bs do :
@@ -728,6 +736,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
 
   val base-box-pose = loc(side-buffer, top-buffer)
   rectangle(node, adj-width, adj-height, pose = base-box-pose)
+
   ;println("Rectangle w%_, h%_, pose %_" % [width, height, base-box-pose])
   defn convert-maybe (x:Maybe<Double>) -> Double :
     match(x):
@@ -738,7 +747,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     within pin-info = got?(pin-info-by-rcs, rcs) :
       val actual-size = actual-size-by-rcs[rcs]
       val size-info = size-info-by-rcs[rcs]
-      ;println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
+      println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
 
       defn calc-start (base:Point, offset:Double) -> Point :
         match(side) :
@@ -867,13 +876,11 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     val center-y = row-offset + actual-size-by-rcs[RCS(i,0,Left)] / 2.0
 
     if show-grid? :
-      val adj-y =
+      var adj-y = center-y
         if i == 0 :
-          center-y - text-buffer-top / 2.0
-        else if i == num-rows - 1 :
-          center-y + text-buffer-bottom / 2.0
-        else :
-          center-y
+          adj-y = adj-y - text-buffer-top / 2.0
+        if i == num-rows - 1 :
+          adj-y = adj-y + text-buffer-bottom / 2.0
       text(node,
         calc-start(top-left, (- pin-length(params)), adj-y),
         to-string(SHOW_GRID_ROW % [i]),
@@ -887,13 +894,11 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         val start = calc-start(top-left, col-offset, 0.0)
         build-cell(i, j, Up, start)
         if show-grid? :
-          val adj-x =
-            if j == 0 :
-              center-x - text-buffer-left / 2.0
-            else if j == num-cols - 1 :
-              center-x + text-buffer-right / 2.0
-            else :
-              center-x
+          var adj-x = center-x
+          if j == 0 :
+            adj-x = adj-x - text-buffer-left / 2.0
+          if j == num-cols - 1 :
+            adj-x = adj-x + text-buffer-right / 2.0
           text(node,
             calc-start(top-left, adj-x, (- pin-length(params))),
             to-string(SHOW_GRID_COL % [j]),
@@ -904,7 +909,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
               [calc-start(top-left, col-offset, 0.0),
               calc-start(top-left, col-offset, adj-height)]
             )
-      else if i == num-rows - 1 :
+      if i == num-rows - 1 :
         val start = calc-start(top-left, col-offset, adj-height)
         build-cell(i, j, Down, start)
         if show-grid? and j > 0 :
@@ -919,7 +924,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
             [calc-start(top-left, 0.0, row-offset),
             calc-start(top-left, adj-width, row-offset)]
           )
-      else if j == num-cols - 1 :
+      if j == num-cols - 1 :
         build-cell(i, j, Right, calc-start(top-left, adj-width, row-offset))
         if show-grid? and i < num-rows - 1:
           line(node,
@@ -1005,9 +1010,6 @@ public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
       throw $ InvalidGridDimension("grid a dims must be >= 1, %_" % [dims])
     set-dims(grid(b), dims)
     set-active-grid?(grid(b), true)
-      ; default unspecified pins to 0, 0
-    for p in pins(obj(b)) do :
-      set-pin-grid-default(p)
   else :
     throw $ InvalidGridDimension("Active grid already set to %_" % [grid(b)])
   false
@@ -1015,20 +1017,7 @@ public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
 public defn set-grid (b:BoxSymbol, dims:[Int, Int], bank:Int|Ref) :
   if not key?(banks(b), bank) :
     banks(b)[bank] = GridInfo(dims, true)
-    ; default unspecified pins to 0, 0
-    for p in pins(obj(b)) do :
-      match(get-property?(p, BANK_PROP)) :
-        (o:One):
-          if value(o) == bank :
-            set-pin-grid-default(p)
-        (f): false
   false
-
-defn set-pin-grid-default (p: JITXObject) :
-  if not has-property?(p.row) :
-    set-property(p, ROW_PROP, 0)
-  if not has-property?(p.col) :
-    set-property(p, COL_PROP, 0)
 
 doc: \<DOC>
 Get the total number of rows in the pin grid.
