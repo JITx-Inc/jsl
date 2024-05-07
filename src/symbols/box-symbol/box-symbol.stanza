@@ -867,7 +867,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       if i == 0 :
         val start = calc-start(top-left, col-offset, 0.0)
         build-cell(i, j, Up, start)
-        if show-grid? :
+        if show-grid? and j > 0 :
           line(node,
             [calc-start(top-left, col-offset, 0.0),
             calc-start(top-left, col-offset, adj-height)]
@@ -875,21 +875,21 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       else if i == num-rows - 1 :
         val start = calc-start(top-left, col-offset, adj-height)
         build-cell(i, j, Down, start)
-        if show-grid? :
+        if show-grid? and j < num-cols - 1 :
           line(node,
             [calc-start(top-left, right, 0.0),
             calc-start(top-left, right, adj-height)]
           )
       if j == 0 :
         build-cell(i, j, Left, calc-start(top-left, 0.0, row-offset))
-        if show-grid? :
+        if show-grid? and i > 0 :
           line(node,
             [calc-start(top-left, 0.0, row-offset),
             calc-start(top-left, adj-width, row-offset)]
           )
       else if j == num-cols - 1 :
         build-cell(i, j, Right, calc-start(top-left, adj-width, row-offset))
-        if show-grid? :
+        if show-grid? and i < num-rows - 1:
           line(node,
             [calc-start(top-left, 0.0, down),
             calc-start(top-left, adj-width, down)]
