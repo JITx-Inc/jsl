@@ -279,7 +279,7 @@ pcb-component test-24AA025:
   )
   assign-landpattern(create-landpattern(SOIC-pkg))
 
-pcb-component cja-test-0:
+pcb-component test-default-align:
   manufacturer = "Microchip"
   mpn = "24AA025UIDT-I/OT"
 
@@ -291,22 +291,15 @@ pcb-component cja-test-0:
     [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
     [bus.sda | p[3] | Left | 0 | "SDA" ]
     [bus.scl | p[1] | Left | 0 | "SCL" ]
-    [scl2 | p[7] | Left | 0 | "SCL2" ]
-    [scl3 | p[8] | Left | 0 | "SCL3" ]
     [rail.V+ | p[6] | Right | 0 | "VCC" ]
     [rail.V- | p[2] | Left | 1 | "VSS" ]
     [ADDR[0] | p[5] | Right | 1 | "A0" ]
     [ADDR[1] | p[4] | Right | 1 | "A1" ]
 
-  val box = BoxSymbol(self, params =
-    BoxSymbolParams(
+  val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
     col-width = 10
-    row-width = 5
-    pad-ref-size = 2.0
-    pin-name-size = 2.0
-    pin-pitch = 5.0
-  ))
+    row-width = 5))
   set-grid(box, [2,2])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
@@ -315,7 +308,192 @@ pcb-component cja-test-0:
   assign-symbol(symb)
 
   val SOIC-pkg = SOIC-N(
-    num-leads = 8,
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pad-ref:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    col-width = 10
+    row-width = 5
+    pad-ref-size = 2.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pin-name:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 10
+    row-width = 5
+    pin-name-size = 2.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+  add-decorator(box, self.rail.V-, ClockDecorator(size = 2.0))
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pin-pitch:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 10
+    row-width = 5
+    pin-pitch = 5.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-up-column:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Up | 0 | "SDA" ]
+    [bus.scl | p[1] | Down | 2 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 1
+    row-width = 5
+  ))
+  set-grid(box, [3,3])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-even-row:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Down | 2 | "A0" ]
+    [ADDR[1] | p[4] | Down | 2 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 1
+    row-width = 5
+  ))
+  set-grid(box, [3, 3])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
     lead-span = min-max(5.8, 6.2),
     package-length = 4.5 +/- 0.10,
     density-level = DensityLevelC
@@ -330,7 +508,12 @@ pcb-module test-design:
   ; inst c4: basic-align-rotate
   ; inst c5: basic-bank
   ; inst c6: test-24AA025
-  inst t0: cja-test-0
+  inst t0: test-default-align
+  inst t1: test-pad-ref
+  inst t2: test-pin-name
+  inst t3: test-pin-pitch
+  inst t4: test-up-column
+  inst t5: test-even-row
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 
