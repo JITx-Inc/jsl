@@ -35,7 +35,9 @@ val DEF_PIN_PADDING = 0.5
 val DESIGNATOR_MARGIN = 1.0
 val DEF_SHOW_GRID = false
 
-val MAGIC_SCALE_FACTOR = 0.16
+val MAGIC_SCALE_FACTOR = 1.27
+val SHOW_GRID_ROW_COL = "ROW %_\nCOL %_"
+val SHOW_GRID_ROW_COL_SQUASHED = "ROW %_\nCOL %_\n(Squashed to zero)"
 
 ; Property constants
 public :
@@ -537,15 +539,16 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     RCS(row, col, side)
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
-    val base = x $ text-size(to-string(p-ref), pin-name-size(params))
+    val base = 1.27 * (x $ text-size(to-string(p-ref), pin-name-size(params)))
     if key?(dec-info-by-pin(bb), p-ref) :
       (x $ ddims(dec-info-by-pin(bb)[p-ref])) + base
     else :
-      val scale = (pin-name-size(params) / DEF_PIN_NAME_SIZE)
-      if scale > 1.0 :
-        MAGIC_SCALE_FACTOR * scale * base
-      else :
-        base
+      base
+      ; val scale = (pin-name-size(params) / DEF_PIN_NAME_SIZE)
+      ; if scale > 1.0 :
+      ;   MAGIC_SCALE_FACTOR * scale * base
+      ; else :
+      ;   base
 
   ; group pins by cell and side
   for p-ref in pin-order-bs do :
@@ -860,10 +863,13 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   val show-grid? = show-grid(params)
   var row-offset = text-buffer-top
   for i in 0 to num-rows do :
+    val down = row-offset + actual-size-by-rcs[RCS(i,0,Left)]
+    val center-y = row-offset + actual-size-by-rcs[RCS(i,0,Left)] / 2.0
+
     var col-offset = text-buffer-left
-    val down = actual-size-by-rcs[RCS(i,0,Left)] + row-offset
     for j in 0 to num-cols do :
-      val right = actual-size-by-rcs[RCS(0,j,Up)] + col-offset
+      val right = col-offset + actual-size-by-rcs[RCS(0,j,Up)]
+      val center-x = col-offset + actual-size-by-rcs[RCS(0,j,Up)] / 2.0
       if i == 0 :
         val start = calc-start(top-left, col-offset, 0.0)
         build-cell(i, j, Up, start)
@@ -875,10 +881,10 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
       else if i == num-rows - 1 :
         val start = calc-start(top-left, col-offset, adj-height)
         build-cell(i, j, Down, start)
-        if show-grid? and j < num-cols - 1 :
+        if show-grid? and j > 0 :
           line(node,
-            [calc-start(top-left, right, 0.0),
-            calc-start(top-left, right, adj-height)]
+            [calc-start(top-left, col-offset, 0.0),
+            calc-start(top-left, col-offset, adj-height)]
           )
       if j == 0 :
         build-cell(i, j, Left, calc-start(top-left, 0.0, row-offset))
@@ -894,7 +900,33 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
             [calc-start(top-left, 0.0, down),
             calc-start(top-left, adj-width, down)]
           )
-      col-offset = right
+      if show-grid? :
+        val grid-text =
+          if actual-size-by-rcs[RCS(i,0,Left)] == 0 or
+            actual-size-by-rcs[RCS(0,j,Up)] == 0 :
+            to-string(SHOW_GRID_ROW_COL_SQUASHED % [i, j])
+          else :
+            to-string(SHOW_GRID_ROW_COL % [i, j])
+        val adj-x =
+          if j == 0 :
+            center-x - text-buffer-left / 2.0
+          else if j == num-cols - 1 :
+            center-x + text-buffer-right / 2.0
+          else :
+            center-x
+        val adj-y =
+          if i == 0 :
+            center-y - text-buffer-top / 2.0
+          else if i == num-rows - 1 :
+            center-y + text-buffer-bottom / 2.0
+          else :
+            center-y
+        text(node,
+          calc-start(top-left, adj-x, adj-y),
+          grid-text
+          unit-size = pin-name-size(params),
+          anchor = C)
+        col-offset = right
     row-offset = down
 
 public defmethod build-artwork (x:BoxSymbolBank, node:SymbolNode) :
