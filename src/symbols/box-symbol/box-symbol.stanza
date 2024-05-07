@@ -1231,6 +1231,20 @@ public defn set-tail-margin (margin:Double, pins: Seqable<JITXObject>) :
   for p in valid-pins do :
     set-property(p, TAIL_MARGIN_PROP, margin)
 
+public defn set-head-margin (box: BoxSymbol, margin:Double, group: String) :
+  set-margin-for-group(box, margin, group, HEAD_MARGIN_PROP)
+
+public defn set-tail-margin (box: BoxSymbol, margin:Double, group: String) :
+  set-margin-for-group(box, margin, group, TAIL_MARGIN_PROP)
+
+defn set-margin-for-group (box: BoxSymbol, margin: Double, group: String, prop: Symbol) :
+  for p in pins(obj(box)) do :
+    match(get-property?(p, GROUP_PROP)) :
+      (one:One)   :
+        if value(one) == group :
+          set-property(p, HEAD_MARGIN_PROP, margin)
+      (none:None) : false
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Decorators
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
