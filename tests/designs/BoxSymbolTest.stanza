@@ -370,8 +370,8 @@ pcb-component test-pin-name:
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    col-width = 10
-    row-width = 5
+    ;col-width = 10
+    ;row-width = 5
     pin-name-size = 2.0))
   set-grid(box, [2,2])
   set-alignment(N, self.rail.V+)
@@ -483,6 +483,8 @@ pcb-component test-even-row:
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
     ;col-width = 1
+    ; line-width = 0.4
+    ; pin-length = 4.4
     row-width = 5
   ))
   set-grid(box, [2, 1])

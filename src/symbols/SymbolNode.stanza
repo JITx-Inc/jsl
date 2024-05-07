@@ -560,15 +560,18 @@ public defn rectangle (
 
 public defn line-rectangle (
   sn:SymbolNode,
-  p0:Point|[Double, Double]|[Int, Int],
-  p1:Point|[Double, Double]|[Int, Int],
+  p0:Point,
+  p1:Point,
   width:Double,
   --
+  pose:Pose = DEF_SYMNODE_POSE
   name:String = ?,
   class:Seqable<String>|String = []
   ) -> Glyph :
-  throw $ NotImplementedYet("line-rectangle")
-
+  val top-right = Point(x(p1), y(p0))
+  val bottom-left = Point(x(p0), y(p1))
+  val art = pose * Polyline(width, [p0, top-right, p1, bottom-left, p0])
+  add-glyph(sn, art, name? = name, class = class)
 
 public defn polyline (
   sn:SymbolNode,

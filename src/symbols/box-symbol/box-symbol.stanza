@@ -15,6 +15,7 @@ defpackage jsl/symbols/box-symbol/box-symbol:
   import jsl/symbols/SymbolNode
   import jsl/symbols/box-symbol/utils
   import jsl/geometry/box
+  import jsl/geometry/LineRectangle
   import math
 
 val DEF_LINE_WIDTH = 0.05
@@ -38,6 +39,9 @@ val DEF_SHOW_GRID = false
 val GRID_SCALE = UNIT-TO-MM / 2.0
 val SHOW_GRID_ROW = "ROW %_"
 val SHOW_GRID_COL = "COL %_"
+
+defn scale (d: Double) -> Double :
+  GRID_SCALE * d
 
 ; Property constants
 public :
@@ -552,7 +556,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     RCS(row, col, side)
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
-    val base = GRID_SCALE * (x $ text-size(to-string(p-ref), pin-name-size(params)))
+    val base = scale(x $ text-size(to-string(p-ref), pin-name-size(params)))
     if key?(dec-info-by-pin(bb), p-ref) :
       (x $ ddims(dec-info-by-pin(bb)[p-ref])) + base
     else :
@@ -735,7 +739,9 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   val top-left = Point(left-snap-grid, top-snap-grid)
 
   val base-box-pose = loc(side-buffer, top-buffer)
+
   rectangle(node, adj-width, adj-height, pose = base-box-pose)
+  line-rectangle(node, top-left, top-left + Point(adj-width, (- adj-height)), line-width(params))
 
   ;println("Rectangle w%_, h%_, pose %_" % [width, height, base-box-pose])
   defn convert-maybe (x:Maybe<Double>) -> Double :
@@ -747,7 +753,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     within pin-info = got?(pin-info-by-rcs, rcs) :
       val actual-size = actual-size-by-rcs[rcs]
       val size-info = size-info-by-rcs[rcs]
-      println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
+      ;println("RCS%_\n%_\n%_\nactual-size %_" % [rcs, pin-info, size-info, actual-size])
 
       defn calc-start (base:Point, offset:Double) -> Point :
         match(side) :
@@ -882,7 +888,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         if i == num-rows - 1 :
           adj-y = adj-y + text-buffer-bottom / 2.0
       text(node,
-        calc-start(top-left, (- pin-length(params)), adj-y),
+        calc-start(top-left, (- scale(pin-length(params))), adj-y),
         to-string(SHOW_GRID_ROW % [i]),
         unit-size = pin-name-size(params),
         anchor = E)
@@ -900,7 +906,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
           if j == num-cols - 1 :
             adj-x = adj-x + text-buffer-right / 2.0
           text(node,
-            calc-start(top-left, adj-x, (- pin-length(params))),
+            calc-start(top-left, adj-x, (- scale(pin-length(params)))),
             to-string(SHOW_GRID_COL % [j]),
             unit-size = pin-name-size(params),
             anchor = S)
