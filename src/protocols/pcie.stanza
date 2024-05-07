@@ -116,8 +116,11 @@ public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable,
           PCIE-V6 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ;  64.0 GT/s
           PCIE-V7 : [0.0 +/- 0.850e-12, 16.0,  85.0 +/- (5 %)]  ; 128.0 GT/s
 
+      ; user land code to provide the correct routing structure to us
+      ; given that we don't know the stack-up at this point
+      val rs = diff-imped-func(gen, ti)
       topo-net(a => b)
-      diff-structure(diff(ti), a => b)
+      diff-structure(rs, a => b)
       val swf = sw * if (half): typ(0.50) else: typ(1.00)
       skew-window(swf, a => b)
       max-loss(ml, a => b)
@@ -138,7 +141,34 @@ public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable,
 
     net (x.control y.control)
 
-; need a function like this (dependent on the board stackup, of course)
+doc: \<DOC>
+The diff-imped-func below is going to have to be provided by the user because it is stack-up dependant for now.
+The function should return a pcb-differential-routing-structure that will be applied to the differential traces 
+in the PCIe bus.
+<DOC>
+defn diff-imped-func (gen:PCIeVersion, impedance:Toleranced):
+  pcb-differential-routing-structure diff (impedance:Toleranced) :
+    name = "85/100 Ohm differential impedance - PCIe"
+    val tw = switch(typ(impedance)) :
+      85.0  : 0.1400
+      100.0 : 0.1510
+    ; whatever layers are to be used for routing the differential pairs (defined by the user)
+    layer(LayerIndex(1, Top)) :
+      trace-width  = tw       ; mm
+      pair-spacing = 2.0 * tw ; mm
+      clearance    = 0.300    ; mm
+      velocity = 0.19e12      ; mm/s
+      insertion-loss = 0.008  ; db/mm @ 1GHz 
+
+    uncoupled-region = se-50
+  diff 
+
+
+doc: \<DOC>
+The pcb-routing-structure(s) below are just examples of the routing structures that need to be maintained 
+in the project code because they are dependant on the stack-up and other factors. When using the connect-pci-e()
+function, there are board-specific constraints that need to be applied.
+<DOC>
 public pcb-routing-structure se-50 :
   name = "50 Ohm single-ended"
   layer(Top) :
