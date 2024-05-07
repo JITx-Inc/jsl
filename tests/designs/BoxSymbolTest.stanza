@@ -477,15 +477,15 @@ pcb-component test-even-row:
     [bus.scl | p[1] | Left | 0 | "SCL" ]
     [rail.V+ | p[6] | Right | 0 | "VCC" ]
     [rail.V- | p[2] | Left | 1 | "VSS" ]
-    [ADDR[0] | p[5] | Down | 2 | "A0" ]
-    [ADDR[1] | p[4] | Down | 2 | "A1" ]
+    [ADDR[0] | p[5] | Down | 1 | "A0" ]
+    [ADDR[1] | p[4] | Down | 1 | "A1" ]
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    col-width = 1
+    ;col-width = 1
     row-width = 5
   ))
-  set-grid(box, [3, 3])
+  set-grid(box, [2, 2])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
 
@@ -508,11 +508,11 @@ pcb-module test-design:
   ; inst c4: basic-align-rotate
   ; inst c5: basic-bank
   ; inst c6: test-24AA025
-  inst t0: test-default-align
-  inst t1: test-pad-ref
-  inst t2: test-pin-name
-  inst t3: test-pin-pitch
-  inst t4: test-up-column
+  ; inst t0: test-default-align
+  ; inst t1: test-pad-ref
+  ; inst t2: test-pin-name
+  ; inst t3: test-pin-pitch
+  ; inst t4: test-up-column
   inst t5: test-even-row
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
