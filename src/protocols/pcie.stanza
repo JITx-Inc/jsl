@@ -10,6 +10,8 @@ defpackage jsl/protocols/pcie:
   import jsl/si/couplers
   import jsl/pin-assignment
 
+  import jsl/examples/si/pcie-example ; need to refer to the example file here?
+
 doc: \<DOC>
 PCI-E Bundle
 PCI-E is a serial communication supporting high speed data links
@@ -48,7 +50,8 @@ public defn pcie (-- lanes:Int = 4) :
 
 doc: \<DOC>
 PCI-E Data Bundle
-PCI-E is a serial communication supporting high speed data links
+The Data Bundle consists of a number (1 or more) of RX and TX pairs (count = lanes)
+and it also includes a refclk (100MHz) pair
 @see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
@@ -58,7 +61,6 @@ public pcb-bundle pcie-data (lanes:Int) :
   port rx : diff-pair[lanes] 
   port tx : diff-pair[lanes] 
   port refclk : diff-pair
-
 
 doc: \<DOC>
 PCI-E Control Bundle
@@ -81,7 +83,9 @@ connecting the tx pairs on the first bundle to the rx pairs on the second bundle
 vice versa. It also connects the control sub-bundle together without constraints.
 For the data lines, the constraints on intra-pair skew, max loss and trace impedance
 need to be verified by the user. Some defaults in the table are derived from the references
-listed below.
+listed below. The function also inserts two TX blocking caps in series to the connection between 
+the TX and RX pairs. The particular blocking cap to be used needs to be passed into this 
+function.
 <DOC>
 
 public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable, x:JITXObject, y:JITXObject) : 
@@ -118,6 +122,7 @@ public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable,
 
       ; NOTE: user land code to provide the correct routing structure to us
       ; given that we don't know the stack-up at this point
+      ; an example of this function is available in jsl/examples/si/pcie-example.stanza
       val rs = diff-imped-func(gen, ti)
       topo-net(a => b)
       diff-structure(rs, a => b)
@@ -126,13 +131,13 @@ public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable,
       skew-window(swf, a => b)
       max-loss(mlf, a => b)
 
-    for (i in 0 to length(x.data.tx)) do : 
+    for i in indices(x.data.tx) do : 
       inst bl-x-y-cap : dp-coupler(cap)
       require tx1 : dual-pair from bl-x-y-cap
       constraint(gen, true, x.data.tx[i], tx1.A)
       constraint(gen, true, tx1.B, y.data.rx[i])
 
-    for (i in 0 to length(y.data.tx)) do : 
+    for i in indices(y.data.tx) do : 
       inst bl-y-x-cap : dp-coupler(cap)
       require tx1 : dual-pair from bl-y-x-cap
       constraint(gen, true, y.data.tx[i], tx1.A)
@@ -142,68 +147,3 @@ public defn connect-pci-e (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable,
 
     net (x.control y.control)
 
-doc: \<DOC>
-The diff-imped-func template below is going to have to be provided by the user because it is stack-up dependant for now.
-The function should return a pcb-differential-routing-structure that will be applied to the differential traces 
-in the PCIe bus. It should also reference a single ended routing structure for the uncoupled region.
-<DOC>
-defn diff-imped-func (gen:jsl/protocols/pcie/PCIeVersion, impedance:Toleranced):
-  pcb-differential-routing-structure diff (impedance:Toleranced) :
-    name = "85/100 Ohm differential impedance - PCIe"
-    val tw = switch(typ(impedance)) :
-      85.0  : 0.1400
-      100.0 : 0.1510
-    ; whatever layers are to be used for routing the differential pairs (defined by the user)
-    layer(LayerIndex(1, Top)) :
-      trace-width  = tw       ; mm
-      pair-spacing = 2.0 * tw ; mm
-      clearance    = 0.300    ; mm
-      velocity = 0.19e12      ; mm/s
-      insertion-loss = 0.008  ; db/mm @ 1GHz 
-
-    uncoupled-region = se-50
-  diff 
-
-
-doc: \<DOC>
-The pcb-routing-structure(s) below are just examples of the routing structures that need to be maintained 
-in the project code because they are dependant on the stack-up and other factors. When using the connect-pci-e()
-function, there are board-specific constraints that need to be applied.
-<DOC>
-public pcb-routing-structure se-50 :
-  name = "50 Ohm single-ended"
-  layer(Top) :
-    trace-width = 0.15    ; mm
-    clearance = 0.15     ; mm
-    velocity = 0.19e12   ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz 
-    neck-down = NeckDown(
-      trace-width = 0.156 
-      clearance = 0.1 
-    )
-
-  layer(Bottom) :
-    trace-width = 0.15    ; mm
-    clearance = 0.15         ; mm
-    velocity = 0.19e12   ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz 
-    neck-down = NeckDown(
-      trace-width = 0.156 
-      clearance = 0.1 
-    )
-
-; ; @TODO - Compute from the JSL Stackup and Strip Line
-; public pcb-differential-routing-structure diff (eff-imp:Toleranced) :
-;   name = "85/100 Ohm differential impedance - PCIe"
-;   val tw = switch(typ(eff-imp)) :
-;      85.0  : 0.1400
-;      100.0 : 0.1510
-
-;   layer(LayerIndex(1, Top)) :
-;     trace-width  = tw       ; mm
-;     pair-spacing = 2.0 * tw ; mm
-;     clearance    = 0.300    ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz 
-
-;   uncoupled-region = se-50

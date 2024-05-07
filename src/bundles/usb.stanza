@@ -1,9 +1,15 @@
 #use-added-syntax(jitx)
 defpackage jsl/bundles/usb:
   import core
+  import collections
   import jitx
+  import jitx/commands
 
-  import jsl/bundles/general
+  import jsl/bundles
+  import jsl/si/helpers
+  import jsl/si/couplers
+
+  import jsl/examples/si/usb3-example ; need to refer to the example file here?
 
 doc: \<DOC>
 USB 2.0 Bundle
@@ -55,3 +61,38 @@ public pcb-bundle usb-3 (-- dual-lane:True|False = true) :
     name = "USB 3.2 Gen2x1"
     port ssrx : diff-pair
     port sstx : diff-pair
+
+doc: \<DOC>
+USB-3 connect function
+<DOC>
+public defn connect-usb-3 (cap:Instantiable, x:JITXObject, y:JITXObject) :
+  inside pcb-module :
+    defn constraint (half:True|False, a:JITXObject, b:JITXObject) :
+      val sw = 0.0 +/- 1.0e-12 ; WAG
+      val ti = 82.5 +/- (10 %) ; differential impedance
+      val ml = 5.5  ; page 29 : https://www.usb.org/sites/default/files/D2T2-2%20-%20USB4%20Cable%20and%20System.pdf
+      ; NOTE: user land code to provide the correct routing structure to us
+      ; given that we don't know the stack-up at this point
+      ; an example of this function is available in jsl/examples/si/usb3-example.stanza
+      val rs = diff-imped-func(ti)
+      topo-net(a => b)
+      diff-structure(rs, a => b)
+      val swf = sw * if (half): typ(0.50) else: typ(1.00)
+      val mlf = ml * if (half): 0.50 else: 1.00
+      skew-window(swf, a => b)
+      max-loss(mlf, a => b)
+
+    for (i in indices(x.sstx)) do :
+      inst bl-x-y-cap : dp-coupler(cap)
+      require tx1 : dual-pair from bl-x-y-cap
+      constraint(true, x.sstx[i], tx1.A)
+      constraint(true, tx1.B, y.ssrx[i])
+
+    for (i in indices(y.sstx)) do :
+      inst bl-y-x-cap : dp-coupler(cap)
+      require tx1 : dual-pair from bl-y-x-cap
+      constraint(true, y.sstx[i], tx1.A)
+      constraint(true, tx1.B, x.ssrx[i])
+
+    constraint(false, x.data, y.data) ; usb2 data pair
+
