@@ -28,6 +28,9 @@ public defn set-default-iamp-symbol-params (v:OpAmpSymbolParams) -> False :
   DEF_IAMP_PARAMS = v
 
 
+public val IAMP_RG_REF_DEF = Ref("Rg")
+public val IAMP_VREF_REF_DEF = Ref("REF")
+
 
 public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
   doc: \<DOC>
@@ -47,6 +50,43 @@ public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
     default => DEF_IAMP_RG_PITCH
   )
 
+  doc: \<DOC>
+  Input Base Reference or Explicit Input References.
+  @see OpAmpSymbol for more Information.
+  <DOC>
+  in-ref:Ref|[Ref, Ref] with: (
+    default => OPAMP_IN_BASE_REF,
+    as-method => true
+  )
+  doc: \<DOC>
+  Output Reference
+  User can override the default for supporting multi-channel
+  chips. The default expected output pin ref is `out`
+  <DOC>
+  out-ref:Ref with: (
+    default => OPAMP_OUT_REF,
+    as-method => true
+  )
+
+  doc: \<DOC>
+  Gain Resistor Interface Reference
+  User can override the default for supporting multi-channel
+  chips. The default Rg pin ref is `Rg` and this will result
+  in two pins `Rg[0]` and `Rg[1]`
+  <DOC>
+  rg-ref:Ref with: (
+    default => IAMP_RG_REF_DEF
+  )
+
+  doc: \<DOC>
+  Voltage Reference Pin RefName
+  User can override the default for supporting multi-channel
+  chips. The default vref pin is `REF`.
+  <DOC>
+  vref-ref:Ref with: (
+    default => IAMP_VREF_REF_DEF
+  )
+
   params:OpAmpSymbolParams with: (
     default => get-default-iamp-symbol-params()
     as-method => true
@@ -58,16 +98,18 @@ public defn InstrumentationAmpSymbol (
   --
   pitch:Double = DEF_IAMP_PITCH,
   rg-pitch:Double = DEF_IAMP_RG_PITCH
+  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
+  out-ref:Ref = OPAMP_OUT_REF,
+  rg-ref:Ref = IAMP_RG_REF_DEF,
+  vref-ref:Ref = IAMP_VREF_REF_DEF,
   params:OpAmpSymbolParams = get-default-iamp-symbol-params()
   ) -> InstrumentationAmpSymbol :
   if rg-pitch > pitch :
     throw $ ValueError("Invalid Pitch Configuration for Instrumentation Amp Symbol: pitch %_ > rg-pitch %_" % [pitch, rg-pitch])
-  #InstrumentationAmpSymbol(pitch, rg-pitch, params)
+  #InstrumentationAmpSymbol(pitch, rg-pitch, in-ref, out-ref, rg-ref, vref-ref, params)
 
 public defmethod name (x:InstrumentationAmpSymbol) -> String :
   "InstrumentationAmp"
-
-val IAMP_RG_REF = Ref("Rg")
 
 public defn add-iamp-rg-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
   val p = params(x)
@@ -81,10 +123,10 @@ public defn add-iamp-rg-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
   val w = rg-pitch(x) / 2.0
   val h2 = tri-height(p) / 2.0
 
-  add-pin(node, IAMP_RG_REF[0], [(- h2), w], params = rg-params, name = "pin-rg-0")
-  add-pin(node, IAMP_RG_REF[1], [(- h2), (- w)], params = rg-params, name = "pin-rg-1")
+  val rg = rg-ref(x)
+  add-pin(node, rg[0], [(- h2), w], params = rg-params, name = "pin-rg-0")
+  add-pin(node, rg[1], [(- h2), (- w)], params = rg-params, name = "pin-rg-1")
 
-val IAMP_VREF_REF = Ref("REF")
 
 public defn add-iamp-ref-pin (x:InstrumentationAmpSymbol, node:SymbolNode) :
   val p = params(x)
@@ -101,7 +143,7 @@ public defn add-iamp-ref-pin (x:InstrumentationAmpSymbol, node:SymbolNode) :
   ;   is (w / 4)
   val y = 0.25 * w
 
-  add-pin(node, IAMP_VREF_REF, [0.0, (- y)], params = ref-params, name = "pin-ref")
+  add-pin(node, vref-ref(x), [0.0, (- y)], params = ref-params, name = "pin-ref")
 
 
 public defmethod build-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :

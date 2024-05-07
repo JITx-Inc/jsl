@@ -28,6 +28,24 @@ public defstruct ComparatorSymbol <: OpAmpSymbol :
     as-method => true
   )
 
+  doc: \<DOC>
+  Input Base Reference or Explicit Input Refs.
+  @see OpAmpSymbol for more Information.
+  <DOC>
+  in-ref:Ref|[Ref, Ref] with: (
+    default => OPAMP_IN_BASE_REF,
+    as-method => true
+  )
+  doc: \<DOC>
+  Output Reference
+  User can override the default for supporting multi-channel
+  chips. The default expected output pin ref is `out`
+  <DOC>
+  out-ref:Ref with: (
+    default => OPAMP_OUT_REF,
+    as-method => true
+  )
+
   params:OpAmpSymbolParams with: (
     default => get-default-comparator-symbol-params()
     as-method => true
@@ -38,9 +56,11 @@ with:
 public defn ComparatorSymbol (
   --
   pitch:Double = DEF_OPAMP_PITCH,
+  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
+  out-ref:Ref = OPAMP_OUT_REF,
   params:OpAmpSymbolParams = get-default-comparator-symbol-params()
   ) -> ComparatorSymbol :
-  #ComparatorSymbol(pitch, params)
+  #ComparatorSymbol(pitch, in-ref, out-ref, params)
 
 
 public defmethod name (x:ComparatorSymbol) -> String :
