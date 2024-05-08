@@ -31,6 +31,8 @@ val DEF_ROW_WIDTH = 0
 ; padding for top and bottom of a cell
 val DEF_CELL_TOP_MARGIN = 0.0
 val DEF_CELL_BOTTOM_MARGIN = 0.0
+val DEF_GROUP_TOP_MARGIN = 0.0
+val DEF_GROUP_BOTTOM_MARGIN = 0.0
 ; length between groups/singleton pins
 val DEF_PIN_PADDING = 0.5
 val DESIGNATOR_MARGIN = 1.0
@@ -53,6 +55,9 @@ public :
   val HEAD_MARGIN_PROP = `head-margin
   val TAIL_MARGIN_PROP = `tail-margin
   val BANK_PROP = `bank
+
+val GROUP_HEAD_MARGIN_PROP = `group-head-margin
+val GROUP_TAIL_MARGIN_PROP = `group-tail-margin
 
 val SYM_PROPS = [
   ROW_PROP
@@ -253,6 +258,10 @@ public defstruct BoxSymbol <: SymbolDefn :
   decorator-by-pin:HashTable<Ref, Vector<PinDecorator>>
     with: (default => HashTable<Ref,Vector<PinDecorator>>())
 
+  ; tracks group-properties
+  prop-by-group:HashTable<String,HashTable<Symbol,?>>
+    with: (default => HashTable<String,HashTable<Symbol,?>>())
+
   ; for multi-bank box symbols, empty table for non-banked box symbols
   banks:HashTable<Int|Ref,GridInfo>
     with: (default => HashTable<Int|Ref,GridInfo>())
@@ -342,6 +351,7 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
   if bank is False and length(sorted-pins) != length(filtered-pins) :
     throw $ Exception("Cannot mix pins with and without 'bank' property")
 
+  val pins-by-group = HashTable<String, Vector<JITXObject>>()
   for p in filtered-pins do :
     val props = HashTable<Symbol, ?>()
     for pr in SYM_PROPS do :
@@ -350,12 +360,30 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
           props[pr] = value(one)
         (none: None) :
           false
+
+    match(get-property?(p, GROUP_PROP)) :
+      (one: One) :
+        add-to-vector-table(pins-by-group, value(one), p)
+      (none: None) :
+        false
+
     within pin-decs = got?(decorator-by-pin(x), ref(p)) :
       decorators[ref(p)] = DecoratorInfo(
         to-Dims(bounds(Union(seq(art, pin-decs)))),
         pin-decs)
     pin-infos[ref(p)] = props
     add(pin-order, ref(p))
+
+  ; Add group margins
+  for kv in pins-by-group do :
+    val pins = value(kv)
+    val head-pin = pins[0]
+    val tail-pin = pins[length(pins) - 1]
+    within group-props = got?(prop-by-group(x), key(kv)) :
+      within group-head-margin = got?(group-props, GROUP_HEAD_MARGIN_PROP) :
+        pin-infos[ref(head-pin)][GROUP_HEAD_MARGIN_PROP] = group-head-margin
+      within group-tail-margin = got?(group-props, GROUP_TAIL_MARGIN_PROP) :
+        pin-infos[ref(tail-pin)][GROUP_TAIL_MARGIN_PROP] = group-tail-margin
 
   val bank-grid =
     match(bank) :
@@ -651,14 +679,26 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
   ;
   defn calc-min-cell-dimension (c:CellPinInfo) -> CellSizeInfo :
     defn get-head-margin-for-pin (p: Ref) -> Double :
-      match(get?(pin-info-bs[p], HEAD_MARGIN_PROP)) :
-        (m:Double) : round-to-grid(m)
-        (f) : DEF_CELL_TOP_MARGIN
+      val pin-margin =
+        match(get?(pin-info-bs[p], HEAD_MARGIN_PROP)) :
+          (m:Double) : round-to-grid(m)
+          (f) : DEF_CELL_TOP_MARGIN
+      val group-margin =
+        match(get?(pin-info-bs[p], GROUP_HEAD_MARGIN_PROP)) :
+          (m:Double) : round-to-grid(m)
+          (f) : DEF_GROUP_TOP_MARGIN
+      pin-margin + group-margin
 
     defn get-tail-margin-for-pin (p: Ref) -> Double :
-      match(get?(pin-info-bs[p], TAIL_MARGIN_PROP)) :
-        (m:Double) : round-to-grid(m)
-        (f) : DEF_CELL_BOTTOM_MARGIN
+      val pin-margin =
+        match(get?(pin-info-bs[p], TAIL_MARGIN_PROP)) :
+          (m:Double) : round-to-grid(m)
+          (f) : DEF_CELL_BOTTOM_MARGIN
+      val group-margin =
+        match(get?(pin-info-bs[p], GROUP_TAIL_MARGIN_PROP)) :
+          (m:Double) : round-to-grid(m)
+          (f) : DEF_GROUP_BOTTOM_MARGIN
+      pin-margin + group-margin
 
     defn calc-section-offsets (pin-group: Vector<Ref|String>) -> [Double, Vector<Double>] :
       var total = pin-pitch
@@ -1258,19 +1298,21 @@ public defn set-tail-margin (margin:Double, pins: Seqable<JITXObject>) :
   for p in valid-pins do :
     set-property(p, TAIL_MARGIN_PROP, margin)
 
+; This one is a bit more complicated.
+; Alignment property for groups are separated from alignment properties
+; for individual pins because pins may be added to the group. User should also be able to set additional margins for
+; each pin if they so wish.
+;
+; We keep a map internally of group to margin so we only apply the margin to the pins
+; at symbol generation time.
 public defn set-head-margin (box: BoxSymbol, margin:Double, group: String) :
-  set-margin-for-group(box, margin, group, HEAD_MARGIN_PROP)
+  set-prop-for-group(box, margin, group, GROUP_HEAD_MARGIN_PROP)
 
 public defn set-tail-margin (box: BoxSymbol, margin:Double, group: String) :
-  set-margin-for-group(box, margin, group, TAIL_MARGIN_PROP)
+  set-prop-for-group(box, margin, group, GROUP_TAIL_MARGIN_PROP)
 
-defn set-margin-for-group (box: BoxSymbol, margin: Double, group: String, prop: Symbol) :
-  for p in pins(obj(box)) do :
-    match(get-property?(p, GROUP_PROP)) :
-      (one:One)   :
-        if value(one) == group :
-          set-property(p, HEAD_MARGIN_PROP, margin)
-      (none:None) : false
+defn set-prop-for-group (box: BoxSymbol, v: ?, group: String, prop: Symbol) :
+  add-to-nested-hashtable(prop-by-group(box), group, prop, v)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Decorators

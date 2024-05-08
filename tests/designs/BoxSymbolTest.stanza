@@ -502,6 +502,52 @@ pcb-component test-even-row:
   )
   assign-landpattern(create-landpattern(SOIC-pkg))
 
+pcb-component test-group-margin:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | group:String | SRC-NAME:String ]
+    [bus.sda | p[3] | "i2c" | "SDA" ]
+    [bus.scl | p[1] | "i2c" | "SCL" ]
+    [rail.V+ | p[6] | - | "VCC" ]
+    [rail.V- | p[2] | - | "VSS" ]
+    [ADDR[0] | p[5] | "ADDR" | "A0" ]
+    [ADDR[1] | p[4] | "ADDR" | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    row-width = 5
+  ))
+  set-grid(box, [2, 2])
+
+  set-side(Left, self.bus, self.rail.V-)
+  set-side(Right, self.ADDR, self.rail.V+)
+
+  set-row(1, self.rail.V-, self.ADDR)
+
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  set-alignment(S, self.bus)
+
+  set-tail-margin(box, 1.0, "i2c")
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
 pcb-module test-design:
   ; inst c0 : basic
   ; inst c1 : basic-grid
@@ -510,12 +556,13 @@ pcb-module test-design:
   ; inst c4: basic-align-rotate
   ; inst c5: basic-bank
   ; inst c6: test-24AA025
-  inst t0: test-default-align
-  inst t1: test-pad-ref
-  inst t2: test-pin-name
-  inst t3: test-pin-pitch
-  inst t4: test-up-column
-  inst t5: test-even-row
+  ; inst t0: test-default-align
+  ; inst t1: test-pad-ref
+  ; inst t2: test-pin-name
+  ; inst t3: test-pin-pitch
+  ; inst t4: test-up-column
+  ; inst t5: test-even-row
+  inst t6: test-group-margin
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 

@@ -17,3 +17,17 @@ public defn add-to-vector-table<?K,?V> (h: HashTable<?K, Vector<?V>>, key: K, va
   if not key?(h, key) :
     h[key] = to-vector<V> $ []
   add-all(h[key], values)
+
+; Adds a key-value pair to a HashTable where the values are HashTables.
+; (convenience method for handling the no-key case)
+public defn add-to-nested-hashtable<?K1, ?K2, ?V> (
+  table: HashTable<?K1, HashTable<?K2, ?V>>
+  key1: K1
+  key2: K2
+  value: V
+) -> V:
+  if key?(table, key1) :
+    table[key1][key2] = value
+  else :
+    table[key1] = to-hashtable<K2,V> $ [key2 => value]
+  value
