@@ -11,12 +11,19 @@ defpackage jsl/protocols/pcie:
   import jsl/pin-assignment
 
 doc: \<DOC>
-PCI-E Bundle
+@brief PCI-E definition
 PCI-E is a serial communication supporting high speed data links
 @see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
-public defenum PCIeVersion:
+doc: \<DOC>
+@brief PCI-E Generation enums
+This is a fixed list of possible generation definitions for PCIe
+Can be extended if needed to include PCIE-V3.1, for example
+@see https://en.wikipedia.org/wiki/PCI_Express
+<DOC>
+
+public pcb-enum jsl/protocols/pcie/PCIeVersion:
   PCIE-V1
   PCIE-V2
   PCIE-V3
@@ -25,35 +32,55 @@ public defenum PCIeVersion:
   PCIE-V6
   PCIE-V7
 
-defn ensure-valid (lanes) -> True|False:
-  val res = switch(lanes) :
-    1  : true
-    2  : true
-    4  : true 
-    8  : true
-    16 : true
-    32 : true
-    else : throw $ Exception("Invalid Lane Configuration for PCIe Bundle")
-  res
+doc: \<DOC>
+@brief PCI-E Width enums
+This is a fixed list of possible lane widths for PCIe
+@see https://en.wikipedia.org/wiki/PCI_Express
+<DOC>
 
-public defn pcie (-- lanes:Int = 4) :
-  ; This still throws
-  ensure-valid(lanes)
-  pcb-bundle pcie_b :
-    name = "PCI-E"
-    description = "PCI-E Serial Communications Link"
-    port control : pcie-control
-    port data : pcie-data(lanes)
-  pcie_b
+public pcb-enum jsl/protocols/pcie/PCIeWidth:
+  PCIe-x1
+  PCIe-x2
+  PCIe-x4
+  PCIe-x8
+  PCIe-x16
+  PCIe-x32
+
+public defn PCIe-enum-to-int (en:PCIeWidth) -> Int:
+  switch(en) :
+    PCIe-x1  :  1
+    PCIe-x2  :  2
+    PCIe-x4  :  4
+    PCIe-x8  :  8
+    PCIe-x16 : 16
+    PCIe-x32 : 32
+    ; else : throw $ Exception("Invalid Lane Configuration for PCIe Bundle")
 
 doc: \<DOC>
-PCI-E Data Bundle
+@brief PCI-E Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 and it also includes a refclk (100MHz) differential pair
+@param lanes The number of lanes to be configured for this bundle.
 @see https://en.wikipedia.org/wiki/PCI_Express
-P/N swapping is ok per pair
-all lanes being swapped is ok as well
-this should be handled at the component level
+<DOC>
+
+; for the future
+; P/N swapping is ok per pair
+; all lanes being swapped is ok as well
+; this should be handled at the component level
+
+public pcb-bundle pcie (lanes:Int) :
+  name = "PCI-E"
+  description = "PCI-E Serial Communications Link"
+  port control : pcie-control
+  port data : pcie-data(lanes)
+
+doc: \<DOC>
+@brief PCI-E Data Bundle
+The Data bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
+and it also includes a refclk (100MHz) differential pair.
+@param lanes The number of lanes in the bundle.
+@see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
 public pcb-bundle pcie-data (lanes:Int) :
@@ -64,7 +91,7 @@ public pcb-bundle pcie-data (lanes:Int) :
   port refclk : diff-pair
 
 doc: \<DOC>
-PCI-E Control Bundle
+@brief PCI-E Control bundle
 PCI-E is a serial communication supporting high speed data links
 @see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
@@ -79,22 +106,22 @@ public pcb-bundle pcie-control :
 
 
 doc: \<DOC>
-The connect-pcie-tx-rx() function partially connects two equivalent pcie bundles together by
-connecting the tx pairs on the first bundle to the rx pairs on the second bundle. 
-There is a helper function (pcie-get-skew-loss-vals) which has curated but not verified values
-for intra-pair skew and maximum loss.
-If a capacitor is provided by the user, function also inserts two TX blocking caps 
-in series to the connection between the TX and RX pairs. The particular blocking cap used 
-needs to have pin-model()'s set on the pins. This type of connection would be used between 
-an TX output on an IC (active drive) and any receiver. If the user does not provide a capacitor then
-the TX -> RX are connected straight through. This would be used for a connection between a 
-connector TX and an IC RX. 
+@brief connect-pcie-tx-rx()
+This function partially connects a portion of two pcie bundles together by
+connecting the tx pairs on the first bundle to the rx pairs on the second bundle.
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for all differential signals being connected.
+@param cap Optional DC blocking capacitor to be inserted between the TX and RX signal ends. Note that 
+there are 2 blocking caps inserted, one on each of the pair of P,N signals. Providing a capacitor is often
+called for between 2 components on the same board, for example. If no capacitor is provided, 
+then the signals are connected straight through. This usage is valid for a connection between a 
+connector TX pair and an any RX pair. The capacitor needs to have pin models applied to its pins 
+in order for the overall skew and loss values to be respected.
 <DOC>
 
-public defn connect-pcie-tx-rx (gen:jsl/protocols/pcie/PCIeVersion, cap:Instantiable|False, x:JITXObject, y:JITXObject) : 
+public defn connect-pcie-tx-rx (sw:Toleranced, ml:Double, cap:Instantiable|False, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
-    defn constraint (gen:PCIeVersion, a:JITXObject, b:JITXObject) :
-      val [sw, ml] = pcie-get-skew-loss-vals(gen)
+    defn constraint (a:JITXObject, b:JITXObject) :
       skew-window(sw, a => b)
       max-loss(ml, a => b)
 
@@ -109,11 +136,11 @@ public defn connect-pcie-tx-rx (gen:jsl/protocols/pcie/PCIeVersion, cap:Instanti
         (f:False) : 
           topo-net(x.data.tx[i], y.data.rx[i])
 
-      constraint(gen, x.data.tx[i], y.data.rx[i])
+      constraint(x.data.tx[i], y.data.rx[i])
 
 doc: \<DOC>
-The connect-pcie-tx-rx() function connects two equivalent pcie control 
-sub-bundle together without constraints.
+@brief connect-pcie-control
+This function connects two equivalent pcie control sub-bundles together without constraints.
 <DOC>
 
 public defn connect-pcie-control (x:JITXObject, y:JITXObject) : 
@@ -121,29 +148,29 @@ public defn connect-pcie-control (x:JITXObject, y:JITXObject) :
     net (x.control y.control)
 
 doc: \<DOC>
-The pcie-get-skew-loss-vals() is a helper function that returns the bounds on the 
+@brief pcie-get-skew-loss-vals() returns curated values for skew and loss
+Is a helper function that returns the bounds on the intra-pair
 skew timing and maximum loss as expected by the particular standard targeted by 
 the user.The values returned are a toleranced value with upper/lower limits for the
-intra-pair skew and the maximum loss as a non-toleranced value. Some defaults in the 
+intra-pair skew and the maximum loss as a double representing dB. Some defaults in the 
 table are derived from the references listed below. 
-some references for the data in the following table:
 https://pcisig.com/pci-express%C2%AE-50-architecture-channel-insertion-loss-budget-0
 
-there are also very loose lane to lane skew spec:
-the following lane-to-lane (inter pair) skews are tolerable for different lane rates:
+There is also a very loose lane to lane skew spec for different lane rates:
 Parameter	       2.5 GT/s	5.0 GT/s	8.0 GT/s	16.0 GT/s Unit
 Lane to Lane Skew	20	     8	        6	          5 ns
 
-tpd 170ps/in to 147 ps/in -> 170fs/mil to 147 fs/mil
-@  5 mils that is a intra-pair skew of 850 fs to 750 fs
-@ 10 mils that is a intra-pair skew of 1.70ps to 1.50ps
-for system board skew match: page 2 of https://docs.broadcom.com/doc/pcie-pcb-layout-review
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+for system board skew match: page 2 of @see https://docs.broadcom.com/doc/pcie-pcb-layout-review
 
 Another good reference:
-https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/1/AN307_TP_HARDWARE_DESIGN_PCI_SMGIII.pdf
+@see https://community.nxp.com/pwmxy87654/attachments/pwmxy87654/powerquicc/2284/1/AN307_TP_HARDWARE_DESIGN_PCI_SMGIII.pdf
 <DOC>
 
-public defn pcie-get-skew-loss-vals (gen:jsl/protocols/pcie/PCIeVersion) :
+public defn pcie-get-skew-loss-vals (gen:jsl/protocols/pcie/PCIeVersion) -> [Toleranced, Double]:
   switch(gen) :
     PCIE-V1 : [0.0 +/-  1.0e-12,  12.0]  ;   2.5 GT/s
     PCIE-V2 : [0.0 +/-  1.0e-12,  12.0]  ;   5.0 GT/s
@@ -154,20 +181,21 @@ public defn pcie-get-skew-loss-vals (gen:jsl/protocols/pcie/PCIeVersion) :
     PCIE-V7 : [0.0 +/- 0.850e-12, 16.0]  ; 128.0 GT/s
 
 doc: \<DOC>
-The pcie-get-trace-impedance() is a helper function that returns the expected differential
-trace impedance for the particular version of the PCIe standard that the user wants to 
-implement. The value returned is a toleranced value with upper/lower 
+@brief pcie-get-trace-impedance function returns the differential impedance specified by the standard
+This is a helper function that returns the expected differential
+trace impedance for the particular generation of the PCIe standard that the user wants to 
+use. The value returned is a toleranced value with upper/lower limits for the impedance.
 <DOC>
 
-public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) :
+public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) -> Toleranced :
   switch(gen) :
-    PCIE-V1 : [100.0 +/- (5 %)]  ;   2.5 GT/s
-    PCIE-V2 : [100.0 +/- (5 %)]  ;   5.0 GT/s
-    PCIE-V3 : [ 85.0 +/- (5 %)]  ;   8.0 GT/s
-    PCIE-V4 : [ 85.0 +/- (5 %)]  ;  16.0 GT/s
-    PCIE-V5 : [ 85.0 +/- (5 %)]  ;  32.0 GT/s
-    PCIE-V6 : [ 85.0 +/- (5 %)]  ;  64.0 GT/s
-    PCIE-V7 : [ 85.0 +/- (5 %)]  ; 128.0 GT/s
+    PCIE-V1 : 100.0 +/- (5 %)  ;   2.5 GT/s
+    PCIE-V2 : 100.0 +/- (5 %)  ;   5.0 GT/s
+    PCIE-V3 :  85.0 +/- (5 %)  ;   8.0 GT/s
+    PCIE-V4 :  85.0 +/- (5 %)  ;  16.0 GT/s
+    PCIE-V5 :  85.0 +/- (5 %)  ;  32.0 GT/s
+    PCIE-V6 :  85.0 +/- (5 %)  ;  64.0 GT/s
+    PCIE-V7 :  85.0 +/- (5 %)  ; 128.0 GT/s
 
 doc: \<DOC>
 The pcie-apply-routing-structure() is a function that applies the provided DifferentialRoutingStructure
