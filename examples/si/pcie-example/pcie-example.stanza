@@ -5,6 +5,7 @@ defpackage pcie-example:
   import jitx/commands
 
   import ocdb/utils/generic-components
+  import ocdb/utils/box-symbol
   import ocdb/utils/landpatterns
 
   import jsl/si/helpers
@@ -20,7 +21,7 @@ It should also reference a single ended routing structure for the uncoupled regi
 <DOC>
 pcb-differential-routing-structure diff :
   name = "85/100 Ohm differential impedance - PCIe"
-  val gen = PCIeVersion/PCIE-V4 ; for instance
+  val gen = PCIE-V4 ; for instance
   val lookup-trace-impedance = pcie-get-trace-impedance(gen)
   val tw = switch(typ(lookup-trace-impedance)) :
     85.0  : 0.1400
@@ -69,7 +70,7 @@ public pcb-routing-structure se-50 :
       clearance = 0.1 
     )
 
-pcb-component pcie-src :
+public pcb-component pcie-src-component :
   reference-prefix = "U"
   mpn = "JITX001"
   description = "Dummy device with multiple PCIe supports"
@@ -130,7 +131,7 @@ pcb-component pcie-src :
 
 public pcb-module pcie-src-module :
 
-  public inst sw : jsl/examples/si/pcie-example/pcie-src
+  public inst sw : pcie-example/pcie-src-component
 
   supports pcie(lanes = 4) :
     for i in 0 to 4 do :
