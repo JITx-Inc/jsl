@@ -1,0 +1,88 @@
+doc: \<DOC>
+@brief Signal Ends
+
+With signal integrity topologies, it is often necessary to expose
+the actual component signal endpoint of a topology without changing
+the design module hierarchy. The functions in this package are
+intended to help in this case.
+
+TODO - Add a specific example here and a diagram.
+We should consider using the USB-C to A converter design and renders
+showing the shortcoming and how this helps us solve that issue.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/si/signal-ends:
+  import core
+  import jitx
+  import jitx/commands
+
+public defstruct NoSignalEndError <: Exception:
+  port-name:String
+
+public defn NoSignalEndError (conn:JITXObject) -> NoSignalEndError:
+  NoSignalEndError(to-string(ref(conn)))
+
+defmethod print (o:OutputStream, e:NoSignalEndError) :
+  print(o, "No Signal End Present on Port: %_" % [port-name(e)])
+
+
+doc: \<DOC>
+Set the Signal End Property for a Topology Port
+
+Many times, a module may not expose the end point of a topology on its
+port. We might have pull-up/down resistors, blocking caps, or other
+components in series.
+
+This function allows us to publish the true endpoint of the topology
+via a `property` statement.
+
+This function is typically only used inside the module that is providing
+the endpoint of the topology.
+
+@param conn A public `port` of a `pcb-module` for which we need to publish an endpoint.
+@param sig-end This is the component/module port or abstract port to expose as the signal end.
+
+<DOC>
+public defn set-signal-end (conn:JITXObject, sig-end:JITXObject) :
+  inside pcb-module:
+    property(conn.signal-end) = sig-end
+
+doc: \<DOC>
+Get the Signal End Property of a Topology Port
+
+This function returns the port that is the end of the signal topology
+we are attempting to inspect. This will typically be a port from an internal
+component or abstract port.
+
+@param conn `Pin` object from a `pcb-module`
+@returns The signal end port for this topology. In most applications, this is
+a `Pin` object from a `pcb-component` instance.
+@throws NoSignalEndError When the passed port object does not have a defined
+`signal-end`.
+<DOC>
+public defn get-signal-end (conn:JITXObject) -> JITXObject :
+  inside pcb-module:
+    if not has-property?(conn.signal-end):
+      throw $ NoSignalEndError(conn)
+    property(conn.signal-end)
+
+doc: \<DOC>
+Find the signal end associated with this module port
+
+This function is recursive.
+
+This function searches through a tree of pcb-module ports to find
+the physical signal end port on a component. The first port found that
+does not have a `signal-end` property will be assumed to be the signal end.
+
+@returns The signal end port for this topology. In most applications, this is
+a `Pin` object from a `pcb-component` instance.
+
+<DOC>
+public defn find-signal-end (conn:JITXObject) -> JITXObject :
+  inside pcb-module:
+    if not has-property?(conn.signal-end):
+      conn
+    else:
+      find-signal-end $ get-signal-end(conn)

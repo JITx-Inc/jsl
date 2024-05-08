@@ -27,5 +27,6 @@ build-test tests:
     jsl/tests/ensure
     jsl/tests/si/Microstrip
     jsl/tests/si/couplers
+    jsl/tests/si/signal-ends
   pkg: "test-pkgs"
   o: "jsl-tests"
