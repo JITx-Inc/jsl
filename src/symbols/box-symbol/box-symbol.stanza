@@ -14,6 +14,7 @@ defpackage jsl/symbols/box-symbol/box-symbol:
   import jsl/symbols/SymbolDefn
   import jsl/symbols/SymbolNode
   import jsl/symbols/box-symbol/utils
+  import jsl/symbols/box-symbol/errors
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
   import math
@@ -42,19 +43,7 @@ val GRID_SCALE = UNIT-TO-MM / 2.0
 val SHOW_GRID_ROW = "ROW %_"
 val SHOW_GRID_COL = "COL %_"
 
-defn scale (d: Double) -> Double :
-  GRID_SCALE * d
-
-; Property constants
-public :
-  val ROW_PROP = `row
-  val COL_PROP = `column
-  val ALIGN_PROP = `alignment
-  val SIDE_PROP = `side
-  val GROUP_PROP = `group
-  val HEAD_MARGIN_PROP = `head-margin
-  val TAIL_MARGIN_PROP = `tail-margin
-  val BANK_PROP = `bank
+val TEXT_BORDER_PADDING = 0.2
 
 val GROUP_HEAD_MARGIN_PROP = `group-head-margin
 val GROUP_TAIL_MARGIN_PROP = `group-tail-margin
@@ -69,6 +58,9 @@ val SYM_PROPS = [
   TAIL_MARGIN_PROP
   BANK_PROP
 ]
+
+defn scale (d: Double) -> Double :
+  GRID_SCALE * d
 
 ; Valid anchors for Left/Right, Up/Down pins
 val LR_ANCHORS = [N, C, S]
@@ -278,6 +270,7 @@ public defn BoxSymbol (
 
 defstruct DecoratorInfo :
   ddims: Dims
+  x-padded: Double
   decs: Vector<PinDecorator>
 
 defstruct GridInfo :
@@ -293,6 +286,8 @@ defstruct GridInfo :
   ; since `self` can change when generating the symbol data,
   ; pin-info is all the relevant pin property information
   ; copied out from self before symbol generation
+with :
+  printer => true
 
 ; In order to support multi-bank box-symbols, the data to create the symbol for
 ; each bank is a filtered, computed subset of the pin data for the source
@@ -311,6 +306,10 @@ defstruct BoxSymbolBank <: SymbolDefn :
   pin-order:Tuple<Ref>
     with: (
       default => [], setter => set-pin-order
+    )
+  rcs-by-pin:HashTable<Ref,RCS>
+    with: (
+      default => HashTable<Ref,RCS>()
     )
   dec-info-by-pin:HashTable<Ref, DecoratorInfo>
     with: (default => HashTable<Ref,DecoratorInfo>())
@@ -338,7 +337,8 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
   for p in sorted-pins do :
     match(bank, get-property?(p, BANK_PROP)) :
       (b:Int|Ref, o:One) :
-        if value(o) == b : add(filtered-pins, p)
+        if value(o) == b :
+          add(filtered-pins, p)
       (b:Int|Ref, f:None) :
         false
       (f:False, o:One) :
@@ -351,7 +351,16 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
   if bank is False and length(sorted-pins) != length(filtered-pins) :
     throw $ Exception("Cannot mix pins with and without 'bank' property")
 
+  val bank-grid =
+    match(bank) :
+      (b: Int|Ref):
+        match(get?(banks(x), b)) :
+          (gi: GridInfo) : gi
+          (f) : GridInfo()
+      (f) : grid(x)
+
   val pins-by-group = HashTable<String, Vector<JITXObject>>()
+  val rcs-by-pin = HashTable<Ref,RCS>()
   for p in filtered-pins do :
     val props = HashTable<Symbol, ?>()
     for pr in SYM_PROPS do :
@@ -361,6 +370,11 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
         (none: None) :
           false
 
+    rcs-by-pin[ref(p)] = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
+    pin-infos[ref(p)] = props
+    ;println("DEBUG %_ %_" % [ref(p), props])
+    add(pin-order, ref(p))
+
     match(get-property?(p, GROUP_PROP)) :
       (one: One) :
         add-to-vector-table(pins-by-group, value(one), p)
@@ -368,11 +382,11 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
         false
 
     within pin-decs = got?(decorator-by-pin(x), ref(p)) :
+      val d = to-Dims(bounds(Union(seq(art, pin-decs))))
       decorators[ref(p)] = DecoratorInfo(
-        to-Dims(bounds(Union(seq(art, pin-decs)))),
+        d
+        /x(d) + TEXT_BORDER_PADDING
         pin-decs)
-    pin-infos[ref(p)] = props
-    add(pin-order, ref(p))
 
   ; Add group margins
   for kv in pins-by-group do :
@@ -385,25 +399,18 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
       within group-tail-margin = got?(group-props, GROUP_TAIL_MARGIN_PROP) :
         pin-infos[ref(tail-pin)][GROUP_TAIL_MARGIN_PROP] = group-tail-margin
 
-  val bank-grid =
-    match(bank) :
-      (b: Int|Ref):
-        match(get?(banks(x), b)) :
-          (gi: GridInfo) : gi
-          (f) : GridInfo()
-      (f) : grid(x)
-
-  check-properties(filtered-pins, bank-grid)
+  check-properties(filtered-pins)
 
   BoxSymbolBank(
     bank-grid
     get-params(x)
     pin-infos
     to-tuple $ pin-order
+    rcs-by-pin
     decorators
   )
 
-defn check-properties (pins:Seqable<JITXObject>, grid: GridInfo) :
+defn check-properties (pins:Seqable<JITXObject>) :
   for p in pins do :
     val side? = get-property?(p, SIDE_PROP)
     match(side?, get-property?(p, ALIGN_PROP)) :
@@ -416,29 +423,6 @@ defn check-properties (pins:Seqable<JITXObject>, grid: GridInfo) :
             for pin %_" % [value(o1), value(o2), ref(p)])
       (f1, f2) :
         false
-
-    ; check rows and cols are valid
-    val max-row = dims(grid)[0] - 1
-    match(get-property?(p, ROW_PROP), side?) :
-      (o1:One, side:One):
-        if (value(side) == Up and value(o1) != 0) :
-          throw $ InvalidGridDimension("Invalid row %_ (should be 0) \
-            for pin %_ on side %_" % [value(o1), ref(p), value(side)])
-        if (value(side) == Down and value(o1) != max-row) :
-          throw $ InvalidGridDimension("Invalid row %_ (should be %_) \
-            for pin %_ on side %_" % [value(o1), max-row, ref(p), value(side)])
-      (f1, f2): false
-
-    val max-col = dims(grid)[1] - 1
-    match(get-property?(p, COL_PROP), side?) :
-      (o1:One, side:One):
-        if (value(side) == Left and value(o1) != 0) :
-          throw $ InvalidGridDimension("Invalid col %_ (should be 0) \
-            for pin %_ on side %_" % [value(o1), ref(p), value(side)])
-        if (value(side) == Right and value(o1) != max-col) :
-          throw $ InvalidGridDimension("Invalid col %_ (should be %_) \
-            for pin %_ on side %_" % [value(o1), max-col, ref(p), value(side)])
-      (f1, f2): false
 
 defn check-prop (prop: ?, filter: ?) -> True|False :
     match(prop, filter) :
@@ -482,7 +466,6 @@ public defn create-symbol (
 ) -> SchematicSymbol :
   val bb = save-pin-info(x, bank)
 
-  ;println("DEBUG %_, %_" % [bb, bank])
   pcb-symbol sym :
     name = name(x)
     description = description
@@ -512,16 +495,6 @@ defstruct CellSizeInfo :
 with :
   printer => true
 
-; struct for passing around row/col/side data
-defstruct RCS <: Equalable & Hashable :
-  row:Int
-  col:Int
-  side:Dir
-with :
-  printer => true
-  equalable => true
-  hashable => true
-
 defn min-cell-size (s: Dir, params: BoxSymbolParams) :
   DEF_CELL_TOP_MARGIN + DEF_CELL_BOTTOM_MARGIN +
     match(s) :
@@ -545,55 +518,19 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
 
   val pin-pitch = maximum([
     DEF_PIN_PADDING, pad-ref-size(params), pin-name-size(params), pin-pitch(params)])
-  ; =========== Calcuate row/col/side for pins ============
-  ;
-  ; determine row col and side for specific pin given properties for that pin
-  ; 'Top' gets row = 0
-  ; 'Bottom' gets row = num-rows
-  ; 'Left' gets col = 0
-  ; 'Right' gets col = num-cols
-  ; Defaults :
-  ;   side = 'Left', row = 0, col = 0
-  defn calc-rcs-for-pin (ref: Ref, props: Table<Symbol,?>) -> RCS:
-    val side = get?(props, SIDE_PROP, Left)
-    val has-row? = key?(props, ROW_PROP)
-    val has-col? = key?(props, COL_PROP)
-
-    val row =
-      if side == Top : 0
-      else if side == Bottom : num-rows - 1
-      else :
-        if has-row? :
-          val row = props[ROW_PROP]
-          if row < 0 or row >= num-rows :
-            throw $ InvalidGridDimension("Invalid row %_ for pin %_" % [row, ref])
-          row
-        else :
-          0
-    val col =
-      if side == Left : 0
-      else if side == Right : num-cols - 1
-      else :
-        if has-col? :
-          val col = props[COL_PROP]
-          if col < 0 or col >= num-cols :
-            throw $ InvalidGridDimension("Invalid col %_ for pin %_" % [col, ref])
-          col
-        else :
-          0
-    RCS(row, col, side)
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
     val base = scale(x $ text-size(to-string(p-ref), pin-name-size(params)))
     if key?(dec-info-by-pin(bb), p-ref) :
-      (x $ ddims(dec-info-by-pin(bb)[p-ref])) + base
+      ;println("DEBUG DIMS %_ %_" % [p-ref, ddims(dec-info-by-pin(bb)[p-ref])])
+      (x-padded(dec-info-by-pin(bb)[p-ref])) + base
     else :
       base
 
   ; group pins by cell and side
   for p-ref in pin-order-bs do :
     val p-info = pin-info-bs[p-ref]
-    val rcs = calc-rcs-for-pin(p-ref, p-info)
+    val rcs = rcs-by-pin(bb)[p-ref]
     add-to-vector-table(pins-by-rcs, rcs, p-ref)
     val text-length = calc-padded-text-length(p-ref)
     val prev-length = get?(text-size-by-side, side(rcs), 0.0)
@@ -828,10 +765,10 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
             (di: DecoratorInfo) :
               val dec-offset =
                 match(side) :
-                  (l:Left) : Point(x(pos) + x(ddims(di)), y(pos))
-                  (r:Right) : Point(x(pos) - x(ddims(di)), y(pos))
-                  (u:Up) : loc(x(pos), y(pos) - x(ddims(di)), 90.0)
-                  (d:Down) : loc(x(pos), y(pos) + x(ddims(di)), 90.0)
+                  (l:Left) : Point(x(pos) + x-padded(di), y(pos))
+                  (r:Right) : Point(x(pos) - x-padded(di), y(pos))
+                  (u:Up) : loc(x(pos), y(pos) - x-padded(di), 90.0)
+                  (d:Down) : loc(x(pos), y(pos) + x-padded(di), 90.0)
               text(node, dec-offset, to-string(p), unit-size = pin-name-size(params), anchor = text-anchor(side))
               val vpin = add-pin(node, p, pos, params = VirtualPinParams(
                 direction = side,
@@ -917,6 +854,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
 
   val show-grid? = show-grid(params)
   var row-offset = text-buffer-top
+
   for i in 0 to num-rows do :
     val down = row-offset + actual-size-by-rcs[RCS(i,0,Left)]
     val center-y = row-offset + actual-size-by-rcs[RCS(i,0,Left)] / 2.0
@@ -1166,7 +1104,7 @@ public defn set-column (col:Int, pins: Seqable<JITXObject>) :
   val valid-pins = check-port-type(pins)
     check-non-neg(COL_PROP, col)
     for p in valid-pins do :
-      set-property(p, ROW_PROP, col)
+      set-property(p, COL_PROP, col)
 
 doc: \<DOC>
 Set a horizontal line separator on the edge of a row
