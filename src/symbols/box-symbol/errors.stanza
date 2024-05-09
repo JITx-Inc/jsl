@@ -1,0 +1,100 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/box-symbol/errors:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+;============================================================
+;====================== Errors ==============================
+;============================================================
+public deftype BoxSymbolError <: Exception
+defmulti message (e: BoxSymbolError) -> ?
+
+public defstruct GenericBoxSymbolError <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct BoxSymbolParamError <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct NegativeValueProperty <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct InvalidAlignProperty <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct InvalidGridDimension <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct MultiAlignGroup <: BoxSymbolError :
+  message: ? with : (as-method => true)
+
+public defstruct MissingBankProperty <: BoxSymbolError :
+  pins: Tuple<Ref>
+
+defmethod print (o:OutputStream, e:MissingBankProperty) :
+  print(o, "Pins %, do not have a .bank property." % [pins(e)])
+
+public defstruct MissingBankArguments <: BoxSymbolError :
+  banks: Tuple<Int|Ref>
+
+defmethod print (o:OutputStream, e:MissingBankArguments) :
+  print(o, "Banks %, are not found in `make-box-symbol` arguments." % [banks(e)])
+
+public defstruct MissingRequestedBanks <: BoxSymbolError :
+  banks: Tuple<Int|Ref>
+
+defmethod print (o:OutputStream, e:MissingRequestedBanks) :
+  print(o, "Banks %, are not found in any .bank properties." % [banks(e)])
+
+public defstruct EmptyBanks <: BoxSymbolError :
+  e: ?
+
+defmethod print (o:OutputStream, e:EmptyBanks) :
+  print(o, "`make-box-symbol` bank arguments cannot be empty.")
+
+public defstruct DuplicateBanks <: BoxSymbolError :
+  banks: Tuple<Int|Ref>
+
+defmethod print (o:OutputStream, e:DuplicateBanks) :
+  print(o, "Banks %, are duplicate in `make-box-symbol` arguments." % [banks(e)])
+
+public defstruct MissingSymbolPins <: BoxSymbolError :
+  missing: Tuple<KeyValue<String, Tuple<Ref>>>
+
+defmethod print (o:OutputStream, e:MissingSymbolPins) :
+  defn format (kv:KeyValue<String, Tuple<Ref>>) -> Printable :
+    "pcb-symbol %~ is missing pin(s) %," % [key(kv), value(kv)]
+  val error-str = \<S>`make-box-symbol` requires component pin names to match symbol pin names:
+%n<S> % [map(Indented{format(_)}, missing(e))]
+  print(o, error-str)
+
+public defstruct InvalidPortObject <: BoxSymbolError :
+  invalid-ports: Seqable<JITXObject>
+
+defmethod print (o:OutputStream, e:InvalidPortObject) :
+  print("Object(s) %_ are not of expected PortType"
+      % [invalid-ports(e)])
+
+public defstruct InvalidSideType <: BoxSymbolError :
+  pin: Ref
+  actual-type: String
+
+public defstruct MissingSideProperty <: BoxSymbolError :
+  pins: Tuple<Ref>
+
+defmethod print (o:OutputStream, e:MissingSideProperty) :
+  print(o, "Pins %, do not have a .side property." % [pins(e)])
+
+public defstruct InvalidBankType <: BoxSymbolError :
+  pin: Ref
+  actual-type: String
+
+defmethod print (o:OutputStream, e:InvalidBankType) :
+  print(o, "Property %_.bank is expected to be a Int|Ref object but is instead of type %_." % [
+    pin(e), actual-type(e)])
+
+defmethod print (o:OutputStream, e:BoxSymbolError) :
+  print(o, message(e))
+
+
