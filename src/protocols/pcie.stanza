@@ -198,11 +198,16 @@ public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) -> Tol
     PCIE-V7 :  85.0 +/- (5 %)  ; 128.0 GT/s
 
 doc: \<DOC>
-The pcie-apply-routing-structure() is a function that applies the provided DifferentialRoutingStructure
-to the start and endpoints given. Note that both start and end points needs to be differential bundles
-which are connected to physical component pins either directly or via pin assignment.
+@brief Apply the differential routing structure to a PCI-E bundle.
+The function applies the provided DifferentialRoutingStructure
+to all of the differential pairs in the start and endpoints. Note that both start and end points 
+need to be connected to physical component pins either directly or via pin assignment.
 <DOC>
 
 public defn pcie-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
-    diff-structure(rs, x => y)
+    for i in indices(x.data.tx) do :
+      diff-structure(rs, x.data.tx[i] => y.data.rx[i])
+    for i in indices(y.data.tx) do :
+      diff-structure(rs, y.data.tx[i] => x.data.rx[i])
+    diff-structure(rs, y.data.refclk => x.data.refclk)
