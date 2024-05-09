@@ -210,4 +210,4 @@ public defn pcie-apply-routing-structure (rs:DifferentialRoutingStructure, x:JIT
       diff-structure(rs, x.data.tx[i] => y.data.rx[i])
     for i in indices(y.data.tx) do :
       diff-structure(rs, y.data.tx[i] => x.data.rx[i])
-    diff-structure(rs, y.data.refclk => x.data.refclk)
+    diff-structure(rs, x.data.refclk => y.data.refclk)
