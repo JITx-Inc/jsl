@@ -1,0 +1,644 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/designs/BoxSymbolTest:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/audio
+  import jsl/symbols/box-symbol
+  import jsl/design/settings
+  import jsl/landpatterns/two-pin/SMT
+  import jsl/examples/landpatterns/board
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-island
+  import jsl/landpatterns/SOIC
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/pad-planner
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/decorators
+  import jsl/bundles/comms
+  import jsl/bundles/general
+
+pcb-component basic:
+  pin-properties:
+    [pin:Ref | pads:Ref ...]
+      [ VDD | p[8]]
+      [ DIN  | p[1]]
+      [ EN | p[2]]
+      [ CLK | p[3]]
+      [ DOUT | p[5]]
+      [ ALERT | p[6]]
+      [ NC    | p[7]]
+      [ GND | p[4]]
+
+  val box = BoxSymbol(self)
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-grid:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Right | 3]
+      [ VDD2 | p[9] | Right | 3]
+      [ DIN  | p[1] | Left | 1]
+      [ EN | p[2] | Left | 1]
+      [ CLK | p[3] | Left | 1]
+      [ DOUT | p[5] | Right | 1]
+      [ ALERT | p[6] | Right | 2]
+      [ NC    | p[7] | Left | 3]
+      [ GND | p[4] | Right | 0]
+      [ GND2 | p[10] | Right | 0]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [4,2])
+  set-row(3, find-pins-by-regex(box, "GND.*"))
+  set-row(0, self.VDD, self.VDD2)
+  set-row(3, [self.CLK])
+
+  assign-symbol(create-symbol(box))
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 10,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-margin:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Right | 3]
+      [ VDD2 | p[9] | Right | 3]
+      [ DIN  | p[1] | Left | 1]
+      [ EN | p[2] | Left | 1]
+      [ CLK | p[3] | Left | 1]
+      [ DOUT | p[5] | Right | 1]
+      [ ALERT | p[6] | Right | 2]
+      [ NC    | p[7] | Left | 3]
+      [ GND | p[4] | Right | 0]
+      [ GND2 | p[10] | Right | 0]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [4,2])
+  set-row(3, find-pins-by-regex(box, "GND.*"))
+
+  val vdd = set-group("vdd", [self.VDD, self.VDD2])
+  set-head-margin(2.0, pins-in-group(box, "vdd"))
+  set-tail-margin(2.0, [self.GND])
+  set-row(0, self.VDD, self.VDD2)
+  set-row(3, [self.CLK])
+
+  assign-symbol(create-symbol(box))
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 10,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-bank:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir]
+      [ VDD | p[8] | Right]
+      [ DIN  | p[1] | Left]
+      [ EN | p[2] | Left]
+      [ CLK | p[3] | Left]
+      [ DOUT | p[5] | Right ]
+      [ ALERT | p[6] | Right ]
+      [ NC    | p[7] | Left ]
+      [ GND | p[4] | Left]
+
+  val box = BoxSymbol(self)
+  ; first set all banks to some default bank
+  val gnd-ref = Ref("GND")
+  val d-ref = Ref("D")
+  set-bank(0, pins(self))
+  set-bank(gnd-ref, find-pins-by-regex(box, "GND.*"))
+  set-bank(d-ref, find-pins-by-regex(box, "^D.*"))
+  assign-symbols(
+    [
+      0 => box
+      gnd-ref => box
+      d-ref => box
+    ]
+  )
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-align:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir]
+      [ VDD | p[8] | Right ]
+      [ DIN  | p[1] | Left ]
+      [ DIN2  | p[9] | Left ]
+      [ DIN3  | p[10] | Left ]
+      [ DIN4  | p[11] | Left ]
+      [ DIN5  | p[12] | Left ]
+      [ DIN6  | p[13] | Left ]
+      [ DIN7  | p[14] | Left ]
+      [ DIN8  | p[15] | Left ]
+      [ DIN9  | p[16] | Left ]
+      [ DIN10  | p[17] | Left ]
+      [ EN | p[2] | Left ]
+      [ CLK | p[3] | Left ]
+      [ DOUT | p[5] | Right ]
+      [ VDD2 | p[18] | Right ]
+      [ DOUT2 | p[19] | Left ]
+      [ ALERT | p[6] | Right ]
+      [ NC    | p[7] | Left ]
+      [ GND | p[4] | Left ]
+
+  val box = BoxSymbol(self,
+    params = BoxSymbolParams(
+      show-grid = true
+  ))
+
+  val din-pins = find-pins-by-regex(box, "DIN.*")
+  set-row(1, din-pins)
+  set-row(1, self.CLK, self.EN)
+  set-row(3, self.NC)
+  set-row(4, self.GND)
+  set-row(1, find-pins-by-regex(box, "DOUT.*"))
+  set-row(2, self.ALERT)
+  set-grid(box, [6,2])
+  set-alignment(C, find-pins-by-regex(box, "DOUT.*"))
+  set-head-margin(2.0,self.VDD)
+  set-tail-margin(2.0,self.VDD)
+  set-alignment(C, self.VDD2)
+  set-alignment(C, self.VDD)
+  set-tail-margin(2.0, self.DIN10)
+  set-tail-margin(2.0, self.DIN10)
+  val d-pins = find-pins-by-regex(box, "DIN.*")
+  set-side(Right, d-pins)
+  set-side(Left, self.DOUT)
+
+  add-decorator(box, self.ALERT, CardinalityDecorator(BidirectionalPin))
+  add-decorator(box, self.CLK, ClockDecorator())
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 20,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component basic-align-rotate:
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int]
+      [ VDD | p[8] | Up | 0]
+      [ DIN  | p[1] | Down | 4]
+      [ DIN2  | p[9] | Down | 4]
+      [ DIN3  | p[10] | Down | 4]
+      [ DIN4  | p[11] | Down | 4]
+      [ DIN5  | p[12] | Down | 4]
+      [ DIN6  | p[13] | Down | 4]
+      [ DIN7  | p[14] | Down | 4]
+      [ DIN8  | p[15] | Down | 4]
+      [ DIN9  | p[16] | Down | 4]
+      [ DIN10  | p[17] | Down | 4]
+      [ EN | p[2] | Down | 4]
+      [ CLK | p[3] | Down | 4]
+      [ DOUT | p[5] | Up | 0]
+      [ ALERT | p[6] | Up | 0]
+      [ NC    | p[7] | Down | 4]
+      [ GND | p[4] | Down | 4]
+
+  val box = BoxSymbol(self,
+    params = BoxSymbolParams(
+      show-grid = true
+      ; pin-name-size = 3.0
+      ; pad-ref-size = 3.0
+  ))
+  set-grid(box, [5,1])
+  set-alignment(C, self.DOUT)
+  add-decorator(box, self.ALERT, OpenCollectorDecorator())
+  add-decorator(box, self.CLK, ClockDecorator(size = 3.0))
+  set-head-margin(1.0, self.CLK)
+  set-tail-margin(1.0, self.CLK)
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val lp = create-landpattern $ SOIC-N(
+    num-leads = 18,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(lp)
+
+pcb-component test-24AA025:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self)
+  set-grid(box, [2,1])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-default-align:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 10
+    row-width = 5))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pad-ref:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    col-width = 10
+    row-width = 5
+    pad-ref-size = 2.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pin-name:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    ;col-width = 10
+    ;row-width = 5
+    pin-name-size = 2.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+  add-decorator(box, self.rail.V-, ClockDecorator(size = 2.0))
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-pin-pitch:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 10
+    row-width = 5
+    pin-pitch = 5.0))
+  set-grid(box, [2,2])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-up-column:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String | bank:Ref]
+    [bus.sda | p[3] | Up | 0 | "SDA" | test ]
+    [bus.scl | p[1] | Down | 2 | "SCL" | test ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" | test ]
+    [rail.V- | p[2] | Left | 1 | "VSS" | test ]
+    [ADDR[0] | p[5] | Right | 1 | "A0" | test ]
+    [ADDR[1] | p[4] | Right | 1 | "A1" | test  ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    col-width = 1
+    row-width = 5
+  ))
+  set-grid(box, [3,3], Ref("test"))
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  assign-symbols([
+    Ref("test") => box
+  ])
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-even-row:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | row:Int | SRC-NAME:String ]
+    [bus.sda | p[3] | Left | 0 | "SDA" ]
+    [bus.scl | p[1] | Left | 0 | "SCL" ]
+    [rail.V+ | p[6] | Right | 0 | "VCC" ]
+    [rail.V- | p[2] | Left | 1 | "VSS" ]
+    [ADDR[0] | p[5] | Down | 1 | "A0" ]
+    [ADDR[1] | p[4] | Down | 1 | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    ;col-width = 1
+    ; line-width = 0.4
+    ; pin-length = 4.4
+    row-width = 5
+  ))
+  set-grid(box, [2, 1])
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-component test-group-margin:
+  manufacturer = "Microchip"
+  mpn = "24AA025UIDT-I/OT"
+
+  port bus : i2c
+  port rail : power
+  port ADDR : pin[2]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | group:String | SRC-NAME:String ]
+    [bus.sda | p[3] | "i2c" | "SDA" ]
+    [bus.scl | p[1] | "i2c" | "SCL" ]
+    [rail.V+ | p[6] | - | "VCC" ]
+    [rail.V- | p[2] | - | "VSS" ]
+    [ADDR[0] | p[5] | "ADDR" | "A0" ]
+    [ADDR[1] | p[4] | "ADDR" | "A1" ]
+
+  val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    row-width = 5
+  ))
+  set-grid(box, [2, 2])
+
+  set-side(Left, self.bus, self.rail.V-)
+  set-side(Right, self.ADDR, self.rail.V+)
+
+  set-row(1, self.rail.V-, self.ADDR)
+
+  set-alignment(N, self.rail.V+)
+  set-alignment(S, self.rail.V-)
+
+  set-alignment(S, self.bus)
+
+  set-tail-margin(box, 1.0, "i2c")
+
+  val symb = create-symbol(box)
+  assign-symbol(symb)
+
+  val SOIC-pkg = SOIC-N(
+    num-leads = 6,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+public pcb-component test-multi-bank :
+  manufacturer = "Texas Instruments"
+  mpn = "HD3SS3220RNHR"
+  reference-prefix = "U"
+  port TX-O : diff-pair
+  port RX-O : diff-pair
+  port TX : diff-pair[[1, 2]]
+  port RX : diff-pair[[1, 2]]
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | electrical-type:String | bank:Ref]
+    [ID | p[27] | Left | "unspecified" | control]
+    [CC2 | p[1] | Left | "unspecified" | control]
+    [CC1 | p[2] | Left | "unspecified" | control]
+    [CURRENT_MODE | p[3] | Left | "unspecified" | control]
+    [VBUS_DET | p[5] | Left | "unspecified" | control]
+    [PORT | p[4] | Left | "unspecified" | control]
+    [ENn_CC | p[29] | Left | "unspecified" | control]
+    [TX-O.P | p[6] | Left | "unspecified" | mux]
+    [TX-O.N | p[7] | Left | "unspecified" | mux]
+    [VCC33 | p[8] | Up | "unspecified" | control]
+    [RX-O.P | p[9] | Left | "unspecified" | mux]
+    [RX-O.N | p[10] | Left | "unspecified" | mux]
+    [DIR | p[11] | Right | "unspecified" | control]
+    [ENn_MUX | p[12] | Down | "unspecified" | mux]
+    [GND0 | p[13] | Down | "unspecified" | control]
+    [RX[1].N | p[14] | Right | "unspecified" | mux]
+    [RX[1].P | p[15] | Right | "unspecified" | mux]
+    [TX[1].N | p[16] | Right | "unspecified" | mux]
+    [TX[1].P | p[17] | Right | "unspecified" | mux]
+    [RX[2].N | p[18] | Right | "unspecified" | mux]
+    [RX[2].P | p[19] | Right | "unspecified" | mux]
+    [TX[2].N | p[20] | Right | "unspecified" | mux]
+    [TX[2].P | p[21] | Right | "unspecified" | mux]
+    [INT_N_OUT3 | p[23] | Right | "unspecified" | control]
+    [ADDR | p[22] | Right | "unspecified" | control]
+    [VCONN_FAULT_N | p[24] | Right | "unspecified" | control]
+    [SDA_OUT1 | p[25] | Right | "unspecified" | control]
+    [SCL_OUT2 | p[26] | Right | "unspecified" | control]
+    [GND1 | p[28] | Down | "unspecified" | control]
+    [VDD5 | p[30] | Up | "unspecified" | control]
+    [EP | p[31] | Down | "unspecified" | control]
+  val ctl-r = Ref("control")
+  val mux-r = Ref("mux")
+   val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    ;col-width = 10
+    ;row-width = 5
+  ))
+  set-grid(box, [2, 2], ctl-r)
+  set-grid(box, [3, 2], mux-r)
+  assign-symbols(
+    ctl-r => box,
+    mux-r => box
+    ; mux-r => create-symbol(box, mux-r),
+    ; ctl-r => create-symbol(box, ctl-r),
+  )
+  val SOIC-pkg = SOIC-N(
+    num-leads = 32,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
+pcb-module test-design:
+  ; inst c0 : basic
+  ; inst c1 : basic-grid
+  ; inst c2 : basic-margin
+  inst c3: basic-align
+  ; inst c4: basic-align-rotate
+  ; inst c5: basic-bank
+  ; inst c6: test-24AA025
+  ; inst t0: test-default-align
+  ; inst t1: test-pad-ref
+  ; inst t2: test-pin-name
+  ; inst t3: test-pin-pitch
+  ; inst t4: test-up-column
+  ; inst t5: test-even-row
+  ; inst t6: test-group-margin
+  ; inst t7: test-multi-bank
+val board-shape = RoundedRectangle(50.0, 50.0, 0.15)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("BoxSymbol-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-schematic()
+;view-board()

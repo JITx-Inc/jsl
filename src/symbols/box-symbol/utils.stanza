@@ -1,0 +1,276 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/box-symbol/utils:
+  import algorithm/utils
+  import core
+  import collections
+  import lang-utils
+  import pcre
+  import jitx
+  import jitx/commands
+  import jitx/utils/got
+  import jitx/schematic/analysis
+  import jsl/ensure
+  import jsl/symbols/utils
+  import jsl/symbols/box-symbol/errors
+  import jsl/geometry/box
+  import math
+
+; Property constants
+public :
+  val ROW_PROP = `row
+  val COL_PROP = `column
+  val ALIGN_PROP = `alignment
+  val SIDE_PROP = `side
+  val GROUP_PROP = `group
+  val HEAD_MARGIN_PROP = `head-margin
+  val TAIL_MARGIN_PROP = `tail-margin
+  val BANK_PROP = `bank
+
+val DEF_SIDE = Left
+val DEF_ROW = 0
+val DEF_COL = 0
+
+; struct for passing around row/col/side data
+public defstruct RCS <: Equalable & Hashable :
+  row:Int
+  col:Int
+  side:Dir
+with :
+  printer => true
+  equalable => true
+  hashable => true
+
+; TODO(azhu): most of this is lifted from previous ocdb implementation.
+; Could use a facelift.
+;
+public defn assign-schematic-symbols (banks: Tuple<KeyValue<Int|Ref,SchematicSymbol>>) :
+  defn ensure-non-empty-banks! () :
+    if empty?(banks) :
+      throw(EmptyBanks(""))
+  defn ensure-unique-bank-arguments! () :
+    val seen-banks = HashSet<Int|Ref>()
+    val duplicate-banks = Vector<Int|Ref>()
+    for bank-kv in banks do :
+      val bank = key(bank-kv)
+      if not add(seen-banks, bank) :
+        add(duplicate-banks, bank)
+    if not empty?(duplicate-banks) :
+      throw(DuplicateBanks(to-tuple(duplicate-banks)))
+  defn ensure-banks-exist! (pin-banks:Tuple<Maybe>) :
+    val banks* = map(key, banks)
+    val pin-banks* = unique-banks(pin-banks)
+    val extra-banks = difference(banks*, pin-banks*)
+    if not empty?(extra-banks) :
+      throw(MissingRequestedBanks(qsort(extra-banks)))
+    val missing-banks = difference(pin-banks*, banks*)
+    if not empty?(missing-banks) :
+      throw(MissingBankArguments(qsort(missing-banks)))
+  defn ensure-symbol-pins! (pins:Tuple<JITXObject>, pin-banks:Tuple<Maybe>) :
+    val bad-matches = to-tuple $
+      for bank in banks seq? :
+        val symbol-pins = to-hashset(ref, /pins(value(bank)))
+        val mismatched-pins = to-tuple $
+          for (p in pins, b in pin-banks) seq? :
+            val pin-ref = ref(p)
+            if value!(b) == bank and not symbol-pins[pin-ref] :
+              One(pin-ref)
+            else :
+              None()
+        if not empty?(mismatched-pins) :
+          One(name(value(bank)) => to-tuple(mismatched-pins))
+        else :
+          None()
+    if not empty?(bad-matches) :
+      throw(MissingSymbolPins(bad-matches))
+
+  ensure-non-empty-banks!()
+  ensure-unique-bank-arguments!()
+  inside pcb-component :
+    val pins = sort-by-row-index(pins(self))
+    val pin-sides0 = map({property?(_.side)}, pins)
+    val pin-banks = map({property?(_.bank)}, pins)
+    val pin-sides = ensure-good-sides!(pins, pin-sides0)
+    ensure-good-banks!(pins, pin-banks, true)
+    ensure-banks-exist!(pin-banks)
+    ensure-symbol-pins!(pins, pin-banks)
+    val wrapped-banks =
+      for [bank, symbol] in kvs(banks) seq :
+        val pin-mappings = for (p in pins, b in pin-banks) seq? :
+          if value!(b) == bank :
+            One(p => dot(symbol, ref(p)))
+          else :
+            None()
+        StandardBank(symbol, to-tuple(pin-mappings))
+    make-box-symbol(wrapped-banks)
+
+; Sort the given pins by their .pin-properties-row-index field.
+public defn sort-by-row-index (pins:Tuple<JITXObject>) -> Tuple<JITXObject> :
+  ;Compare pin[i0] versus pin[i1].
+  ;Indices are used, instead of the pin directly, in order to perform a
+  ;stable sort.
+  ;All pins without a .pin-properties-row-index are put in the beginning.
+  defn compare-index (i0:Int, i1:Int) :
+    val ai = value?(property?(pins[i0].pin-properties-row-index))
+    val bi = value?(property?(pins[i1].pin-properties-row-index))
+    match(ai, bi) :
+      (ai:Int, bi:Int) : compare(ai, bi)
+      (ai:Int, bi) : 1
+      (ai, bi:Int) : -1
+      (ai, bi) : compare(i0,i1)
+  val indices = qsort(0 to length(pins), compare-index)
+  map({pins[_]}, indices)
+
+defstruct StandardBank :
+  symbol: SchematicSymbol
+  pin-mappings: Tuple<KeyValue<JITXObject, JITXObject>>
+
+public defn make-box-symbol (banks:Seqable<StandardBank>) :
+  inside pcb-component :
+    symbol :
+      for (bank in banks, u in 0 to false) do :
+        val [sym, mapping] = [symbol(bank), pin-mappings(bank)]
+        unit(u) = sym(
+          for e in mapping do :
+            key(e) => value(e))
+
+defn ensure-good-banks! (pins:Tuple<JITXObject>,
+                         banks:Tuple<Maybe>,
+                         require-banks?:True|False) :
+  ;Check that all pins.banks are either Int|Ref or not given.
+  for (p in pins, b in banks) do :
+    ;[TODO] Why is `false` allowed?
+    if value?(b) is-not Int|Ref|False :
+      throw(InvalidBankType(ref(p), object-type(value?(b))))
+  ;Check that all banks given or no banks given (if not required).
+  if none?(empty?, banks) :
+    false
+  else :
+    val ps = to-tuple $ for (p in pins, b in banks) seq? :
+      if empty?(b) : One(ref(p))
+      else : None()
+    if require-banks? and empty?(ps) :
+      throw(MissingBankProperty(ps))
+
+defn ensure-good-sides! (pins:Tuple<JITXObject>, sides:Tuple<Maybe>) -> Tuple<Dir> :
+  ;Check that all pins.side is either Dir or not given.
+  for (p in pins, s in sides) do :
+    ;[TODO] Why is `false` allowed?
+    if value?(s) is-not Dir|False :
+      throw(InvalidSideType(ref(p), object-type(value?(s))))
+  ;Default side is Right
+  if all?(empty?, sides) :
+    map({Right}, pins)
+  else if none?(empty?, sides) :
+    map(value!, sides)
+  else :
+    val ps = for (p in pins, s in sides) seq? :
+      if empty?(s) : One(ref(p))
+      else : None()
+    throw(MissingSideProperty(to-tuple(ps)))
+
+defn flatten-pin-entries (es:Seqable<KeyValue<Dir,JITXObject|Seqable<JITXObject>>>) -> Vector<KeyValue<Dir,Pin>> :
+  val entries = Vector<KeyValue<Dir,Pin>>()
+  for e in es do :
+    match(value(e)) :
+      (p:Pin) : add(entries, key(e) => p)
+      (ps:Seqable<Pin>) : do(add{entries, key(e) => _}, ps)
+  entries
+
+defn unique-banks (banks:Tuple<Maybe>) :
+  val banks* = to-vector<Int|Ref> $ to-hashset<Int|Ref> $
+    for b in banks seq :
+      match(b) :
+        (o:One) : value(o)
+        (n:None) : throw $ Exception("One or more pins found with no banks")
+  defn compare-bank (x:Int|Ref, y:Int|Ref) -> Int :
+    defn rank (x:Int|Ref) :
+      match(x) :
+        (x:Int) : 0
+        (x:Ref) : 1
+    val c = compare(rank(x), rank(y))
+    if c == 0 : compare(x, y)
+    else : c
+  qsort!(banks*, compare-bank)
+  banks*
+
+; =========== Calcuate row/col/side for pins ============
+;
+; determine row col and side for specific pin given properties for that pin
+; 'Up' gets row = 0
+; 'Down' gets row = num-rows
+; 'Left' gets col = 0
+; 'Right' gets col = num-cols
+; Defaults :
+;   side = 'Left', row = 0, col = 0
+public defn calc-rcs-for-pin (ref:Ref, props:Table<Symbol,?>, row-col:[Int, Int]) -> RCS:
+  val max-row = row-col[0] - 1
+  val max-col = row-col[1] - 1
+
+  val has-side? = key?(props, SIDE_PROP)
+  val has-row? = key?(props, ROW_PROP)
+  val has-col? = key?(props, COL_PROP)
+
+  defn check-border (row:Int, col:Int) :
+    if row > 0 and row < max-row and col > 0 and col < max-col :
+      throw $ InvalidGridDimension("Invalid row+col %_ %_ for pin %_."
+        % [row, col, ref])
+
+  defn check-row-side (row:Int, side:Dir) :
+    if (
+      (side == Up and row != 0)
+      or (side == Down and row != max-row)
+    ) :
+      throw $ InvalidGridDimension("Invalid row/side combo %_/%_ for pin %_" % [row, side, ref])
+
+  defn check-col-side (col:Int, side:Dir) :
+    if (
+      (side == Left and col != 0)
+      or (side == Right and col != max-col)
+    ) :
+      throw $ InvalidGridDimension("Invalid col/side combo %_/%_ for pin %_" % [col, side, ref])
+
+  match(has-row?, has-col?, has-side?) :
+    (r:True, c:True, s:True) :
+      val [row, col, side] = [props[ROW_PROP], props[COL_PROP], props[SIDE_PROP]]
+      ; user specified everything, run error checks
+      check-border(row, col)
+      check-row-side(row, side)
+      check-col-side(col, side)
+      RCS(row, col, side)
+    (r:True, c:True, s:False) :
+      val [row, col] = [props[ROW_PROP], props[COL_PROP]]
+      check-border(row, col)
+      val side =
+        if col == 0 : Left
+        else if col == max-col : Right
+        else if row == 0 : Up
+        else if row == max-row : Down
+        else : Left
+      RCS(row,col,side)
+    (r:True, c:False, s:True) :
+      val [row, side] = [props[ROW_PROP], props[SIDE_PROP]]
+      check-row-side(row, side)
+      val col =
+        if side == Right : max-col
+        else : 0
+      RCS(row, col, side)
+    (r:True, c:False, s:False) :
+      RCS(props[ROW_PROP], 0, Left)
+    (r:False, c:True, s:True) :
+      val [col, side] = [props[COL_PROP], props[SIDE_PROP]]
+      check-col-side(col, side)
+      val row =
+        if side == Down : max-row
+        else : 0
+      RCS(row, col, side)
+    (r:False, c:True, s:False) :
+      RCS(0, props[COL_PROP], Up)
+    (r:False, c:False, s:True) :
+      val side = props[SIDE_PROP]
+      val [row, col] =
+        if side == Right : [0, max-col]
+        else if side == Down : [max-row, 0]
+        else : [0,0]
+      RCS(row, col, side)
+    (r:False, c:False, s:False) :
+      RCS(0, 0, Left)
