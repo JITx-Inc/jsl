@@ -104,7 +104,6 @@ public pcb-bundle pcie-control :
   pin PERST#          ; PCI-E Reset signal
   pin CLKREQ#         ; clock request
 
-
 doc: \<DOC>
 @brief connect-pcie-tx-rx()
 This function partially connects a portion of two pcie bundles together by
@@ -118,13 +117,8 @@ then the signals are connected straight through. This usage is valid for a conne
 connector TX pair and an any RX pair. The capacitor needs to have pin models applied to its pins 
 in order for the overall skew and loss values to be respected.
 <DOC>
-
 public defn connect-pcie-tx-rx (sw:Toleranced, ml:Double, cap:Instantiable|False, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
-    defn constraint (a:JITXObject, b:JITXObject) :
-      skew-window(sw, a => b)
-      max-loss(ml, a => b)
-
     for i in indices(x.data.tx) do :
       match(cap) :
         (c:Instantiable) : 
@@ -136,7 +130,22 @@ public defn connect-pcie-tx-rx (sw:Toleranced, ml:Double, cap:Instantiable|False
         (f:False) : 
           topo-net(x.data.tx[i], y.data.rx[i])
 
-      constraint(x.data.tx[i], y.data.rx[i])
+      constrain(sw, ml, x.data.tx[i], y.data.rx[i])
+
+doc: \<DOC>
+@brief connect-pcie-clk()
+This function partially connects the refclk of two pcie bundles.
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for the differential signals being connected.
+<DOC>
+public defn connect-pcie-clk (sw:Toleranced, ml:Double, x:JITXObject, y:JITXObject) : 
+  inside pcb-module :
+    topo-net(x.data.refclk, y.data.refclk)
+    constrain(sw, ml, x.data.refclk, y.data.refclk)
+
+defn constrain (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
+  skew-window(sw, a => b)
+  max-loss(ml, a => b)
 
 doc: \<DOC>
 @brief connect-pcie-control
@@ -157,8 +166,9 @@ table are derived from the references listed below.
 https://pcisig.com/pci-express%C2%AE-50-architecture-channel-insertion-loss-budget-0
 
 There is also a very loose lane to lane skew spec for different lane rates:
-Parameter	       2.5 GT/s	5.0 GT/s	8.0 GT/s	16.0 GT/s Unit
-Lane to Lane Skew	20	     8	        6	          5 ns
+| Parameter	       | 2.5 GT/s | 5.0 GT/s | 8.0 GT/s | 16.0 GT/s | Unit  |
+|------------------|----------|----------|----------|-----------|-------|
+|Lane to Lane Skew |     20   |    8     |     6    |      5    |   ns  |
 
 Calculating the intra-pair skew distance to time correspondence depends on the material.
 tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
