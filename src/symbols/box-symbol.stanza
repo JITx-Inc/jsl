@@ -1,15 +1,19 @@
 #use-added-syntax(jitx)
-defpackage jsl/symbols/box-symbol/box-symbol:
+defpackage jsl/symbols/box-symbol:
   import algorithm/utils
   import core
   import collections
   import lang-utils
   import pcre
+
   import jitx
   import jitx/commands
   import jitx/utils/got
   import jitx/schematic/analysis
+
   import jsl/ensure
+  import jsl/design/Classable
+  import jsl/symbols/decorators
   import jsl/symbols/utils
   import jsl/symbols/SymbolDefn
   import jsl/symbols/SymbolNode
@@ -272,6 +276,11 @@ defstruct DecoratorInfo :
   ddims: Dims
   x-padded: Double
   decs: Vector<PinDecorator>
+  keep-pin-name?: True|False
+
+defn only-outside-decorator? (decs: Vector<PinDecorator>) -> True|False :
+  contains?(seq-cat({class(_)}, decs), DEC_OUTSIDE)
+    and not contains?(seq-cat({class(_)}, decs), DEC_INSIDE)
 
 defstruct GridInfo :
   ; 1-indexed dimensions
@@ -386,7 +395,9 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
       decorators[ref(p)] = DecoratorInfo(
         d
         /x(d) + TEXT_BORDER_PADDING
-        pin-decs)
+        pin-decs
+        only-outside-decorator?(pin-decs)
+      )
 
   ; Add group margins
   for kv in pins-by-group do :
@@ -521,11 +532,14 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
     val base = scale(x $ text-size(to-string(p-ref), pin-name-size(params)))
-    if key?(dec-info-by-pin(bb), p-ref) :
-      ;println("DEBUG DIMS %_ %_" % [p-ref, ddims(dec-info-by-pin(bb)[p-ref])])
-      (x-padded(dec-info-by-pin(bb)[p-ref])) + base
-    else :
-      base
+    match(get?(dec-info-by-pin(bb), p-ref)):
+      (di:DecoratorInfo) :
+        if keep-pin-name?(di) :
+          base
+        else :
+          (x-padded(di)) + base
+      (f) :
+        base
 
   ; group pins by cell and side
   for p-ref in pin-order-bs do :
@@ -744,6 +758,28 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
           pin-name-size = pin-name-size(params)
         )
 
+      defn add-decorated-pin (p:Ref, pos:Point, di:DecoratorInfo) :
+        val dec-offset =
+          match(side) :
+            (l:Left) : Point(x(pos) + x-padded(di), y(pos))
+            (r:Right) : Point(x(pos) - x-padded(di), y(pos))
+            (u:Up) : loc(x(pos), y(pos) - x-padded(di), 90.0)
+            (d:Down) : loc(x(pos), y(pos) + x-padded(di), 90.0)
+
+        val vpin =
+          if keep-pin-name?(di) :
+            add-pin(node, p, pos, params = create-default-vpin-params())
+          else :
+            text(node, dec-offset, to-string(p), unit-size = pin-name-size(params), anchor = text-anchor(side))
+            add-pin(node, p, pos, params = VirtualPinParams(
+              direction = side,
+              pin-length = pin-length(params),
+              pad-ref-size = pad-ref-size(params)
+            ))
+
+        for dec in decs(di) do :
+          add-decorator(vpin, dec)
+
       defn build-alignment-section (
         groups:Vector<Ref|String>
         offsets:Vector<Double>
@@ -763,20 +799,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
         for (p in pins, pos in positions) do :
           match(get?(dec-info-by-pin(bb), p)) :
             (di: DecoratorInfo) :
-              val dec-offset =
-                match(side) :
-                  (l:Left) : Point(x(pos) + x-padded(di), y(pos))
-                  (r:Right) : Point(x(pos) - x-padded(di), y(pos))
-                  (u:Up) : loc(x(pos), y(pos) - x-padded(di), 90.0)
-                  (d:Down) : loc(x(pos), y(pos) + x-padded(di), 90.0)
-              text(node, dec-offset, to-string(p), unit-size = pin-name-size(params), anchor = text-anchor(side))
-              val vpin = add-pin(node, p, pos, params = VirtualPinParams(
-                direction = side,
-                pin-length = pin-length(params),
-                pad-ref-size = pad-ref-size(params)
-              ))
-              for dec in decs(di) do :
-                add-decorator(vpin, dec)
+              add-decorated-pin(p, pos, di)
             (f) :
               add-pin(node, p, pos, params = create-default-vpin-params())
 

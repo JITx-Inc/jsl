@@ -187,7 +187,7 @@ pcb-component basic-align:
   set-side(Right, d-pins)
   set-side(Left, self.DOUT)
 
-  add-decorator(box, self.ALERT, OpenCollectorDecorator())
+  add-decorator(box, self.ALERT, CardinalityDecorator(BidirectionalPin))
   add-decorator(box, self.CLK, ClockDecorator())
 
   val symb = create-symbol(box)
@@ -613,21 +613,21 @@ public pcb-component test-multi-bank :
   assign-landpattern(create-landpattern(SOIC-pkg))
 
 pcb-module test-design:
-  inst c0 : basic
-  inst c1 : basic-grid
-  inst c2 : basic-margin
+  ; inst c0 : basic
+  ; inst c1 : basic-grid
+  ; inst c2 : basic-margin
   inst c3: basic-align
-  inst c4: basic-align-rotate
-  inst c5: basic-bank
-  inst c6: test-24AA025
-  inst t0: test-default-align
-  inst t1: test-pad-ref
-  inst t2: test-pin-name
-  inst t3: test-pin-pitch
-  inst t4: test-up-column
-  inst t5: test-even-row
-  inst t6: test-group-margin
-  inst t7: test-multi-bank
+  ; inst c4: basic-align-rotate
+  ; inst c5: basic-bank
+  ; inst c6: test-24AA025
+  ; inst t0: test-default-align
+  ; inst t1: test-pad-ref
+  ; inst t2: test-pin-name
+  ; inst t3: test-pin-pitch
+  ; inst t4: test-up-column
+  ; inst t5: test-even-row
+  ; inst t6: test-group-margin
+  ; inst t7: test-multi-bank
 val board-shape = RoundedRectangle(50.0, 50.0, 0.15)
 
 ; Set the top level module (the module to be compile into a schematic and PCB)

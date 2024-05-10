@@ -6,8 +6,9 @@ defpackage jsl/symbols/decorators:
   import jsl/symbols/SymbolNode
   import jsl/geometry/basics
 
-val DEC_OUTSIDE = "outside"
-val DEC_INSIDE = "inside"
+public :
+  val DEC_OUTSIDE = "outside"
+  val DEC_INSIDE = "inside"
 
 val DEF_ACTIVE_LOW_DIAM = 0.5
 val DEF_ACTIVE_LOW_NUDGE = loc(0.05, 0.0)
@@ -208,14 +209,14 @@ public defn CardinalityDecorator (
 
   val [decShape, cls] = match(cardinality):
     (_:InputPin):
-      [construct-input-card-shape(s), [DEC_INSIDE]]
+      [construct-input-card-shape(s), [DEC_OUTSIDE]]
     (_:OutputPin):
       [construct-output-card-shape(s), [DEC_OUTSIDE]]
     (_:BidirectionalPin):
       [Union([
         construct-input-card-shape(s),
         construct-output-card-shape(s)
-      ]), [DEC_INSIDE, DEC_OUTSIDE]]
+      ]), [DEC_OUTSIDE]]
 
   val name = to-string $ "cardinality-%_" % [to-name-string(cardinality)]
   PinDecorator(
