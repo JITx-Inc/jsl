@@ -110,51 +110,49 @@ This function partially connects a portion of two pcie bundles together by
 connecting the tx pairs on the first bundle to the rx pairs on the second bundle.
 @param sw The intra-pair skew value for the differential signals being connected.
 @param ml The maximum loss for all differential signals being connected.
-@param cap Optional DC blocking capacitor to be inserted between the TX and RX signal ends. Note that 
+@param cap-xy Optional DC blocking capacitor to be inserted between the x.TX and y.RX signal ends. Note that 
 there are 2 blocking caps inserted, one on each of the pair of P,N signals. Providing a capacitor is often
 called for between 2 components on the same board, for example. If no capacitor is provided, 
 then the signals are connected straight through. This usage is valid for a connection between a 
 connector TX pair and an any RX pair. The capacitor needs to have pin models applied to its pins 
 in order for the overall skew and loss values to be respected.
+@param cap-yx Optional DC blocking capacitor to be inserted between the y.TX and x.RX signal ends. This capacitor
+covers the reverse direction connection between y.TX and x.RX. If the second component was a connector, then typically
+no capacitor is inserted between y.TX and x.RX (cap-y-x = false).
 <DOC>
-public defn connect-pcie-tx-rx (sw:Toleranced, ml:Double, cap:Instantiable|False, x:JITXObject, y:JITXObject) : 
+public defn connect-pcie (sw:Toleranced, ml:Double, cap-xy:Instantiable|False, cap-yx:Instantiable|False, x:JITXObject, y:JITXObject) : 
   inside pcb-module :
     for i in indices(x.data.tx) do :
-      match(cap) :
+      match(cap-xy) :
         (c:Instantiable) : 
-          inst bl-cap : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap
+          inst bl-cap-xy : dp-coupler(c)
+          require tx1 : dual-pair from bl-cap-xy
           ; need to have pin-model()'s set on the cap pins...
           topo-net(x.data.tx[i], tx1.A)
           topo-net(tx1.B, y.data.rx[i])
-        (f:False) : 
+        (f:False) :
           topo-net(x.data.tx[i], y.data.rx[i])
-
       constrain(sw, ml, x.data.tx[i], y.data.rx[i])
 
-doc: \<DOC>
-@brief connect-pcie-clk()
-This function partially connects the refclk of two pcie bundles.
-@param sw The intra-pair skew value for the differential signals being connected.
-@param ml The maximum loss for the differential signals being connected.
-<DOC>
-public defn connect-pcie-clk (sw:Toleranced, ml:Double, x:JITXObject, y:JITXObject) : 
-  inside pcb-module :
+    for i in indices(y.data.tx) do :
+      match(cap-yx) :
+        (c:Instantiable) :
+          inst bl-cap-yx : dp-coupler(c)
+          require tx1 : dual-pair from bl-cap-yx
+          ; need to have pin-model()'s set on the cap pins...
+          topo-net(y.data.tx[i], tx1.A)
+          topo-net(tx1.B, x.data.rx[i])
+        (f:False) : 
+          topo-net(y.data.tx[i], x.data.rx[i])
+      constrain(sw, ml, y.data.tx[i], x.data.rx[i])
     topo-net(x.data.refclk, y.data.refclk)
     constrain(sw, ml, x.data.refclk, y.data.refclk)
+    ; no constraints applied to the control sub-bundle
+    net (x.control y.control)
 
 defn constrain (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
   skew-window(sw, a => b)
   max-loss(ml, a => b)
-
-doc: \<DOC>
-@brief connect-pcie-control
-This function connects two equivalent pcie control sub-bundles together without constraints.
-<DOC>
-
-public defn connect-pcie-control (x:JITXObject, y:JITXObject) : 
-  inside pcb-module :
-    net (x.control y.control)
 
 doc: \<DOC>
 @brief pcie-get-skew-loss-vals() returns curated values for skew and loss
