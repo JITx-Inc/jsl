@@ -18,6 +18,41 @@ public pcb-bundle i2c:
   pin sda
   pin scl
 
+
+doc: \<DOC>
+SMBus Bundle
+System Management Bus (SMBus) is a two wire serial communication protocol
+@see http://smbus.org/specs/
+<DOC>
+public pcb-enum jsl/bundles/comms/SMBUSPins :
+  SMBALERT#
+  SMBSUS#
+
+pcb-bundle smbus-b (pins:Collection<SMBUSPins>):
+  name = "SMBus"
+  description = "System Management Bus (SMBus) - Serial Communication Protocol"
+  pin smbclk
+  pin smbdat
+  for p in pins do :
+    switch(p) :
+      SMBALERT#  : make-pin(`smbalert#)
+      SMBSUS#    : make-pin(`smbsus#)
+
+public defn smbus (pins:SMBUSPins ...) :
+  smbus-b(pins)
+
+doc: \<DOC>
+Standard SMBUS Generator
+
+This generator will construct an SMBUS bundle with the following pins:
+
+*  `smbclk` - Clock Line
+*  `smbdat` - Data Line
+
+<DOC>
+public defn std-smbus () :
+  smbus()
+
 doc: \<DOC>
 CAN Physical Layer Bundle
 

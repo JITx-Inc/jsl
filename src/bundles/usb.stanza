@@ -1,9 +1,13 @@
 #use-added-syntax(jitx)
 defpackage jsl/bundles/usb:
   import core
+  import collections
   import jitx
+  import jitx/commands
 
-  import jsl/bundles/general
+  import jsl/bundles
+  import jsl/si/helpers
+  import jsl/si/couplers
 
 doc: \<DOC>
 USB 2.0 Bundle
@@ -55,3 +59,4 @@ public pcb-bundle usb-3 (-- dual-lane:True|False = true) :
     name = "USB 3.2 Gen2x1"
     port ssrx : diff-pair
     port sstx : diff-pair
+
