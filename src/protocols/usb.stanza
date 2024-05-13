@@ -1,0 +1,306 @@
+doc: \<DOC>
+USB Protocol
+
+This package contains the definitions for the Universal Serial Bus protocol.
+
+@see https://en.wikipedia.org/wiki/USB
+@see https://www.usb.org/
+
+##  Transport vs Connnector Bundles
+
+The USB protocol contains many different layers from physical to logical. The bundles in
+this package are organized to support two levels in the application:
+
+2.  Transport - This is the set of signals that convey the information in the bus. These
+    signals typically traverse many components from the connector to the processor endpoint.
+    These signals typically have SI constraints attached to them.
+1.  Connector - This is the physical layer where the USB cable meets the board. This
+    interface may have power, shield, and other accessory pins in addition to the transport
+    layer signals. These additional connections may or may not make there way to the
+    processor endpoint.
+
+In the code below, the `transport` bundles are what you would typically use when connecting
+up the different modules of your circuit. The `connector` bundles are typically used to
+define the ports on a physical connector component or module that contains the physical
+connector component.
+
+## Symmetry in Transport Bundles
+
+If you look closely at the bundles defined below, you will notice some symmetry in
+the definitions of the transport bundles.
+
+The `usb-data` bundle defines the USB2.0 interface with port `data`. This same interface
+gets reused in `usb-superspeed` and `usb-c` later on.
+
+Similarly, `usb-superspeed` defines the pattern for the `lane` array of `superspeed-lane`
+bundles. This same pattern gets used in `usb-c`.
+
+This is not by accident. The reason we structure the bundles this way is:
+
+1. They can easily used in `supports/require` pin assignment statements.
+2. We can simplify the implementation of the connect, constrain, and routing structure
+   application functions.
+
+## Matching Lanes
+
+For most of the constraint functions in this package, the bundle types
+themselves are not checked for equality. Instead - we check for matching
+lane configurations. This allows a `usb-superspeed` and `usb-c`
+transport bundle to connect to each other if they have the correct number
+of lanes defined.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/usb:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/si/helpers
+  import jsl/si/couplers
+
+doc: \<DOC>
+Transport Bundle for the USB 2.0 Interface
+<DOC>
+public pcb-bundle usb-data :
+  name = "USB 2.0 Transport"
+  port data : diff-pair
+
+doc: \<DOC>
+Connector Bundle for the USB 2.0 Interface
+<DOC>
+public pcb-bundle usb-2-connector :
+  name = "USB 2.0 Connector"
+  port vbus : power
+  port bus : usb-data
+  port id : pin
+
+doc: \<DOC>
+USB SuperSpeed Lane Bundle
+<DOC>
+public pcb-bundle superspeed-lane:
+  name = "USB Superspeed Transport Lane Bundle"
+  port ssrx : diff-pair
+  port sstx : diff-pair
+
+doc: \<DOC>
+Transport Bundle for Superspeed USB
+
+This bundle supports USB 3/4 transport signals. These are the signals
+that are typically connected with SI constraints from the connector
+to the MCU or other components.
+
+This bundle type is usually used to construct the ports on MCUs,
+ESD devices, Muxes, etc in the USB 3/4 applications.
+
+@param lane-cnt Number of superspeed lanes in this bundle. Default is 1.
+<DOC>
+public pcb-bundle usb-superspeed (lane-cnt:Int = 1) :
+  name = "USB Superspeed Transport"
+  port data : diff-pair
+  port lane : superspeed-lane[lane-cnt]
+
+
+doc: \<DOC>
+Connector Bundle for USB Type A SuperSpeed(TM) Connectors
+<DOC>
+public pcb-bundle usb-a-SS-connector :
+  name = "USB Type-A SuperSpeed Connector"
+  port vbus : power
+  port bus : usb-superspeed()
+  port shield : pin
+
+
+doc: \<DOC>
+Transport Bundle for USB3/4
+@param lane-cnt Number of superspeed lanes in this bundle. Default is 2
+<DOC>
+public pcb-bundle usb-c (lane-cnt:Int = 2):
+  name = "USB Type-C Transport"
+  port data : diff-pair
+  port lane : superspeed-lane[lane-cnt]
+  port cc : pin[2]
+  port sbu : pin[2]
+
+doc: \<DOC>
+Connector Bundle - USB Type C Connector
+
+This bundle is typically applied to a physical connector
+component in a board design.
+<DOC>
+public pcb-bundle usb-c-connector :
+  name = "USB Type C Connector"
+  port vbus : power
+  port bus : usb-c()
+  port shield : pin
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; Constraints
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public pcb-enum jsl/protocols/usb/USBVersion:
+  USB2
+  USB3
+  USB4
+
+public defn usb-get-skew-loss (gen:jsl/protocols/usb/USBVersion) -> [Toleranced, Double]:
+  switch(gen):
+    USB2 : [0.0 +/- 3.75e-12, 2.0]
+    USB3 : [0.0 +/- 1.0e-12, 2.0]
+    USB4 : [0.0 +/- 1.0e-12, 2.0]
+
+public defn usb-get-trace-impedance (gen:jsl/protocols/usb/USBVersion) -> Toleranced :
+  switch(gen):
+    USB2 : 90.0 +/- (15 %)
+    USB3 : 90.0 +/- (15 %)
+    USB4 : 85.0 +/- 9.0
+
+
+doc: \<DOC>
+Check the passed port for `lane` port in its bundle type
+<DOC>
+defn has-lanes? (A:JITXObject) -> True|False:
+  match(port-type(A)):
+    (usb-b:Bundle):
+      label<True|False> return:
+        for p in pins(usb-b) do:
+          if prefix?(to-string(ref(p)), "lane"):
+            return(true)
+        return(false)
+    (_):
+      false
+
+defn check-lane-configs (src:JITXObject, dst:JITXObject):
+  if not has-lanes?(src):
+    throw $ ValueError("Expected Bundle with superspeed `lane` set")
+  if not has-lanes?(dst):
+    throw $ ValueError("Expected Bundle with superspeed `lane` set")
+  if length(src.lane) != length(dst.lane):
+    throw $ ValueError("Src and Dst have mis-matching Lane Configurations")
+
+doc: \<DOC>
+Connect the USB superspeed lanes Topology
+
+@param src One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
+@param dst Other endpoint as a USB bundle port. Must be of equivalent type as `src`.
+Specifically, the lane count in `src` must match the lane count in `dst`
+@param cap Optional blocking capacitor that will be inserted into the transmit pair
+connection in each lane. Passing a value of `false` means no blocking cap is inserted.
+<DOC>
+public defn connect-usb-lanes (src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+  inside pcb-module:
+    check-lane-configs(src, dst)
+
+    for i in 0 to length(src.lane) do:
+      topo-net(src.lane[i].ssrx => dst.lane[i].ssrx)
+
+      match(cap):
+        (c:Instantiable):
+          inst bl-cap : dp-coupler(c)
+          require d-p : dual-pair from bl-cap
+          topo-net(src.lane[i].sstx => d-p.A)
+          topo-net(d-p.B => dst.lane[i].sstx)
+        (f:False) :
+          topo-net(src.lane[i].sstx => dst.lane[i].sstx)
+
+doc: \<DOC>
+Connect the USB2 Data DiffPair Topology
+
+@param src One endpoint as a USB bundle port. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+@param dst Other endpoint as a USB bundle port. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+<DOC>
+public defn connect-usb-data (src:JITXObject, dst:JITXObject):
+  inside pcb-module:
+    topo-net(src.data => dst.data)
+
+doc: \<DOC>
+Connect the USB Topology
+
+This function will connect both the USB 2.0 data pair and
+any USB superspeed lanes as necessary depending on the
+bundle types of the passed ports.
+
+@param src Bundle port of type `usb-data`, `usb-superspeed` or `usb-c`
+@param dst Bundle port of type with matching lane configuration to `src`.
+The lane count of `src` and `dst` must match.
+@param cap Optional blocking capacitor that will be inserted into the transmit pair
+connection in each lane. Passing a value of `false` means no blocking cap is inserted.
+This parameter is only used if `src/dst` have superspeed lanes.
+<DOC>
+public defn connect-usb (src:JITXObject, dst:JITXObject, cap:Instantiable|False):
+  connect-usb-data(src, dst)
+  if has-lanes?(src):
+    connect-usb-lanes(src, dst, cap)
+
+doc: \<DOC>
+Constrain the USB superspeed lane topology.
+
+This function adds intra-pair timing skew constraints and
+maximum lass constraints for all superspeed lanes in
+the passed ports.
+
+@param sw The intra-pair skew time difference for the differential signals being connected.
+@param ml The maximum loss in dB for all differential signals being connected.
+@param src Bundle port of type `usb-superspeed` or `usb-c`
+@param dst Bundle port of type with matching lane configuration to `src`.
+The lane count of `src` and `dst` must match.
+<DOC>
+public defn constrain-usb-lanes (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject):
+  inside pcb-module:
+    check-lane-configs(src, dst)
+
+    for i in 0 to length(src.lane) do:
+      constrain-ch(sw, ml, src.lane[i].ssrx, dst.lane[i].ssrx )
+      constrain-ch(sw, ml, src.lane[i].sstx, dst.lane[i].sstx )
+
+doc: \<DOC>
+Constrain the USB2.0 data topology
+
+This function adds intra-pair timing skew constraints and
+maximum lass constraints to the USB2.0 data diff-pair.
+@param sw The intra-pair skew time difference for the `data` diff-pair.
+@param ml The maximum loss in dB for the `data` diff-pair.
+@param src Bundle port of type `usb-data`, `usb-superspeed`, or `usb-c`
+@param dst Bundle port of type `usb-data`, `usb-superspeed`, or `usb-c`
+<DOC>
+public defn constrain-usb-data (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject):
+  inside pcb-module:
+    constrain-ch(sw, ml, src.data, dst.data )
+
+
+doc: \<DOC>
+Apply a Differential Routing structure to the `data` pair of a USB bus
+
+This is for applying the routing structure for the USB2.0
+differential signaling pair.
+
+@param rs Differential Routing Structure object
+@param x One endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+@param y Other endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+<DOC>
+public defn usb-apply-data-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject):
+  inside pcb-module:
+    diff-structure(rs, x.data => y.data)
+
+doc: \<DOC>
+Apply a Differential Routing structure to the superspeed lane pairs of a USB bus
+
+This is for applying the routing structure for the USB3/4 highspeed
+communication lanes `ssrx` and `sstx`.
+
+@param rs Differential Routing Structure object
+@param x One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
+@param y Other endpoint as a USB bundle port. Must match with the bundle type of `x`
+<DOC>
+public defn usb-apply-lane-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject):
+  inside pcb-module:
+    check-lane-configs(x, y)
+    for i in 0 to length(x.lane) do:
+      diff-structure(
+        rs,
+        x.lane[i].ssrx => y.lane[i].ssrx
+        x.lane[i].sstx => y.lane[i].sstx
+      )

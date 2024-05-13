@@ -6,7 +6,6 @@ defpackage jsl/bundles:
   forward jsl/bundles/general
   forward jsl/bundles/debug
   forward jsl/bundles/comms
-  forward jsl/bundles/usb
   forward jsl/bundles/ethernet
   forward jsl/bundles/displays
 
