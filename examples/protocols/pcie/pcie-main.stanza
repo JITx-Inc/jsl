@@ -1,0 +1,79 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/pcie/main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/capacitors
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+
+  import jsl/protocols/pcie
+  import jsl/si/helpers
+
+  import jsl/examples/protocols/pcie/pcie-board
+  import jsl/examples/protocols/pcie/pcie-src
+
+
+
+public pcb-component block-cap :
+  name = "block-cap"
+  manufacturer = "KYOCERA AVX"
+  mpn = "02016D224MAT2A"
+  emodel = Capacitor(2.2e-07, 0.2, 6.3, false)
+  datasheet = "http://datasheets.avx.com/cx5r.pdf"
+  reference-prefix = "C"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [p[1] | p[1] ]
+    [p[2] | p[2] ]
+
+  val symb = CapacitorSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = SMT-Chip(
+    chips["0201"],
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  ; adding a pin model to the pins of this component allow si constraints
+  ; to be propagated through this component correctly. Obviously the values
+  ; used for this component are just placeholders.
+
+  pin-model(self.p[1] self.p[2]) = PinModel(typ(0.0), typ(0.0))
+
+
+pcb-module pcie-example :
+
+  inst dut1 : jsl/examples/protocols/pcie/pcie-src/module
+  inst dut2 : jsl/examples/protocols/pcie/pcie-src/module
+
+  require src : pcie(4) from dut1
+  require dst : pcie(4) from dut2
+
+  val [skew, loss] = pcie-get-skew-loss-vals(PCIE-V4)
+
+  connect-pcie(skew, loss, block-cap, false, src, dst)
+  pcie-apply-routing-structure(diff, src, dst)
+
+set-current-design("pcie-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(pcie-example)
+
+; View the results
+view-board()
+; view-schematic()
+view-design-explorer()
+; view-bom(BOM-STD)

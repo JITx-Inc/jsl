@@ -1,0 +1,204 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/pcie/pcie-board :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/protocols/pcie
+
+
+public pcb-rules pcie-board-rules :
+  min-copper-width             = 0.025
+  min-copper-copper-space      = 0.025
+  min-copper-hole-space        = 0.025
+  min-copper-edge-space        = 0.254
+  min-annular-ring             = 0.050
+  min-drill-diameter           = 0.100
+  min-silkscreen-width         = 0.100
+  min-pitch-leaded             = 0.350
+  min-pitch-bga                = 0.350
+  max-board-width              = 406.4
+  max-board-height             = 558.8
+  min-silk-solder-mask-space   = 0.050
+  min-silkscreen-text-height   = 0.380
+  solder-mask-registration     = 0.050
+  min-th-pad-expand-outer      = 0.050
+  min-soldermask-opening       = 0.152
+  min-soldermask-bridge        = 0.102
+  min-hole-to-hole             = 0.100
+  min-pth-pin-solder-clearance = 0.500
+
+;==== Materials ================================================================
+pcb-material copper :
+  type = Conductor
+  name = "Copper"
+
+pcb-material core :
+  type = Dielectric
+  dielectric-coefficient = 3.6
+  name = "FR4 Core"
+
+pcb-material soldermask :
+  type = Dielectric
+  dielectric-coefficient = 3.7
+  name = "Taiyo BSN4000"
+
+pcb-material prepreg :
+  type = Dielectric
+  dielectric-coefficient = 3.5
+  name = "FR4 Prepreg"
+
+
+public pcb-stackup pcie-stackup :
+  name = "Example 6-layer 0.032in"
+  layer(0.013, soldermask)
+  layer(0.030, copper    )
+  layer(0.060, prepreg   )
+  layer(0.025, copper    )
+  layer(0.060, prepreg   )
+  layer(0.015, copper    )
+  layer(0.070, core      )
+  layer(0.025, copper    )
+  layer(0.060, prepreg   )
+  layer(0.025, copper    )
+  layer(0.060, prepreg   )
+  layer(0.030, copper    )
+  layer(0.013, soldermask)
+
+public pcb-via gen-via (via-start:LayerIndex via-stop:LayerIndex via-name:String) :
+  name = via-name
+  start = via-start
+  stop = via-stop
+  diameter = 0.200
+  hole-diameter = 0.100
+  type = LaserDrill
+  via-in-pad = true
+
+public pcb-routing-structure single-ended :
+  name = "42.5 Ohm single-ended"
+  layer(Top) :
+    trace-width = 0.050     ; mm
+    clearance = 0.100       ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = NeckDown(0.075 0.075 false false)
+
+  layer(LayerIndex(2)) :
+    trace-width = 0.050     ; mm
+    clearance = 0.100        ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = NeckDown(0.075 0.075 false false)
+
+  layer(LayerIndex(4)) :
+    trace-width = 0.050     ; mm
+    clearance = 0.100       ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = NeckDown(0.075 0.075 false false)
+
+public pcb-differential-routing-structure differential :
+  name = "85 Ohm common-mode impedance"
+  layer(Top) :
+    trace-width = 0.050     ; mm
+    pair-spacing = 0.100    ; mm
+    clearance = 0.100       ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+
+  layer(LayerIndex(2)) :
+    trace-width = 0.050     ; mm
+    pair-spacing = 0.100    ; mm
+    clearance = 0.100       ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
+
+  layer(LayerIndex(4)) :
+    trace-width = 0.050     ; mm
+    pair-spacing = 0.100    ; mm
+    clearance = 0.100       ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
+
+  uncoupled-region = single-ended
+
+; Define the shape/size of the board
+public val board-shape = RoundedRectangle(50.0, 30.0, 0.25)
+
+; Creates a pcb-board with default stackup given the number of layers and board outline.
+public pcb-board pcie-example-board (outline:Shape) :
+  stackup = pcie-stackup
+  boundary = outline
+  signal-boundary = outline
+  vias = [gen-via(LayerIndex(0,Top), LayerIndex(1,Top) "uTop-1") ; Gnd
+          gen-via(LayerIndex(0,Top), LayerIndex(2,Top) "uTop-2") ; Signal
+          gen-via(LayerIndex(0,Top), LayerIndex(3,Top) "uTop-3") ; Gnd
+          gen-via(LayerIndex(0,Top), LayerIndex(4,Top) "uTop-4") ; Signal
+          gen-via(LayerIndex(0,Top), LayerIndex(0,Bottom) "th") ; Signal
+        ]
+
+; Setup the board
+public defn setup-board () :
+  set-board(pcie-example-board(board-shape))
+  set-rules(pcie-board-rules)
+
+
+
+doc: \<DOC>
+The pcb-differential-routing-structure template below is an example of a differential-routing-structure needed
+by pcie. This pcb-differential-routing-structure will be applied to the differential traces
+in the PCIe bus by using the helper function `pcie-apply-routing-structure()`.
+It should also reference a single ended routing structure for the uncoupled region.
+<DOC>
+public pcb-differential-routing-structure diff :
+  name = "85/100 Ohm differential impedance - PCIe"
+  val gen = PCIE-V4 ; for instance
+  val lookup-trace-impedance = pcie-get-trace-impedance(gen)
+  val tw = switch(typ(lookup-trace-impedance)) :
+    85.0  : 0.1400
+    100.0 : 0.1510
+  ; whatever layers are to be used for routing the differential pairs (defined by the user)
+  layer(LayerIndex(1, Top)) :
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.300    ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+
+  layer(LayerIndex(1, Bottom)) :
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.300    ; mm
+    velocity = 0.19e12      ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+
+  uncoupled-region = se-50
+
+
+doc: \<DOC>
+The pcb-routing-structure(s) below are just examples of the routing structures that need to be maintained
+in the project code because they are dependant on the stack-up and other factors.
+<DOC>
+public pcb-routing-structure se-50 :
+  name = "50 Ohm single-ended"
+  layer(Top) :
+    trace-width = 0.15    ; mm
+    clearance = 0.15     ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = NeckDown(
+      trace-width = 0.156
+      clearance = 0.1
+    )
+
+  layer(Bottom) :
+    trace-width = 0.15    ; mm
+    clearance = 0.15         ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = NeckDown(
+      trace-width = 0.156
+      clearance = 0.1
+    )
