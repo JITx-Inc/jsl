@@ -1,4 +1,4 @@
-# JSL - Jitx Standard Library
+# JSL - JITX Standard Library
 
 This library is intended to be a companion library to the
 JITX environment. The goals for this project are:
@@ -8,16 +8,15 @@ JITX environment. The goals for this project are:
 3.  Maintainable and distributable library with the help of [SLM](https://github.com/StanzaOrg/slm).
 4.  Well-documented and thoughtful explanations.
 
+** This is currently in ALPHA release. **
 
 # Setup
 
-1.  Clone [jitx-client](https://github.com/JITx-Inc/jitx-client) and build `jstanza`
-    1.  `source scripts/setup-env.bash` - You will need to run this in every new shell.
-    2.  `./scripts/make.bash jstanza` - You should only have to do this once.
-2.  Check that `jstanza` is on your path
-    1.  `whereis jstanza`
-    2.  You should see `jstanza: $HOME/src/jitx-client/build/bin/jstanza` or something similar.
+1.  Check that `jstanza` is on your path
+    1.  In Linux/Mac: `whereis jstanza`
+    2.  In Windows: `get-command jstanza`
     3.  `jstanza version` should report the current version.
+    4.  If there is no `jstanza` on your path - then you will need to add it to your `$PATH` (or in Windows `$env:PATH`).
 
 
 # Running the Tests
