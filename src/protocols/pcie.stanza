@@ -1,3 +1,26 @@
+doc: \<DOC>
+@brief PCI-e Protocol
+
+PCI-e is a serial communication supporting high speed data links
+@see https://en.wikipedia.org/wiki/PCI_Express
+
+This functions and definitions in this file support defining PCI-e
+connections between components in a board design.
+
+## PCIe Blocking Capacitors
+
+The PCIe specification calls for AC coupling for the data lanes. This is typically
+achieved using a blocking capacitor. When connecting two active components, this typically
+means blocking caps from `Tx -> Rx` on both sides of the link. When connecting an
+active component to a passive component, this typically means adding the blocking caps only on
+the `Tx -> Rx` side of the link.
+
+The functions in this module allow you to pass a blocking capacitor as an `Instantiable`.
+This component will get instantiated for each leg of the diff-pair. These functions handle
+the topology configuration, but the user needs to set a `pin-model` statement on the capacitor component.
+
+
+<DOC>
 #use-added-syntax(jitx)
 defpackage jsl/protocols/pcie:
   import core
@@ -10,17 +33,11 @@ defpackage jsl/protocols/pcie:
   import jsl/si/couplers
   import jsl/pin-assignment
 
-doc: \<DOC>
-@brief PCI-E definition
-PCI-E is a serial communication supporting high speed data links
-@see https://en.wikipedia.org/wiki/PCI_Express
-<DOC>
 
 doc: \<DOC>
-@brief PCI-E Generation enums
+@brief PCI-e Generation enums
 This is a fixed list of possible generation definitions for PCIe
 Can be extended if needed to include PCIE-V3.1, for example
-@see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
 public pcb-enum jsl/protocols/pcie/PCIeVersion:
@@ -33,11 +50,9 @@ public pcb-enum jsl/protocols/pcie/PCIeVersion:
   PCIE-V7
 
 doc: \<DOC>
-@brief PCI-E Width enums
+@brief PCI-e Width enums
 This is a fixed list of possible lane widths for PCIe
-@see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
-
 public pcb-enum jsl/protocols/pcie/PCIeWidth:
   PCIe-x1
   PCIe-x2
@@ -54,14 +69,12 @@ public defn PCIe-enum-to-int (en:PCIeWidth) -> Int:
     PCIe-x8  :  8
     PCIe-x16 : 16
     PCIe-x32 : 32
-    ; else : throw $ Exception("Invalid Lane Configuration for PCIe Bundle")
 
 doc: \<DOC>
-@brief PCI-E Bundle
+@brief PCI-e Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 and it also includes a refclk (100MHz) differential pair
 @param lanes The number of lanes to be configured for this bundle.
-@see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
 ; for the future
@@ -70,97 +83,105 @@ and it also includes a refclk (100MHz) differential pair
 ; this should be handled at the component level
 
 public pcb-bundle pcie (lanes:Int) :
-  name = "PCI-E"
-  description = "PCI-E Serial Communications Link"
+  name = "PCI-e"
+  description = "PCI-e Serial Communications Link"
   port control : pcie-control
   port data : pcie-data(lanes)
 
 doc: \<DOC>
-@brief PCI-E Data Bundle
+@brief PCI-e Data Bundle
 The Data bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 and it also includes a refclk (100MHz) differential pair.
 @param lanes The number of lanes in the bundle.
-@see https://en.wikipedia.org/wiki/PCI_Express
 <DOC>
 
 public pcb-bundle pcie-data (lanes:Int) :
-  name = "PCI-E Data"
-  description = "PCI-E Serial Communications Link Data"
-  port rx : diff-pair[lanes] 
-  port tx : diff-pair[lanes] 
+  name = "PCI-e Data"
+  description = "PCI-e Serial Communications Link Data"
+  port rx : diff-pair[lanes]
+  port tx : diff-pair[lanes]
   port refclk : diff-pair
 
 doc: \<DOC>
-@brief PCI-E Control bundle
-PCI-E is a serial communication supporting high speed data links
-@see https://en.wikipedia.org/wiki/PCI_Express
+@brief PCI-e Control bundle
+PCI-e is a serial communication supporting high speed data links
 <DOC>
 
 public pcb-bundle pcie-control :
-  name = "PCI-E Control"
-  description = "PCI-E Serial Communications Link Control"
+  name = "PCI-e Control"
+  description = "PCI-e Serial Communications Link Control"
   pin PEWAKE#
   pin PRSNT#          ; hot plug detection
   pin PERST#          ; PCI-E Reset signal
   pin CLKREQ#         ; clock request
 
-doc: \<DOC>
-@brief connect-pcie-tx-rx()
-This function partially connects a portion of two pcie bundles together by
-connecting the tx pairs on the first bundle to the rx pairs on the second bundle.
-@param sw The intra-pair skew value for the differential signals being connected.
-@param ml The maximum loss for all differential signals being connected.
-@param cap-xy Optional DC blocking capacitor to be inserted between the x.TX and y.RX signal ends. Note that 
-there are 2 blocking caps inserted, one on each of the pair of P,N signals. Providing a capacitor is often
-called for between 2 components on the same board, for example. If no capacitor is provided, 
-then the signals are connected straight through. This usage is valid for a connection between a 
-connector TX pair and an any RX pair. The capacitor needs to have pin models applied to its pins 
-in order for the overall skew and loss values to be respected.
-@param cap-yx Optional DC blocking capacitor to be inserted between the y.TX and x.RX signal ends. This capacitor
-covers the reverse direction connection between y.TX and x.RX. If the second component was a connector, then typically
-no capacitor is inserted between y.TX and x.RX (cap-y-x = false).
-<DOC>
-public defn connect-pcie (sw:Toleranced, ml:Double, cap-xy:Instantiable|False, cap-yx:Instantiable|False, x:JITXObject, y:JITXObject) : 
-  inside pcb-module :
-    for i in indices(x.data.tx) do :
-      match(cap-xy) :
-        (c:Instantiable) : 
-          inst bl-cap-xy : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap-xy
-          ; need to have pin-model()'s set on the cap pins...
-          topo-net(x.data.tx[i], tx1.A)
-          topo-net(tx1.B, y.data.rx[i])
-        (f:False) :
-          topo-net(x.data.tx[i], y.data.rx[i])
-      constrain(sw, ml, x.data.tx[i], y.data.rx[i])
 
-    for i in indices(y.data.tx) do :
-      match(cap-yx) :
-        (c:Instantiable) :
-          inst bl-cap-yx : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap-yx
-          ; need to have pin-model()'s set on the cap pins...
-          topo-net(y.data.tx[i], tx1.A)
-          topo-net(tx1.B, x.data.rx[i])
-        (f:False) : 
-          topo-net(y.data.tx[i], x.data.rx[i])
-      constrain(sw, ml, y.data.tx[i], x.data.rx[i])
-    topo-net(x.data.refclk, y.data.refclk)
-    constrain(sw, ml, x.data.refclk, y.data.refclk)
-    ; no constraints applied to the control sub-bundle
-    net (x.control y.control)
-
-defn constrain (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
+defn constrain-ch (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
   skew-window(sw, a => b)
   max-loss(ml, a => b)
 
 doc: \<DOC>
-@brief pcie-get-skew-loss-vals() returns curated values for skew and loss
-Is a helper function that returns the bounds on the intra-pair
-skew timing and maximum loss as expected by the particular standard targeted by 
+@brief Construct one direction of a PCIe channel.
+
+This function will construct the `Tx -> Rx` channel of a PCIe bus. The `src` and `dst`
+arguments must both be of type `pcie` with equal lane counts.
+
+@param sw The intra-pair skew time difference for the differential signals being connected.
+@param ml The maximum loss in dB for all differential signals being connected.
+@param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
+there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
+@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `pcie`
+@param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `pcie`
+
+<DOC>
+public defn connect-pcie-channel (sw:Toleranced, ml:Double, cap:Instantiable|False, src:JITXObject, dst:JITXObject) :
+  inside pcb-module:
+    for i in indices(src.data.tx) do :
+      match(cap) :
+        (c:Instantiable) :
+          inst bl-cap-xy : dp-coupler(c)
+          require tx1 : dual-pair from bl-cap-xy
+          topo-net(src.data.tx[i], tx1.A)
+          topo-net(tx1.B, dst.data.rx[i])
+        (f:False) :
+          topo-net(src.data.tx[i], dst.data.rx[i])
+      constrain-ch(sw, ml, src.data.tx[i], dst.data.rx[i])
+
+doc: \<DOC>
+@brief Construct the PCIe Topology and Constraints
+
+This function constructs the PCIe topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for all differential signals being connected.
+@param cap-xy Optional DC blocking capacitor to be inserted between the x.TX and y.RX signal ends. Note that
+there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have pin models applied to its pins
+in order for the overall skew and loss values to be respected.
+@param cap-yx Optional DC blocking capacitor to be inserted between the y.TX and x.RX signal ends. This capacitor
+covers the reverse direction connection between y.TX and x.RX. If the second component was a connector, then typically
+no capacitor is inserted between y.TX and x.RX (cap-y-x = false).
+@param x This is expected to be a port of `Bundle` type `pcie`
+@param y This is expected to be a port of `Bundle` type `pcie`
+<DOC>
+public defn connect-pcie (sw:Toleranced, ml:Double, cap-xy:Instantiable|False, cap-yx:Instantiable|False, x:JITXObject, y:JITXObject) :
+  inside pcb-module :
+    connect-pcie-channel(sw, ml, cap-xy, x, y)
+    connect-pcie-channel(sw, ml, cap-yx, y, x)
+
+    topo-net(x.data.refclk, y.data.refclk)
+    constrain-ch(sw, ml, x.data.refclk, y.data.refclk)
+    ; no constraints applied to the control sub-bundle
+    net (x.control y.control)
+
+
+doc: \<DOC>
+@brief Curated values for skew and loss of PCIe Channel
+This is a helper function that returns the bounds on the intra-pair
+skew timing and maximum loss as expected by the particular standard targeted by
 the user.The values returned are a toleranced value with upper/lower limits for the
-intra-pair skew and the maximum loss as a double representing dB. Some defaults in the 
-table are derived from the references listed below. 
+intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
+table are derived from the references listed below.
 https://pcisig.com/pci-express%C2%AE-50-architecture-channel-insertion-loss-budget-0
 
 There is also a very loose lane to lane skew spec for different lane rates:
@@ -189,10 +210,11 @@ public defn pcie-get-skew-loss-vals (gen:jsl/protocols/pcie/PCIeVersion) -> [Tol
     PCIE-V7 : [0.0 +/- 0.850e-12, 16.0]  ; 128.0 GT/s
 
 doc: \<DOC>
-@brief pcie-get-trace-impedance function returns the differential impedance specified by the standard
+@brief Differential impedance specified by the PCIe standard
 This is a helper function that returns the expected differential
-trace impedance for the particular generation of the PCIe standard that the user wants to 
-use. The value returned is a toleranced value with upper/lower limits for the impedance.
+trace impedance for the specified generation of the PCIe standard.
+
+@returns Upper/lower limits for the impedance.
 <DOC>
 
 public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) -> Toleranced :
@@ -206,13 +228,15 @@ public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) -> Tol
     PCIE-V7 :  85.0 +/- (5 %)  ; 128.0 GT/s
 
 doc: \<DOC>
-@brief Apply the differential routing structure to a PCI-E bundle.
+@brief Apply the differential routing structure to a PCI-e bundle.
 The function applies the provided DifferentialRoutingStructure
-to all of the differential pairs in the start and endpoints. Note that both start and end points 
+to all of the differential pairs in the start and endpoints. Note that both start and end points
 need to be connected to physical component pins either directly or via pin assignment.
+@param x This is expected to be a port of `Bundle` type `pcie`
+@param y This is expected to be a port of `Bundle` type `pcie`
 <DOC>
 
-public defn pcie-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) : 
+public defn pcie-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) :
   inside pcb-module :
     for i in indices(x.data.tx) do :
       diff-structure(rs, x.data.tx[i] => y.data.rx[i])

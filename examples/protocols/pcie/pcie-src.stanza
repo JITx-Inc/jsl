@@ -1,0 +1,213 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/pcie/pcie-src :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+
+  import jsl/design/settings
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/pcie
+
+val body = PackageBody(
+  width = 15.0 +/- 0.1,
+  length = 15.0 +/- 0.1,
+  height = 0.71 +/- [0.06, 0.0]
+)
+
+val BGA-pkg = BGA(
+  num-leads = 49,
+  rows = 8,
+  columns = 8,
+  lead-diam = 0.5,
+  pitch = 2.0,
+  package-body = body,
+  density-level = DensityLevelB
+)
+
+
+public pcb-component component :
+  reference-prefix = "U"
+  mpn = "JITX001"
+  description = "Dummy device with multiple PCIe supports"
+
+  pin-properties :
+    [pin:Ref    | pads:Ref ... ]
+
+    [REFCLKN[0] | A[1] ]
+    [REFCLKP[0] | A[2] ]
+    [REFCLKP[1] | D[4] ]
+    [REFCLKN[1] | D[3] ]
+    [REFCLKP[2] | D[2] ]
+    [REFCLKN[2] | D[1] ]
+    [REFCLKP[3] | C[7] ]
+    [REFCLKN[3] | C[6] ]
+
+    [PTXP[0]    | B[3] ]
+    [PTXN[0]    | B[2] ]
+    [PTXP[1]    | A[8] ]
+    [PTXN[1]    | A[7] ]
+    [PTXP[2]    | C[4] ]
+    [PTXN[2]    | C[3] ]
+    [PTXP[3]    | C[2] ]
+    [PTXN[3]    | C[1] ]
+
+    [PRXP[0]    | A[6] ]
+    [PRXN[0]    | A[5] ]
+    [PRXP[1]    | A[4] ]
+    [PRXN[1]    | A[3] ]
+    [PRXP[2]    | B[7] ]
+    [PRXN[2]    | B[6] ]
+    [PRXP[3]    | B[5] ]
+    [PRXN[3]    | B[4] ]
+
+    [PERST#[0]  | C[5] ]
+    [PERST#[3]  | D[5] ]
+    [PERST#[2]  | D[6] ]
+    [PERST#[1]  | D[7] ]
+
+    [GPIO[1]    | E[1] ]
+    [GPIO[2]    | E[2] ]
+    [GPIO[3]    | E[3] ]
+    [GPIO[4]    | E[4] ]
+    [GPIO[5]    | E[5] ]
+    [GPIO[6]    | E[6] ]
+    [GPIO[7]    | E[7] ]
+    [GPIO[8]    | F[1] ]
+    [GPIO[9]    | F[2] ]
+    [GPIO[10]   | F[3] ]
+    [GPIO[11]   | F[4] ]
+    [GPIO[12]   | F[5] ]
+    [GPIO[13]   | F[6] ]
+    [GPIO[14]   | F[7] ]
+    [GPIO[15]   | G[1] ]
+    [GPIO[16]   | G[2] ]
+    [GPIO[17]   | G[3] ]
+    [GPIO[18]   | G[4] ]
+    [GPIO[19]   | G[5] ]
+    [GPIO[20]   | G[6] ]
+    [GPIO[21]   | G[7] ]
+
+  val bus-r = Ref("bus")
+  val ctl-r = Ref("ctl")
+
+  val box-params = BoxSymbolParams(
+    show-grid = false
+    col-width = 1
+  )
+
+  val box = BoxSymbol(self, params = box-params)
+  set-grid(box, [2, 2], ctl-r)
+
+  set-bank(bus-r, self.PRXP, self.PRXN)
+  set-bank(bus-r, self.PTXP, self.PTXN)
+
+  set-group("tx-grp", self.PTXP, self.PTXN)
+  set-group("rx-grp", self.PRXP, self.PRXN)
+  set-head-margin(box, 0.5, "rx-grp")
+
+  set-side(Right, self.PTXP, self.PTXN, self.PRXP, self.PRXN)
+
+  set-bank(ctl-r, self.GPIO, self.PERST#)
+  set-bank(ctl-r, self.REFCLKP, self.REFCLKN)
+
+  set-group("reset-grp", self.PERST#)
+
+  set-group("gpio-grp", self.GPIO)
+  set-head-margin(box, 0.5, "gpio-grp")
+
+  set-side(Left, self.GPIO, self.PERST#)
+
+  for i in 0 to 4 do:
+    val  name = to-string $ "ref-clk-%_" % [i]
+    set-group(name, self.REFCLKP[i], self.REFCLKN[i] )
+    set-head-margin(box, 0.5, name)
+
+  set-side(Right, self.REFCLKP, self.REFCLKN)
+
+  assign-symbols(
+    ctl-r => box,
+    bus-r => box
+  )
+
+  val lp = create-landpattern(BGA-pkg)
+  assign-landpattern(lp)
+
+
+  for i in 0 to 4 do :
+    diff-pin-model(self.PRXP[i], self.PRXN[i],       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.PTXP[i], self.PTXN[i],       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.REFCLKP[i], self.REFCLKN[i], delay = typ(10.0e-15) loss = typ(0.1))
+
+
+public pcb-module module :
+
+  public inst sw : component
+
+  val bd-4x = pcie(4)
+  supports bd-4x :
+    for i in 0 to 4 do :
+      bd-4x.data.rx[i].P => sw.PRXP[i]
+      bd-4x.data.rx[i].N => sw.PRXN[i]
+      bd-4x.data.tx[i].P => sw.PTXP[i]
+      bd-4x.data.tx[i].N => sw.PTXN[i]
+    bd-4x.data.refclk.P => sw.REFCLKP[0]
+    bd-4x.data.refclk.N => sw.REFCLKN[0]
+
+    bd-4x.control.PEWAKE# => sw.GPIO[5]
+    bd-4x.control.PRSNT#  => sw.GPIO[12]
+    bd-4x.control.PERST#  => sw.PERST#[0]
+    bd-4x.control.CLKREQ# => sw.GPIO[1]
+
+  val ctls-2x = [
+    [sw.GPIO[6], sw.GPIO[12], sw.GPIO[1]]
+    [sw.GPIO[7], sw.GPIO[13], sw.GPIO[2]]
+  ]
+  val bd-2x = pcie(2)
+  for j in 0 to 2 do:
+    supports bd-2x:
+      val ch-offset = (2 * j)
+      for i in 0 to 2 do :
+        bd-2x.data.rx[i].P => sw.PRXP[i + ch-offset]
+        bd-2x.data.rx[i].N => sw.PRXN[i + ch-offset]
+        bd-2x.data.tx[i].P => sw.PTXP[i + ch-offset]
+        bd-2x.data.tx[i].N => sw.PTXN[i + ch-offset]
+      bd-2x.data.refclk.P => sw.REFCLKP[ch-offset]
+      bd-2x.data.refclk.N => sw.REFCLKN[ch-offset]
+
+      val [wake, present, clkreq] = ctls-2x[j]
+
+      bd-2x.control.PEWAKE# => wake
+      bd-2x.control.PRSNT#  => present
+      bd-2x.control.PERST#  => sw.PERST#[ch-offset]
+      bd-2x.control.CLKREQ# => clkreq
+
+
+  val bd-1x = pcie(1)
+  val ctls-1x = [
+    [sw.GPIO[8], sw.GPIO[12], sw.GPIO[1]],
+    [sw.GPIO[9], sw.GPIO[14], sw.GPIO[3]],
+    [sw.GPIO[10], sw.GPIO[13], sw.GPIO[2]],
+    [sw.GPIO[11], sw.GPIO[15], sw.GPIO[4]],
+  ]
+  for j in 0 to 4 do:
+    supports bd-1x:
+      bd-1x.data.rx[0].P => sw.PRXP[j]
+      bd-1x.data.rx[0].N => sw.PRXN[j]
+      bd-1x.data.tx[0].P => sw.PTXP[j]
+      bd-1x.data.tx[0].N => sw.PTXN[j]
+      bd-1x.data.refclk.P => sw.REFCLKP[j]
+      bd-1x.data.refclk.N => sw.REFCLKN[j]
+
+      val [wake, present, clkreq] = ctls-1x[j]
+      bd-1x.control.PERST#  => sw.PERST#[j]
+      bd-1x.control.PEWAKE# => wake
+      bd-1x.control.PRSNT#  => present
+      bd-1x.control.CLKREQ# => clkreq
+

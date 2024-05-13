@@ -1,0 +1,84 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/si/signal-ends:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/si/signal-ends
+
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/resistors
+
+  import jsl/tests/utils
+
+pcb-component test-R:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = ResistorSymbol()
+  assign-symbol(create-symbol(symb))
+  val chip-def = chips["1206"]
+  val pkg = SMT-Chip(
+    chip-def,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+deftest(signal-ends) test-basic-signal-ends:
+
+  pcb-module inner-mod:
+
+    port sig : pin
+    port gnd : pin
+
+    inst src : test-R
+    net (src.p[2], gnd)
+
+    inst series : test-R
+
+    net (src.p[1], series.p[2])
+    net (series.p[1], sig)
+
+    set-signal-end(sig, src.p[1])
+
+  pcb-module middle-mod:
+    port sig : pin
+    port gnd : pin
+
+    inst inner : inner-mod
+
+    net (gnd, inner.gnd)
+
+    inst R1 : test-R
+
+    net (inner.sig, R1.p[1])
+
+    net (sig, R1.p[2])
+
+    set-signal-end(sig, inner.sig)
+
+  pcb-module outer-mod:
+
+    inst U1 : middle-mod
+
+    val se = get-signal-end(U1.sig)
+    #EXPECT( to-string(ref(se)) == "U1.inner.sig" )
+
+    val se2 = find-signal-end(U1.sig)
+    #EXPECT( to-string(ref(se2)) == "U1.inner.src.p[1]" )
+
+    expect-throw({ get-signal-end(U1.gnd) })
+
+
+  set-main-module(outer-mod)

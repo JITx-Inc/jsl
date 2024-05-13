@@ -174,6 +174,9 @@ well.
 public defn add-decorator (vp:VirtualPin, dec:PinDecorator) :
   add(decorators(vp), dec)
 
+public defn add-decorator (vp:VirtualPin, decs:Seqable<PinDecorator>) :
+  add-all(decorators(vp), decs)
+
 doc: \<DOC>
 A Glyph is a set of geometry that creates an electrical symbol
 
@@ -431,8 +434,8 @@ defn make-full-vpin (vp:VirtualPin, scale:Double, pose:Pose) :
   defn dec-rot () -> Pose :
     match(direction(p)):
       (_:Right): loc(Point(0.0, 0.0), FlipX)
-      (_:Up): loc(Point(0.0, 0.0), 90.0)
-      (_:Down): loc(Point(0.0, 0.0), 90.0, FlipX)
+      (_:Up): loc(Point(0.0, 0.0), 90.0, FlipX)
+      (_:Down): loc(Point(0.0, 0.0), 90.0)
       (_:Left): loc(0.0, 0.0)
 
   inside pcb-symbol:
@@ -557,15 +560,18 @@ public defn rectangle (
 
 public defn line-rectangle (
   sn:SymbolNode,
-  p0:Point|[Double, Double]|[Int, Int],
-  p1:Point|[Double, Double]|[Int, Int],
+  p0:Point,
+  p1:Point,
   width:Double,
   --
+  pose:Pose = DEF_SYMNODE_POSE
   name:String = ?,
   class:Seqable<String>|String = []
   ) -> Glyph :
-  throw $ NotImplementedYet("line-rectangle")
-
+  val top-right = Point(x(p1), y(p0))
+  val bottom-left = Point(x(p0), y(p1))
+  val art = pose * Polyline(width, [p0, top-right, p1, bottom-left, p0])
+  add-glyph(sn, art, name? = name, class = class)
 
 public defn polyline (
   sn:SymbolNode,
@@ -597,12 +603,14 @@ public defn approx-arc (
   ) -> Glyph :
   throw $ NotImplementedYet("approx-arc")
 
+public val FONT-TO-UNIT = 10.0 / 72.0
 
-val FONT-TO-UNIT = 10.0 / 72.0
+public defn font-to-unit (i: Int) -> Double :
+  to-double(i) * FONT-TO-UNIT
 
 public defn text (
   sn:SymbolNode,
-  p:Point|[Double, Double]|[Int, Int],
+  p:Pose|Point|[Double, Double]|[Int, Int],
   content:String|Printable,
   --
   font-size:Int = 12
@@ -610,7 +618,33 @@ public defn text (
   name:String = ?,
   class:Seqable<String>|String = []
   ):
-  val p* = to-point(p)
-  val size = to-double(font-size) * FONT-TO-UNIT
-  val art = Text(to-string(content), size, anchor, loc(p*))
+  val l =
+    match(p):
+      (pose:Pose): pose
+      (point:Point|[Double Double]|[Int Int]): loc(to-point(point))
+  val art = Text(to-string(content), font-to-unit(font-size), anchor, l)
   add-glyph(sn, art, name? = name, class = class)
+
+public defn text (
+  sn:SymbolNode,
+  p:Pose|Point|[Double, Double]|[Int, Int],
+  content:String|Printable,
+  --
+  unit-size:Double
+  anchor:Anchor = C
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ):
+  val l =
+    match(p):
+      (pose:Pose): pose
+      (point:Point|[Double Double]|[Int Int]): loc(to-point(point))
+  val art = Text(to-string(content), unit-size, anchor, l)
+  add-glyph(sn, art, name? = name, class = class)
+
+public defn text-size (
+  content:String|Printable,
+  unit-size:Double
+) -> Dims :
+  val art = Text(to-string(content), unit-size, C, loc(0.0, 0.0))
+  to-Dims(bounds(art))
