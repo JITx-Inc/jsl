@@ -68,9 +68,9 @@ public pcb-module dp-coupler (comp:Instantiable -- margin:Double = 0.0, y-skew:D
   place(c[1]) at loc((- x-off), (- y2)) on Top
 
 doc: \<DOC>
-Construct Aligned Symmetric Pull Down Resistors
+Construct Aligned Symmetric Pull Down Components
 
-This function constructs a coulpler where two 2-pin components
+This function constructs a coupler where two 2-pin components
 are instantiated with p[1] of both components adjacent to each other.
 The far pin (p[2]) on both components is connected to a common `GND` terminal.
 
@@ -96,3 +96,35 @@ public pcb-module symmetric-pull-downs (comp:Instantiable -- margin:Double = 0.0
 
   place(R[0]) at loc(0.0, y-off, 180.0) on Top
   place(R[1]) at loc(0.0, (- y-off)) on Top
+
+doc: \<DOC>
+Construct Aligned Symmetric Shunt Components
+
+This function constructs a shunt module where two 2-pin components
+are instantiated with p[1] of both components adjacent to each other.
+The far pin (p[2]) on both components is connected to a `COMMON` terminal 
+which could be either a ground or a power supply net.
+
+@param comp 2-pin component like a resistors/capacitor with `p[1]` and `p[2]`
+@param margin Additional Y spacing distance between the two instantiated components.
+
+<DOC>
+public pcb-module symmetric-shunt (comp:Instantiable -- margin:Double = 0.0) :
+  port A : diff-pair
+  port B : diff-pair
+  pin COMMON
+
+  inst RC : comp[2]
+
+  topo-net(A.P => RC[0].p[1] => B.P)
+  net (RC[0].p[2], COMMON)
+
+  topo-net(A.N => RC[1].p[1] => B.N)
+  net (RC[1].p[2], COMMON)
+
+  val cyard = get-courtyard-dims(comp)
+  val y-off = (y(cyard) + margin) / 2.0
+
+  place(RC[0]) at loc(0.0, y-off, 180.0) on Top
+  place(RC[1]) at loc(0.0, (- y-off)) on Top
+  
