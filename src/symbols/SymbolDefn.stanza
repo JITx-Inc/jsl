@@ -35,6 +35,24 @@ the symbol in the schematic.
 public defmulti build-params (x:SymbolDefn, sn:SymbolNode)
 
 doc: \<DOC>
+Consstruct the preferred orientation statement for the symbol
+
+This function implements the `preferred-orientation` statement
+which controls at what orientation the symbol will be placed
+on the schematic sheet.
+<DOC>
+public defmulti build-orientation (x:SymbolDefn, sn:SymbolNode)
+
+doc: \<DOC>
+Default Implementation for Build Orientation
+
+By default - the function does nothing. It is up to the individual
+symbol implementations to provide this functionality as necessary.
+<DOC>
+public defmethod build-orientation (x:SymbolDefn, sn:SymbolNode) :
+  false
+
+doc: \<DOC>
 Construct the symbol definition
 
 This method will construct symbol definition by
@@ -59,6 +77,7 @@ public defmethod build-all (x:SymbolDefn, sn:SymbolNode) :
   build-pins(x, sn)
   build-artwork(x, sn)
   build-params(x, sn)
+  build-orientation(x, sn)
 
 val DEF_SYM_POSE = loc(0.0, 0.0)
 doc: \<DOC>
