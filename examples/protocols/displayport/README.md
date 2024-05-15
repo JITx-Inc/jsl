@@ -13,7 +13,8 @@ This example illustrates how to utilize the DisplayPort helper functions availab
 # Running the Example
 
 To run this example, you need to run `displayport-main.stanza` by entering `<CTRL> Enter` while in that file.
-Running the code will result in a layout which can be edited to position the two ICs as well as the 4 pairs of blocking capacitors.
+Running the code will result in a layout which can be edited to position the two ICs as well as the 4 pairs of 
+blocking capacitors and one pair of pull-up resistors.
 
 # Adapting the Example
 
