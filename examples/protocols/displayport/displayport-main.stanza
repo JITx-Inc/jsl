@@ -1,0 +1,51 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/displayport/main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+
+  import jsl/protocols/displayport
+  import jsl/si/helpers
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+  import jsl/examples/protocols/displayport/displayport-src
+
+pcb-module displayport-example :
+  pin VDD
+  pin GND
+
+  inst dut1 : jsl/examples/protocols/displayport/displayport-src/module(source = true)
+  inst dut2 : jsl/examples/protocols/displayport/displayport-src/module(source = false)
+
+  require src : displayport from dut1
+  require dst : displayport from dut2
+
+  val gen = DP1p4
+
+  val [skew, loss] = displayport-get-skew-loss-vals(gen)
+
+  connect-displayport(skew, loss, src, dst, block-cap(100.0e-9), [pu-res(50.0e3), VDD])
+  displayport-apply-routing-structure(diff, src, dst)
+
+  net (VDD dut1.VDD dut2.VDD)
+  net (GND dut1.GND dut2.GND)
+
+set-current-design("displayport-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(displayport-example)
+
+; View the results
+view-board()
+; view-schematic()
+view-design-explorer()
+; view-bom(BOM-STD)

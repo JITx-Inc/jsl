@@ -1,0 +1,75 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/common/example-components:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/capacitors
+  import jsl/symbols/resistors
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/two-pin/SMT
+
+  import jsl/si/helpers
+
+public pcb-component block-cap (value:Double):
+  name = "block-cap"
+  manufacturer = "KYOCERA AVX"
+  mpn = "02016D224MAT2A" ; this is fake now
+  emodel = Capacitor(value, 0.2, 6.3, false)
+  datasheet = "http://datasheets.avx.com/cx5r.pdf"
+  reference-prefix = "C"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [p[1] | p[1] ]
+    [p[2] | p[2] ]
+
+  val symb = CapacitorSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = SMT-Chip(
+    chips["0201"],
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  ; adding a pin model to the pins of this component allow si constraints
+  ; to be propagated through this component correctly. Obviously the values
+  ; used for this component are just placeholders.
+
+  pin-model(self.p[1] self.p[2]) = PinModel(typ(0.0), typ(0.0))
+
+public pcb-component pu-res (value:Double):
+  name = "pull-up res"
+  manufacturer = "KYOCERA AVX"
+  mpn = "02016D224MAT2A"
+  emodel = Resistor(value)
+  datasheet = "http://datasheets.avx.com/cx5r.pdf"
+  reference-prefix = "R"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [p[1] | p[1] ]
+    [p[2] | p[2] ]
+
+  val symb = ResistorSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = SMT-Chip(
+    chips["0201"],
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  ; adding a pin model to the pins of this component allow si constraints
+  ; to be propagated through this component correctly. Obviously the values
+  ; used for this component are just placeholders.
+
+  pin-model(self.p[1] self.p[2]) = PinModel(typ(0.0), typ(0.0))

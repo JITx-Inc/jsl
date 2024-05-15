@@ -1,0 +1,142 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/displayport/displayport-src :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+
+  import jsl/design/settings
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/displayport
+
+doc: \<DOC>
+@brief DisplayPort dummy component
+The component defined in this file is an example of how to enable a DisplayPort interface
+on a component. The component demonstrates the use of JSL land-patterns and symbols.
+<DOC>
+
+val body = PackageBody(
+  width = 15.0 +/- 0.1,
+  length = 15.0 +/- 0.1,
+  height = 0.71 +/- [0.06, 0.0]
+)
+
+val BGA-pkg = BGA(
+  num-leads = 64,
+  rows = 8,
+  columns = 8,
+  lead-diam = 0.5,
+  pitch = 2.0,
+  package-body = body,
+  density-level = DensityLevelB
+)
+
+doc: \<DOC>
+@brief DisplayPort dummy component definition
+This definition assumes a BGA component with pins defined per the DisplayPort standard. The component has a single 
+DP source or sink port per the argument.
+@param source:True|False defines whether the component is a DP source (true) or DP sink (false)
+<DOC>
+
+public pcb-component component :
+  reference-prefix = "U"
+  mpn = "JITX002"
+  description = "Dummy device with both a source and sink DP port"
+
+  pin-properties :
+    [pin:Ref    | pads:Ref ... ]
+
+    [DP-TX-P[0] | A[1] ]
+    [DP-TX-N[0] | A[2] ]
+    [DP-TX-P[1] | D[4] ]
+    [DP-TX-N[1] | D[3] ]
+    [DP-TX-P[2] | D[2] ]
+    [DP-TX-N[2] | D[1] ]
+    [DP-TX-P[3] | C[7] ]
+    [DP-TX-N[3] | C[6] ]
+
+    [DP-RX-P[0] | B[3] ]
+    [DP-RX-N[0] | B[2] ]
+    [DP-RX-P[1] | A[8] ]
+    [DP-RX-N[1] | A[7] ]
+    [DP-RX-P[2] | C[4] ]
+    [DP-RX-N[2] | C[3] ]
+    [DP-RX-P[3] | C[2] ]
+    [DP-RX-N[3] | C[1] ]
+
+    [AUX-N      | C[5] ]
+    [AUX-P      | D[5] ]
+    [HPD        | D[6] ]
+
+    [VDD        | E[1] ]
+    [GND        | E[2] ]
+
+  val bus-r = Ref("bus")
+  val ctl-r = Ref("aux")
+  val pwr-r = Ref("pwr")
+
+  val box-params = BoxSymbolParams(
+    show-grid = false
+    col-width = 1
+  )
+
+  val box = BoxSymbol(self, params = box-params)
+
+  set-bank(bus-r, self.DP-TX-P, self.DP-TX-N)
+  set-bank(bus-r, self.DP-RX-P, self.DP-RX-N)
+
+  set-group("tx-grp", self.DP-TX-P, self.DP-TX-N)
+  set-group("rx-grp", self.DP-RX-P, self.DP-RX-N)
+  set-head-margin(box, 0.5, "rx-grp")
+
+  set-side(Right, self.DP-TX-P, self.DP-TX-N, self.DP-RX-P, self.DP-RX-N)
+
+  set-bank(ctl-r, self.AUX-P, self.AUX-N, self.HPD)
+
+  set-side(Left, self.AUX-P, self.AUX-N, self.HPD)
+
+  set-bank(pwr-r, self.VDD, self.GND)
+  set-side(Up, self.VDD)
+  set-side(Down, self.GND)
+
+  assign-symbols(
+    ctl-r => box,
+    bus-r => box,
+    pwr-r => box
+  )
+
+  val lp = create-landpattern(BGA-pkg)
+  assign-landpattern(lp)
+
+  for i in 0 to 4 do :
+    diff-pin-model(self.DP-TX-P[i], self.DP-TX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.DP-RX-P[i], self.DP-RX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.AUX-P, self.AUX-N, delay = typ(10.0e-15) loss = typ(0.1))
+
+
+public pcb-module module (-- source:True|False = true) :
+  port VDD : pin
+  port GND : pin
+
+  public inst sw : component
+
+  net (VDD sw.VDD)
+  net (GND sw.GND)
+
+  supports displayport :
+    for i in 0 to 4 do :
+      if source :
+        displayport.lane[i].P => sw.DP-TX-P[i]
+        displayport.lane[i].N => sw.DP-TX-N[i]
+      else :
+        displayport.lane[i].P => sw.DP-RX-P[i]
+        displayport.lane[i].N => sw.DP-RX-N[i]
+    displayport.aux.P => sw.AUX-P
+    displayport.aux.N => sw.AUX-N
+    displayport.hpd   => sw.HPD

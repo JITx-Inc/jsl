@@ -222,7 +222,7 @@ This function is expected to be used in a `pcb-module` context.
 @param dp-pair KeyValue of two terminal ports of a `diff-pair` topology. Both
 the `key` and `value` of this KVP must be Bundle Ports of type `diff-pair
 <DOC>
-public defn diff-structure (route-struct, dp-pair:KeyValue<JITXObject, JITXObject>) :
+public defn diff-structure (route-struct:DifferentialRoutingStructure, dp-pair:KeyValue<JITXObject, JITXObject>) :
   inside pcb-module:
     val [A, B] = [key(dp-pair), value(dp-pair)]
     check-bundle(diff-pair, A, B)
@@ -396,3 +396,16 @@ public defn skew-window (
       (type-A, type-B):
         throw $ ArgumentError("Invalid Type for Skew Constraint: A=%_ B=%_" % [type-A, type-B])
 
+doc: \<DOC>
+@brief Simple helper function to apply constraints to a channel
+This function applies a skew window and a max-loss constraint to the specified channel
+@param sw Skew window in seconds. This would typically be a Toleranced around zero
+such as `0.0 +/- 10.0e-12`.
+@param ml Max Loss is a specification for the maximum loss in dB for a connection.
+@param a Terminal starting point
+@param b Terminal ending point for either two diff-pair bundles or two port-arrays.
+<DOC>
+
+public defn constrain-ch (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
+  skew-window(sw, a => b)
+  max-loss(ml, a => b)
