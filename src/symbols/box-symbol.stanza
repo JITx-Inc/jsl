@@ -949,7 +949,7 @@ public defmethod build-params (x:BoxSymbolBank, sn:SymbolNode) :
   text(sn, [left(b), up(b) + DESIGNATOR_MARGIN], ">REF", anchor = SW, font-size = 8)
   text(sn, [left(b), down(b) - DESIGNATOR_MARGIN], ">VALUE", anchor = NW, font-size = 8)
 
-public defmethod build-orientation (x:SymbolDefn, sn:SymbolNode) :
+public defmethod build-orientation (x:BoxSymbolBank, sn:SymbolNode) :
   inside pcb-symbol:
     ; By default - box symbols have a preferred orientation
     ;   of vertical. Without this - the ground and power net symbols
