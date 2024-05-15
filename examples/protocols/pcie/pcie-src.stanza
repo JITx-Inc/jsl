@@ -22,7 +22,7 @@ val body = PackageBody(
 )
 
 val BGA-pkg = BGA(
-  num-leads = 49,
+  num-leads = 64,
   rows = 8,
   columns = 8,
   lead-diam = 0.5,

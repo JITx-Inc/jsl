@@ -53,7 +53,7 @@ public pcb-enum jsl/protocols/displayport/DPVersion:
 doc: \<DOC>
 @brief DisplayPort Bundle
 The Data Bundle consists of 4 lane pairs (1 RX or TX pair set = 1 lane)
-The bundle also constains an AUX channel (differential pair) and a HPD pin
+The bundle also constrains an AUX channel (differential pair) and a HPD pin
 <DOC>
 
 public pcb-bundle displayport :
@@ -64,10 +64,6 @@ public pcb-bundle displayport :
   port hpd  : pin ; hot plug detect
 
 
-defn constrain-ch (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
-  skew-window(sw, a => b)
-  max-loss(ml, a => b)
-
 doc: \<DOC>
 @brief Construct a DisplayPort lane.
 
@@ -76,13 +72,13 @@ arguments must both be of type `displayport`.
 
 @param sw The intra-pair skew time difference for the differential signals being connected.
 @param ml The maximum loss in dB for all differential signals being connected.
+@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `displayport`
+@param sink This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `displayport`
 @param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
 there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
-@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `displayport`
-@param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `displayport`
 
 <DOC>
-public defn connect-displayport-lane (sw:Toleranced, ml:Double, cap:Instantiable|False, src:JITXObject, dst:JITXObject) :
+public defn connect-displayport-lane (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False) :
   inside pcb-module:
     for i in indices(src.lane) do :
       match(cap) :
@@ -90,10 +86,10 @@ public defn connect-displayport-lane (sw:Toleranced, ml:Double, cap:Instantiable
           inst bl-cap : dp-coupler(c)
           require tx1 : dual-pair from bl-cap
           topo-net(src.lane[i], tx1.A)
-          topo-net(tx1.B, dst.lane[i])
+          topo-net(tx1.B, sink.lane[i])
         (f:False) :
-          topo-net(src.lane[i], dst.lane[i])
-      constrain-ch(sw, ml, src.lane[i], dst.lane[i])
+          topo-net(src.lane[i], sink.lane[i])
+      constrain-ch(sw, ml, src.lane[i], sink.lane[i])
 
 doc: \<DOC>
 @brief Construct aux connection of a DisplayPort connection.
@@ -104,38 +100,40 @@ The `src` and `dst` arguments must both be of type `displayport`.
 
 @param sw The intra-pair skew time difference for the differential signals being connected.
 @param ml The maximum loss in dB for all differential signals being connected.
-@param res Optional pull-up resistor to be added to the AUX pair before the capacitor. 
-Note that there are 2 resistors added, one on each of the P,N signals of the pair.
-@param vdd Power supply pin to be used for the optional pull-up resistors. Must be present if the resistors are used.
-@param cap Optional DC blocking capacitor to be inserted between the AUX pair. Note that
-there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
 @param src This is assumed to be the source side of the link. This is expected to be a port of `Bundle` type `displayport`
 @param dst This is assumed to be the sink side of the link. This is expected to be a port of `Bundle` type `displayport`
+@param cap Optional DC blocking capacitor to be inserted between the AUX pair. Note that
+there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
+@param term Optional pull-up resistor and common net to be added to the AUX pair before the capacitor. 
+Note that there are 2 resistors added, one on each of the P,N signals of the pair. Power supply pin to be 
+used for the pull-up resistors. Must be valid if the resistors are used.
 
 <DOC>
-public defn connect-displayport-aux (sw:Toleranced, ml:Double, res:Instantiable|False, vdd:JITXObject|False, cap:Instantiable|False, src:JITXObject, dst:JITXObject) :
+public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
   inside pcb-module:
-    match(res, vdd, cap) :
-      (r:Instantiable, v:JITXObject, c:Instantiable) :
-        inst shunt-r : symmetric-shunt(r)
+    match(term, cap) :
+      (t:[Instantiable, JITXObject], c:Instantiable) :
+        inst shunt-r : symmetric-shunt(t[0] as Instantiable)
         inst bl-cap : dp-coupler(c)
         require tx1 : dual-pair from bl-cap
         topo-net(src.aux, shunt-r.A)
         topo-net(shunt-r.B, tx1.A)
         topo-net(tx1.B, dst.aux)
-        topo-net(shunt-r.COMMON, v)
-      (r:Instantiable, v:False, c:Instantiable|False) :
-          fatal("Failed to connect DisplayPort AUX pull-up resistors to power supply pin")
-      (r:False, v:False, c:Instantiable) :
-        inst bl-cap : dp-coupler(c)
-        require tx1 : dual-pair from bl-cap
-        topo-net(src.aux, tx1.A)
-        topo-net(tx1.B, dst.aux)
-      (r:False, v:JITXObject, c:Instantiable|False) :
-          fatal("Failed to instantiate DisplayPort AUX pull-up resistors to power supply pin")
-      (r:False, v:False, c:False) :
-        topo-net(src.aux, dst.aux)
+        topo-net(shunt-r.COMMON, t[1] as JITXObject)
+      (f:False, c:Instantiable|False) :
+        connect-displayport-aux(sw, ml, src, dst, c)
+    constrain-ch(sw, ml, src.aux, dst.aux)
 
+public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+  inside pcb-module:
+    match(cap) :
+      (c:Instantiable) :
+        inst bl-cap : dp-coupler(c)
+        require d-p : dual-pair from bl-cap
+        topo-net(src.aux, d-p.A)
+        topo-net(d-p.B, dst.aux)
+      (f:False) :
+        topo-net(src.aux, dst.aux)
     constrain-ch(sw, ml, src.aux, dst.aux)
 
 doc: \<DOC>
@@ -146,24 +144,22 @@ to the channel for intra-pair skew and channel loss.
 
 @param sw The intra-pair skew value for the differential signals being connected.
 @param ml The maximum loss for all differential signals being connected.
-@param res Optional pull-up resistor to be added to the AUX pair before the capacitor. 
-Note that there are 2 resistors added, one on each of the P,N signals of the pair.
-@param vdd Optional power supply pin to be used for the optional pull-up resistors.
-@param cap-xy Optional DC blocking capacitor to be inserted between the x.tx and y.rx channel. Note that
-there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have pin models applied to its pins
-in order for the overall skew and loss values to be respected.
-@param cap-yx Optional DC blocking capacitor to be inserted between the y.tx and x.rx signal ends. This capacitor
-covers the reverse direction connection between y.TX and x.RX. If the second component was a connector, then typically
-no capacitor is inserted between y.TX and x.RX (cap-y-x = false).
-@param x This is expected to be a port of `Bundle` type `displayport`
-@param y This is expected to be a port of `Bundle` type `displayport`
+@param src This is expected to be a port of `Bundle` type `displayport`
+@param sink This is expected to be a port of `Bundle` type `displayport`
+@param cap Optional DC blocking capacitor to be inserted between the src.tx and sink.rx channel. Note that
+there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have 
+pin models applied to its pins in order for the overall skew and loss values to be respected.
+
+@param term Optional tuple of pull-up resistor and common net to be added to the AUX pair before the capacitor. 
+Note that there are 2 resistors added, one on each of the P,N signals of the pair. Common net is to be used 
+for the pull-up resistors and can be a power supply net.
 <DOC>
-public defn connect-displayport (sw:Toleranced, ml:Double, res:Instantiable|False, vdd:JITXObject|False, cap:Instantiable|False, x:JITXObject, y:JITXObject) :
+public defn connect-displayport (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
   inside pcb-module :
-    connect-displayport-lane(sw, ml, cap, x, y)
-    connect-displayport-aux(sw, ml, res, vdd, cap, x, y)
+    connect-displayport-lane(sw, ml, src, sink, cap)
+    connect-displayport-aux(sw, ml, src, sink, cap, term)
     ; no constraints applied to the hot plug detect
-    net (x.hpd y.hpd)
+    net (src.hpd sink.hpd)
 
 
 doc: \<DOC>

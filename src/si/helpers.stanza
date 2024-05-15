@@ -396,3 +396,16 @@ public defn skew-window (
       (type-A, type-B):
         throw $ ArgumentError("Invalid Type for Skew Constraint: A=%_ B=%_" % [type-A, type-B])
 
+doc: \<DOC>
+@brief Simple helper function to apply constraints to a channel
+This function applies a skew window and a max-loss constraint to the specified channel
+@param sw Skew window in seconds. This would typically be a Toleranced around zero
+such as `0.0 +/- 10.0e-12`.
+@param ml Max Loss is a specification for the maximum loss in dB for a connection.
+@param a Terminal starting point
+@param b Terminal ending point for either two diff-pair bundles or two port-arrays.
+<DOC>
+
+public defn constrain-ch (sw:Toleranced, ml:Double, a:JITXObject, b:JITXObject) :
+  skew-window(sw, a => b)
+  max-loss(ml, a => b)

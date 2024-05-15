@@ -28,7 +28,7 @@ val body = PackageBody(
 )
 
 val BGA-pkg = BGA(
-  num-leads = 49,
+  num-leads = 64,
   rows = 8,
   columns = 8,
   lead-diam = 0.5,
@@ -87,7 +87,6 @@ public pcb-component component :
   )
 
   val box = BoxSymbol(self, params = box-params)
-  set-grid(box, [2, 2], ctl-r)
 
   set-bank(bus-r, self.DP-TX-P, self.DP-TX-N)
   set-bank(bus-r, self.DP-RX-P, self.DP-RX-N)
@@ -129,7 +128,7 @@ public pcb-module module (-- source:True|False = true) :
 
   net (VDD sw.VDD)
   net (GND sw.GND)
-  
+
   supports displayport :
     for i in 0 to 4 do :
       if source :

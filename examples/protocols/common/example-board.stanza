@@ -1,16 +1,21 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/displayport/displayport-board :
+defpackage jsl/examples/protocols/common/example-board :
   import core
   import jitx
   import jitx/commands
 
-  import jsl/protocols/displayport
 
+doc: \<DOC>
+@brief Simple board rules
+This structure sets the simple design rules to be applied to a design. Note 
+that routing-structures will supersede these values when applied to traces.
+See https://docs.jitx.com/reference/statements/rulestmt/heading.html
+<DOC>
 
-public pcb-rules displayport-board-rules :
-  min-copper-width             = 0.025
-  min-copper-copper-space      = 0.025
-  min-copper-hole-space        = 0.025
+public pcb-rules example-board-rules :
+  min-copper-width             = 0.075
+  min-copper-copper-space      = 0.075
+  min-copper-hole-space        = 0.075
   min-copper-edge-space        = 0.254
   min-annular-ring             = 0.050
   min-drill-diameter           = 0.100
@@ -49,7 +54,7 @@ pcb-material prepreg :
   name = "FR4 Prepreg"
 
 
-public pcb-stackup displayport-stackup :
+public pcb-stackup example-stackup :
   name = "Example 6-layer 0.032in"
   layer(0.013, soldermask)
   layer(0.030, copper    )
@@ -65,6 +70,15 @@ public pcb-stackup displayport-stackup :
   layer(0.030, copper    )
   layer(0.013, soldermask)
 
+doc: \<DOC>
+@brief Parametric via generator for laser-drilled vias
+This function creates vias based on the input arguments
+@param via-start the layer that the via starts on
+@param via-stop the layer that the via ends on
+For other via types and arguments, please 
+consult: https://docs.jitx.com/reference/statements/viastmt/heading.html
+<DOC>
+
 public pcb-via gen-via (via-start:LayerIndex via-stop:LayerIndex via-name:String) :
   name = via-name
   start = via-start
@@ -74,63 +88,20 @@ public pcb-via gen-via (via-start:LayerIndex via-stop:LayerIndex via-name:String
   type = LaserDrill
   via-in-pad = true
 
-; public pcb-routing-structure single-ended :
-;   name = "50.0 Ohm single-ended"
-;   layer(Top) :
-;     trace-width = 0.050     ; mm
-;     clearance = 0.100       ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = NeckDown(0.075 0.075 false false)
-
-;   layer(LayerIndex(2)) :
-;     trace-width = 0.050     ; mm
-;     clearance = 0.100        ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = NeckDown(0.075 0.075 false false)
-
-;   layer(LayerIndex(4)) :
-;     trace-width = 0.050     ; mm
-;     clearance = 0.100       ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = NeckDown(0.075 0.075 false false)
-
-; public pcb-differential-routing-structure differential :
-;   name = "100 Ohm common-mode impedance"
-;   layer(Top) :
-;     trace-width = 0.100     ; mm
-;     pair-spacing = 0.075    ; mm
-;     clearance = 0.100       ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
-
-;   layer(LayerIndex(2)) :
-;     trace-width = 0.110     ; mm
-;     pair-spacing = 0.080    ; mm
-;     clearance = 0.120       ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
-
-;   layer(LayerIndex(4)) :
-;     trace-width = 0.100     ; mm
-;     pair-spacing = 0.075    ; mm
-;     clearance = 0.100       ; mm
-;     velocity = 0.19e12      ; mm/s
-;     insertion-loss = 0.008  ; db/mm @ 1GHz
-;     neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
-
-;   uncoupled-region = single-ended
-
+doc: \<DOC>
+@brief Simple board shape
+This variable defines a shape for a board.
+<DOC>
 ; Define the shape/size of the board
 public val board-shape = RoundedRectangle(50.0, 30.0, 0.25)
 
-; Creates a pcb-board with default stackup given the number of layers and board outline.
-public pcb-board displayport-example-board (outline:Shape) :
-  stackup = displayport-stackup
+doc: \<DOC>
+@brief Simple board definition function
+This function call defines a board by creating a board with shape, stackup and allowable vias.
+@param outline the shape of the board
+<DOC>
+public pcb-board an-example-board (outline:Shape) :
+  stackup = example-stackup
   boundary = outline
   signal-boundary = outline
   vias = [gen-via(LayerIndex(0,Top), LayerIndex(1,Top) "uTop-1") ; Gnd
@@ -140,20 +111,28 @@ public pcb-board displayport-example-board (outline:Shape) :
           gen-via(LayerIndex(0,Top), LayerIndex(0,Bottom) "th") ; Signal
         ]
 
+doc: \<DOC>
+@brief Simple board setup function
+This function call sets up a board for a design by creating a board with a shape, stackup and design rules.
+<DOC>
+
 ; Setup the board
 public defn setup-board () :
-  set-board(displayport-example-board(board-shape))
-  set-rules(displayport-board-rules)
+  set-board(an-example-board(board-shape))
+  set-rules(example-board-rules)
 
 doc: \<DOC>
 The pcb-differential-routing-structure template below is an example of a differential-routing-structure needed
-by pcie. This pcb-differential-routing-structure will be applied to the differential traces
-in the PCIe bus by using the helper function `pcie-apply-routing-structure()`.
+by different protocols. This pcb-differential-routing-structure will be applied to the differential traces
+in the targeted bus by using the helper function `<bus>-apply-routing-structure()`.
 It should also reference a single ended routing structure for the uncoupled region.
 <DOC>
 public pcb-differential-routing-structure diff :
-  name = "100 Ohm differential impedance - PCIe"
-  val lookup-trace-impedance = displayport-get-trace-impedance()
+  name = "100 Ohm differential impedance"
+  ; if you want to look up a standard specific value, then you can use a function like one of the following:
+  ; val lookup-trace-impedance = pcie-get-trace-impedance(GEN)
+  ; val lookup-trace-impedance = displayport-get-trace-impedance()
+  val lookup-trace-impedance = 85.0 +/- (10 %)
   val tw = switch(typ(lookup-trace-impedance)) :
     85.0  : 0.1400
     100.0 : 0.1510
@@ -182,7 +161,7 @@ in the project code because they are dependant on the stack-up and other factors
 public pcb-routing-structure se-50 :
   name = "50 Ohm single-ended"
   layer(Top) :
-    trace-width = 0.15    ; mm
+    trace-width = 0.10    ; mm
     clearance = 0.15     ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
@@ -192,7 +171,7 @@ public pcb-routing-structure se-50 :
     )
 
   layer(Bottom) :
-    trace-width = 0.15    ; mm
+    trace-width = 0.10    ; mm
     clearance = 0.15         ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz

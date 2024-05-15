@@ -74,56 +74,6 @@ public pcb-via gen-via (via-start:LayerIndex via-stop:LayerIndex via-name:String
   type = LaserDrill
   via-in-pad = true
 
-public pcb-routing-structure single-ended :
-  name = "42.5 Ohm single-ended"
-  layer(Top) :
-    trace-width = 0.050     ; mm
-    clearance = 0.100       ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = NeckDown(0.075 0.075 false false)
-
-  layer(LayerIndex(2)) :
-    trace-width = 0.050     ; mm
-    clearance = 0.100        ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = NeckDown(0.075 0.075 false false)
-
-  layer(LayerIndex(4)) :
-    trace-width = 0.050     ; mm
-    clearance = 0.100       ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = NeckDown(0.075 0.075 false false)
-
-public pcb-differential-routing-structure differential :
-  name = "85 Ohm common-mode impedance"
-  layer(Top) :
-    trace-width = 0.050     ; mm
-    pair-spacing = 0.100    ; mm
-    clearance = 0.100       ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-
-  layer(LayerIndex(2)) :
-    trace-width = 0.050     ; mm
-    pair-spacing = 0.100    ; mm
-    clearance = 0.100       ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
-
-  layer(LayerIndex(4)) :
-    trace-width = 0.050     ; mm
-    pair-spacing = 0.100    ; mm
-    clearance = 0.100       ; mm
-    velocity = 0.19e12      ; mm/s
-    insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = DifferentialNeckDown(0.080 0.080 0.100 false false)
-
-  uncoupled-region = single-ended
-
 ; Define the shape/size of the board
 public val board-shape = RoundedRectangle(50.0, 30.0, 0.25)
 
