@@ -40,13 +40,12 @@ This is a tool for defining the `Lead-Profile` for the
 leads on the E/W (X) Edges and the N/S (Y) Edges of the
 quad package component.
 
-TODO - Do we expand this to have different lead-spans
-  on North, South Y edges for example?
-
 This type allows the user to optionally select the
 number of pins on either the X edges, the Y edges,
 or on both. These numbers must still be consistent
 with the `num-leads` parameter of the package.
+
+See {@link select-quad-numbering} for more information.
 
 <DOC>
 public defstruct Quad-Lead-Profile <: Equalable & Hashable:
@@ -60,6 +59,31 @@ with:
   hashable => true
   constructor => #Quad-Lead-Profile
 
+doc: \<DOC>
+Construct a Quad-Lead Profile
+
+The quad-lead profile allows the user to optionally select different
+lead-span configurations for the X leads vs the Y leads.
+
+The X leads are the dual row of pads that straddle the Y axis.
+The Y leads are the dual row of pads that straddle the X axis.
+
+@param x-span Center to center distance between the X-dimension leads in mm.
+@param x-pitch Center to center distance between leads in mm.
+@param x-lead Lead Configuration data for generating the pad of the X leads
+
+@param y-span Center to center distance between the Y-dimension leads in mm.
+@param y-pitch Center to center distance between leads in mm.
+@param y-lead Lead Configuration data for generating the pad of the Y leads
+
+@param x-count Number of leads for the X-dimension leads. This is the number
+of leads on the E/W sides of the quad package. If this value is not provided, then
+we will attempt to guess based on other parameters.
+@param y-count Number of leads for the Y-dimension leads. This is the number
+of leads on the N/S sides of the quad package. If this value is not provided, then
+we will attempt to guess based on other parameters.
+
+<DOC>
 public defn Quad-Lead-Profile (
   --
   x-span : Toleranced,
@@ -87,6 +111,18 @@ public defn Quad-Lead-Profile (
   val profile = Lead-Profile( span = span, pitch = pitch, lead = lead)
   Quad-Lead-Profile(profile = profile)
 
+doc: \<DOC>
+Construct a Quad Profile from two separate `Lead-Profile` objects.
+
+@param x-leads Lead Profile for the X leads (E/W edges)
+@param y-leads Lead Profile for the Y leads (N/S edges)
+@param x-count Number of leads for the X-dimension leads. This is the number
+of leads on the E/W sides of the quad package. If this value is not provided, then
+we will attempt to guess based on other parameters.
+@param y-count Number of leads for the Y-dimension leads. This is the number
+of leads on the N/S sides of the quad package. If this value is not provided, then
+we will attempt to guess based on other parameters.
+<DOC>
 public defn Quad-Lead-Profile (
   --
   x-leads:Lead-Profile,
@@ -96,6 +132,11 @@ public defn Quad-Lead-Profile (
   ) -> Quad-Lead-Profile:
   #Quad-Lead-Profile(x-leads, x-count, y-leads, y-count)
 
+doc: \<DOC>
+Construct a symmetric quad lead profile from a given `Lead-Profile` object
+
+@param profile Lead Profile to apply to all edges of the quad package.
+<DOC>
 public defn Quad-Lead-Profile (
   --
   profile:Lead-Profile,
@@ -107,7 +148,8 @@ doc: \<DOC>
 Select Numbering Scheme for QFN lead configuration
 
 For standard square QFN packages, the {@link Column-Major-Numbering}
-is sufficient to enumerate the pad ids for a QFN.
+is sufficient to enumerate the pad ids for a QFN. This gets selected if
+`x-count` and `y-count` are both `None`.
 
 For non-standard QFNs that have uneven numbers of leads of
 each side we must use a different numbering scheme. This function
@@ -115,6 +157,12 @@ will use the configuration in the {@link Quad-Lead-Profile} to
 generate an appropriate {@link Uneven-Column-Major-Numbering} for
 the asymmetric pin edges of a non-standard QFN.
 
+If `x-count` is an `Int` and `y-count` is None - then we will attempt to use the
+`num-leads` value to solve for what `y-count` should be assuming the N/S edge of
+leads is equal on either side. Vice versa if `x-count` is `None` and `y-count` is an
+`Int`.
+
+@param num-leads Total number of leads in the desired package (not including thermal)
 @throws ValueError If the lead configurations are invalid - such as one side having
 less than or equal to 0 leads.
 <DOC>
