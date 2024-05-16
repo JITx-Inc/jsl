@@ -10,6 +10,7 @@ build-test tests:
     jsl/tests/landpatterns/packages
     jsl/tests/landpatterns/pad-planner
     jsl/tests/landpatterns/SOIC
+    jsl/tests/landpatterns/SON
     jsl/tests/landpatterns/IPC
     jsl/tests/landpatterns/BGA
     jsl/tests/landpatterns/protrusions
