@@ -1,0 +1,105 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/landpatterns/SON:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/tests/utils
+  import jsl/tests/landpatterns/defchecks
+
+  import jsl/design/settings
+  import jsl/landpatterns/SON
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/leads
+  import jsl/geometry/box
+
+
+deftest(SON) test-lead:
+
+  val a = SON-Lead(
+    length = min-max(0.8, 1.0)
+    width = min-max(0.37, 0.42)
+    )
+  val b = SON-Lead(
+    lead-type = SmallGullWingLeads()
+    length = min-max(0.8, 1.0)
+    width = min-max(0.37, 0.42)
+    )
+
+  #EXPECT( a != b )
+
+  #EXPECT( lead-type(a) == SmallOutlineNoLeads() )
+  #EXPECT( in-range?( min-max(0.5, 1.2),  typ $ length(a)) )
+  #EXPECT( in-range?( min-max(0.35, 0.5),  typ $ width(a)) )
+
+  #EXPECT( lead-type(b) == SmallGullWingLeads() )
+
+  ; Check Ensures
+  val test-vecs = [
+    [min-max(-0.1, 0.1), typ(2.0)],
+    [min-max(0.0, 0.1), typ(2.0)],
+    [typ(2.0), min-max(-0.1, 0.1)],
+    [typ(2.0), min-max(0.0, 0.1)],
+  ]
+
+  for test-vec in test-vecs do:
+    val [l, w] = test-vec
+    expect-throw(
+      {SON-Lead(length = l, width = w)}
+    )
+
+deftest(SON) test-SON:
+  val expNames = [
+    "SON50P200X250-8N"
+    "SON50P200X400-14N"
+    "SON50P200X550-20N"
+  ]
+  for (num-pins in [8, 14, 20], i in 0 to false) do:
+
+    val symb = SON(
+      num-leads = num-pins,
+      lead-profile = Lead-Profile(
+        span = min-max(1.9, 2.1),
+        pitch = 0.5,
+        lead = SON-Lead(
+          length = min-max(0.2, 0.4),
+          width = min-max(0.18, 0.32)
+        )
+      ),
+      package-body = PackageBody(
+        width = min-max(1.9, 2.1)
+        length = typ(0.5 * to-double((num-pins / 2) + 1))
+        height = min-max(0.7, 0.8)
+      )
+    )
+    val expName = expNames[i]
+    #EXPECT(name(symb) == expName)
+
+    pcb-landpattern N-lp:
+      make-pads(symb)
+
+    val exp-Pitch-X = tol%(1.9, (5 %))
+    val exp-Pitch-Y = tol%(0.5, (1 %))
+
+    val grid = PadGrid(N-lp)
+
+    #EXPECT(length(rows(grid)) == num-pins / 2)
+    #EXPECT(check-row-pitch(grid, exp-Pitch-Y))
+    #EXPECT(check-column-pitch(grid, exp-Pitch-X))
+
+    for row in values(rows(grid)) do:
+      #EXPECT(length(row) == 2)
+      for lp-pad in row do:
+        val pd = pad(lp-pad)
+        val shape = pad-shape(pd)
+        #EXPECT(shape is Rectangle)
+
+    val not-empty = to-hashset<LayerSpecifier>([
+      SolderMask(Top)
+      Paste(Top)
+    ])
+
+    expect-empty-others(N-lp, not-empty)
+
+
