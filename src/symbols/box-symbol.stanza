@@ -44,6 +44,7 @@ val DESIGNATOR_MARGIN = 1.0
 val DEF_SHOW_GRID = false
 
 val GRID_SCALE = UNIT-TO-MM / 2.0
+val MIN_GRID_NUDGE = 0.5
 val SHOW_GRID_ROW = "ROW %_"
 val SHOW_GRID_COL = "COL %_"
 
@@ -531,7 +532,7 @@ public defmethod build-pins (bb:BoxSymbolBank, node:SymbolNode) :
     DEF_PIN_PADDING, pad-ref-size(params), pin-name-size(params), pin-pitch(params)])
 
   defn calc-padded-text-length (p-ref: Ref) -> Double :
-    val base = scale(x $ text-size(to-string(p-ref), pin-name-size(params)))
+    val base = (MIN_GRID_NUDGE / 2.0) + scale(x $ text-size(to-string(p-ref), pin-name-size(params)))
     match(get?(dec-info-by-pin(bb), p-ref)):
       (di:DecoratorInfo) :
         if keep-pin-name?(di) :

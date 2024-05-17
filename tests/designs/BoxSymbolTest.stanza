@@ -372,7 +372,7 @@ pcb-component test-pin-name:
     ;col-width = 10
     ;row-width = 5
     pin-name-size = 2.0))
-  set-grid(box, [2,2])
+  set-grid(box, [2,1])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
   add-decorator(box, self.rail.V-, ClockDecorator(size = 2.0))
@@ -612,22 +612,87 @@ public pcb-component test-multi-bank :
   )
   assign-landpattern(create-landpattern(SOIC-pkg))
 
+public pcb-component test-multi-bank-compressed :
+  manufacturer = "Texas Instruments"
+  mpn = "HD3SS3220RNHR"
+  reference-prefix = "U"
+  port TX-O : diff-pair
+  port RX-O : diff-pair
+  port TX : diff-pair[[1, 2]]
+  port RX : diff-pair[[1, 2]]
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | electrical-type:String | bank:Ref]
+    [ID | p[27] | Left | "unspecified" | control]
+    [CC2 | p[1] | Left | "unspecified" | control]
+    [CC1 | p[2] | Left | "unspecified" | control]
+    [CURRENT_MODE | p[3] | Left | "unspecified" | control]
+    [VBUS_DET | p[5] | Left | "unspecified" | control]
+    [PORT | p[4] | Left | "unspecified" | control]
+    [ENn_CC | p[29] | Left | "unspecified" | control]
+    [TX-O.P | p[6] | Left | "unspecified" | mux]
+    [TX-O.N | p[7] | Left | "unspecified" | mux]
+    [VCC33 | p[8] | Left | "unspecified" | control]
+    [RX-O.P | p[9] | Left | "unspecified" | mux]
+    [RX-O.N | p[10] | Left | "unspecified" | mux]
+    [DIR | p[11] | Right | "unspecified" | control]
+    [ENn_MUX | p[12] | Left | "unspecified" | mux]
+    [GND0 | p[13] | Left | "unspecified" | control]
+    [RX[1].N | p[14] | Right | "unspecified" | mux]
+    [RX[1].P | p[15] | Right | "unspecified" | mux]
+    [TX[1].N | p[16] | Right | "unspecified" | mux]
+    [TX[1].P | p[17] | Right | "unspecified" | mux]
+    [RX[2].N | p[18] | Right | "unspecified" | mux]
+    [RX[2].P | p[19] | Right | "unspecified" | mux]
+    [TX[2].N | p[20] | Right | "unspecified" | mux]
+    [TX[2].P | p[21] | Right | "unspecified" | mux]
+    [INT_N_OUT3 | p[23] | Right | "unspecified" | control]
+    [ADDR | p[22] | Right | "unspecified" | control]
+    [VCONN_FAULT_N | p[24] | Right | "unspecified" | control]
+    [SDA_OUT1 | p[25] | Right | "unspecified" | control]
+    [SCL_OUT2 | p[26] | Right | "unspecified" | control]
+    [GND1 | p[28] | Left | "unspecified" | control]
+    [VDD5 | p[30] | Right | "unspecified" | control]
+    [EP | p[31] | Right | "unspecified" | control]
+  val ctl-r = Ref("control")
+  val mux-r = Ref("mux")
+   val box = BoxSymbol(self, params = BoxSymbolParams(
+    show-grid = true
+    ;col-width = 10
+    ;row-width = 5
+  ))
+  set-grid(box, [2, 1], ctl-r)
+  set-grid(box, [3, 1], mux-r)
+  assign-symbols(
+    ctl-r => box,
+    mux-r => box
+    ; mux-r => create-symbol(box, mux-r),
+    ; ctl-r => create-symbol(box, ctl-r),
+  )
+  val SOIC-pkg = SOIC-N(
+    num-leads = 32,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  assign-landpattern(create-landpattern(SOIC-pkg))
+
 pcb-module test-design:
-  ; inst c0 : basic
-  ; inst c1 : basic-grid
-  ; inst c2 : basic-margin
+  inst c0 : basic
+  inst c1 : basic-grid
+  inst c2 : basic-margin
   inst c3: basic-align
-  ; inst c4: basic-align-rotate
-  ; inst c5: basic-bank
-  ; inst c6: test-24AA025
-  ; inst t0: test-default-align
-  ; inst t1: test-pad-ref
-  ; inst t2: test-pin-name
-  ; inst t3: test-pin-pitch
-  ; inst t4: test-up-column
-  ; inst t5: test-even-row
-  ; inst t6: test-group-margin
-  ; inst t7: test-multi-bank
+  inst c4: basic-align-rotate
+  inst c5: basic-bank
+  inst c6: test-24AA025
+  inst t0: test-default-align
+  inst t1: test-pad-ref
+  inst t2: test-pin-name
+  inst t3: test-pin-pitch
+  inst t4: test-up-column
+  inst t5: test-even-row
+  inst t6: test-group-margin
+  inst t7: test-multi-bank
+  inst t8: test-multi-bank-compressed
 val board-shape = RoundedRectangle(50.0, 50.0, 0.15)
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
