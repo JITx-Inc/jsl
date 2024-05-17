@@ -181,30 +181,31 @@ defn check-lane-configs (src:JITXObject, dst:JITXObject):
   if length(src.lane) != length(dst.lane):
     throw $ ValueError("Src and Dst have mis-matching Lane Configurations")
 
-doc: \<DOC>
-Connect the USB superspeed lanes Topology
-
-@param src One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
-@param dst Other endpoint as a USB bundle port. Must be of equivalent type as `src`.
-Specifically, the lane count in `src` must match the lane count in `dst`
-@param cap Optional blocking capacitor that will be inserted into the transmit pair
-connection in each lane. Passing a value of `false` means no blocking cap is inserted.
-<DOC>
-public defn connect-usb-lanes (src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+defn connect-blocking-cap (src:JITXObject, dst:JITXObject, cap:Instantiable):
   inside pcb-module:
-    check-lane-configs(src, dst)
+    inst bl-cap : dp-coupler(cap)
+    require d-p : dual-pair from bl-cap
+    topo-net(src => d-p.A)
+    topo-net(d-p.B => dst)
 
-    for i in 0 to length(src.lane) do:
-      topo-net(src.lane[i].ssrx => dst.lane[i].ssrx)
+doc: \<DOC>
+Connect a USB superspeed lane Topology
 
-      match(cap):
-        (c:Instantiable):
-          inst bl-cap : dp-coupler(c)
-          require d-p : dual-pair from bl-cap
-          topo-net(src.lane[i].sstx => d-p.A)
-          topo-net(d-p.B => dst.lane[i].sstx)
-        (f:False) :
-          topo-net(src.lane[i].sstx => dst.lane[i].sstx)
+This connects a single tx or rx lane with an optional blocking cap
+
+@param src One endpoint as a diff-pair.
+@param dst Other endpoint as a diff-pair.
+@param cap Optional blocking capacitor that will be inserted into the
+diff-pair topology. Passing a value of `false` means no blocking cap is inserted.
+<DOC>
+
+public defn connect-usb-lane (src:JITXObject, dst:JITXObject, cap:Instantiable|False):
+  inside pcb-module:
+    match(cap):
+      (c:Instantiable):
+        connect-blocking-cap(src, dst, c)
+      (_:False):
+        topo-net(src => dst)
 
 doc: \<DOC>
 Connect the USB2 Data DiffPair Topology
@@ -221,7 +222,8 @@ Connect the USB Topology
 
 This function will connect both the USB 2.0 data pair and
 any USB superspeed lanes as necessary depending on the
-bundle types of the passed ports.
+bundle types of the passed ports. This function is typically used
+when connecting an active device to a passive connector.
 
 @param src Bundle port of type `usb-data`, `usb-superspeed` or `usb-c`
 @param dst Bundle port of type with matching lane configuration to `src`.
@@ -233,7 +235,35 @@ This parameter is only used if `src/dst` have superspeed lanes.
 public defn connect-usb (src:JITXObject, dst:JITXObject, cap:Instantiable|False):
   connect-usb-data(src, dst)
   if has-lanes?(src):
-    connect-usb-lanes(src, dst, cap)
+    check-lane-configs(src, dst)
+    for i in 0 to length(src.lane) do:
+      connect-usb-lane(src.lane[i].sstx, dst.lane[i].sstx, cap)
+      connect-usb-lane(src.lane[i].ssrx, dst.lane[i].ssrx, false)
+
+doc: \<DOC>
+Connect the USB Topology in a Null Modem Fashion
+
+This function is typically used when connecting two active USB devices on the same
+PCB substrate. This connects `TX -> RX` and `RX -> TX` with an optional blocking
+capacitor on both pairs.
+
+The USB2.0 data pair is unaffected - it does a straight-through topology connection.
+
+@param src Bundle port of type `usb-data`, `usb-superspeed` or `usb-c`
+@param dst Bundle port of type with matching lane configuration to `src`.
+The lane count of `src` and `dst` must match.
+@param cap Optional blocking capacitor that will be inserted into each pair
+connection in each lane. Passing a value of `false` means no blocking cap is inserted.
+This parameter is only used if `src/dst` have superspeed lanes.
+<DOC>
+public defn connect-usb-NM (src:JITXObject, dst:JITXObject, cap:Instantiable|False):
+  connect-usb-data(src, dst)
+  if has-lanes?(src):
+    check-lane-configs(src, dst)
+    for i in 0 to length(src.lane) do:
+      connect-usb-lane(src.lane[i].sstx, dst.lane[i].ssrx, cap)
+      connect-usb-lane(src.lane[i].ssrx, dst.lane[i].sstx, cap)
+
 
 doc: \<DOC>
 Constrain the USB superspeed lane topology.
@@ -257,6 +287,30 @@ public defn constrain-usb-lanes (sw:Toleranced, ml:Double, src:JITXObject, dst:J
       constrain-ch(sw, ml, src.lane[i].sstx, dst.lane[i].sstx )
 
 doc: \<DOC>
+Constrain the USB superspeed lane topology in a Null-Modem fashion.
+
+This function adds intra-pair timing skew constraints and
+maximum lass constraints for all superspeed lanes in
+the passed ports.
+
+This function assumes that the USB topology was defined with the {@link connect-usb-NM}
+function to create the null-modem topology.
+
+@param sw The intra-pair skew time difference for the differential signals being connected.
+@param ml The maximum loss in dB for all differential signals being connected.
+@param src Bundle port of type `usb-superspeed` or `usb-c`
+@param dst Bundle port of type with matching lane configuration to `src`.
+The lane count of `src` and `dst` must match.
+<DOC>
+public defn constrain-usb-lanes-NM (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject):
+  inside pcb-module:
+    check-lane-configs(src, dst)
+
+    for i in 0 to length(src.lane) do:
+      constrain-ch(sw, ml, src.lane[i].ssrx, dst.lane[i].sstx )
+      constrain-ch(sw, ml, src.lane[i].sstx, dst.lane[i].ssrx )
+
+doc: \<DOC>
 Constrain the USB2.0 data topology
 
 This function adds intra-pair timing skew constraints and
@@ -278,12 +332,12 @@ This is for applying the routing structure for the USB2.0
 differential signaling pair.
 
 @param rs Differential Routing Structure object
-@param x One endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
-@param y Other endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+@param src One endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
+@param dst Other endpoint as a USB bundle. Must be of type `usb-data`, `usb-superspeed`, or `usb-c`
 <DOC>
-public defn usb-apply-data-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject):
+public defn usb-apply-data-routing-structure (rs:DifferentialRoutingStructure, src:JITXObject, dst:JITXObject):
   inside pcb-module:
-    diff-structure(rs, x.data => y.data)
+    diff-structure(rs, src.data => dst.data)
 
 doc: \<DOC>
 Apply a Differential Routing structure to the superspeed lane pairs of a USB bus
@@ -292,15 +346,37 @@ This is for applying the routing structure for the USB3/4 highspeed
 communication lanes `ssrx` and `sstx`.
 
 @param rs Differential Routing Structure object
-@param x One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
-@param y Other endpoint as a USB bundle port. Must match with the bundle type of `x`
+@param src One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
+@param dst Other endpoint as a USB bundle port. Must match with the bundle type of `src`
 <DOC>
-public defn usb-apply-lane-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject):
+public defn usb-apply-lane-routing-structure (rs:DifferentialRoutingStructure, src:JITXObject, dst:JITXObject):
   inside pcb-module:
-    check-lane-configs(x, y)
-    for i in 0 to length(x.lane) do:
+    check-lane-configs(src, dst)
+    for i in 0 to length(src.lane) do:
       diff-structure(
         rs,
-        x.lane[i].ssrx => y.lane[i].ssrx
-        x.lane[i].sstx => y.lane[i].sstx
+        src.lane[i].ssrx => dst.lane[i].ssrx
+        src.lane[i].sstx => dst.lane[i].sstx
+      )
+
+doc: \<DOC>
+Apply a Differential Routing structure to the superspeed lane pairs of a USB bus for Null Modem Topology
+
+This is for applying the routing structure for the USB3/4 highspeed
+communication lanes `ssrx` and `sstx`.
+
+This function assumes that the topology for the USB bus was constructed using the {@link connect-usb-NM} function.
+
+@param rs Differential Routing Structure object
+@param src One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
+@param dst Other endpoint as a USB bundle port. Must match with the bundle type of `src`
+<DOC>
+public defn usb-apply-lane-routing-structure-NM (rs:DifferentialRoutingStructure, src:JITXObject, dst:JITXObject):
+  inside pcb-module:
+    check-lane-configs(src, dst)
+    for i in 0 to length(src.lane) do:
+      diff-structure(
+        rs,
+        src.lane[i].ssrx => dst.lane[i].sstx
+        src.lane[i].sstx => dst.lane[i].ssrx
       )
