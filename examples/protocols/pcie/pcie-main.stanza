@@ -27,7 +27,9 @@ pcb-module pcie-example :
   val [skew, loss] = pcie-get-skew-loss-vals(PCIE-V4)
 
   connect-pcie(skew, loss, block-cap(220.0e-9), false, src, dst)
-  pcie-apply-routing-structure(diff, src, dst)
+
+  val trace-imped = pcie-get-trace-impedance(PCIE-V4)
+  pcie-apply-routing-structure(diff(trace-imped), src, dst)
 
 set-current-design("pcie-example")
 setup-board()
