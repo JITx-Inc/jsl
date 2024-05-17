@@ -1,0 +1,123 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/usb/usb-main:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/protocols/usb
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/quad
+  import jsl/landpatterns/pad-planner
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+
+
+pcb-component usb-src :
+
+  port D1 : diff-pair
+  port D2 : diff-pair
+
+  port SSTX : diff-pair
+  port SSRX : diff-pair
+
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [D1.P | 1]
+    [D1.N | 2]
+
+    [D2.P | 29]
+    [D2.N | 28]
+
+    [SSTX.P | 12]
+    [SSTX.N | 13]
+    [SSRX.P | 16]
+    [SSRX.N | 15]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+  val b = usb-superspeed()
+  supports b:
+    b.data.P => self.D1.P
+    b.data.N => self.D1.N
+    b.lane[0].sstx.P => self.SSTX.P
+    b.lane[0].sstx.N => self.SSTX.N
+    b.lane[0].ssrx.P => self.SSRX.P
+    b.lane[0].ssrx.N => self.SSRX.N
+
+  supports b:
+    b.data.P => self.D2.P
+    b.data.N => self.D2.N
+    b.lane[0].sstx.P => self.SSTX.P
+    b.lane[0].sstx.N => self.SSTX.N
+    b.lane[0].ssrx.P => self.SSRX.P
+    b.lane[0].ssrx.N => self.SSRX.N
+
+
+pcb-module usb-uut:
+
+  inst U1 : usb-src
+  inst U2 : usb-src
+
+
+  require ep1 : usb-superspeed() from U1
+  require ep2 : usb-superspeed() from U2
+
+  val b-cap = block-cap(100.0e-9)
+  connect-usb-NM(ep1, ep2, b-cap)
+
+  val [skew-3, loss-3] = usb-get-skew-loss(USB3)
+  constrain-usb-lanes-NM(skew-3, loss-3, ep1, ep2)
+
+  val [skew-2, loss-2] = usb-get-skew-loss(USB2)
+  constrain-usb-data(skew-2, loss-2, ep1, ep2)
+
+  val ti-3 = usb-get-trace-impedance(USB3)
+  usb-apply-lane-routing-structure-NM(diff(ti-3), ep1, ep2)
+
+  val ti-2 = usb-get-trace-impedance(USB2)
+  usb-apply-data-routing-structure(diff(ti-2), ep1, ep2)
+
+set-current-design("usb-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(usb-uut)
+
+; View the results
+view-board()
+; view-schematic()
+view-design-explorer()
+; view-bom(BOM-STD)
