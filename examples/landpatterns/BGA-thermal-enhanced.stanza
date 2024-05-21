@@ -1,0 +1,93 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/BGA-thermal-enhanced:
+  import core
+  import jitx
+
+  import jitx/commands
+  import jsl/design/settings
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-island
+  import jsl/landpatterns/numbering
+  import jsl/landpatterns/BGA
+  import jsl/examples/landpatterns/board
+
+  import jsl/symbols/box-symbol
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-therm-enhanded:
+
+  pin-properties:
+    [pin:Ref | pads:Ref ... | side:Dir ]
+    [p[1] | A[1] A[2] A[3] A[4] A[5] A[6] A[7] A[8] A[9] A[10] A[11] A[12] A[13] A[14] A[15] A[16] | Right ]
+    [p[2] | B[1] B[2] B[3] B[4] B[5] B[6] B[7] B[8] B[9] B[10] B[11] B[12] B[13] B[14] B[15] B[16] | Right ]
+    [p[3] | C[1] C[2] C[3] C[4] C[5] C[6] C[7] C[8] C[9] C[10] C[11] C[12] C[13] C[14] C[15] C[16] | Right ]
+    [p[4] | D[1] D[2] D[3] D[4] D[5] D[6] D[7] D[8] D[9] D[10] D[11] D[12] D[13] D[14] D[15] D[16] | Right ]
+    [p[5] | E[1] E[2] E[3] E[4] E[5] E[6] E[7] E[8] E[9] E[10] E[11] E[12] E[13] E[14] E[15] E[16] | Right ]
+    [p[6] | F[1] F[2] F[3] F[4] F[5]                                 F[12] F[13] F[14] F[15] F[16] | Right ]
+    [p[7] | G[1] G[2] G[3] G[4] G[5]                                 G[12] G[13] G[14] G[15] G[16] | Right ]
+    [p[8] | H[1] H[2] H[3] H[4] H[5]           H[8] H[9]             H[12] H[13] H[14] H[15] H[16] | Right ]
+    [p[9] | J[1] J[2] J[3] J[4] J[5]           J[8] J[9]             J[12] J[13] J[14] J[15] J[16] | Right ]
+    [p[10] | K[1] K[2] K[3] K[4] K[5]                                K[12] K[13] K[14] K[15] K[16] | Right ]
+    [p[11] | L[1] L[2] L[3] L[4] L[5]                                L[12] L[13] L[14] L[15] L[16] | Right ]
+    [p[12] | M[1] M[2] M[3] M[4] M[5] M[6] M[7] M[8] M[9] M[10] M[11] M[12] M[13] M[14] M[15] M[16] | Right ]
+    [p[13] | N[1] N[2] N[3] N[4] N[5] N[6] N[7] N[8] N[9] N[10] N[11] N[12] N[13] N[14] N[15] N[16] | Right ]
+    [p[14] | P[1] P[2] P[3] P[4] P[5] P[6] P[7] P[8] P[9] P[10] P[11] P[12] P[13] P[14] P[15] P[16] | Right ]
+    [p[15] | R[1] R[2] R[3] R[4] R[5] R[6] R[7] R[8] R[9] R[10] R[11] R[12] R[13] R[14] R[15] R[16] | Right ]
+    [p[16] | T[1] T[2] T[3] T[4] T[5] T[6] T[7] T[8] T[9] T[10] T[11] T[12] T[13] T[14] T[15] T[16] | Right ]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box, false)
+
+  val te-rows = 16
+  val te-cols = 16
+
+  val planner = ThermallyEnhanced-Matrix-Planner(
+    inactive = PadIsland(
+      6 through 11,
+      6 through 11
+      ),
+    active = PadIsland(
+      8 through 9,
+      8 through 9
+      ),
+  )
+
+  val body = PackageBody(
+    width = 9.0 +/- 0.1,
+    length = 9.0 +/- 0.1,
+    height = 0.9 +/- [0.16, 0.0]
+  )
+
+  val pkg = BGA(
+    num-leads = 224,
+    rows = te-rows,
+    columns = te-cols,
+    lead-diam = 0.3,
+    pitch = 0.5,
+    package-body = body,
+    pad-planner = planner,
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-therm-enhanded
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("BG-TE-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
