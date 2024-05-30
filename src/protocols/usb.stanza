@@ -1,5 +1,5 @@
 doc: \<DOC>
-USB Protocol
+@title USB Protocol
 
 This package contains the definitions for the Universal Serial Bus protocol.
 
@@ -60,6 +60,7 @@ defpackage jsl/protocols/usb:
   import jsl/errors
   import jsl/si/helpers
   import jsl/si/couplers
+  import jsl/si/constraints
 
 doc: \<DOC>
 Transport Bundle for the USB 2.0 Interface
@@ -79,11 +80,15 @@ public pcb-bundle usb-2-connector :
 
 doc: \<DOC>
 USB SuperSpeed Lane Bundle
+
+This is intended to be a `lane-pair` type - hence the use of
+`TX` and `RX`. See {@link lane-pair} for more information.
 <DOC>
 public pcb-bundle superspeed-lane:
   name = "USB Superspeed Transport Lane Bundle"
-  port ssrx : diff-pair
-  port sstx : diff-pair
+  port TX : diff-pair
+  port RX : diff-pair
+
 
 doc: \<DOC>
 Transport Bundle for Superspeed USB
@@ -148,9 +153,9 @@ public pcb-enum jsl/protocols/usb/USBVersion:
 
 public defn usb-get-skew-loss (gen:jsl/protocols/usb/USBVersion) -> [Toleranced, Double]:
   switch(gen):
-    USB2 : [0.0 +/- 3.75e-12, 2.0]
-    USB3 : [0.0 +/- 1.0e-12, 2.0]
-    USB4 : [0.0 +/- 1.0e-12, 2.0]
+    USB2 : [0.0 +/- 3.75e-12, 12.0]
+    USB3 : [0.0 +/- 1.0e-12, 12.0]
+    USB4 : [0.0 +/- 1.0e-12, 12.0]
 
 public defn usb-get-trace-impedance (gen:jsl/protocols/usb/USBVersion) -> Toleranced :
   switch(gen):
@@ -160,7 +165,8 @@ public defn usb-get-trace-impedance (gen:jsl/protocols/usb/USBVersion) -> Tolera
 
 
 doc: \<DOC>
-Check the passed port for `lane` port in its bundle type
+Check the passed port for `lane` child port in its bundle type
+@return Has Lanes or Not
 <DOC>
 defn has-lanes? (A:JITXObject) -> True|False:
   match(port-type(A)):
@@ -187,6 +193,25 @@ defn connect-blocking-cap (src:JITXObject, dst:JITXObject, cap:Instantiable):
     require d-p : dual-pair from bl-cap
     topo-net(src => d-p.A)
     topo-net(d-p.B => dst)
+
+
+doc: \<DOC>
+Construct a USBConstraints object
+
+@param proto USB Protocol Version to construct a constraint object for
+@param route-struct Differential Pair Routing Structure - Use
+`pcb-differential-routing-structure` to create.
+@return Diff-Pair Constraint Object
+<DOC>
+public defn USB-Constraint (
+  --
+  proto:jsl/protocols/usb/USBVersion,
+  route-struct:DifferentialRoutingStructure
+  ) -> DP-Constraint :
+  val [s, ml] = usb-get-skew-loss(proto)
+  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
+
+
 
 doc: \<DOC>
 Connect a USB superspeed lane Topology
@@ -237,8 +262,8 @@ public defn connect-usb (src:JITXObject, dst:JITXObject, cap:Instantiable|False)
   if has-lanes?(src):
     check-lane-configs(src, dst)
     for i in 0 to length(src.lane) do:
-      connect-usb-lane(src.lane[i].sstx, dst.lane[i].sstx, cap)
-      connect-usb-lane(src.lane[i].ssrx, dst.lane[i].ssrx, false)
+      connect-usb-lane(src.lane[i].TX, dst.lane[i].TX, cap)
+      connect-usb-lane(src.lane[i].RX, dst.lane[i].RX, false)
 
 doc: \<DOC>
 Connect the USB Topology in a Null Modem Fashion
@@ -261,8 +286,8 @@ public defn connect-usb-NM (src:JITXObject, dst:JITXObject, cap:Instantiable|Fal
   if has-lanes?(src):
     check-lane-configs(src, dst)
     for i in 0 to length(src.lane) do:
-      connect-usb-lane(src.lane[i].sstx, dst.lane[i].ssrx, cap)
-      connect-usb-lane(src.lane[i].ssrx, dst.lane[i].sstx, cap)
+      connect-usb-lane(src.lane[i].TX, dst.lane[i].RX, cap)
+      connect-usb-lane(src.lane[i].RX, dst.lane[i].TX, cap)
 
 
 doc: \<DOC>
@@ -283,8 +308,8 @@ public defn constrain-usb-lanes (sw:Toleranced, ml:Double, src:JITXObject, dst:J
     check-lane-configs(src, dst)
 
     for i in 0 to length(src.lane) do:
-      constrain-ch(sw, ml, src.lane[i].ssrx, dst.lane[i].ssrx )
-      constrain-ch(sw, ml, src.lane[i].sstx, dst.lane[i].sstx )
+      constrain-ch(sw, ml, src.lane[i].RX, dst.lane[i].RX )
+      constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].TX )
 
 doc: \<DOC>
 Constrain the USB superspeed lane topology in a Null-Modem fashion.
@@ -307,8 +332,8 @@ public defn constrain-usb-lanes-NM (sw:Toleranced, ml:Double, src:JITXObject, ds
     check-lane-configs(src, dst)
 
     for i in 0 to length(src.lane) do:
-      constrain-ch(sw, ml, src.lane[i].ssrx, dst.lane[i].sstx )
-      constrain-ch(sw, ml, src.lane[i].sstx, dst.lane[i].ssrx )
+      constrain-ch(sw, ml, src.lane[i].RX, dst.lane[i].TX )
+      constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].RX )
 
 doc: \<DOC>
 Constrain the USB2.0 data topology
@@ -343,7 +368,7 @@ doc: \<DOC>
 Apply a Differential Routing structure to the superspeed lane pairs of a USB bus
 
 This is for applying the routing structure for the USB3/4 highspeed
-communication lanes `ssrx` and `sstx`.
+communication lanes `RX` and `TX`.
 
 @param rs Differential Routing Structure object
 @param src One endpoint as a USB bundle port. Must be of type `usb-superspeed`, or `usb-c`
@@ -355,15 +380,15 @@ public defn usb-apply-lane-routing-structure (rs:DifferentialRoutingStructure, s
     for i in 0 to length(src.lane) do:
       diff-structure(
         rs,
-        src.lane[i].ssrx => dst.lane[i].ssrx
-        src.lane[i].sstx => dst.lane[i].sstx
+        src.lane[i].RX => dst.lane[i].RX
+        src.lane[i].TX => dst.lane[i].TX
       )
 
 doc: \<DOC>
 Apply a Differential Routing structure to the superspeed lane pairs of a USB bus for Null Modem Topology
 
 This is for applying the routing structure for the USB3/4 highspeed
-communication lanes `ssrx` and `sstx`.
+communication lanes `RX` and `TX`.
 
 This function assumes that the topology for the USB bus was constructed using the {@link connect-usb-NM} function.
 
@@ -377,6 +402,6 @@ public defn usb-apply-lane-routing-structure-NM (rs:DifferentialRoutingStructure
     for i in 0 to length(src.lane) do:
       diff-structure(
         rs,
-        src.lane[i].ssrx => dst.lane[i].sstx
-        src.lane[i].sstx => dst.lane[i].ssrx
+        src.lane[i].RX => dst.lane[i].TX
+        src.lane[i].TX => dst.lane[i].RX
       )

@@ -1,0 +1,128 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/constraints:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/si/signal-ends
+
+doc: \<DOC>
+Base type for the Signal Integrity Constraint object
+
+The user is expected to derive from this type and
+implement the `constrain` function according to their
+needs.
+<DOC>
+public deftype SI-Constraint
+doc: \<DOC>
+Check if the pass port is consistent with this SI constraint
+<DOC>
+public defmulti is-valid-port? (cst:SI-Constraint, p:JITXObject) -> True|False
+doc: \<DOC>
+Add SI constraints to the passed port endpoints.
+
+Derived types must implement this function and provide the necessary
+constraint functions for their particular application.
+
+@param cst The constraint object with state info
+@param src One endpoint port of the topology to constrain. This
+port must pass the `is-valid-port?` check to correctly create a constraint
+@param dst Other endpoint port of the topology to constrain. This port
+must match in type with `src`
+<DOC>
+public defmulti constrain (cst:SI-Constraint, src:JITXObject, dst:JITXObject) -> False
+
+
+doc: \<DOC>
+Diff-Pair Signal Integrity Constraint
+
+This is a basic implementation of a `SI-Constraint`. It
+is typical in diff-pairs to need to define only the
+skew and the loss. There are typically no inter-pair timing
+constraints for things like USB3 or DisplayPort.
+
+<DOC>
+public defstruct DP-Constraint <: SI-Constraint :
+  skew:Toleranced
+  loss:Double
+  route-struct:DifferentialRoutingStructure
+with:
+  constructor => #DP-Constraint
+
+public defn DP-Constraint (
+  --
+  skew:Toleranced
+  loss:Double
+  route-struct:DifferentialRoutingStructure
+  ) -> DP-Constraint:
+  #DP-Constraint(skew, loss, route-struct)
+
+
+public defmethod is-valid-port? (cst:SI-Constraint, p:JITXObject) -> True|False:
+  match(port-type(p)):
+    (b:Bundle):
+      ; @TODO - check `diff-pair` like here ?
+      true
+    (pa:PortArray):
+      true
+    (sp:SinglePin):
+      ; Skew window doesn't work on single pin.
+      false
+
+public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  skew-window(skew(cst), src => dst)
+  max-loss(loss(cst), src => dst)
+  diff-structure(route-struct(cst), src => dst)
+
+
+doc: \<DOC>
+Constrain a diff-pair from its endpoints.
+
+This function is used with the `within` clause to allow
+the user to construct the topology inside the body of the
+`within` clause. This function then handles setting the
+contraints on the diff-pair channel after the topology
+is constructed.
+
+@param body Function that will construct the topology. This function
+is passed the `src` and `dst` as arguments. The user is responsible for
+constructing the topology between the source and destination.
+@param src One endpoint port of the topology. This can be any type
+of port (SinglePin, Bundle, or PortArray) but it must match with the
+expected port type for the `SI-Constraint` object.
+@param dst The other endpoint port of the topology. Must match in type
+with `src`.
+@param cst Constraint object that defines the features of the
+signals defined by the topology.
+<DOC>
+public defn constrain-topology (body, src:JITXObject, dst:JITXObject, cst:SI-Constraint) :
+  check-matching-port-types(src, dst)
+  if not is-valid-port?(cst, src):
+    throw $ ValueError("Invalid Port Type - Constraint Reject Port type: %_" % [port-type(src)])
+
+  body([src, dst])
+
+  val src-ep = find-signal-end(src)
+  val dst-ep = find-signal-end(dst)
+
+  constrain(cst, src-ep, dst-ep)
+
+public defn constrain-topology (src:JITXObject, dst:JITXObject, cst:SI-Constraint) :
+  ; Null Solution - Just connect the src to dst
+  ;   and don't put anything in between.
+  defn body (pair-tup):
+    val [src, dst] = pair-tup
+    inside pcb-module:
+      topo-net(src, dst)
+
+  constrain-topology(body, src, dst, cst)
+
+public defn constrain-topology (body, dp:KeyValue<JITXObject,JITXObject>, cst:SI-Constraint) :
+  constrain-topology(body, key(dp), value(dp), cst)
+
+public defn constrain-topology (dp:KeyValue<JITXObject,JITXObject>, cst:SI-Constraint) :
+  constrain-topology(key(dp), value(dp), cst)
+

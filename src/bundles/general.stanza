@@ -31,10 +31,25 @@ Two Differential Pairs - a Dual Pair
 The dual pair is useful for cases where there is a pass-through
 differential pair through a component - for example, an ESD
 diode protection device like a TI, TPD4E05.
+
+No directionality is implied by this bundle.
 <DOC>
 public pcb-bundle dual-pair :
+  name = "Dual Pair Bundle"
   port A : diff-pair
   port B : diff-pair
+
+doc: \<DOC>
+Two Differential Pairs - a Lane Pair
+
+It is very common in communication standards to have a
+TX diff-pair and an RX diff-pair with
+The lane pair is a directed differential pair lane
+<DOC>
+public pcb-bundle lane-pair :
+  name = "Lane Pair Bundle"
+  port TX : diff-pair
+  port RX : diff-pair
 
 doc: \<DOC>
 Pass Through Bundle Type

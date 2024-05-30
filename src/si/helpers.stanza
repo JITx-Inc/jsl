@@ -26,10 +26,17 @@ This function must be used in a `pcb-module` context.
 @param p1 Pin object
 @param p2 Pin object
 <DOC>
-public defn topo-net (p1:JITXObject, p2:JITXObject):
+public defn topo-net (p1:JITXObject, p2:JITXObject -- name?:Maybe<String> = None()):
   check-matching-port-types(p1, p2)
   inside pcb-module:
-    net (p1, p2)
+    match(name?):
+      (_:None):
+        net (p1, p2)
+      (v:One<String>):
+        ; Macro doesn't work when we want to assign from string.
+        ; net value(v) (p1, p2)
+        make-net(to-symbol(value(v)), port-type(p1), [p1, p2])
+
     topology-segment(p1, p2)
 
 
@@ -71,7 +78,7 @@ referenced objects in this sequence are `diff-pair` bundles.
    between the terminal points.
 
 <DOC>
-public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
+public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>, names:Seq<String>|Tuple<String> = to-seq([])):
   ; TODO - Make the `key` of the KeyValue a `JITXObject|KeyValue` too
   ;  so that we can handle sequences like:
   ;
@@ -79,13 +86,23 @@ public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
   ;
   ;  Currently the parenthesis will break this construct.
   val [p1, o2] = [key(pair), value(pair)]
+
+  val names-seq = match(names):
+    (names-t:Tuple): to-seq(names-t)
+    (names-s:Seq<String>): names-s
+
+  val name?:Maybe<String> = if not empty?(names-seq):
+    One $ next(names-seq)
+  else:
+    None()
+
   match(o2):
     (kp:KeyValue):
       val [p2, rest] = [key(kp), value(kp)]
-      topo-net(p1, p2)
-      topo-net(kp)
+      topo-net(p1, p2, name? = name?)
+      topo-net(kp, names-seq)
     (p2:JITXObject):
-      topo-net(p1, p2)
+      topo-net(p1, p2, name? = name?)
 
 doc: \<DOC>
 Construct a KeyValue Daisy Chain of Ports
@@ -211,6 +228,24 @@ defn reverse-pair (p:JITXObject) :
     topo-net(p.P, temp.N)
     topo-net(p.N, temp.P)
     temp
+
+doc: \<DOC>
+Construct an in-place swap of the TX/RX pairs of a `lane-pair` bundle
+
+@param p Port of type `lane-pair` or similar that we wish to swap
+the TX/RX pair on.
+@return A `node` of type `port-type(p)` that has TX and RX reversed.
+<DOC>
+defn reverse-lane (p:JITXObject) :
+  inside pcb-module:
+    match(port-type(p)):
+      (b:Bundle):
+        node temp:b
+        topo-net(p.TX, temp.RX)
+        topo-net(p.RX, temp.TX)
+        temp
+      (x):
+        throw $ Exception("Invalid Port - Must be Bundle")
 
 
 doc: \<DOC>
