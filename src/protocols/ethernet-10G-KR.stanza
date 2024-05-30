@@ -1,0 +1,145 @@
+doc: \<DOC>
+@brief 10GBASE-KR Protocol
+
+10GBASE-KR is a ethernet communication supporting high speed data links
+in copper for backplane connections
+@see https://en.wikipedia.org/wiki/10_Gigabit_Ethernet#10GBASE-KR
+
+This functions and definitions in this file support defining 10GBASE-KR
+connections between components and/or connectors in a board design.
+
+## 10GBASE-KR Blocking Capacitors
+
+The 10GBASE-KR specification calls for AC coupling for the data lanes. This is typically
+achieved using a blocking capacitor. When connecting two active components, this typically
+means blocking caps from `Tx -> Rx` on both sides of the link. When connecting an
+active component to a passive component, this typically means adding the blocking caps only on
+the `Tx -> Rx` side of the link.
+
+The functions in this module allow you to pass a blocking capacitor as an `Instantiable`.
+This component will get instantiated for each leg of the diff-pair. These functions handle
+the topology configuration, but the user needs to set a `pin-model` statement on the capacitor component.
+
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet-10G-KR:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/si/helpers
+  import jsl/si/couplers
+  import jsl/pin-assignment
+
+doc: \<DOC>
+@brief 10GBASE-KR Bundle
+The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
+@param channels The number of channels to be configured for this bundle.
+<DOC>
+
+public pcb-bundle ethernet-10G-KR (channels:Int) :
+  name = "10GBASE-KR"
+  description = "10GBASE-KR Ethernet Communications Link"
+  port rx : diff-pair[channels]
+  port tx : diff-pair[channels]
+
+doc: \<DOC>
+@brief Construct one direction of a 10GBASE-KR channel.
+
+This function will construct the `Tx -> Rx` channel of a 10GBASE-KR bus. The `src` and `dst`
+arguments must both be of type `ethernet-10G-KR` with equal channel counts.
+
+@param sw The intra-pair skew time difference for the differential signals being connected.
+@param ml The maximum loss in dB for all differential signals being connected.
+@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
+there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
+
+<DOC>
+public defn connect-10GBASE-KR-channel (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+  inside pcb-module:
+    for i in indices(src.tx) do :
+      match(cap) :
+        (c:Instantiable) :
+          inst bl-cap-xy : dp-coupler(c)
+          require tx1 : dual-pair from bl-cap-xy
+          topo-net(src.tx[i], tx1.A)
+          topo-net(tx1.B, dst.rx[i])
+        (f:False) :
+          topo-net(src.tx[i], dst.rx[i])
+      constrain-ch(sw, ml, src.tx[i], dst.rx[i])
+
+doc: \<DOC>
+@brief Construct the 10GBASE-KR Topology and Constraints
+
+This function constructs the 10GBASE-KR topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for all differential signals being connected.
+@param cap-src-dst Optional DC blocking capacitor to be inserted between the src.TX and dst.RX signal ends. Note that
+there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have pin models applied to its pins
+in order for the overall skew and loss values to be respected.
+@param cap-dst-src Optional DC blocking capacitor to be inserted between the dst.TX and src.RX signal ends. This capacitor
+covers the reverse direction connection between dst.TX and src.RX. If the second component was a connector, then typically
+no capacitor is inserted between dst.TX and src.RX (cap-dst-src = false).
+@param src This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param dst This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+<DOC>
+public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    connect-10GBASE-KR-channel(sw, ml, src, dst, cap-src-dst)
+    connect-10GBASE-KR-channel(sw, ml, dst, src, cap-dst-src)
+
+
+doc: \<DOC>
+@brief Curated values for skew and loss of 10GBASE-KR Channel
+This is a helper function that returns the bounds on the intra-pair
+skew timing and maximum loss as expected by the particular standard targeted by
+the user.The values returned are a toleranced value with upper/lower limits for the
+intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
+table are derived from the reference listed below.
+https://www.ieee802.org/3/ba/public/jul08/balasubramanian_01_0708.pdf
+
+
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+see @http://pdf.cloud.opensystemsmedia.com/advancedtca-systems.com/Simclar.Feb08.pdf
+Table 3 where the intra-pair skew is set to 0.0625e-12 and the inter-pair skew
+is set to 0.625e-12. This corresponds roughly to 0.01mm skew intra-pair and 
+0.100mm skew inter-pair. Note that the reference document reverses the nomenclature
+of intra-pair and inter-pair skew.
+<DOC>
+
+public defn ethernet-10G-KR-get-skew-loss-vals () -> [Toleranced, Toleranced, Double]:
+    [0.0 +/- 0.0625e-12, 0.0 +/- 0.625e-12, 15.0] 
+
+doc: \<DOC>
+@brief Differential impedance specified by the 10GBASE-KR standard
+This is a helper function that returns the expected differential
+trace impedance for the specified generation of the 10GBASE-KR standard.
+
+@returns Upper/lower limits for the impedance.
+<DOC>
+
+public defn ethernet-10G-KR-get-trace-impedance () -> Toleranced :
+  100.0 +/- (10 %)  ;   2.5 GT/s
+
+doc: \<DOC>
+@brief Apply the differential routing structure to a 10GBASE-KR bundle.
+The function applies the provided DifferentialRoutingStructure
+to all of the differential pairs in the start and endpoints. Note that both start and end points
+need to be connected to physical component pins either directly or via pin assignment.
+@param x This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param y This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+<DOC>
+
+public defn ethernet-10G-KR-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) :
+  inside pcb-module :
+    for i in indices(x.tx) do :
+      diff-structure(rs, x.tx[i] => y.rx[i])
+    for i in indices(y.tx) do :
+      diff-structure(rs, y.tx[i] => x.rx[i])

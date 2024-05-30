@@ -114,5 +114,5 @@ Reduced Medium Independent Interface (RMII) Bundle Generator
 @see https://en.wikipedia.org/wiki/Media-independent_interface#Reduced_media-independent_interface
 @param add-rx-error This flag will add the optional `rx-er` pin to the bundle
 <DOC>
-public defn rmii (add-rx-error:True|False = true ):
+public defn rmii (add-rx-error:True|False = true):
   rmii-b(add-rx-error)
