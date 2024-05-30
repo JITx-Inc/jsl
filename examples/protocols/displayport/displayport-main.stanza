@@ -31,7 +31,8 @@ pcb-module displayport-example :
   val [skew, loss] = displayport-get-skew-loss-vals(gen)
 
   connect-displayport(skew, loss, src, dst, block-cap(100.0e-9), [pu-res(50.0e3), VDD])
-  displayport-apply-routing-structure(diff, src, dst)
+  val trace-imped = displayport-get-trace-impedance()
+  displayport-apply-routing-structure(diff(trace-imped), src, dst)
 
   net (VDD dut1.VDD dut2.VDD)
   net (GND dut1.GND dut2.GND)
