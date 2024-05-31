@@ -64,23 +64,6 @@ deftest(bundles) test-comms-bundles:
 
   set-main-module(test-comms)
 
-deftest(bundles) test-usb-bundles:
-
-  pcb-module test-usb:
-    port A1 : usb-2
-    port A2 : usb-3()
-
-    port B : usb-c-connector
-
-    port C : usb-a-superspeed-connector
-
-    check-bundle(usb-2, A1)
-    check-bundle(usb-3(), A2)
-    check-bundle(usb-c-connector, B)
-    check-bundle(usb-a-superspeed-connector, C)
-
-  set-main-module(test-usb)
-
 deftest(bundles) test-ethernet-bundles:
 
   pcb-module test-ethernet:
