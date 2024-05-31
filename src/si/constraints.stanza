@@ -1,0 +1,179 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/constraints:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/si/signal-ends
+  import jsl/utils
+
+doc: \<DOC>
+Base type for the Signal Integrity Constraint object
+
+The user is expected to derive from this type and
+implement the `constrain` function according to their
+needs.
+<DOC>
+public deftype SI-Constraint
+
+doc: \<DOC>
+Add SI constraints to the passed port endpoints.
+
+Derived types must implement this function and provide the necessary
+constraint functions for their particular application.
+
+When constraining the topology, the {@link find-signal-end}
+function will be used on the `src` and `dst` so that the proper
+endpoints of the topology for found. The implementer of a new
+`constraints` type is responsible for implmenting this.
+
+@param cst The constraint object with state info
+@param src One endpoint port of the topology to constrain.
+@param dst Other endpoint port of the topology to constrain. This port
+must match in type with `src`
+<DOC>
+public defmulti constrain (cst:SI-Constraint, src:JITXObject, dst:JITXObject) -> False
+
+
+doc: \<DOC>
+Diff-Pair Signal Integrity Constraint
+
+This is a basic concrete implementation of a `SI-Constraint`. It
+is typical in diff-pairs to need to define only the
+skew and the loss. There are typically no inter-pair timing
+constraints for things like USB3 or DisplayPort.
+<DOC>
+public defstruct DP-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Limit in Seconds
+  This value is typically something like `0 +/- (10.0e-12)`
+  <DOC>
+  skew:Toleranced
+  doc: \<DOC>
+  Max Loss Limit in dB
+  <DOC>
+  loss:Double with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Differential Routing Structure for defining the geometry of the diff-pair
+
+  The user will define a `pcb-differential-routing-structure` and then pass that
+  by ref to this field. This will define how this differential pair realizes in
+  the board view.
+  <DOC>
+  route-struct:DifferentialRoutingStructure
+with:
+  constructor => #DP-Constraint
+
+doc: \<DOC>
+Constructor for a Differential Pair Constraint object
+<DOC>
+public defn DP-Constraint (
+  --
+  skew:Toleranced
+  loss:Double
+  route-struct:DifferentialRoutingStructure
+  ) -> DP-Constraint:
+  #DP-Constraint(skew, loss, route-struct)
+
+public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  ; We're not necessarily guaranteed that the src and dst will be the
+  ; true end points. We use the signal-end concept to make sure we are applying
+  ; constraints over the entire topology.
+  val src-ep = find-signal-end(src)
+  val dst-ep = find-signal-end(dst)
+
+  val route = src-ep => dst-ep
+  skew-window(skew(cst), route)
+  max-loss(loss(cst), route)
+  diff-structure(route-struct(cst), route)
+
+
+doc: \<DOC>
+Construct and Constrain a Signal Topology
+
+This function is used with the `within` clause to allow
+the user to construct the topology inside the body of the
+`within` clause. This function then handles setting the
+contraints on the diff-pair channel after the topology
+is constructed via the `SI-Constraint` object.
+
+The topology construction uses the `src` and `dst` endpoints
+directly.
+
+
+@param body Function that will construct the topology. This function
+is passed the `src` and `dst` as arguments. The user is responsible for
+constructing the topology between the source and destination.
+@param src One endpoint port of the topology. This can be any type
+of port (SinglePin, Bundle, or PortArray) but it must match with the
+expected port type for the `SI-Constraint` object.
+@param dst The other endpoint port of the topology. Must match in type
+with `src`.
+@param cst Constraint object that defines the features of the
+signals defined by the topology.
+
+@snippet
+
+```stanza
+  inst ESD : ESD-protector
+  within [src, dst] = constrain-topology(usb-conn.data, MCU.data, usb2-constraints):
+    require prot:dual-pair from ESD
+    topo-net(src => port.A => prot.B => dst)
+```
+
+
+<DOC>
+public defn constrain-topology (body, src:JITXObject, dst:JITXObject, cst:SI-Constraint) :
+  check-matching-port-types(src, dst)
+  body([src, dst])
+  constrain(cst, src, dst)
+
+doc: \<DOC>
+Constrain a trivial topology
+
+This implements a point-to-point topology and applies the constraints object.
+This function does not get used by a `within` clause and is just a pure function.
+
+@param src One endpoint port of the topology. This can be any type
+of port (SinglePin, Bundle, or PortArray) but it must match with the
+expected port type for the `SI-Constraint` object.
+@param dst The other endpoint port of the topology. Must match in type
+with `src`.
+@param cst Constraint object that defines the features of the
+signals defined by the topology.
+<DOC>
+public defn constrain-topology (src:JITXObject, dst:JITXObject, cst:SI-Constraint) :
+  ; Null Solution - Just connect the src to dst
+  ;   and don't put anything in between.
+  within [src, dst] = constrain-topology(src, dst, cst):
+    topo-net(src, dst)
+
+doc: \<DOC>
+Construct and Constrain a Topology
+
+Similar to the other `constrain-topology` function except that the `src`
+and `dst` arguments are passed as a `KeyValue` instead of individually.
+
+This function typically gets used via a `within` clause.
+<DOC>
+public defn constrain-topology (body, dp:KeyValue<JITXObject,JITXObject>, cst:SI-Constraint) :
+  val [src, dst] = unpack(dp)
+  constrain-topology(body, src, dst, cst)
+
+doc: \<DOC>
+Constrain a Trivial Topology
+
+This implements a point-to-point topology and applies the constraints object.
+This function does not get used by a `within` clause and is just a pure function.
+
+This function is similar to the other `constrain-topology` definition for trivial
+topologies except that the `src` and `dst` are encoded as a `KeyValue` object.
+<DOC>
+public defn constrain-topology (dp:KeyValue<JITXObject,JITXObject>, cst:SI-Constraint) :
+  val [src, dst] = unpack(dp)
+  constrain-topology(src, dst, cst)
+
