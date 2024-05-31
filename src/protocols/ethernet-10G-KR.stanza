@@ -58,9 +58,10 @@ arguments must both be of type `ethernet-10G-KR` with equal channel counts.
 @param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `ethernet-10G-KR`
 @param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
 there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
+@param null-modem When true, makes the channel connection between src.TX and dst.RX and when false, connects src.TX to dst.TX
 
 <DOC>
-public defn connect-10GBASE-KR-channel (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+public defn connect-10GBASE-KR-channel (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False, null-modem:True|False) :
   inside pcb-module:
     for i in indices(src.tx) do :
       match(cap) :
@@ -68,10 +69,31 @@ public defn connect-10GBASE-KR-channel (sw:Toleranced, ml:Double, src:JITXObject
           inst bl-cap-xy : dp-coupler(c)
           require tx1 : dual-pair from bl-cap-xy
           topo-net(src.tx[i], tx1.A)
-          topo-net(tx1.B, dst.rx[i])
+          if null-modem :
+            topo-net(tx1.B, dst.rx[i])
+          else :
+            topo-net(tx1.B, dst.tx[i])
         (f:False) :
-          topo-net(src.tx[i], dst.rx[i])
-      constrain-ch(sw, ml, src.tx[i], dst.rx[i])
+          if null-modem :
+            topo-net(src.tx[i], dst.rx[i])
+          else :
+            topo-net(src.tx[i], dst.tx[i])
+      if null-modem :
+        constrain-ch(sw, ml, src.tx[i], dst.rx[i])
+      else :
+        constrain-ch(sw, ml, src.tx[i], dst.tx[i])
+
+
+defn make-null-modem (A:JITXObject, B:JITXObject) :
+  inside pcb-module :
+       node TXRX:diff-pair
+       node RXTX:diff-pair
+       topo-net(A.P, TXRX.P)
+       topo-net(A.N, TXRX.N)
+       topo-net(TXRX.P RXTX.P)
+       topo-net(TXRX.N RXTX.N)
+       TXRX
+
 
 doc: \<DOC>
 @brief Construct the 10GBASE-KR Topology and Constraints
@@ -89,11 +111,67 @@ covers the reverse direction connection between dst.TX and src.RX. If the second
 no capacitor is inserted between dst.TX and src.RX (cap-dst-src = false).
 @param src This is expected to be a port of `Bundle` type `ethernet-10G-KR`
 @param dst This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param null-modem If set to true, connects src.TX through the optional cap-src-dst to dst.RX and dst.TX through the optional cap-dst-src to src.RX. 
+If set to false, connects src.TX through the optional cap-src-dst to dst.TX and dst.RX through the optional cap-dst-src to src.RX
 <DOC>
-public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject) :
+public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, null-modem:True|False) :
   inside pcb-module :
-    connect-10GBASE-KR-channel(sw, ml, src, dst, cap-src-dst)
-    connect-10GBASE-KR-channel(sw, ml, dst, src, cap-dst-src)
+    for i in indices(src.tx) do :
+      match(cap-src-dst, cap-dst-src) :
+        (csd:Instantiable, cds:Instantiable) :
+          inst bl-cap-xy : dp-coupler(csd)
+          require tx1 : dual-pair from bl-cap-xy
+          inst bl-cap-yx : dp-coupler(cds)
+          require tx2 : dual-pair from bl-cap-yx
+          topo-net(src.tx[i], tx1.A)
+          topo-net(dst.tx[i], tx2.A)
+          if null-modem :
+            topo-net(tx1.B, dst.rx[i])
+            topo-net(tx2.B, src.rx[i])
+          else :
+            fatal("Not supported with 2 sets of blocking caps connected straight through")
+
+        (csd:Instantiable, false) :
+          inst bl-cap-xy : dp-coupler(csd)
+          require tx1 : dual-pair from bl-cap-xy
+          topo-net(src.tx[i], tx1.A)
+
+        (false, cds:Instantiable) :
+          inst bl-cap-yx : dp-coupler(cds)
+          require tx2 : dual-pair from bl-cap-yx
+          topo-net(dst.tx[i], tx2.A)
+
+        (false, false) :
+          if null-modem :
+            topo-net(src.tx[i], dst.rx[i])
+            topo-net(src.rx[i], dst.tx[i])
+          else :
+            topo-net(src.tx[i], dst.tx[i])
+            topo-net(src.rx[i], dst.rx[i])
+
+        
+        (c:Instantiable) :
+          inst bl-cap-xy : dp-coupler(c)
+          require tx1 : dual-pair from bl-cap-xy
+          topo-net(src.tx[i], tx1.A)
+          if null-modem :
+            topo-net(tx1.B, dst.rx[i])
+          else :
+            topo-net(tx1.B, dst.tx[i])
+        (f:False) :
+          if null-modem :
+            topo-net(src.tx[i], dst.rx[i])
+          else :
+            topo-net(src.tx[i], dst.tx[i])
+            topo-net(src.rx[i], dst.rx[i])
+      
+      if null-modem :
+        constrain-ch(sw, ml, src.tx[i], dst.rx[i])
+      else :
+        constrain-ch(sw, ml, src.tx[i], dst.tx[i])
+
+    connect-10GBASE-KR-channel(sw, ml, src, dst, cap-src-dst, null-modem)
+    connect-10GBASE-KR-channel(sw, ml, dst, src, cap-dst-src, null-modem)
 
 
 doc: \<DOC>
