@@ -19,6 +19,8 @@ The differential pair is a foundation bundle type used in various
 derived bundles. Many utilities are built to reference `diff-pair`
 bundle types. It is highly suggested to use this type when constructing
 ports/bundles.
+@member P Positive side of the differential pair
+@member N Negative side of the differential pair
 <DOC>
 public pcb-bundle diff-pair :
   name = "Differential Signal Pair"
@@ -33,6 +35,9 @@ differential pair through a component - for example, an ESD
 diode protection device like a TI, TPD4E05.
 
 No directionality is implied by this bundle.
+@member A Differential Pair Port
+@member B Differential Pair Port
+
 <DOC>
 public pcb-bundle dual-pair :
   name = "Dual Pair Bundle"
@@ -45,6 +50,9 @@ Two Differential Pairs - a Lane Pair
 It is very common in communication standards to have a
 TX diff-pair and an RX diff-pair with
 The lane pair is a directed differential pair lane
+
+@member TX Transmit Pair
+@member RX Receive Pair
 <DOC>
 public pcb-bundle lane-pair :
   name = "Lane Pair Bundle"
@@ -63,6 +71,9 @@ Example:
 ESD Protection devices often have two pins that are intended
 to be shorted together to provide an ESD protected trace with
 minimal affect on the impedance of the trace.
+
+@member A SinglePin Port
+@member B SinglePin Port
 <DOC>
 public pcb-bundle pass-through :
   pin A
@@ -73,6 +84,9 @@ Power Bundle define a DC power source
 
 The power bundle defines the two reference voltages
 of a DC power source.
+
+@member V+ Positive Voltage of the Power Bundle
+@member V- Negative Voltage of the Power Bundle
 <DOC>
 public pcb-bundle power :
   name = "DC Power"
@@ -83,17 +97,42 @@ public pcb-bundle power :
 ; General IO Classes
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+doc: \<DOC>
+GPIO Interface Bundle
+
+@member p GPIO Pin
+<DOC>
 public pcb-bundle gpio :
   pin p
 
+doc: \<DOC>
+Timer Interface Bundle
+
+@member p Timer Pin
+<DOC>
 public pcb-bundle timer :
   pin p
 
+doc: \<DOC>
+Single-Ended ADC Interface Bundle
+
+@member p ADC Pin
+<DOC>
 public pcb-bundle adc :
   pin p
 
+doc: \<DOC>
+Single-Ended DAC Interface Bundle
+
+@member p DAC Pin
+<DOC>
 public pcb-bundle dac :
   pin p
 
+doc: \<DOC>
+Reset Interface Bundle
+
+@member p Reset Pin
+<DOC>
 public pcb-bundle reset :
   pin p
