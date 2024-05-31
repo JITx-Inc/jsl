@@ -41,7 +41,7 @@ Pass Through Bundle Type
 
 This provides a mechanism of describing a pass through
 connection through a device, primarily for implementing
-the `supports/requrie` statements.
+the `supports/require` statements.
 
 Example:
 
