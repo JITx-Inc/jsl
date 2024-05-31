@@ -8,6 +8,7 @@ defpackage jsl/symbols/transformer:
 
   import jsl/ensure
   import jsl/errors
+  import jsl/utils
   import jsl/geometry/basics
   import jsl/geometry/box
   import jsl/symbols/SymbolDefn
@@ -370,7 +371,7 @@ public defmethod build-pins (x:TransformerSymbol, node:SymbolNode) :
     )
     val flip? = loc(Point(0.0, 0.0), 0.0, side is Left)
     for (kvp in coils, offset in offsets) do:
-      val [coil-id, coil] = [key(kvp), value(kvp)]
+      val [coil-id, coil] = unpack(kvp)
 
       ; Endpoint Pins of the Transformer
       val h = compute-ind-pitch(tp, coil)
