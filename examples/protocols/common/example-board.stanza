@@ -140,8 +140,8 @@ public pcb-differential-routing-structure diff (trace-impedance:Toleranced|Doubl
   ; whatever layers are to be used for routing the differential pairs (defined by the user)
   layer(Top) :
     trace-width  = tw       ; mm
-    pair-spacing = 2.0 * tw ; mm
-    ; pair-spacing = tw / 2.0 ; mm
+    ; pair-spacing = 2.0 * tw ; mm
+    pair-spacing = tw / 2.0 ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
@@ -162,8 +162,8 @@ public pcb-differential-routing-structure diff (trace-impedance:Toleranced|Doubl
 
   layer(Bottom) :
     trace-width  = tw       ; mm
-    pair-spacing = 2.0 * tw ; mm
-    ; pair-spacing = tw / 2.0 ; mm
+    ; pair-spacing = 2.0 * tw ; mm
+    pair-spacing = tw / 2.0 ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
