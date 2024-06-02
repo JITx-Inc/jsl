@@ -1,0 +1,21 @@
+defpackage jsl/utils:
+  import core
+
+doc: \<DOC>
+De-structure a `KeyValue` into two components
+
+@snippet
+
+```stanza
+
+val kp = "apple" => 2
+val [name, cnt] = unpack(kp)
+println("Name: %_ Cnt: %_" % [name, cnt])
+
+; Prints:
+; Name: apple Cnt: 2
+
+```
+<DOC>
+public defn unpack (kp:KeyValue) -> [?, ?]:
+  [key(kp), value(kp)]

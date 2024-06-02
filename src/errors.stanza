@@ -70,3 +70,12 @@ public defn MaxIterationsExceededError (msg:Printable) -> MaxIterationsExceededE
 
 public defmethod print (o:OutputStream, e:MaxIterationsExceededError):
   print(o, "Max Iterations Limit Exceed: %_" % [msg(e)])
+
+doc: \<DOC>
+This exception is thrown when an Instance lacks `supports` for a particular bundle type.
+<DOC>
+public defstruct InvalidComponentSupports <: Exception:
+  expected-supports:Tuple<String>
+
+public defmethod print (o:OutputStream, e:InvalidComponentSupports):
+  print(o, "Expected Instance to provide one of '%,' supports - but none were found"  % [expected-supports(e)])

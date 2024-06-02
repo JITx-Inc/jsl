@@ -7,6 +7,7 @@ defpackage jsl/si/helpers:
   import jsl/errors
   import jsl/pin-assignment
   import jsl/bundles
+  import jsl/utils
 
 doc: \<DOC>
 Create a net and topology segment
@@ -78,10 +79,10 @@ public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
   ;    topo-net(A => (B => C) => D)
   ;
   ;  Currently the parenthesis will break this construct.
-  val [p1, o2] = [key(pair), value(pair)]
+  val [p1, o2] = unpack(pair)
   match(o2):
     (kp:KeyValue):
-      val [p2, rest] = [key(kp), value(kp)]
+      val [p2, rest] = unpack(kp)
       topo-net(p1, p2)
       topo-net(kp)
     (p2:JITXObject):
@@ -122,7 +123,6 @@ public defn daisy-chain (obj:JITXObject, accessor:(JITXObject -> JITXObject) ) -
       defn f (x:JITXObject, y:JITXObject|KeyValue) -> KeyValue :
         KeyValue(x, y)
       reduce-right(f, eps)
-
 
 doc: \<DOC>
 Set a differential PinModel between two pins
@@ -176,7 +176,7 @@ public defn diff-pin-model (
   --
   delay:Toleranced, loss:Toleranced = typ(0.0)
   ) :
-  val [p1, p2] = [key(pair), value(pair)]
+  val [p1, p2] = unpack(pair)
   diff-pin-model(p1, p2, delay = delay, loss = loss)
 
 doc: \<DOC>
@@ -225,7 +225,7 @@ the `key` and `value` of this KVP must be Bundle Ports of type `diff-pair
 public defn diff-structure (route-struct:DifferentialRoutingStructure, dp-pairs:KeyValue<JITXObject, JITXObject> ...) :
   inside pcb-module:
     for dp-pair in dp-pairs do:
-      val [A, B] = [key(dp-pair), value(dp-pair)]
+      val [A, B] = unpack(dp-pair)
       check-bundle(diff-pair, A, B)
       structure(A.P => B.P, A.N => B.N) = route-struct
 
@@ -260,7 +260,7 @@ until all KVPs are processed.
 <DOC>
 public defn pair-wise (f: (KeyValue<JITXObject, JITXObject> -> False), ep-sets:Seqable<KeyValue<JITXObject, JITXObject>> ) :
   for eps in ep-sets do:
-    val [ep-A, ep-B] = [key(eps), value(eps)]
+    val [ep-A, ep-B] = unpack(eps)
     match(port-type(ep-A), port-type(ep-B)):
       (a-s:SinglePin, b-s:SinglePin):
         f(ep-A => ep-B)
@@ -291,7 +291,7 @@ public defn insertion-loss-limit (loss-dB:Toleranced, ep-sets:KeyValue<JITXObjec
   val constraint = InsertionLossConstraint(loss-dB)
   inside pcb-module:
     for eps in ep-sets pair-wise:
-      val [A, B] = [key(eps), value(eps)]
+      val [A, B] = unpack(eps)
       insertion-loss(A => B) = constraint
 
 doc: \<DOC>
@@ -318,7 +318,7 @@ public defn delay-limit (delay-S:Toleranced, ep-sets:KeyValue<JITXObject, JITXOb
   val constraint = TimingConstraint(delay-S)
   inside pcb-module:
     for eps in ep-sets pair-wise:
-      val [A, B] = [key(eps), value(eps)]
+      val [A, B] = unpack(eps)
       timing(A => B) = constraint
 
 doc: \<DOC>
@@ -384,7 +384,7 @@ public defn skew-window (
 
   inside pcb-module:
     for pair in pairs do:
-      val [A, B] = [key(pair), value(pair)]
+      val [A, B] = unpack(pair)
       match(port-type(A), port-type(B)):
         (A-b:Bundle, B-b:Bundle):
           check-bundle(diff-pair, A, B)

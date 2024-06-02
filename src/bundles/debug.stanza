@@ -12,6 +12,11 @@ Typically used for debugging/testing integrated circuits.
 This bundle does not include `TRSTN` or Target Reset. Use a
 separate `reset` bundle to provide that interface on a connector
 or microcontroller.
+
+@member tck Synchronous Clock Line
+@member tdi Data Input Line
+@member tdo Data Output Line
+@member tms State Select Line
 <DOC>
 public pcb-bundle jtag :
   name = "JTAG"
@@ -34,15 +39,9 @@ pcb-bundle swd-b (pins:Collection<SWDPins>):
 doc: \<DOC>
 Serial Wire Debug Bundle Generator
 
-This bundle includes the pins:
-
-`swdio` - Data line
-`swdclk` - Clock line
-
-This bundle can optionally include:
-
-`swo` - Trace Data Line
-
+@member swdio Synchronous Bidir Data Line
+@member swdclk Synchronous Clock Line
+@member swo Optional Trace Data Line
 <DOC>
 public defn swd (pins:SWDPins ...):
   swd-b(pins)

@@ -1,0 +1,195 @@
+doc: \<DOC>
+@brief Differential Pair Topologies
+
+This package contains the implementation of tools for working with
+{@link diff-pair}, {@link dual-pair}, and {@link lane-pair} types.
+
+The idea is that differential pairs are a common transmission line
+pattern in most high speed designs. These package aims to make working
+with these structures easier.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/si/pairs:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/utils
+  import jsl/si/helpers
+  import jsl/si/constraints
+  import jsl/pin-assignment
+  import jsl/si/signal-ends
+
+doc: \<DOC>
+Lane-Pair Constraint
+
+This type is used to define the SI-Constraints
+for a `lane-pair` bundle, typically used for
+things like USB3 superspeed lanes, 10G ethernet
+lanes, etc.
+<DOC>
+public defstruct LaneConstraint <: SI-Constraint :
+  doc: \<DOC>
+  Defines the constraint used for the lanes.
+
+  User can either provide a single constraint object
+  that will be applied to both the `TX` and `RX` pairs
+  or separate constraint objects for each.
+
+  In the tuple variant, the order is important and
+  the constraints are ordered `[TX, RX]`
+  <DOC>
+  pair-cst:SI-Constraint|[SI-Constraint, SI-Constraint]
+with:
+  constructor => #LaneConstraint
+
+doc: \<DOC>
+Construct a Lane Constraint with a universal constraint for both Tx/Rx pairs.
+<DOC>
+public defn LaneConstraint (single:SI-Constraint) -> LaneConstraint:
+  #LaneConstraint(single)
+
+doc: \<DOC>
+Construct a Lane Constraint with separate Constraints for Each Tx/Rx pair
+<DOC>
+public defn LaneConstraint (tx:SI-Constraint, rx:SI-Constraint) -> LaneConstraint:
+  #LaneConstraint([tx, rx])
+
+defmethod constrain (cst:LaneConstraint, src:JITXObject, dst:JITXObject) -> False :
+  ; `lane-ref` here create a `Ref` object that we can use to
+  ;   dot path into the `src` and `dst` objects.
+  ; Note - order here matters because the tuple for the
+  ;  different tx vs rx constraints is ordered.
+  for (lane-ref in [#R(TX), #R(RX)], i in 0 to false) do:
+    val src-ep = dot(src, lane-ref)
+    val dst-ep = dot(dst, lane-ref)
+
+    match(pair-cst(cst)):
+      (single:SI-Constraint):
+        constrain(single, src-ep, dst-ep)
+      (csts:[SI-Constraint, SI-Constraint]):
+        constrain(csts[i], src-ep, dst-ep)
+
+
+doc: \<DOC>
+Construct a chained topology of diff-pair objects including ports, components and modules.
+
+This function is a generator and must be called from within a `pcb-module` context.
+
+This function accepts a sequence of `KeyValue` JITXObjects. Each key or value may be:
+
+1.  Bundle port instance - `diff-pair`, `dual-pair` or `lane-pair`
+2.  An `Instance` - ie an instance of a `pcb-module` or `pcb-component`
+3.  Another `KeyValue` (typically only in the `value`). Currently does not handle
+`KeyValue` as the `key`
+
+If we encounter an instance - then we will use a `require` statement to extract
+out the diff-pair interfaces needed to construct our chained topology of
+diff-pairs.
+
+This function is recursive. Hence, the `KeyValue` sequence should not include a cycle.
+
+The first and last elements of the chained topology are expected to be ports of
+type `diff-pair`. Any other type of bundle is an error.
+
+@snippet
+
+```stanza
+inst ESD : ESD-protector
+inst block-cap : dp-coupler(...)
+topo-pair(src => block-cap => ESD => dst)
+```
+
+@snip-note 1 2 These components provide `supports` statements for either `dual-pair` or `lane-pair`
+@snip-note 3 Notice that the topology chain references the components directly. `topo-pair`
+will use `require` statements to extract out the necessary interfaces and create topology connections.
+<DOC>
+public defn topo-pair (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
+  inside pcb-module:
+    val [p1, o2] = unpack(pair)
+    match(p1):
+      (expected:JITXObject):
+        ; This is what I expect to find - a Port Object
+        false
+      (unexpected:KeyValue):
+        ; If we find a `KeyValue` here that means that the user did something like
+        ;  `(src => (m1 => m2) => dst)`
+        ; Which is unexpected and not what we expected.
+        throw $ ValueError("Unexpected 'KeyValue' for Left Side of 'topo-pair'")
+
+    match(o2):
+      (kp:KeyValue):
+        ; Recursion Occurs Here
+        val [p2, o3] = unpack(kp)
+        match(p2):
+          (pt:Pin):
+            ; In this case - the user has passed a port.
+            ;  We want to correctly handle the different types of
+            ;  bundle ports here.
+            ; The application is for when the user uses the `require` statement
+            ;  manually instead of just passing the component/module instance that
+            ;  we could make a `require` from.
+            match(port-type(pt)):
+              (b:Bundle):
+                if b == diff-pair:
+                  topo-net(p1 => p2)
+                  topo-pair(kp)
+                else if b == dual-pair:
+                  topo-net(p1 => p2.A)
+                  topo-pair(p2.B => o3)
+                else if b == lane-pair:
+                  topo-net(p1 => p2.TX)
+                  topo-pair(p2.RX => o3)
+                else:
+                  throw $ ValueError("Invalid Bundle Type: %_" % [name(b)])
+              (x):
+                throw $ ValueError("Invalid Port Type: %_" % [p2])
+          (i:Instance):
+            ; User has passed us an instance of a `pcb-module` or `pcb-component`.
+            ;  We need to create the `require` of the right type based on what that
+            ;  instance supports - otherwise we will get a fatal exception.
+            ; We don't have cover `diff-pair` here because that would be a terminal
+            ;  case and we are in the middle of the chain.
+            val it = instantiable-type(i)
+            if supports?(it, dual-pair):
+              require x:dual-pair from i
+              topo-net(p1 => x.A)
+              topo-pair(x.B => o3)
+            else if supports?(it, lane-pair):
+              require x:lane-pair from i
+              topo-net(p1 => x.RX)
+              topo-pair(x.TX => o3)
+            else:
+              throw $ InvalidComponentSupports(["dual-pair", "lane-pair"])
+          (non-port-inst):
+            throw $ ValueError("Unhandled Object '%_' - Expected Port or Instance" % [non-port-inst])
+      (p2:JITXObject):
+        match(p2):
+          (pt:Pin):
+            topo-net(p1, p2)
+          (_):
+            throw $ ValueError("Expected Port for Final Object - Received: '%_'" % [p2])
+
+
+doc: \<DOC>
+Construct an in-place swap of the TX/RX pairs of a `lane-pair` bundle
+
+This function is a generator and must be called from within a
+`pcb-module` context.
+
+@param p Port of type `lane-pair` or similar that we wish to swap
+the TX/RX pair on.
+@return A `node` of type `port-type(p)` that has TX and RX reversed.
+<DOC>
+public defn reverse-lane (p:JITXObject) :
+  inside pcb-module:
+    match(port-type(p)):
+      (b:Bundle):
+        node temp:b
+        topo-net(p.TX => temp.RX)
+        topo-net(p.RX => temp.TX)
+        temp
+      (x):
+        throw $ Exception("Invalid Port - Must be Bundle")

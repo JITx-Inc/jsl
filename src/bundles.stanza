@@ -2,11 +2,30 @@
 defpackage jsl/bundles:
   import core
   import jitx
+  import jitx/commands
 
   forward jsl/bundles/general
   forward jsl/bundles/debug
   forward jsl/bundles/comms
-  forward jsl/bundles/usb
   forward jsl/bundles/ethernet
   forward jsl/bundles/displays
 
+; Utilities
+
+doc: \<DOC>
+Detect if a component or module provides a supports statement
+
+This statement will inspect a component or module for
+a `supports` statement of a particular `bundle` type.
+
+@param module Either a `pcb-module` or `pcb-component` definition to check
+@param bundle Bundle type discriminant
+@return true if a support statement exists, else false.
+<DOC>
+public defn supports? (module:InstantiableType, bundle:PortType) -> True|False :
+  pcb-module temp :
+    inst i : module
+    require r:bundle from i
+  set-main-module(temp) ;uh oh
+  val result = assign-pins?()
+  result is-not False
