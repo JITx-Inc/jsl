@@ -1,0 +1,100 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/components/QuadAND:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/design/settings
+  import jsl/symbols/logic/AND
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+
+  import jsl/landpatterns/SOIC
+  import jsl/landpatterns/packages
+  import jsl/examples/landpatterns/board
+
+pcb-component QuadAND:
+  manufacturer = "onsemi"
+  mpn = "MC74HC08ADR2G"
+  datasheet = "https://www.onsemi.com/pdf/datasheet/mc74hc08a-d.pdf"
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | bank:Ref]
+    [in-A[1] | 1            | Left        | gate-A  ]
+    [in-A[2] | 2            | Left        | gate-A  ]
+    [in-B[1] | 4            | Left        | gate-B  ]
+    [in-B[2] | 5            | Left        | gate-B  ]
+    [in-C[1] | 9            | Left        | gate-C  ]
+    [in-C[2] | 10           | Left        | gate-C  ]
+    [in-D[1] | 12           | Left        | gate-D  ]
+    [in-D[2] | 13           | Left        | gate-D  ]
+    [out-A | 3              | Right        | gate-A  ]
+    [out-B | 6              | Right        | gate-B  ]
+    [out-C | 8              | Right        | gate-C  ]
+    [out-D | 11             | Right        | gate-D  ]
+    [GND   | 7              | Left     | pwr     ]
+    [VCC   | 14             | Right    | pwr     ]
+
+  val b = BoxSymbol(self)
+
+  defn in-R (i):
+    Ref("in-%_" % [i])
+
+  defn out-R (i):
+    Ref("out-%_" % [i])
+
+  val gate-symbs = to-tuple $ for i in ["A", "B", "C", "D"] seq:
+    Ref("gate-%_" % [i]) => create-symbol $ ANDGateSymbol(
+      in-ref = in-R(i)
+      out-ref = out-R(i)
+    )
+  val symbs = to-tuple $ cat(gate-symbs, [#R(pwr) => b])
+  assign-symbols(symbs)
+
+  val pkg = SOIC-N(
+    num-leads = 14,
+    lead-span = min-max(5.8, 6.2),
+    package-length = min-max(8.55, 8.75)
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  for i in ["A", "B", "C", "D"] do:
+    make-gate-supports(
+      dot(self, out-R(i)),
+      dot(self, in-R(i)[1]),
+      dot(self, in-R(i)[2])
+      )
+
+
+pcb-module test-design:
+  inst U1 : QuadAND
+  place(U1) at loc(0.0, 0.0) on Top
+
+  require G1:gate(2) from U1
+  require G2:gate(2) from U1
+  require G3:gate(2) from U1
+  require G4:gate(2) from U1
+
+  net (G1.out, G2.in[1])
+  net (G3.out, G2.in[2])
+  net (G4.out, G3.in[1], G1.in[2])
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Quad-AND-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()
