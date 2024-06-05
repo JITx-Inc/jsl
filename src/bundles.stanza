@@ -9,6 +9,7 @@ defpackage jsl/bundles:
   forward jsl/bundles/comms
   forward jsl/bundles/ethernet
   forward jsl/bundles/displays
+  forward jsl/bundles/gates
 
 ; Utilities
 

@@ -1,0 +1,77 @@
+#use-added-syntax(jitx)
+defpackage jsl/bundles/gates:
+  import core
+  import jitx
+  import jitx/commands
+
+doc: \<DOC>
+N-Input Logic Gate Bundle
+
+This is the base bundle implementation for a logic
+gate and is intended to drive the interface for the
+gate bundle definitions.
+
+This definition does not restrict the function of
+the gate. It could be AND/OR/etc depending on what
+component is providing this gate interface.
+
+For most applications, this definition is sufficient.
+There are few IC packages that combine AND gates and
+OR gates together in a single package. For that case,
+you would likely want to use the more specific bundle.
+This will require the dummy pin feature to properly
+differentiate between `gate`, `and-gate`, `or-gate`,
+etc.
+
+@param num-inputs Number of total inputs
+@member in Array of Inputs starting with index 1 and
+length of `num-inputs`
+@member out Output for the gate.
+<DOC>
+public pcb-bundle gate (num-inputs:Int):
+  name = to-string("%_-Input Gate Bundle" % [num-inputs])
+  port in : pin[ to-tuple(1 through num-inputs)]
+  port out : pin
+
+
+doc: \<DOC>
+Make supports statements for a Logic Gate.
+
+This function is a generator. It should be called
+from within either a `pcb-module` or `pcb-component`
+context.
+
+This function will create a `supports` statement
+for an N-input gate where `N` is the length of the
+`in-pins` tuple. This will allow the inputs to the
+gate to be connected in any order depending on the
+best layout for the resuting circuit.
+
+@param out-pint Output pin to bind to the gate supports statement.
+@param in-pins A set of input pins to bind to the gate supports statement.
+<DOC>
+public defn make-gate-supports (out-pin:JITXObject, in-pins:JITXObject ...):
+  inside pcb-module:
+
+    ; Internal Bundle Type
+    pcb-bundle gate-input:
+      pin gate-p
+
+    for in-pin in in-pins do:
+      supports gate-input:
+        gate-input.gate-p => in-pin
+
+    val num-inputs = length(in-pins)
+    val gb = gate(num-inputs)
+    supports gb:
+      require in-vec:gate-input[num-inputs]
+      gb.out => out-pin
+      for i in 1 through num-inputs do:
+        gb.in[i] => in-vec[i - 1].gate-p
+
+
+
+
+
+
+
