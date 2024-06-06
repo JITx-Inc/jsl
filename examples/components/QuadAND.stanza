@@ -19,37 +19,43 @@ pcb-component QuadAND:
   mpn = "MC74HC08ADR2G"
   datasheet = "https://www.onsemi.com/pdf/datasheet/mc74hc08a-d.pdf"
 
+  val num-circuits = 4
+  ;  These are explicit Gate Ports for the AND
+  ;  gates. You would use these ports when
+  ;  you explicitly want to use a particular channel of the
+  ;  device.
+  ;
+  ;  Otherwise - see below for the pin assignment supports statements.
+  port AND : gate(2)[num-circuits]
+  port rail : power
+
   pin-properties:
-    [pin:Ref | pads:Int ... | side:Dir | bank:Ref]
-    [in-A[1] | 1            | Left        | gate-A  ]
-    [in-A[2] | 2            | Left        | gate-A  ]
-    [in-B[1] | 4            | Left        | gate-B  ]
-    [in-B[2] | 5            | Left        | gate-B  ]
-    [in-C[1] | 9            | Left        | gate-C  ]
-    [in-C[2] | 10           | Left        | gate-C  ]
-    [in-D[1] | 12           | Left        | gate-D  ]
-    [in-D[2] | 13           | Left        | gate-D  ]
-    [out-A | 3              | Right        | gate-A  ]
-    [out-B | 6              | Right        | gate-B  ]
-    [out-C | 8              | Right        | gate-C  ]
-    [out-D | 11             | Right        | gate-D  ]
-    [GND   | 7              | Left     | pwr     ]
-    [VCC   | 14             | Right    | pwr     ]
+    [pin:Ref | pads:Int ... | side:Dir | bank:Int]
+    [AND[0].in[1] | 1       | Left        | 0  ]
+    [AND[0].in[2] | 2       | Left        | 0  ]
+    [AND[0].out   | 3       | Right       | 0  ]
 
-  val b = BoxSymbol(self)
+    [AND[1].in[1] | 4       | Left        | 1  ]
+    [AND[1].in[2] | 5       | Left        | 1  ]
+    [AND[1].out   | 6       | Right       | 1  ]
 
-  defn in-R (i):
-    Ref("in-%_" % [i])
+    [AND[2].in[1] | 9       | Left        | 2  ]
+    [AND[2].in[2] | 10      | Left        | 2  ]
+    [AND[2].out   | 8       | Right       | 2  ]
 
-  defn out-R (i):
-    Ref("out-%_" % [i])
+    [AND[3].in[1] | 12      | Left        | 3  ]
+    [AND[3].in[2] | 13      | Left        | 3  ]
+    [AND[3].out   | 11      | Right       | 3  ]
 
-  val gate-symbs = to-tuple $ for i in ["A", "B", "C", "D"] seq:
-    Ref("gate-%_" % [i]) => create-symbol $ ANDGateSymbol(
-      in-ref = in-R(i)
-      out-ref = out-R(i)
+    [rail.V-      | 7       | Left        | 4  ]
+    [rail.V+      | 14      | Right       | 4  ]
+
+  val gate-symbs = for i in 0 to num-circuits seq:
+    i => create-symbol $ ANDGateSymbol(
+      in-ref = #R(AND[i].in)
+      out-ref = #R(AND[i].out)
     )
-  val symbs = to-tuple $ cat(gate-symbs, [#R(pwr) => b])
+  val symbs = to-tuple $ cat(gate-symbs, [4 => BoxSymbol(self)])
   assign-symbols(symbs)
 
   val pkg = SOIC-N(
@@ -62,11 +68,15 @@ pcb-component QuadAND:
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
-  for i in ["A", "B", "C", "D"] do:
+  ; Setup the Gate Supports statements.
+  ;  These allow the gates to be used in the
+  ;  pin assignment solution and not explicitly
+  ;  allocated.
+  for i in 0 to num-circuits do:
     make-gate-supports(
-      dot(self, out-R(i)),
-      dot(self, in-R(i)[1]),
-      dot(self, in-R(i)[2])
+      self.AND[i].out,
+      self.AND[i].in[1],
+      self.AND[i].in[2]
       )
 
 
