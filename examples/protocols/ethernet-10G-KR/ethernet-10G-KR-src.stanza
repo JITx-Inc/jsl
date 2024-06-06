@@ -60,7 +60,7 @@ DP source or sink port per the argument.
 public pcb-component component :
   reference-prefix = "U"
   mpn = "JITX002"
-  description = "Dummy device with 1-4 lanes of ethernet-10G-KX"
+  description = "Dummy device with 1-4 lanes of ethernet-10G-KR"
 
   pin-properties :
     [pin:Ref | pads:Ref ... ]

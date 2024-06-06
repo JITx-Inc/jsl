@@ -4,4 +4,6 @@ defpackage jsl/protocols:
   import jitx
 
   forward jsl/protocols/pcie
-
+  forward jsl/protocols/displayport
+  forward jsl/protocols/usb
+  forward jsl/protocols/ethernet-10G-KR
