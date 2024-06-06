@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/landpatterns/SMT:
+defpackage jsl/examples/symbols/resistor:
   import core
   import collections
   import jitx
