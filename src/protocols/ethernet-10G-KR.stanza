@@ -32,68 +32,19 @@ defpackage jsl/protocols/ethernet-10G-KR:
   import jsl/errors
   import jsl/si/helpers
   import jsl/si/couplers
+  import jsl/si/pairs
   import jsl/pin-assignment
 
 doc: \<DOC>
 @brief 10GBASE-KR Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
-@param channels The number of channels to be configured for this bundle.
+@param num-lanes The number of lanes to be configured for this bundle.
 <DOC>
 
-public pcb-bundle ethernet-10G-KR (channels:Int) :
+public pcb-bundle ethernet-10G-KR (num-lanes:Int) :
   name = "10GBASE-KR"
   description = "10GBASE-KR Ethernet Communications Link"
-  port rx : diff-pair[channels]
-  port tx : diff-pair[channels]
-
-doc: \<DOC>
-@brief Construct one direction of a 10GBASE-KR channel.
-
-This function will construct the `Tx -> Rx` channel of a 10GBASE-KR bus. The `src` and `dst`
-arguments must both be of type `ethernet-10G-KR` with equal channel counts.
-
-@param sw The intra-pair skew time difference for the differential signals being connected.
-@param ml The maximum loss in dB for all differential signals being connected.
-@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `ethernet-10G-KR`
-@param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `ethernet-10G-KR`
-@param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
-there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
-@param null-modem When true, makes the channel connection between src.TX and dst.RX and when false, connects src.TX to dst.TX
-
-<DOC>
-public defn connect-10GBASE-KR-channel (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False, null-modem:True|False) :
-  inside pcb-module:
-    for i in indices(src.tx) do :
-      match(cap) :
-        (c:Instantiable) :
-          inst bl-cap-xy : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap-xy
-          topo-net(src.tx[i], tx1.A)
-          if null-modem :
-            topo-net(tx1.B, dst.rx[i])
-          else :
-            topo-net(tx1.B, dst.tx[i])
-        (f:False) :
-          if null-modem :
-            topo-net(src.tx[i], dst.rx[i])
-          else :
-            topo-net(src.tx[i], dst.tx[i])
-      if null-modem :
-        constrain-ch(sw, ml, src.tx[i], dst.rx[i])
-      else :
-        constrain-ch(sw, ml, src.tx[i], dst.tx[i])
-
-
-defn make-null-modem (A:JITXObject, B:JITXObject) :
-  inside pcb-module :
-       node TXRX:diff-pair
-       node RXTX:diff-pair
-       topo-net(A.P, TXRX.P)
-       topo-net(A.N, TXRX.N)
-       topo-net(TXRX.P RXTX.P)
-       topo-net(TXRX.N RXTX.N)
-       TXRX
-
+  port lane : lane-pair[num-lanes]
 
 doc: \<DOC>
 @brief Construct the 10GBASE-KR Topology and Constraints
@@ -116,63 +67,47 @@ If set to false, connects src.TX through the optional cap-src-dst to dst.TX and 
 <DOC>
 public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, null-modem:True|False) :
   inside pcb-module :
-    for i in indices(src.tx) do :
-      match(cap-src-dst, cap-dst-src) :
-        (csd:Instantiable, cds:Instantiable) :
+    ; check-bundle(ethernet-10G-KR, src, dst)
+    if length(src.lane) != length(dst.lane) :
+      throw $ Exception("Invalid Port Widths - Different Widths for src/dst")
+    for i in indices(src.lane) do :
+      match(null-modem, cap-src-dst, cap-dst-src) :
+        (nm:True|False, x:False, y:False) :
+          val dst-r = if nm : reverse-lane(dst) else : dst
+          topo-net(src.lane[i].TX, dst-r.lane[i].TX)
+          topo-net(dst-r.lane[i].RX, src.lane[i].RX)
+        (nm:True, csd:Instantiable, cds:Instantiable) :
           inst bl-cap-xy : dp-coupler(csd)
           require tx1 : dual-pair from bl-cap-xy
           inst bl-cap-yx : dp-coupler(cds)
           require tx2 : dual-pair from bl-cap-yx
-          topo-net(src.tx[i], tx1.A)
-          topo-net(dst.tx[i], tx2.A)
-          if null-modem :
-            topo-net(tx1.B, dst.rx[i])
-            topo-net(tx2.B, src.rx[i])
-          else :
-            fatal("Not supported with 2 sets of blocking caps connected straight through")
-
-        (csd:Instantiable, false) :
+          topo-net(src.lane[i].TX, tx1.A)
+          topo-net(dst.lane[i].TX, tx2.A)
+          topo-net(tx1.B, dst.lane[i].RX)
+          topo-net(tx2.B, src.lane[i].RX)
+        (nm:True|False, csd:Instantiable, y:False) :
+          val dst-r = if nm : reverse-lane(dst) else : dst
           inst bl-cap-xy : dp-coupler(csd)
           require tx1 : dual-pair from bl-cap-xy
-          topo-net(src.tx[i], tx1.A)
-
-        (false, cds:Instantiable) :
+          topo-net(src.lane[i].TX, tx1.A)
+          topo-net(tx1.B, dst-r.lane[i].TX)
+          topo-net(dst-r.lane[i].RX, src.lane[i].RX)
+        (nm:True|False, x:False, cds:Instantiable) :
+          val src-r = if nm : reverse-lane(src) else : src
           inst bl-cap-yx : dp-coupler(cds)
           require tx2 : dual-pair from bl-cap-yx
-          topo-net(dst.tx[i], tx2.A)
-
-        (false, false) :
-          if null-modem :
-            topo-net(src.tx[i], dst.rx[i])
-            topo-net(src.rx[i], dst.tx[i])
-          else :
-            topo-net(src.tx[i], dst.tx[i])
-            topo-net(src.rx[i], dst.rx[i])
-
-        
-        (c:Instantiable) :
-          inst bl-cap-xy : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap-xy
-          topo-net(src.tx[i], tx1.A)
-          if null-modem :
-            topo-net(tx1.B, dst.rx[i])
-          else :
-            topo-net(tx1.B, dst.tx[i])
-        (f:False) :
-          if null-modem :
-            topo-net(src.tx[i], dst.rx[i])
-          else :
-            topo-net(src.tx[i], dst.tx[i])
-            topo-net(src.rx[i], dst.rx[i])
+          topo-net(dst.lane[i].TX, tx2.A)
+          topo-net(tx2.B, src-r.lane[i].TX)
+          topo-net(src-r.lane[i].RX, dst.lane[i].RX)
+        (x, y, z) :
+          throw $ Exception("Invalid Configuration - null-modem and/or blocking caps conflict")
       
       if null-modem :
-        constrain-ch(sw, ml, src.tx[i], dst.rx[i])
+        constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].RX)
+        constrain-ch(sw, ml, dst.lane[i].TX, src.lane[i].RX)
       else :
-        constrain-ch(sw, ml, src.tx[i], dst.tx[i])
-
-    connect-10GBASE-KR-channel(sw, ml, src, dst, cap-src-dst, null-modem)
-    connect-10GBASE-KR-channel(sw, ml, dst, src, cap-dst-src, null-modem)
-
+        constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].TX)
+        constrain-ch(sw, ml, src.lane[i].RX, dst.lane[i].RX)
 
 doc: \<DOC>
 @brief Curated values for skew and loss of 10GBASE-KR Channel
@@ -188,12 +123,11 @@ Calculating the intra-pair skew distance to time correspondence depends on the m
 see @http://pdf.cloud.opensystemsmedia.com/advancedtca-systems.com/Simclar.Feb08.pdf
 Table 3 where the intra-pair skew is set to 0.0625e-12 and the inter-pair skew
 is set to 0.625e-12. This corresponds roughly to 0.01mm skew intra-pair and 
-0.100mm skew inter-pair. Note that the reference document reverses the nomenclature
-of intra-pair and inter-pair skew.
+0.100mm skew inter-pair (or channel).
 <DOC>
 
 public defn ethernet-10G-KR-get-skew-loss-vals () -> [Toleranced, Toleranced, Double]:
-    [0.0 +/- 0.0625e-12, 0.0 +/- 0.625e-12, 15.0] 
+    [0.0 +/- 0.0625e-12, 0.0 +/- 0.625e-12, 15.0]
 
 doc: \<DOC>
 @brief Differential impedance specified by the 10GBASE-KR standard

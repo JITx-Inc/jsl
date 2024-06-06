@@ -1,0 +1,130 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/ethernet-10G-KR/ethernet-10G-KR-src :
+  import core
+  import jitx
+  import jitx/commands
+  import math
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/helpers
+
+  import jsl/design/settings
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/ethernet-10G-KR
+
+doc: \<DOC>
+@brief ethernet-10G-KR dummy component
+The component defined in this file is an example of how to enable a ethernet-10G-KR interface
+on a component. The component demonstrates the use of JSL land-patterns and symbols.
+<DOC>
+
+val pkg = QFN(
+  num-leads = 32,
+  lead-profile = QFN-Lead-Profile(
+    span = 5.0 +/- 0.05,
+    pitch = 0.5,
+    lead-length = 0.4 +/- 0.05,
+    lead-width = 0.25 +/- 0.05
+  ),
+  thermal-lead? = Rectangle(3.7, 3.7),
+  package-body = PackageBody(
+    width = 5.0 +/- 0.05,
+    length = 5.0 +/- 0.05,
+    height = 0.8 +/- 0.05
+  ),
+  pad-planner = Corner-PadPlanner(
+    chamfered-corner-shaper(0.15),
+    rect-shaper,
+    8
+  )
+  density-level = DensityLevelA
+)
+
+
+doc: \<DOC>
+@brief ethernet-10G-KR dummy component definition
+This definition assumes a BGA component with pins defined per the ethernet-10G-KR standard. The component has a single 
+DP source or sink port per the argument.
+@param source:True|False defines whether the component is a DP source (true) or DP sink (false)
+<DOC>
+
+public pcb-component component :
+  reference-prefix = "U"
+  mpn = "JITX002"
+  description = "Dummy device with 1-4 lanes of ethernet-10G-KX"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    for i in 1 through 32 do :
+      [ A[i]    | p[i]  ]
+
+  assign-landpattern(create-landpattern(pkg))
+  val box = BoxSymbol(self)
+
+  for i in 1 to 33 do :
+    if i % 2 == 0:
+      set-side(Right, self.A[i])
+    else :
+      set-side(Left, self.A[i])
+  assign-symbol(create-symbol(box))
+
+  ; for i in 0 to 4 do :
+  ;   diff-pin-model(self.DP-TX-P[i], self.DP-TX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
+  ;   diff-pin-model(self.DP-RX-P[i], self.DP-RX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
+  ;   diff-pin-model(self.AUX-P, self.AUX-N, delay = typ(10.0e-15) loss = typ(0.1))
+
+
+public pcb-module module :
+
+  public inst sw : component
+
+  val NUM-IO = 32
+  for num-lanes in [1, 2, 4] do :
+    val num-options:Int = NUM-IO / (num-lanes * 4)
+    val e-10G = ethernet-10G-KR(num-lanes)
+    for i in 0 to num-options do :
+      supports e-10G :
+        for sub-lane-count in 0 to num-lanes do :
+          val pin-num = sub-lane-count * 4 + i * 4 * num-lanes + 1
+          e-10G.lane[sub-lane-count].TX.P => sw.A[pin-num + 0]
+          e-10G.lane[sub-lane-count].TX.N => sw.A[pin-num + 1]
+          e-10G.lane[sub-lane-count].RX.P => sw.A[pin-num + 2]
+          e-10G.lane[sub-lane-count].RX.N => sw.A[pin-num + 3]
+
+
+pcb-landpattern edge-fingers (nf:Int):
+  for i in 1 through nf / 2 :
+    pad p[i] : smd-pad(0.7, 3.91) at loc(to-double(i), 0.0) on Top
+    pad p[i + nf / 2] : smd-pad(0.7, 3.91) at loc(to-double(i), 0.0) on Bottom
+
+public pcb-component edge-connector :
+  val NUM-PADS = 32
+    pin-properties :
+      [ pin : Ref | pads : Int ... ]
+      for i in 1 through NUM-PADS do :
+        [ p[i]    | i  ]
+  
+  assign-landpattern(edge-fingers(NUM-PADS))
+  val box = BoxSymbol(self)
+  assign-symbol(create-symbol(box))
+
+  for num-lanes in [1, 2, 4] do :
+    val num-options:Int = NUM-PADS / (num-lanes * 4)
+    val e-10G = ethernet-10G-KR(num-lanes)
+    for i in 0 to num-options do :
+      supports e-10G :
+        for sub-lane-count in 0 to num-lanes do :
+          val pin-num = sub-lane-count * 4 + i * 4 * num-lanes + 1          
+          e-10G.lane[sub-lane-count].TX.P => self.p[pin-num + 0]
+          e-10G.lane[sub-lane-count].TX.N => self.p[pin-num + 1]
+          e-10G.lane[sub-lane-count].RX.P => self.p[pin-num + 2]
+          e-10G.lane[sub-lane-count].RX.N => self.p[pin-num + 3]

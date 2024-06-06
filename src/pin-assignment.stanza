@@ -27,7 +27,7 @@ public defn check-bundle (exp:Bundle, b-set:JITXObject ...) :
     match(port-type(p1)):
       (obs:Bundle):
         if obs != exp:
-          throw $ ArgumentError("Expected Bundle '%_' - Observed Bundle '%_'" % [name(obs), name(exp)])
+          throw $ ArgumentError("Expected Bundle '%_' - Observed Bundle '%_'" % [name(exp), name(obs)])
       (x):
         throw $ ArgumentError("Expected Bundle - Received: %_" % [x])
 
@@ -234,7 +234,7 @@ statement.
 
 This function is recursive.
 
-@pararm pb This object is either a bundle definition (the top level instance
+@param pb This object is either a bundle definition (the top level instance
 in a supports statement) or a JITXObject (ie, a pin).
 @param p2 This is the object being assigned to the supports bundle. It is
 either a single pin, bundle, or array - but must match with its counter part.
@@ -286,7 +286,7 @@ Swizzle a Bus Bundle
 
 This constructs a supports statement for a bus bundle.
 A bus bundle is a bundle with one PortArray pin definition.
-The support statement then constructs a cross-bar for the
+The support statement then constructs a cross-bar for the ?
 <DOC>
 public defn swizzle-bus (bus-bundle:JITXObject -- locked:Tuple<Int>) :
   check-is-bundle?(bus-bundle)

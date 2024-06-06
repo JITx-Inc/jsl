@@ -68,8 +68,3 @@ public pcb-component pu-res (value:Double):
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
-  ; adding a pin model to the pins of this component allow si constraints
-  ; to be propagated through this component correctly. Obviously the values
-  ; used for this component are just placeholders.
-
-  pin-model(self.p[1] self.p[2]) = PinModel(typ(0.0), typ(0.0))
