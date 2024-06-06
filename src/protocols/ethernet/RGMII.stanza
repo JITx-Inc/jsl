@@ -1,0 +1,157 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/RGMII:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si/helpers
+  import jsl/si/constraints
+  import jsl/si/signal-ends
+
+public val RGMII_BUS_WIDTH = 4
+
+doc: \<DOC>
+RGMII Lane Bundle
+
+@member data Data Bus Port
+@member clk Clock Line
+@member ctl Multiplexed enable and error signals
+<DOC>
+public pcb-bundle rgmii-lane :
+  port data : pin[RGMII_BUS_WIDTH]
+  port clk : pin
+  port ctl : pin
+
+doc: \<DOC>
+Reduced Gigabit Media Independent Interface (RGMII)
+@see https://en.wikipedia.org/wiki/Media-independent_interface#RGMII
+
+This bundle is structured as a {@link lane-pair} bundle.
+
+@member TX Transmit Lane Port
+@member RX Receive Lane Port
+<DOC>
+public pcb-bundle rgmii :
+  name = "RGMII"
+  port TX : rgmii-lane
+  port RX : rgmii-lane
+
+val RGMII_v1_DATA_TO_CLK = min-max(1.0e-9, 2.6e-9)
+val RGMII_v1_TARG_DATA_TO_CLK = min-max(1.5e-9, 2.0e-9)
+
+doc: \<DOC>
+RGMII Version
+
+RGMII v1 requires a specific Data to Clock delay in the PCB board to
+meet setup and hold times.
+
+In RGMII v2, the spec introduces an optional "Internal Delay"
+feature. Devices that provide this are labeled "RGMII-ID".
+These devices don't require a PCB board delay because the
+delay can be configured in firmware.
+<DOC>
+public pcb-enum jsl/protocols/ethernet/RGMII/RGMIIVersion:
+  RGMII-STD
+  RGMII-ID
+
+doc: \<DOC>
+RGMII Delay and Loss Spec
+
+@param gen RGMII version spec
+@return Tuple of `[delay, max-loss]` where:
+*  `delay` - This is the expected delay between data to clock.
+*  `max-loss` - This is the max loss in dB for all signals.
+<DOC>
+public defn rgmii-get-delay-loss (version:RGMIIVersion) -> [Toleranced, Double]:
+  switch(version):
+    RGMII-STD: [RGMII_v1_TARG_DATA_TO_CLK, 7.5]
+    RGMII-ID:   [0.0 +/- 0.5e-9, 7.5]
+
+doc: \<DOC>
+RGMII Databus Skew Specification
+<DOC>
+public defn rgmii-bus-skew () -> Toleranced:
+  0.0 +/- 11.0e-12
+
+doc: \<DOC>
+RGMII Trace Impedance Spec
+
+@return Impedance spec for single-ended traces.
+<DOC>
+public defn rgmii-get-trace-impedance () -> Toleranced :
+  50.0 +/- (15 %)
+
+
+doc: \<DOC>
+RGMII Lane Constraint
+
+This constraint is used to constrain a lane of the RGMII
+interface. This type would typically be used with a {@link LaneConstraint}
+type for constructing a full-duplex RGMII interface.
+
+This constraint expects to be passed `rgmii-lane` bundle
+ports to constrain.
+
+<DOC>
+public defstruct RGMII-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Specification for the Data to Clock Delay
+  <DOC>
+  clk-delay:Toleranced
+  doc: \<DOC>
+  Max skew between the data bus and ctl lines
+  <DOC>
+  bus-skew:Toleranced
+  doc: \<DOC>
+  Max Loss Limit in dB
+  <DOC>
+  loss:Double with: (ensure => ensure-positive!)
+  doc: \<DOC>
+  Single-ended routing structure for all signals.
+  <DOC>
+  route-struct:RoutingStructure
+
+
+
+doc: \<DOC>
+Construct a RGMII Constraint object
+
+@param proto USB Protocol Version to construct a constraint object for
+@param route-struct Differential Pair Routing Structure - Use
+`pcb-differential-routing-structure` to create.
+@return Diff-Pair Constraint Object
+<DOC>
+public defn RGMII-Constraint (
+  --
+  version:RGMIIVersion
+  route-struct:RoutingStructure
+  ) -> RGMII-Constraint :
+
+  val [d, ml] = rgmii-get-delay-loss(version)
+  val bus-skew = rgmii-bus-skew()
+
+  RGMII-Constraint(d, bus-skew, ml, route-struct)
+
+
+public defmethod constrain (cst:RGMII-Constraint, src:JITXObject, dst:JITXObject) -> False :
+
+  val src-ep = find-signal-end(src)
+  val dst-ep = find-signal-end(dst)
+
+  val clk-route = src-ep.clk => dst-ep.clk
+  val bus-route = src-ep.data => dst-ep.data
+  val ctl-route = src-ep.ctl => dst-ep.ctl
+
+  timing-window(bus-skew(cst), ctl-route, bus-route)
+  max-loss(loss(cst), clk-route, bus-route, ctl-route)
+
+  val data-to-clk = TimingDifferenceConstraint(clk-delay(cst))
+  timing-difference(ctl-route, clk-route) = data-to-clk
+
+  val se-50 = route-struct(cst)
+  structure(clk-route) = se-50
+  structure(bus-route) = se-50
+  structure(ctl-route) = se-50

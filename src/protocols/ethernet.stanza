@@ -1,0 +1,31 @@
+doc: \<DOC>
+@title Ethernet Protocol
+@brief Constraints and Bundles
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet:
+  import core
+  import jitx
+  import jitx/commands
+
+  forward jsl/protocols/ethernet/RGMII
+  forward jsl/protocols/ethernet/GMII
+  forward jsl/protocols/ethernet/RMII
+  forward jsl/protocols/ethernet/MII
+  ; TODO - forward jsl/protocols/ethernet/MDI
+
+
+doc: \<DOC>
+Media Independent Interface Management (MIIM)
+This is the configuration interface for the PHY or switch.
+
+@member mdc Synchronous Clock Line
+@member mdio Data Line
+<DOC>
+public pcb-bundle miim :
+  name = "MIIM"
+  port mdc : pin
+  port mdio : pin
+
+
+
