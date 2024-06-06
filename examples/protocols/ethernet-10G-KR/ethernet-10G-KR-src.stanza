@@ -70,20 +70,20 @@ public pcb-component component :
   assign-landpattern(create-landpattern(pkg))
   val box = BoxSymbol(self)
 
-  for i in 1 to 33 do :
+  for i in 1 through 32 do :
     if i % 2 == 0:
       set-side(Right, self.A[i])
     else :
       set-side(Left, self.A[i])
   assign-symbol(create-symbol(box))
 
-  ; for i in 0 to 4 do :
-  ;   diff-pin-model(self.DP-TX-P[i], self.DP-TX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
-  ;   diff-pin-model(self.DP-RX-P[i], self.DP-RX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
-  ;   diff-pin-model(self.AUX-P, self.AUX-N, delay = typ(10.0e-15) loss = typ(0.1))
+  for i in 0 to 16 do :
+    supports diff-pair :
+      diff-pair.P => self.A[i * 2 + 1]
+      diff-pair.N => self.A[i * 2 + 2]
 
 
-public pcb-module module :
+public pcb-module module (-- invert:True|False = false):
 
   public inst sw : component
 
@@ -94,11 +94,18 @@ public pcb-module module :
     for i in 0 to num-options do :
       supports e-10G :
         for sub-lane-count in 0 to num-lanes do :
-          val pin-num = sub-lane-count * 4 + i * 4 * num-lanes + 1
-          e-10G.lane[sub-lane-count].TX.P => sw.A[pin-num + 0]
-          e-10G.lane[sub-lane-count].TX.N => sw.A[pin-num + 1]
-          e-10G.lane[sub-lane-count].RX.P => sw.A[pin-num + 2]
-          e-10G.lane[sub-lane-count].RX.N => sw.A[pin-num + 3]
+          require dp-t : diff-pair from sw
+          require dp-r : diff-pair from sw
+          if invert :
+            e-10G.lane[sub-lane-count].TX.P => dp-t.N
+            e-10G.lane[sub-lane-count].TX.N => dp-t.P
+            e-10G.lane[sub-lane-count].RX.P => dp-r.N
+            e-10G.lane[sub-lane-count].RX.N => dp-r.P
+          else :
+            e-10G.lane[sub-lane-count].TX.P => dp-t.P
+            e-10G.lane[sub-lane-count].TX.N => dp-t.N
+            e-10G.lane[sub-lane-count].RX.P => dp-r.P
+            e-10G.lane[sub-lane-count].RX.N => dp-r.N
 
 
 pcb-landpattern edge-fingers (nf:Int):
@@ -117,14 +124,20 @@ public pcb-component edge-connector :
   val box = BoxSymbol(self)
   assign-symbol(create-symbol(box))
 
+  for i in 0 to 16 do :
+    supports diff-pair :
+      diff-pair.P => self.p[i * 2 + 1]
+      diff-pair.N => self.p[i * 2 + 2]
+
   for num-lanes in [1, 2, 4] do :
     val num-options:Int = NUM-PADS / (num-lanes * 4)
     val e-10G = ethernet-10G-KR(num-lanes)
     for i in 0 to num-options do :
       supports e-10G :
         for sub-lane-count in 0 to num-lanes do :
-          val pin-num = sub-lane-count * 4 + i * 4 * num-lanes + 1          
-          e-10G.lane[sub-lane-count].TX.P => self.p[pin-num + 0]
-          e-10G.lane[sub-lane-count].TX.N => self.p[pin-num + 1]
-          e-10G.lane[sub-lane-count].RX.P => self.p[pin-num + 2]
-          e-10G.lane[sub-lane-count].RX.N => self.p[pin-num + 3]
+          require dp-t : diff-pair
+          require dp-r : diff-pair
+          e-10G.lane[sub-lane-count].TX.P => dp-t.P
+          e-10G.lane[sub-lane-count].TX.N => dp-t.N
+          e-10G.lane[sub-lane-count].RX.P => dp-r.P
+          e-10G.lane[sub-lane-count].RX.N => dp-r.N

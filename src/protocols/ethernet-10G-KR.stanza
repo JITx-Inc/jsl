@@ -34,13 +34,13 @@ defpackage jsl/protocols/ethernet-10G-KR:
   import jsl/si/couplers
   import jsl/si/pairs
   import jsl/pin-assignment
+  import jsl/si/constraints
 
 doc: \<DOC>
 @brief 10GBASE-KR Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 @param num-lanes The number of lanes to be configured for this bundle.
 <DOC>
-
 public pcb-bundle ethernet-10G-KR (num-lanes:Int) :
   name = "10GBASE-KR"
   description = "10GBASE-KR Ethernet Communications Link"
@@ -52,8 +52,7 @@ doc: \<DOC>
 This function constructs the 10GBASE-KR topology and applies constraints
 to the channel for intra-pair skew and channel loss.
 
-@param sw The intra-pair skew value for the differential signals being connected.
-@param ml The maximum loss for all differential signals being connected.
+@param cons The Constraint structure to be used for the routing.
 @param cap-src-dst Optional DC blocking capacitor to be inserted between the src.TX and dst.RX signal ends. Note that
 there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have pin models applied to its pins
 in order for the overall skew and loss values to be respected.
@@ -65,8 +64,9 @@ no capacitor is inserted between dst.TX and src.RX (cap-dst-src = false).
 @param null-modem If set to true, connects src.TX through the optional cap-src-dst to dst.RX and dst.TX through the optional cap-dst-src to src.RX. 
 If set to false, connects src.TX through the optional cap-src-dst to dst.TX and dst.RX through the optional cap-dst-src to src.RX
 <DOC>
-public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, null-modem:True|False) :
+public defn connect-10G-KR (cons, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, null-modem:True|False) :
   inside pcb-module :
+    val lane-constraint = LaneConstraint(cons)
     ; check-bundle(ethernet-10G-KR, src, dst)
     if length(src.lane) != length(dst.lane) :
       throw $ Exception("Invalid Port Widths - Different Widths for src/dst")
@@ -74,41 +74,30 @@ public defn connect-10G-KR (sw:Toleranced, ml:Double, cap-src-dst:Instantiable|F
       match(null-modem, cap-src-dst, cap-dst-src) :
         (nm:True|False, x:False, y:False) :
           val dst-r = if nm : reverse-lane(dst) else : dst
-          topo-net(src.lane[i].TX, dst-r.lane[i].TX)
-          topo-net(dst-r.lane[i].RX, src.lane[i].RX)
+          within [s,d] = constrain-topology(src.lane[i] => dst-r.lane[i], lane-constraint) :
+            topo-net(s.TX, d.TX)
+            topo-net(s.RX, d.RX)
         (nm:True, csd:Instantiable, cds:Instantiable) :
-          inst bl-cap-xy : dp-coupler(csd)
-          require tx1 : dual-pair from bl-cap-xy
-          inst bl-cap-yx : dp-coupler(cds)
-          require tx2 : dual-pair from bl-cap-yx
-          topo-net(src.lane[i].TX, tx1.A)
-          topo-net(dst.lane[i].TX, tx2.A)
-          topo-net(tx1.B, dst.lane[i].RX)
-          topo-net(tx2.B, src.lane[i].RX)
+          within [s,d] = constrain-topology(src.lane[i] => reverse-lane(dst.lane[i]), lane-constraint) :
+            inst bl-cap-xy : dp-coupler(csd)
+            inst bl-cap-yx : dp-coupler(cds)
+            topo-pair(s.TX => bl-cap-xy => d.TX)
+            topo-pair(d.RX => bl-cap-yx => s.RX)
         (nm:True|False, csd:Instantiable, y:False) :
           val dst-r = if nm : reverse-lane(dst) else : dst
-          inst bl-cap-xy : dp-coupler(csd)
-          require tx1 : dual-pair from bl-cap-xy
-          topo-net(src.lane[i].TX, tx1.A)
-          topo-net(tx1.B, dst-r.lane[i].TX)
-          topo-net(dst-r.lane[i].RX, src.lane[i].RX)
+          within [s,d] = constrain-topology(src.lane[i] => dst-r.lane[i], lane-constraint) :
+            inst bl-cap-xy : dp-coupler(csd)
+            topo-pair(s.TX => bl-cap-xy => d.TX)
+            topo-net(s.RX, d.RX)
         (nm:True|False, x:False, cds:Instantiable) :
           val src-r = if nm : reverse-lane(src) else : src
-          inst bl-cap-yx : dp-coupler(cds)
-          require tx2 : dual-pair from bl-cap-yx
-          topo-net(dst.lane[i].TX, tx2.A)
-          topo-net(tx2.B, src-r.lane[i].TX)
-          topo-net(src-r.lane[i].RX, dst.lane[i].RX)
+          within [s,d] = constrain-topology(dst.lane[i] => src-r.lane[i], lane-constraint) :
+            inst bl-cap-yx : dp-coupler(cds)
+            topo-pair(d.TX => bl-cap-yx => s.TX)
+            topo-net(d.RX, s.RX)
         (x, y, z) :
           throw $ Exception("Invalid Configuration - null-modem and/or blocking caps conflict")
       
-      if null-modem :
-        constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].RX)
-        constrain-ch(sw, ml, dst.lane[i].TX, src.lane[i].RX)
-      else :
-        constrain-ch(sw, ml, src.lane[i].TX, dst.lane[i].TX)
-        constrain-ch(sw, ml, src.lane[i].RX, dst.lane[i].RX)
-
 doc: \<DOC>
 @brief Curated values for skew and loss of 10GBASE-KR Channel
 This is a helper function that returns the bounds on the intra-pair
@@ -140,18 +129,18 @@ trace impedance for the specified generation of the 10GBASE-KR standard.
 public defn ethernet-10G-KR-get-trace-impedance () -> Toleranced :
   100.0 +/- (10 %)  ;   2.5 GT/s
 
-doc: \<DOC>
-@brief Apply the differential routing structure to a 10GBASE-KR bundle.
-The function applies the provided DifferentialRoutingStructure
-to all of the differential pairs in the start and endpoints. Note that both start and end points
-need to be connected to physical component pins either directly or via pin assignment.
-@param x This is expected to be a port of `Bundle` type `ethernet-10G-KR`
-@param y This is expected to be a port of `Bundle` type `ethernet-10G-KR`
-<DOC>
 
-public defn ethernet-10G-KR-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) :
-  inside pcb-module :
-    for i in indices(x.tx) do :
-      diff-structure(rs, x.tx[i] => y.rx[i])
-    for i in indices(y.tx) do :
-      diff-structure(rs, y.tx[i] => x.rx[i])
+doc: \<DOC>
+Construct a ethernet-10G-KR-Constraints object
+
+@param route-struct Differential Pair Routing Structure - Use
+`pcb-differential-routing-structure` to create.
+@return Diff-Pair Constraint Object
+<DOC>
+public defn ethernet-10G-KR-Constraint (
+  --
+  route-struct:DifferentialRoutingStructure
+  ) -> DP-Constraint :
+  val [s, c, ml] = ethernet-10G-KR-get-skew-loss-vals()
+  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
+
