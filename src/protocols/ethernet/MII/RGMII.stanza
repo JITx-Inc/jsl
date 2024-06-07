@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/protocols/ethernet/RGMII:
+defpackage jsl/protocols/ethernet/MII/RGMII:
   import core
   import jitx
   import jitx/commands
@@ -137,21 +137,21 @@ public defn RGMII-Constraint (
 
 
 public defmethod constrain (cst:RGMII-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+    val src-ep = find-signal-end(src)
+    val dst-ep = find-signal-end(dst)
 
-  val src-ep = find-signal-end(src)
-  val dst-ep = find-signal-end(dst)
+    val clk-route = src-ep.clk => dst-ep.clk
+    val bus-route = src-ep.data => dst-ep.data
+    val ctl-route = src-ep.ctl => dst-ep.ctl
 
-  val clk-route = src-ep.clk => dst-ep.clk
-  val bus-route = src-ep.data => dst-ep.data
-  val ctl-route = src-ep.ctl => dst-ep.ctl
+    timing-window(bus-skew(cst), ctl-route, bus-route)
+    max-loss(loss(cst), clk-route, bus-route, ctl-route)
 
-  timing-window(bus-skew(cst), ctl-route, bus-route)
-  max-loss(loss(cst), clk-route, bus-route, ctl-route)
+    val data-to-clk = TimingDifferenceConstraint(clk-delay(cst))
+    timing-difference(ctl-route, clk-route) = data-to-clk
 
-  val data-to-clk = TimingDifferenceConstraint(clk-delay(cst))
-  timing-difference(ctl-route, clk-route) = data-to-clk
-
-  val se-50 = route-struct(cst)
-  structure(clk-route) = se-50
-  structure(bus-route) = se-50
-  structure(ctl-route) = se-50
+    val se-50 = route-struct(cst)
+    structure(clk-route) = se-50
+    structure(bus-route) = se-50
+    structure(ctl-route) = se-50

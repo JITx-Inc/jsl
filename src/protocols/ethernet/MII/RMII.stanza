@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/protocols/ethernet/MII:
+defpackage jsl/protocols/ethernet/MII/RMII:
   import core
   import jitx
   import jitx/commands
