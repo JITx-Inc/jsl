@@ -1,0 +1,211 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+
+  import jsl/si/constraints
+  import jsl/si/pairs
+  import jsl/si/helpers
+  import jsl/protocols/ethernet/MDI/MDI-1000Base-T
+  import jsl/protocols/ethernet/MII/RGMII
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/SOIC
+  import jsl/landpatterns/quad
+  import jsl/landpatterns/pad-planner
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+
+
+pcb-component MAC :
+
+  port mii : rgmii
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | group:String]
+    [mii.TX.data[0] | 1 | Right | "TX"]
+    [mii.TX.data[1] | 2 | Right | "TX"]
+    [mii.TX.data[2] | 3 | Right | "TX"]
+    [mii.TX.data[3] | 4 | Right | "TX"]
+    [mii.TX.ctl     | 5 | Right | "TX"]
+    [mii.TX.clk     | 6 | Right | "TX"]
+
+    [mii.RX.data[0] | 16 | Right | "RX"]
+    [mii.RX.data[1] | 17 | Right | "RX"]
+    [mii.RX.data[2] | 18 | Right | "RX"]
+    [mii.RX.data[3] | 19 | Right | "RX"]
+    [mii.RX.ctl     | 20 | Right | "RX"]
+    [mii.RX.clk     | 21 | Right | "RX"]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+
+pcb-component PHY :
+
+  port mii : rgmii
+  port mdi : MDI-1000Base-T
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | group:String]
+    [mii.TX.data[0] | 1 | Left | "TX"]
+    [mii.TX.data[1] | 2 | Left | "TX"]
+    [mii.TX.data[2] | 3 | Left | "TX"]
+    [mii.TX.data[3] | 4 | Left | "TX"]
+    [mii.TX.ctl     | 5 | Left | "TX"]
+    [mii.TX.clk     | 6 | Left | "TX"]
+
+    [mii.RX.data[0] | 12 | Left | "RX"]
+    [mii.RX.data[1] | 13 | Left | "RX"]
+    [mii.RX.data[2] | 14 | Left | "RX"]
+    [mii.RX.data[3] | 15 | Left | "RX"]
+    [mii.RX.ctl     | 16 | Left | "RX"]
+    [mii.RX.clk     | 17 | Left | "RX"]
+
+    [mdi.TP[0].P | 22 | Right | "MDI"]
+    [mdi.TP[0].N | 23 | Right | "MDI"]
+    [mdi.TP[1].P | 24 | Right | "MDI"]
+    [mdi.TP[1].N | 25 | Right | "MDI"]
+    [mdi.TP[2].P | 26 | Right | "MDI"]
+    [mdi.TP[2].N | 27 | Right | "MDI"]
+    [mdi.TP[3].P | 28 | Right | "MDI"]
+    [mdi.TP[3].N | 29 | Right | "MDI"]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+
+pcb-component RJ45 :
+  port mdi : MDI-1000Base-T
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir]
+    [mdi.TP[0].P | 1 | Left]
+    [mdi.TP[0].N | 2 | Left]
+    [mdi.TP[1].P | 3 | Left]
+    [mdi.TP[1].N | 4 | Left]
+    [mdi.TP[2].P | 5 | Left]
+    [mdi.TP[2].N | 6 | Left]
+    [mdi.TP[3].P | 7 | Left]
+    [mdi.TP[3].N | 8 | Left]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = SOIC-N(
+    num-leads = 16,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 9.0 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  make-1000Base-T-supports(
+    mdi.TP[0],
+    mdi.TP[1],
+    mdi.TP[2],
+    mdi.TP[3]
+  )
+
+
+pcb-module rgmii-1000BaseT-uut:
+  inst m : MAC
+  inst p : PHY
+  inst c : RJ45
+
+  val ti-rgmii = rgmii-get-trace-impedance()
+  val rgmii-constraints = RGMII-Constraint(version = RGMII-STD, route-struct = se-50)
+  val lane-constraint = LaneConstraint(rgmii-constraints)
+
+  ; NOTE - currently this will fail with an exception
+  ;   on JITX 3.9.0
+  ; Uncaught Exception: TopologySegmentNotOnPorts(a = [9tHFPCPWyZTut2yBEM9363], b = [11111111115JT1djG9])
+  ; TopologySegmentNotOnPorts(a = [3JdzbzsP7z8oZ4jPYvvdWG], b = [11111111115JNJUveq])
+  ; TopologySegmentNotOnPorts(a = [D57MKszvyEC3jtWCtFi1gC], b = [11111111115JE7fsM6])
+  ; TopologySegmentNotOnPorts(a = [4AyVmePRijodvmZcuAgYy8], b = [11111111115J14VSXd])
+  constrain-topology(m.mii => reverse-lane(p.mii), lane-constraint)
+  ; This will succeed.
+  ; constrain-topology(m.mii => p.mii, lane-constraint)
+
+  require gig-mdi:MDI-1000Base-T from c
+
+  val mdi-constraint = MDI-1000Base-T-Constraint(
+    route-struct = diff(100.0)
+  )
+  constrain-topology(p.mdi => gig-mdi, mdi-constraint)
+
+
+set-current-design("rgmii-1000BaseT-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(rgmii-1000BaseT-uut)
+
+; View the results
+view-board()
+view-schematic()
+view-design-explorer()
+; view-bom(BOM-STD)
