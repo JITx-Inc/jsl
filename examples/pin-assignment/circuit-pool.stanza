@@ -1,0 +1,230 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/pin-assignment/circuit-pool:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/bundles
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+
+  import jsl/si/pairs
+  import jsl/pin-assignment
+  import jsl/pin-assignment/circuit-pool
+
+  import jsl/protocols/ethernet/MDI/MDI-1000Base-T
+  import jsl/protocols/ethernet/MII/RGMII
+
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/SOIC
+  import jsl/landpatterns/SON
+  import jsl/landpatterns/quad
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/pad-planner
+
+  import jsl/examples/landpatterns/board
+
+
+
+
+pcb-component esd-protector (num-chs:Int = 4):
+  if (num-chs % 2) != 0 :
+    throw $ ValueError("Number Channels must be Divisible By 2")
+
+  port PT : pass-through[num-chs]
+
+  val num-pins = 2 * num-chs
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir]
+      for i in 0 to num-chs do:
+        [PT[i].A | (i + 1) | Left]
+        [PT[i].B | (num-pins - i) | Right]
+
+  ; Define the `dual-pair` supports that
+  ;  utilize the adjacent passthroughs.
+  property(self.num-dual-pairs) = num-chs / 2
+
+  for i in 0 to (num-chs / 2) do:
+    val index = (2 * i)
+
+    bidir-swappable-dual-pair(
+      self.PT[index].A,
+      self.PT[index + 1].A,
+      self.PT[index].B,
+      self.PT[index + 1].B
+    )
+
+  val symb = create-symbol $ BoxSymbol(self)
+  assign-symbol(symb)
+
+  val pitch = 0.5
+  val L = (to-double(num-chs) * pitch) + 1.0
+  val pkg = SON(
+    num-leads = num-pins,
+    lead-profile = Lead-Profile(
+      span = min-max(1.9, 2.1),
+      pitch = pitch,
+      lead = SON-Lead(
+        length = min-max(0.2, 0.4),
+        width = min-max(0.18, 0.32)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(1.9, 2.1)
+      length = L +/- (5 %)
+      height = min-max(0.7, 0.8)
+    )
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+
+pcb-component PHY :
+
+  port mii : rgmii
+  port mdi : MDI-1000Base-T
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | group:String]
+
+    [mii.RX.data[0] | 17 | Left | "RX"]
+    [mii.RX.data[1] | 16 | Left | "RX"]
+    [mii.RX.data[2] | 15 | Left | "RX"]
+    [mii.RX.data[3] | 14 | Left | "RX"]
+    [mii.RX.ctl     | 13 | Left | "RX"]
+    [mii.RX.clk     | 12 | Left | "RX"]
+
+    [mii.TX.data[0] | 6 | Left | "TX"]
+    [mii.TX.data[1] | 5 | Left | "TX"]
+    [mii.TX.data[2] | 4 | Left | "TX"]
+    [mii.TX.data[3] | 3 | Left | "TX"]
+    [mii.TX.ctl     | 2 | Left | "TX"]
+    [mii.TX.clk     | 1 | Left | "TX"]
+
+    [mdi.TP[0].P | 22 | Right | "MDI"]
+    [mdi.TP[0].N | 23 | Right | "MDI"]
+    [mdi.TP[1].P | 24 | Right | "MDI"]
+    [mdi.TP[1].N | 25 | Right | "MDI"]
+    [mdi.TP[2].P | 26 | Right | "MDI"]
+    [mdi.TP[2].N | 27 | Right | "MDI"]
+    [mdi.TP[3].P | 28 | Right | "MDI"]
+    [mdi.TP[3].N | 29 | Right | "MDI"]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+
+pcb-component RJ45 :
+  port mdi : MDI-1000Base-T
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir]
+    [mdi.TP[0].P | 1 | Left]
+    [mdi.TP[0].N | 2 | Left]
+    [mdi.TP[1].P | 3 | Left]
+    [mdi.TP[1].N | 4 | Left]
+    [mdi.TP[2].P | 5 | Left]
+    [mdi.TP[2].N | 6 | Left]
+    [mdi.TP[3].P | 7 | Left]
+    [mdi.TP[3].N | 8 | Left]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = SOIC-N(
+    num-leads = 16,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 9.0 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  make-1000Base-T-supports(
+    mdi.TP[0],
+    mdi.TP[1],
+    mdi.TP[2],
+    mdi.TP[3]
+  )
+
+
+
+pcb-module circuit-pool-example:
+
+  ; Construct a pool of the esd protector components
+  ;  In this simple example, I only source 2 but you could
+  ;  imagine for a more complex interface, you might need
+  ;  more than 2 to protect all of the differential pairs.
+
+  val comp = esd-protector()
+  val cnt = property(comp.num-dual-pairs)
+
+  val template = CircuitTemplate(comp, dual-pair, cnt)
+  val pool-type = create-circuit-pool(template, 2)
+
+  ; This pool of esd protectors provides a way for us to
+  ;  make one `require` statement and select across any of
+  ;  the components in the pool for `dual-pair` bundles.
+  inst esds : pool-type
+
+  inst phy : PHY
+  inst conn : RJ45
+
+  require gig-conn:MDI-1000Base-T from conn
+  ; Note - I'm using Topologies here out of convenience
+  ;  but this example isn't about SI - so I've left out the
+  ;  SI constraint application.
+  for i in 0 to length(gig-conn.TP) do:
+    require prot:dual-pair from esds
+    topo-pair(phy.mdi.TP[i] => prot => gig-conn.TP[i])
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+set-current-design("circuit-pool-example")
+
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(circuit-pool-example)
+
+; View the results
+view-board()
+view-schematic()
+view-design-explorer()
