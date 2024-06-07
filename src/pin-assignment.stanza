@@ -6,5 +6,6 @@ defpackage jsl/pin-assignment:
 
   forward jsl/pin-assignment/checks
   forward jsl/pin-assignment/generators
+  forward jsl/pin-assignment/circuit-pool
 
 
