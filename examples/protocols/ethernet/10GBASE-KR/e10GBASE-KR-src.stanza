@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/ethernet-10G-KR/ethernet-10G-KR-src :
+defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src :
   import core
   import jitx
   import jitx/commands
@@ -19,11 +19,11 @@ defpackage jsl/examples/protocols/ethernet-10G-KR/ethernet-10G-KR-src :
   import jsl/si/helpers
   import jsl/pin-assignment
   import jsl/bundles
-  import jsl/protocols/ethernet-10G-KR
+  import jsl/protocols/ethernet/MDI/e10GBASE-KR
 
 doc: \<DOC>
-@brief ethernet-10G-KR dummy component
-The component defined in this file is an example of how to enable a ethernet-10G-KR interface
+@brief e10GBASE-KR dummy component
+The component defined in this file is an example of how to enable a 10GBASE-KR interface
 on a component. The component demonstrates the use of JSL land-patterns and symbols.
 <DOC>
 
@@ -51,8 +51,8 @@ val pkg = QFN(
 
 
 doc: \<DOC>
-@brief ethernet-10G-KR dummy component definition
-This definition assumes a BGA component with pins defined per the ethernet-10G-KR standard. The component has a single 
+@brief e10GBASE-KR dummy component definition
+This definition assumes a BGA component with pins defined per the e10GBASE-KR standard. The component has a single 
 DP source or sink port per the argument.
 @param source:True|False defines whether the component is a DP source (true) or DP sink (false)
 <DOC>
@@ -60,7 +60,7 @@ DP source or sink port per the argument.
 public pcb-component component :
   reference-prefix = "U"
   mpn = "JITX002"
-  description = "Dummy device with 1-4 lanes of ethernet-10G-KR"
+  description = "Dummy device with 1-4 configurable number of lanes of 10GBASE-KR"
 
   pin-properties :
     [pin:Ref | pads:Ref ... ]
@@ -90,7 +90,7 @@ public pcb-module module (-- invert:True|False = false):
   val NUM-IO = 32
   for num-lanes in [1, 2, 4] do :
     val num-options:Int = NUM-IO / (num-lanes * 4)
-    val e-10G = ethernet-10G-KR(num-lanes)
+    val e-10G = e10GBASE-KR(num-lanes)
     for i in 0 to num-options do :
       supports e-10G :
         for sub-lane-count in 0 to num-lanes do :
@@ -131,7 +131,7 @@ public pcb-component edge-connector :
 
   for num-lanes in [1, 2, 4] do :
     val num-options:Int = NUM-PADS / (num-lanes * 4)
-    val e-10G = ethernet-10G-KR(num-lanes)
+    val e-10G = e10GBASE-KR(num-lanes)
     for i in 0 to num-options do :
       supports e-10G :
         for sub-lane-count in 0 to num-lanes do :

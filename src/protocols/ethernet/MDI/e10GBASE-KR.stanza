@@ -23,7 +23,7 @@ the topology configuration, but the user needs to set a `pin-model` statement on
 
 <DOC>
 #use-added-syntax(jitx)
-defpackage jsl/protocols/ethernet-10G-KR:
+defpackage jsl/protocols/ethernet/MDI/e10GBASE-KR:
   import core
   import jitx
   import jitx/commands
@@ -37,13 +37,13 @@ defpackage jsl/protocols/ethernet-10G-KR:
   import jsl/si/constraints
 
 doc: \<DOC>
-@brief 10GBASE-KR Bundle
+@brief e10GBASE-KR Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 @param num-lanes The number of lanes to be configured for this bundle.
 <DOC>
-public pcb-bundle ethernet-10G-KR (num-lanes:Int) :
+public pcb-bundle e10GBASE-KR (num-lanes:Int) :
   name = "10GBASE-KR"
-  description = "10GBASE-KR Ethernet Communications Link"
+  description = "10GBASE-KR Ethernet Backplane Communications Link"
   port lane : lane-pair[num-lanes]
 
 doc: \<DOC>
@@ -59,15 +59,14 @@ in order for the overall skew and loss values to be respected.
 @param cap-dst-src Optional DC blocking capacitor to be inserted between the dst.TX and src.RX signal ends. This capacitor
 covers the reverse direction connection between dst.TX and src.RX. If the second component was a connector, then typically
 no capacitor is inserted between dst.TX and src.RX (cap-dst-src = false).
-@param src This is expected to be a port of `Bundle` type `ethernet-10G-KR`
-@param dst This is expected to be a port of `Bundle` type `ethernet-10G-KR`
+@param src This is expected to be a port of `Bundle` type `e10GBASE-KR`
+@param dst This is expected to be a port of `Bundle` type `e10GBASE-KR`
 @param null-modem If set to true, connects src.TX through the optional cap-src-dst to dst.RX and dst.TX through the optional cap-dst-src to src.RX. 
 If set to false, connects src.TX through the optional cap-src-dst to dst.TX and dst.RX through the optional cap-dst-src to src.RX
 <DOC>
-public defn connect-10G-KR (cons, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, null-modem:True|False) :
+public defn connect-10GBASE-KR (cons:SI-Constraint, cap-src-dst:Instantiable|False, cap-dst-src:Instantiable|False, src:JITXObject, dst:JITXObject, -- null-modem:True|False = false) :
   inside pcb-module :
     val lane-constraint = LaneConstraint(cons)
-    ; check-bundle(ethernet-10G-KR, src, dst)
     if length(src.lane) != length(dst.lane) :
       throw $ Exception("Invalid Port Widths - Different Widths for src/dst")
     for i in indices(src.lane) do :
@@ -112,35 +111,35 @@ Calculating the intra-pair skew distance to time correspondence depends on the m
 see @http://pdf.cloud.opensystemsmedia.com/advancedtca-systems.com/Simclar.Feb08.pdf
 Table 3 where the intra-pair skew is set to 0.0625e-12 and the inter-pair skew
 is set to 0.625e-12. This corresponds roughly to 0.01mm skew intra-pair and 
-0.100mm skew inter-pair (or channel).
+0.100mm skew inter-pair (or lane).
 <DOC>
 
-public defn ethernet-10G-KR-get-skew-loss-vals () -> [Toleranced, Toleranced, Double]:
+public defn e10GBASE-KR-get-skew-loss-vals () -> [Toleranced, Toleranced, Double]:
     [0.0 +/- 0.0625e-12, 0.0 +/- 0.625e-12, 15.0]
 
 doc: \<DOC>
-@brief Differential impedance specified by the 10GBASE-KR standard
+@brief Differential impedance specified by the e10GBASE-KR standard
 This is a helper function that returns the expected differential
-trace impedance for the specified generation of the 10GBASE-KR standard.
+trace impedance for the specified generation of the e10GBASE-KR standard.
 
 @returns Upper/lower limits for the impedance.
 <DOC>
 
-public defn ethernet-10G-KR-get-trace-impedance () -> Toleranced :
+public defn e10GBASE-KR-get-trace-impedance () -> Toleranced :
   100.0 +/- (10 %)  ;   2.5 GT/s
 
 
 doc: \<DOC>
-Construct a ethernet-10G-KR-Constraints object
+Construct a e10GBASE-KR-Constraints object
 
 @param route-struct Differential Pair Routing Structure - Use
 `pcb-differential-routing-structure` to create.
 @return Diff-Pair Constraint Object
 <DOC>
-public defn ethernet-10G-KR-Constraint (
+public defn e10GBASE-KR-Constraint (
   --
   route-struct:DifferentialRoutingStructure
   ) -> DP-Constraint :
-  val [s, c, ml] = ethernet-10G-KR-get-skew-loss-vals()
+  val [s, c, ml] = e10GBASE-KR-get-skew-loss-vals()
   DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
 
