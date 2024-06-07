@@ -1,0 +1,311 @@
+#use-added-syntax(jitx)
+defpackage jsl/pin-assignment/generators:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/bundles
+
+  import jsl/pin-assignment/checks
+
+
+doc: \<DOC>
+Construct a support that will select one of a list of options to satisfy that support.
+
+For example - lets say you have a microcontroller with two IO Ports `A` and `B`.
+Let's say that the MCU supports one timer output on either pins A[1], B[3], B[6].
+
+You could construct this support with:
+
+```
+supports timer:
+  timer.p => one-of(self.A[1], self.B[3], self.B[6])
+```
+
+@param pins list of SinglePin/PortArray/Bundle objects that will be selected from.
+<DOC>
+public defn one-of (pins:JITXObject ...) :
+  ; I define an internal bundle here because I want the
+  ;  temporary `abstract pin` to be inaccessible to the
+  ;  outside world.
+
+  check-matching-port-types(ports = pins)
+
+  pcb-bundle int-pin :
+    pin p
+  inside pcb-module : ; Works for `component` too
+    for p0 in pins do :
+      supports int-pin :
+        int-pin.p => p0
+    require something:int-pin
+    something.p
+
+
+
+doc: \<DOC>
+Swappable Diff-Pair Support Generator from single pins
+
+This function is a generator that constructs the support statements
+for a differential pair on a component or module where the ordering
+of the positive and negative terminals is not necessarily important.
+
+This is most commonly used for cases where:
+
+1.  There is no polarity - for example, an ESD chip does not care
+    whether P or N are swapped. It is going to do the same protection
+    function regardless
+2.  There is some internal circuitry (mux) that allows the user to select the
+    polarity of the signal, possibly by writing a register in firmware.
+
+@param p1 Single Pin that makes up one of the strands of the diff-pair
+@param p2 Single Pin that makes up the other strand of the diff-pair
+<DOC>
+public defn swappable-diff-pair (p1:JITXObject, p2:JITXObject):
+  check-single-pin(p1, p2)
+  inside pcb-component:
+    supports diff-pair :
+      option:
+        diff-pair.N => p1
+        diff-pair.P => p2
+      option:
+        diff-pair.P => p1
+        diff-pair.N => p2
+
+
+doc: \<DOC>
+Swappable Diff-Pair Support Generator from bundle
+
+@param dp Bundle Port of type `diff-pair`. This will construct an abstract pin that
+can be satisfied by either `P/N` or `N/P` as a diff-pair.
+<DOC>
+public defn swappable-diff-pair (dp:JITXObject):
+  check-bundle(diff-pair, dp)
+  inside pcb-component:
+    supports diff-pair :
+      option:
+        diff-pair.N => dp.P
+        diff-pair.P => dp.N
+      option:
+        diff-pair.P => dp.P
+        diff-pair.N => dp.N
+
+
+doc: \<DOC>
+Reversible Diff-Pair Support Generator
+
+This function generates a `supports` statement for a
+`dual-pair`. This supports statement defines two allowable
+configurations:
+
+1.  A => B
+2.  B => A
+
+This is for supporting bidirectional diff-pair where we
+don't care which side is the input vs the output but we do
+care what the P/N ordering is.
+
+@param A diff-pair bundle port instance
+@param B diff-pair bundle port instance
+<DOC>
+public defn reversible-dual-pair (A:JITXObject, B:JITXObject):
+  check-bundle(diff-pair, A, B)
+  inside pcb-module:
+    supports dual-pair :
+      option:
+        dual-pair.A.P => A.P
+        dual-pair.A.N => A.N
+        dual-pair.B.P => B.P
+        dual-pair.B.N => B.N
+      option:
+        dual-pair.A.P => B.P
+        dual-pair.A.N => B.N
+        dual-pair.B.P => A.P
+        dual-pair.B.N => A.N
+
+
+doc: \<DOC>
+Generator to construct a Bidirectional, Swappable Dual Pair support
+
+@param A Expected to be a `diff-pair` bundle for one side of the `dual-pair`
+@param B Expected to be a `diff-pair` bundle for the other side of the `diff-pair`
+<DOC>
+public defn bidir-swappable-dual-pair (A:JITXObject, B:JITXObject):
+  check-bundle(diff-pair, A, B)
+  bidir-swappable-dual-pair(A.P, A.N, B.P, B.N)
+
+doc: \<DOC>
+Generator to construct a Bidirectional, Swappable Dual Pair support
+
+This function constructs a support statement for a dual-pair that allows
+the pairs to be swapped (A => B) or (B => A). In addition, the differential
+pairs can swap (P => N) or (N => P) as long as both sides are consistent.
+
+@param A-P Single pin for P side of a diff-pair for side A of the dual-pair
+@param A-N Single pin for N side of a diff-pair for side A of the dual-pair
+@param B-P Single pin for P side of a diff-pair for side B of the dual-pair
+@param B-N Single pin for N side of a diff-pair for side B of the dual-pair
+<DOC>
+public defn bidir-swappable-dual-pair (A-P:JITXObject, A-N:JITXObject, B-P:JITXObject, B-N:JITXObject):
+  check-single-pin(A-P, A-N, B-P, B-N)
+  inside pcb-module:
+    supports dual-pair :
+      option:
+        dual-pair.A.P => A-P
+        dual-pair.A.N => A-N
+        dual-pair.B.P => B-P
+        dual-pair.B.N => B-N
+      option:
+        dual-pair.A.P => B-P
+        dual-pair.A.N => B-N
+        dual-pair.B.P => A-P
+        dual-pair.B.N => A-N
+      option:
+        dual-pair.A.P => A-N
+        dual-pair.A.N => A-P
+        dual-pair.B.P => B-N
+        dual-pair.B.N => B-P
+      option:
+        dual-pair.A.P => B-N
+        dual-pair.A.N => B-P
+        dual-pair.B.P => A-N
+        dual-pair.B.N => A-P
+
+doc: \<DOC>
+Generate a Bidirectional `pass-through` support
+
+This function expects to be called within a `pcb-component`
+definition.
+
+@param p1 SinglePin object for one side of the pass through.
+@param p2 SinglePin object for the other side of the pass through.
+<DOC>
+public defn add-pass-through (p1:JITXObject, p2:JITXObject) :
+  check-single-pin(p1, p2)
+  inside pcb-component:
+    supports pass-through:
+      option:
+        pass-through.A => p1
+        pass-through.B => p2
+      option:
+        pass-through.A => p2
+        pass-through.B => p1
+
+
+doc: \<DOC>
+Construct a 1:1 Support Mapping for a single, bundle, or array.
+
+This tool is used when generating a mapping inside a `supports/option`
+statement.
+
+This function is recursive.
+
+@param pb This object is either a bundle definition (the top level instance
+in a supports statement) or a JITXObject (ie, a pin).
+@param p2 This is the object being assigned to the supports bundle. It is
+either a single pin, bundle, or array - but must match with its counter part.
+<DOC>
+public defn one-to-one (pb:JITXObject|Bundle, p2:JITXObject) :
+  inside pcb-bundle:
+    match(pb):
+      (b:Bundle):
+        for (b1 in pins(b), pb2 in pins(p2)) do:
+          one-to-one(b1, pb2)
+      (p1:JITXObject):
+        match(port-type(p1), port-type(p2)):
+          (s1:SinglePin, s2:SinglePin):
+            ; NOTE: This is a bit of a hack because there is no
+            ;  `inside supports:` concept for creating generators
+            ;  So I'm accessing the API directly to construct the
+            ;  mappings.
+            val info = FileInfo("pin-assignment.stanza", 236, 1)
+            jitx/client/make-mapping(jitx/commands/JITX-CLIENT, info, p1, p2)
+          (b1:Bundle, b2:Bundle):
+            for (pb1 in pins(p1), pb2 in pins(p2)) do:
+              one-to-one(pb1, pb2)
+          (a1:PortArray, a2:PortArray):
+            for (pa1 in pins(p1), pa2 in pins(p2)) do:
+              one-to-one(pa1, pa2)
+
+doc: \<DOC>
+Construct a N:N crossbar of supports for these ports
+
+This is useful for constructing supports that allow
+the user to map a particular pin/bundle/etc to any
+incoming connection to a bundle of that type.
+<DOC>
+public defn cross-bar (ports:JITXObject ...) :
+  if length(ports) == 0 :
+    throw $ ArgumentError("Expected at least one port argument - Received 0")
+  check-matching-port-types(ports = ports)
+  val b-type = port-type(ports[0]) as Bundle
+  inside pcb-module:
+    for i in 0 to length(ports) do:
+      supports b-type :
+        for pt in ports do:
+          option:
+            one-to-one(b-type, pt)
+
+
+doc: \<DOC>
+Swizzle a Bus Bundle
+
+This constructs a supports statement for a bus bundle.
+A bus bundle is a bundle with one PortArray pin definition.
+The support statement then constructs a cross-bar for the ?
+<DOC>
+public defn swizzle-bus (bus-bundle:JITXObject -- locked:Tuple<Int>) :
+  check-is-bundle?(bus-bundle)
+  val b-type = port-type(bus-bundle) as Bundle
+
+  val b-pins = pins(b-type)
+  ; println("BPins: %_ Type: %_" % [b-pins, port-type(b-pins[0])])
+  val cnt = length(b-pins)
+  if cnt == 0:
+    throw $ ArgumentError("Bundle '%_' expects at least 1 pin: %_" % [name(b-type), cnt])
+
+  val sup-arr = b-pins ; [0]
+  val comp-arr = pins(bus-bundle) ; [0]
+  ; println("CompArr: %_" % [comp-arr])
+
+  ; Check all the lock indices are in range
+  val l-ok = for l-pin in locked all?:
+    (l-pin >= 0) and (l-pin < length(sup-arr))
+
+  if not l-ok:
+    throw $ ArgumentError("Invalid Locked Indices: length(bus)=%_ - Locked=[%,]" % [length(sup-arr), locked] )
+
+  val active = to-tuple $ for i in 0 to length(sup-arr) filter:
+    not contains?(locked, i)
+
+  ; We construct our own bundle types for the response so that
+  ;   we can have it be unique on the module.
+
+  pcb-bundle lane-bit :
+    pin p
+
+  pcb-bundle swiz-Bus :
+    port D : pin[cnt]
+
+  inside pcb-module:
+
+    ; First construct a `lane-bit` supports
+    ;  one for each of the active lane bits
+    ;  We will use these to construct the bus bundle support
+    for i in active do:
+      supports lane-bit:
+        for j in active do:
+          option:
+            lane-bit.p => comp-arr[j]
+
+    ; Construct a swizzle bus from the locked
+    ;  pins and the swizzle'd pins.
+    supports swiz-Bus :
+      for i in 0 to length(sup-arr) do:
+        if contains?(locked, i):
+          swiz-Bus.D[i] => comp-arr[i]
+        else:
+          require lb:lane-bit from self
+          swiz-Bus.D[i] => lb.p
+
+    swiz-Bus

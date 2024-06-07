@@ -1,0 +1,44 @@
+#use-added-syntax(jitx)
+defpackage jsl/pin-assignment/checks:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+
+public defn check-single-pin (p-set:JITXObject ...):
+  for p1 in p-set do:
+    match(port-type(p1)):
+      (x:SinglePin): false
+      (x):
+        throw $ ArgumentError("Expected SinglePin - Received: %_" % [x])
+
+public defn check-is-bundle? (b-set:JITXObject ...) :
+  for p1 in b-set do:
+    match(port-type(p1)):
+      (obs:Bundle): false
+      (x):
+        ; TODO - consolidate exception type here
+        throw $ ArgumentError("Expected Bundle - Received %_" % [x])
+
+public defn check-bundle (exp:Bundle, b-set:JITXObject ...) :
+  for p1 in b-set do:
+    match(port-type(p1)):
+      (obs:Bundle):
+        if obs != exp:
+          throw $ ArgumentError("Expected Bundle '%_' - Observed Bundle '%_'" % [name(exp), name(obs)])
+      (x):
+        throw $ ArgumentError("Expected Bundle - Received: %_" % [x])
+
+public defn check-matching-port-types (ports:JITXObject ...):
+  val ptypes = to-tuple $ for p in ports seq:
+    port-type(p)
+
+  if length(ptypes) < 2:
+    throw $ ArgumentError("This check expects at least 2 Port arguments")
+
+  val expType = ptypes[0]
+  for (ptype in ptypes, i in 1 to false) do:
+    if ptype != expType:
+      val msg = to-string("Port List Index = %_" % [i])
+      throw $ MisMatchPortError(expType, ptype, msg = msg)
