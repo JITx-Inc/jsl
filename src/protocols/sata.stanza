@@ -48,7 +48,7 @@ public pcb-enum jsl/protocols/sata/SATAGen:
 
 doc: \<DOC>
 @brief SATA Bundle
-The Data Bundle consists of 1 lane pairs (1 RX or TX pair)
+The Data Bundle consists of 1 lane pair (1 RX and TX pair)
 <DOC>
 
 public pcb-bundle SATA :
@@ -60,7 +60,7 @@ public pcb-bundle SATA :
 doc: \<DOC>
 @brief Construct the SATA Topology and Constraints
 
-This function constructs the DisplayPort topology and applies constraints
+This function constructs the SATA topology and applies constraints
 to the channel for intra-pair skew and channel loss.
 
 @param sw The intra-pair skew value for the differential signals being connected.

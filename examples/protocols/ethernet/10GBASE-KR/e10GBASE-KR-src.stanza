@@ -52,7 +52,7 @@ val pkg = QFN(
 
 doc: \<DOC>
 @brief e10GBASE-KR dummy component definition
-This definition assumes a BGA component with pins defined per the e10GBASE-KR standard. 
+This definition assumes a QFN component with pins defined per the e10GBASE-KR standard. 
 <DOC>
 
 public pcb-component component :
