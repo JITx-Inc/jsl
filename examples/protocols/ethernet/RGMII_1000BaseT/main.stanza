@@ -10,7 +10,6 @@ defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
 
   import jsl/si/constraints
   import jsl/si/pairs
-  import jsl/si/helpers
   import jsl/protocols/ethernet/MDI/MDI-1000Base-T
   import jsl/protocols/ethernet/MII/RGMII
 
@@ -81,19 +80,20 @@ pcb-component PHY :
 
   pin-properties:
     [pin:Ref | pads:Int ... | side:Dir | group:String]
-    [mii.TX.data[0] | 1 | Left | "TX"]
-    [mii.TX.data[1] | 2 | Left | "TX"]
-    [mii.TX.data[2] | 3 | Left | "TX"]
-    [mii.TX.data[3] | 4 | Left | "TX"]
-    [mii.TX.ctl     | 5 | Left | "TX"]
-    [mii.TX.clk     | 6 | Left | "TX"]
 
-    [mii.RX.data[0] | 12 | Left | "RX"]
-    [mii.RX.data[1] | 13 | Left | "RX"]
-    [mii.RX.data[2] | 14 | Left | "RX"]
-    [mii.RX.data[3] | 15 | Left | "RX"]
-    [mii.RX.ctl     | 16 | Left | "RX"]
-    [mii.RX.clk     | 17 | Left | "RX"]
+    [mii.RX.data[0] | 17 | Left | "RX"]
+    [mii.RX.data[1] | 16 | Left | "RX"]
+    [mii.RX.data[2] | 15 | Left | "RX"]
+    [mii.RX.data[3] | 14 | Left | "RX"]
+    [mii.RX.ctl     | 13 | Left | "RX"]
+    [mii.RX.clk     | 12 | Left | "RX"]
+
+    [mii.TX.data[0] | 6 | Left | "TX"]
+    [mii.TX.data[1] | 5 | Left | "TX"]
+    [mii.TX.data[2] | 4 | Left | "TX"]
+    [mii.TX.data[3] | 3 | Left | "TX"]
+    [mii.TX.ctl     | 2 | Left | "TX"]
+    [mii.TX.clk     | 1 | Left | "TX"]
 
     [mdi.TP[0].P | 22 | Right | "MDI"]
     [mdi.TP[0].N | 23 | Right | "MDI"]
@@ -179,13 +179,14 @@ pcb-module rgmii-1000BaseT-uut:
   val lane-constraint = LaneConstraint(rgmii-constraints)
 
   ; NOTE - currently this will fail with an exception
-  ;   on JITX 3.9.0
+  ;   on JITX 3.9.0 but succeeds on develop
   ; Uncaught Exception: TopologySegmentNotOnPorts(a = [9tHFPCPWyZTut2yBEM9363], b = [11111111115JT1djG9])
   ; TopologySegmentNotOnPorts(a = [3JdzbzsP7z8oZ4jPYvvdWG], b = [11111111115JNJUveq])
   ; TopologySegmentNotOnPorts(a = [D57MKszvyEC3jtWCtFi1gC], b = [11111111115JE7fsM6])
   ; TopologySegmentNotOnPorts(a = [4AyVmePRijodvmZcuAgYy8], b = [11111111115J14VSXd])
   constrain-topology(m.mii => reverse-lane(p.mii), lane-constraint)
-  ; This will succeed.
+  ; This will succeed on JITX 3.9.0 - but would typically be
+  ;  "incorrect" - ie TX => TX instead of TX => RX
   ; constrain-topology(m.mii => p.mii, lane-constraint)
 
   require gig-mdi:MDI-1000Base-T from c
