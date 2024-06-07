@@ -1,0 +1,127 @@
+doc: \<DOC>
+@brief SATA Protocol
+
+SATA is a serial protocol supporting high speed links for storage applications
+@see https://en.wikipedia.org/wiki/SATA
+
+This functions and definitions in this file support defining SATA
+connections between sources and receivers on a printed circuit board.
+
+SATA Revision 1.0 These devices were widely used in personal desktop and office computers, configured from PATA drives daisy chained together in a primary/secondary configuration. SATA Revision 1 devices reached a top transfer rate of 1.5 Gbps.
+SATA Revision 2.0 These devices doubled the transfer speed to 3.2 Gbps with the inclusion of port multipliers, port selectors and improved queue depth.
+SATA Revision 3.0 These interfaces supported drive transfer rates up to 6 Gbps. Revision 3 drives are backward-compatible with SATA Revision 1 and Revision 2 devices, though with lower transfer speeds.
+SATA Revision 3.1 This intermediate revision added final design requirements for SATA Universal Storage Module for consumer-based portable storage applications.
+SATA Revision 3.2 This update added the SATA Express specification. It supports the simultaneous use of SATA ports and PCI Express (PCIe) lanes.
+SATA Revision 3.3 This revision addressed the use of shingled magnetic recording
+SATA Revision 3.5 This change promoted greater integration and interoperability with PCIe flash and other I/O protocols.
+
+@see https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/sata:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/bundles
+  import jsl/pin-assignment
+  import jsl/si/helpers
+  import jsl/si/pairs
+  import jsl/si/constraints
+
+
+doc: \<DOC>
+@brief SATA Generation enums
+This is a fixed list of possible generation definitions for SATA
+<DOC>
+
+public pcb-enum jsl/protocols/sata/SATAGen:
+  SATA1p0  ; 1.5 Gbit/s
+  SATA2p0  ; 3.2 Gbit/s
+  SATA3p0  ; 6.0 Gbit/s
+  SATA3p1  ; 6.0 Gbit/s
+  SATA3p2  ; 6.0 Gbit/s
+  SATA3p3  ; 6.0 Gbit/s
+  SATA3p4  ; 6.0 Gbit/s
+
+doc: \<DOC>
+@brief SATA Bundle
+The Data Bundle consists of 1 lane pairs (1 RX or TX pair)
+<DOC>
+
+public pcb-bundle SATA :
+  name = "SATA"
+  description = "SATA - Serial AT Attachment"
+  port lane : lane-pair
+
+
+doc: \<DOC>
+@brief Construct the SATA Topology and Constraints
+
+This function constructs the DisplayPort topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for all differential signals being connected.
+@param src This is expected to be a port of `Bundle` type `SATA`
+@param dst This is expected to be a port of `Bundle` type `SATA`
+
+<DOC>
+public defn connect-SATA (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(SATA, src, dst)
+    val lane-constraint = LaneConstraint(cons)
+    within [s,d] = constrain-topology(src.lane => dst.lane, lane-constraint) :
+      topo-net(s.TX d.TX)
+      topo-net(s.RX d.RX)
+
+doc: \<DOC>
+@brief Curated values for skew and loss of SATA connection
+This is a helper function that returns the bounds on the intra-pair
+skew timing and maximum loss as expected by the particular standard targeted by
+the user.The values returned are a toleranced value with upper/lower limits for the
+intra-pair skew and the maximum loss as a double representing dB.
+
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+<DOC>
+
+public defn SATA-get-skew-loss-vals (gen:jsl/protocols/sata/SATAGen) -> [Toleranced, Double]:
+  switch(gen) :
+    SATA1p0 : [0.0 +/- 4.0e-12, 15.0] ; 
+    SATA2p0 : [0.0 +/- 2.0e-12, 15.0] ; 
+    SATA3p0 : [0.0 +/- 1.0e-12, 15.0] ; 
+    SATA3p1 : [0.0 +/- 1.0e-12, 15.0] ; 
+    SATA3p2 : [0.0 +/- 1.0e-12, 15.0] ; 
+    SATA3p3 : [0.0 +/- 1.0e-12, 15.0] ; 
+    SATA3p4 : [0.0 +/- 1.0e-12, 15.0] ; 
+
+doc: \<DOC>
+@brief Differential impedance specified by the SATA standard
+This is a helper function that returns the expected differential
+trace impedance.
+
+@returns Upper/lower limits for the impedance.
+<DOC>
+
+public defn SATA-get-trace-impedance () -> Toleranced :
+  90.0 +/- (15 %)
+
+doc: \<DOC>
+Construct a SATA-Constraints object
+
+@param route-struct Differential Pair Routing Structure - Use
+`pcb-differential-routing-structure` to create.
+@return Diff-Pair Constraint Object
+<DOC>
+public defn SATA-Constraint (
+  --
+  route-struct:DifferentialRoutingStructure
+  gen:jsl/protocols/sata/SATAGen = SATA3p0
+  ) -> DP-Constraint :
+  val [s, ml] = SATA-get-skew-loss-vals(gen)
+  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
