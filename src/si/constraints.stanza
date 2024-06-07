@@ -79,7 +79,15 @@ public defn DP-Constraint (
   ) -> DP-Constraint:
   #DP-Constraint(skew, loss, route-struct)
 
-public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+doc: \<DOC>
+Constrain Interface for DP-Constraint
+
+Making this function public makes it easier to derive
+from DP-Constraint and override it's constrain method.
+
+@see {@link SI-Constraint}
+<DOC>
+public defn dp-constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
   ; We're not necessarily guaranteed that the src and dst will be the
   ; true end points. We use the signal-end concept to make sure we are applying
   ; constraints over the entire topology.
@@ -91,6 +99,8 @@ public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -
   max-loss(loss(cst), route)
   diff-structure(route-struct(cst), route)
 
+public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  dp-constrain(cst, src, dst)
 
 doc: \<DOC>
 Construct and Constrain a Signal Topology

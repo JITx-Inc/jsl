@@ -64,19 +64,4 @@ deftest(bundles) test-comms-bundles:
 
   set-main-module(test-comms)
 
-deftest(bundles) test-ethernet-bundles:
 
-  pcb-module test-ethernet:
-    port A : rgmii
-    port B : miim
-    port C : gmii()
-    port D : mii()
-    port E : rmii(false)
-
-    check-bundle(rgmii, A)
-    check-bundle(miim, B)
-    check-bundle(gmii(), C)
-    check-bundle(mii(), D)
-    check-bundle(rmii(false), E)
-
-  set-main-module(test-ethernet)

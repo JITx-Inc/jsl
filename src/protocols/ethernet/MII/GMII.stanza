@@ -1,0 +1,45 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/MII/GMII:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/protocols/ethernet/utils
+
+public val GMII_BUS_WIDTH = 8
+
+pcb-bundle gmii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
+  name = "GMII"
+  port txd : pin[GMII_BUS_WIDTH]
+  port rxd : pin[GMII_BUS_WIDTH]
+
+  pin gtx-clk
+  pin tx-clk
+  pin tx-en
+
+  pin rx-clk
+  pin rx-dv
+  pin rx-er
+
+  inject-optional-mii-pins(pins)
+
+doc: \<DOC>
+Gigabit Media Independent Interface (GMII) Bundle Generator
+@see https://en.wikipedia.org/wiki/Media-independent_interface#GMII
+
+@param pins Enable flags for optional ports
+
+@member txd Transmit Data Bus
+@member rxd Receive Data Bus
+@member gtx-clk Gigabit Clock (125MHz)
+@member tx-clk Transmit Clock for 10/100Mbit
+@member tx-en Transmit Enable
+@member tx-er Optional Transmit Error Signal
+@member rx-clk Received Clock Line
+@member rx-dv Data Valid Line
+@member rx-er Receive Error Line
+@member col Optional Collision Detect (half-duplex only)
+@member cs Optional Carrier Sense Line (half-duplex only)
+<DOC>
+public defn gmii (pins:jsl/protocols/ethernet/utils/MIIPins ...) :
+  gmii-b(pins)

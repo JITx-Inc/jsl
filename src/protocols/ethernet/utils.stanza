@@ -1,0 +1,21 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/utils:
+  import core
+  import jitx
+  import jitx/commands
+
+public pcb-enum jsl/protocols/ethernet/utils/MIIPins :
+  MII-COL ; Collision
+  MII-CS ; Carrier Sense
+  MII-TXER ; Transmit Error
+
+doc: \<DOC>
+Utility for constructing MII bundles
+<DOC>
+public defn inject-optional-mii-pins (pins:Collection<MIIPins>) :
+  inside pcb-bundle:
+    for p in pins do :
+      switch(p) :
+        MII-COL: make-pin(`col)
+        MII-CS: make-pin(`cs)
+        MII-TXER: make-pin(`tx-er)

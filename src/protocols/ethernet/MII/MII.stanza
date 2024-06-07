@@ -1,0 +1,47 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/MII/MII:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/protocols/ethernet/utils
+
+public val MII_BUS_WIDTH = 4
+
+pcb-bundle mii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
+  name = "MII"
+  port txd : pin[MII_BUS_WIDTH]
+  port rxd : pin[MII_BUS_WIDTH]
+
+  pin tx-clk
+  pin tx-en
+
+  pin rx-clk
+  pin rx-dv
+  pin rx-er
+
+  inject-optional-mii-pins(pins)
+
+doc: \<DOC>
+Media Independent Interface (MII) Bundle Generator
+@see https://en.wikipedia.org/wiki/Media-independent_interface#Standard_MII
+
+@param pins Optional pins for:
+*  `col` - Collision
+*  `cs` - Carrier Sense
+*  `tx-er` - Transmit Error
+
+@member txd Transmit Data Bus
+@member rxd Receive Data Bus
+@member tx-clk Transmit Clock for 10/100Mbit
+@member tx-en Transmit Enable
+@member tx-er Optional Transmit Error Signal
+
+@member rx-clk Received Clock Line
+@member rx-dv Data Valid Line
+@member rx-er Receive Error Line
+@member col Optional Collision Detect (half-duplex only)
+@member cs Optional Carrier Sense Line (half-duplex only)
+<DOC>
+public defn mii (pins:jsl/protocols/ethernet/utils/MIIPins ...) :
+  mii-b(pins)
