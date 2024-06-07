@@ -1,0 +1,161 @@
+#use-added-syntax(jitx)
+defpackage jsl/pin-assignment/circuit-pool:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/utils
+  import jsl/pin-assignment
+
+doc: \<DOC>
+BundleStack is a type for informing how many bundles are available in an instance.
+
+The idea would be that you might have a component like a quad AND gate IC and you want
+to communicate how many `gate(2)` bundles you can extract from that IC instance.
+
+TODO - In the future, we will add the ability to introspect an instance
+for the bundle types and the number of supports. But for now we
+need to explicitly describe the bundle and number of supports.
+
+<DOC>
+public defstruct BundleStack:
+  doc: \<DOC>
+  Bundle Type that this instantiable provides.
+  <DOC>
+  b:Bundle
+  doc: \<DOC>
+  Number of supports for the `b` Bundle in this instantiable.
+  <DOC>
+  num-supports:Int
+
+val DEF_CT_NAME = "unnamed"
+
+doc: \<DOC>
+Circuit Template provides Support Features for the Pool
+
+TODO - In the future, we add the ability to introspect an instance
+for the bundle types and the number of supports. But for now we
+need to explicitly describe the bundle and number of supports.
+
+<DOC>
+public defstruct CircuitTemplate:
+  doc: \<DOC>
+  Instantiable that will provide our supports for the pool
+  <DOC>
+  comp:Instantiable
+  doc: \<DOC>
+  Collection of {@link BundleStack} to describe what supports are provided.
+
+  We will use this list to unpack and consolidate all of the supports available
+  from the component instance.
+  <DOC>
+  stack:Collection<BundleStack>
+  doc: \<DOC>
+  Identifier name - primarily for differentiating multiple component types in a mixed pool
+  <DOC>
+  name:String with: (
+    default => DEF_CT_NAME
+  )
+with:
+  constructor => #CircuitTemplate
+
+doc: \<DOC>
+Construct a Circuit Template for a single Bundle Type.
+<DOC>
+public defn CircuitTemplate (comp:Instantiable, b:Bundle, num-supports:Int -- name = DEF_CT_NAME) -> CircuitTemplate :
+  val s = BundleStack(b, num-supports)
+  #CircuitTemplate(comp, [s], name)
+
+doc: \<DOC>
+Construct a Circuit Template for multiple BundleStacks
+<DOC>
+public defn CircuitTemplate (comp:Instantiable, bs:Seqable<BundleStack> -- name = DEF_CT_NAME) -> CircuitTemplate :
+  #CircuitTemplate(comp, to-tuple(bs), name)
+
+doc: \<DOC>
+Generator to construct the implementation of a Circuit Pool
+
+This function is intended to be called from a `pcb-module` context.
+
+In that `pcb-module` context, an InstanceArray named `pool` is created from the CircuitTemplate.
+This function will consolidate all of the `supports` statements from each instance of the
+pool array and make them available on this module.
+
+
+@param template This defines the `Instantiable` that we will instantiate and the number of supports that
+each instance possesses. We use this information to construct the consolidated supports
+@param num-insts Number of instances of the template to construct.
+<DOC>
+public defn make-circuit-pool (template:CircuitTemplate, num-insts:Int):
+  inside pcb-module:
+    val name-symb = to-symbol $ "pool-%_" % [name(template)]
+    val array = InstantiableArray(comp(template), num-insts)
+    val pool = make-inst(name-symb, array, true )
+    ; inst (name-symb) : comp(template)[num-insts]
+
+    for i in 0 to num-insts do:
+      for bs in stack(template) do:
+        val b-type = b(bs)
+        for ch in 0 to num-supports(bs) do:
+          supports b-type:
+            require ch-port:b-type from pool[i]
+            one-to-one(b-type, ch-port)
+
+doc: \<DOC>
+Create a Circuit Pool Instantiable from a Template
+
+This function will use `make-circuit-pool` to construct an
+instantiable module that will consolidate the supports from  `num-insts`
+number of `template` circuits into one module.
+
+This allows for the supports across multiple packages to be used
+interchangeably in a pin assignment problem.
+
+@param template This defines the `Instantiable` that we will instantiate and the number of supports that
+each instance possesses. We use this information to construct the consolidated supports
+@param num-insts Number of instances of the template to construct.
+
+@return A `pcb-module` definition that can be instaniated to create a pool
+<DOC>
+public defn create-circuit-pool (template:CircuitTemplate, num-insts:Int) -> Instantiable:
+  pcb-module circuit-pool:
+    name = to-string $ "circuit-pool-%_" % [name(template)]
+    make-circuit-pool(template, num-insts)
+  circuit-pool
+
+doc: \<DOC>
+Create a Circuit Pool Instantiablel from a heterogenous mixture of Templates
+
+This function will use `make-circuit-pool` to construct an
+instantiable module that will consolidate the supports from a mix of different
+types of templates.
+
+For example, you might want to create a pool of AND gates from quad and dual packages
+to minimize space and maximize utilization.
+
+@param templates A KeyValue set of Template and Number of Instances of that template to create.
+The user can pass as many of these as they like.
+@return A `pcb-module` definition that can be instaniated to create a pool
+
+<DOC>
+public defn create-circuit-pool (templates:KeyValue<CircuitTemplate, Int> ...) -> Instantiable:
+  defn hetero-name () -> String:
+    val names = for template in templates seq:
+      name $ key(template)
+    to-string $ "circuit-pool-hetero(%,)" % [names]
+
+  pcb-module circuit-pool:
+    name = hetero-name()
+    for kvp in templates do:
+      val [template, num-insts] = unpack(kvp)
+      make-circuit-pool(template, num-insts)
+
+  circuit-pool
+
+
+
+
+
+
+
