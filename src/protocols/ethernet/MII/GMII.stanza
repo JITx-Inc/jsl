@@ -1,18 +1,19 @@
 #use-added-syntax(jitx)
-defpackage jsl/protocols/ethernet/MII:
+defpackage jsl/protocols/ethernet/MII/GMII:
   import core
   import jitx
   import jitx/commands
 
   import jsl/protocols/ethernet/utils
 
-public val MII_BUS_WIDTH = 4
+public val GMII_BUS_WIDTH = 8
 
-pcb-bundle mii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
-  name = "MII"
-  port txd : pin[MII_BUS_WIDTH]
-  port rxd : pin[MII_BUS_WIDTH]
+pcb-bundle gmii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
+  name = "GMII"
+  port txd : pin[GMII_BUS_WIDTH]
+  port rxd : pin[GMII_BUS_WIDTH]
 
+  pin gtx-clk
   pin tx-clk
   pin tx-en
 
@@ -23,25 +24,22 @@ pcb-bundle mii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
   inject-optional-mii-pins(pins)
 
 doc: \<DOC>
-Media Independent Interface (MII) Bundle Generator
-@see https://en.wikipedia.org/wiki/Media-independent_interface#Standard_MII
+Gigabit Media Independent Interface (GMII) Bundle Generator
+@see https://en.wikipedia.org/wiki/Media-independent_interface#GMII
 
-@param pins Optional pins for:
-*  `col` - Collision
-*  `cs` - Carrier Sense
-*  `tx-er` - Transmit Error
+@param pins Enable flags for optional ports
 
 @member txd Transmit Data Bus
 @member rxd Receive Data Bus
+@member gtx-clk Gigabit Clock (125MHz)
 @member tx-clk Transmit Clock for 10/100Mbit
 @member tx-en Transmit Enable
 @member tx-er Optional Transmit Error Signal
-
 @member rx-clk Received Clock Line
 @member rx-dv Data Valid Line
 @member rx-er Receive Error Line
 @member col Optional Collision Detect (half-duplex only)
 @member cs Optional Carrier Sense Line (half-duplex only)
 <DOC>
-public defn mii (pins:jsl/protocols/ethernet/utils/MIIPins ...) :
-  mii-b(pins)
+public defn gmii (pins:jsl/protocols/ethernet/utils/MIIPins ...) :
+  gmii-b(pins)
