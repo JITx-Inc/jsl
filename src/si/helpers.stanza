@@ -132,7 +132,7 @@ This is a simplified model of the pin characteristics of a component.
 This function must be used inside a `pcb-component` context.
 
 @param p1 Pin A of a differential input to this component.
-@param p2 Pin B of a differential input this this component.
+@param p2 Pin B of a differential input to this component.
 @param delay Expected delay due to the physical pin connections. This is used for computing
 the timing parameters of a topology connected to this pin.
 @param loss Expected loss due to the physical pin connections. This is primarily
@@ -159,6 +159,7 @@ public defn diff-pin-model (
   --
   delay:Toleranced, loss:Toleranced = typ(0.0)
   ) :
+  check-bundle(diff-pair, dp)
   inside pcb-component:
     pin-model(dp.P) = PinModel(delay, loss)
     pin-model(dp.N) = PinModel(delay, loss)
@@ -206,6 +207,7 @@ Construct a in-place swap of the P/N signals of a `diff-pair` bundle.
 to the input `p` port.
 <DOC>
 defn reverse-pair (p:JITXObject) :
+  check-bundle(diff-pair, p)
   inside pcb-module:
     node temp:diff-pair
     topo-net(p.P, temp.N)
@@ -303,7 +305,7 @@ This function must be called in a `pcb-module` context.
 @param ep-sets sequence of KeyValue<Port,Port> for the matching terminals of a topology.
 <DOC>
 public defn max-loss (max-dB:Double, ep-sets:KeyValue<JITXObject, JITXObject> ...):
-  insertion-loss-limit( min-max(0.0, max-dB), ep-sets = ep-sets)
+  insertion-loss-limit(min-max(0.0, max-dB), ep-sets = ep-sets)
 
 doc: \<DOC>
 Add a time delay limiter for a set of endpoints.

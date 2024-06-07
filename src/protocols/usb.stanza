@@ -6,7 +6,7 @@ This package contains the definitions for the Universal Serial Bus protocol.
 @see https://en.wikipedia.org/wiki/USB
 @see https://www.usb.org/
 
-##  Transport vs Connnector Bundles
+##  Transport vs Connector Bundles
 
 The USB protocol contains many different layers from physical to logical. The bundles in
 this package are organized to support two levels in the application:

@@ -108,7 +108,7 @@ Construct and Constrain a Signal Topology
 This function is used with the `within` clause to allow
 the user to construct the topology inside the body of the
 `within` clause. This function then handles setting the
-contraints on the diff-pair channel after the topology
+constraints on the diff-pair channel after the topology
 is constructed via the `SI-Constraint` object.
 
 The topology construction uses the `src` and `dst` endpoints

@@ -1,0 +1,143 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src :
+  import core
+  import jitx
+  import jitx/commands
+  import math
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/helpers
+
+  import jsl/design/settings
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/ethernet/MDI/e10GBASE-KR
+
+doc: \<DOC>
+@brief e10GBASE-KR dummy component
+The component defined in this file is an example of how to enable a 10GBASE-KR interface
+on a component. The component demonstrates the use of JSL land-patterns and symbols.
+<DOC>
+
+val pkg = QFN(
+  num-leads = 32,
+  lead-profile = QFN-Lead-Profile(
+    span = 5.0 +/- 0.05,
+    pitch = 0.5,
+    lead-length = 0.4 +/- 0.05,
+    lead-width = 0.25 +/- 0.05
+  ),
+  thermal-lead? = Rectangle(3.7, 3.7),
+  package-body = PackageBody(
+    width = 5.0 +/- 0.05,
+    length = 5.0 +/- 0.05,
+    height = 0.8 +/- 0.05
+  ),
+  pad-planner = Corner-PadPlanner(
+    chamfered-corner-shaper(0.15),
+    rect-shaper,
+    8
+  )
+  density-level = DensityLevelA
+)
+
+
+doc: \<DOC>
+@brief e10GBASE-KR dummy component definition
+This definition assumes a BGA component with pins defined per the e10GBASE-KR standard. The component has a single 
+DP source or sink port per the argument.
+@param source:True|False defines whether the component is a DP source (true) or DP sink (false)
+<DOC>
+
+public pcb-component component :
+  reference-prefix = "U"
+  mpn = "JITX002"
+  description = "Dummy device with 1-4 configurable number of lanes of 10GBASE-KR"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    for i in 1 through 32 do :
+      [ A[i]    | p[i]  ]
+
+  assign-landpattern(create-landpattern(pkg))
+  val box = BoxSymbol(self)
+
+  for i in 1 through 32 do :
+    if i % 2 == 0:
+      set-side(Right, self.A[i])
+    else :
+      set-side(Left, self.A[i])
+  assign-symbol(create-symbol(box))
+
+  for i in 0 to 16 do :
+    supports diff-pair :
+      diff-pair.P => self.A[i * 2 + 1]
+      diff-pair.N => self.A[i * 2 + 2]
+
+
+public pcb-module module (-- invert:True|False = false):
+
+  public inst sw : component
+
+  val NUM-IO = 32
+  for num-lanes in [1, 2, 4] do :
+    val num-options:Int = NUM-IO / (num-lanes * 4)
+    val e-10G = e10GBASE-KR(num-lanes)
+    for i in 0 to num-options do :
+      supports e-10G :
+        for sub-lane-count in 0 to num-lanes do :
+          require dp-t : diff-pair from sw
+          require dp-r : diff-pair from sw
+          if invert :
+            e-10G.lane[sub-lane-count].TX.P => dp-t.N
+            e-10G.lane[sub-lane-count].TX.N => dp-t.P
+            e-10G.lane[sub-lane-count].RX.P => dp-r.N
+            e-10G.lane[sub-lane-count].RX.N => dp-r.P
+          else :
+            e-10G.lane[sub-lane-count].TX.P => dp-t.P
+            e-10G.lane[sub-lane-count].TX.N => dp-t.N
+            e-10G.lane[sub-lane-count].RX.P => dp-r.P
+            e-10G.lane[sub-lane-count].RX.N => dp-r.N
+
+
+pcb-landpattern edge-fingers (nf:Int):
+  for i in 1 through nf / 2 :
+    pad p[i] : smd-pad(0.7, 3.91) at loc(to-double(i), 0.0) on Top
+    pad p[i + nf / 2] : smd-pad(0.7, 3.91) at loc(to-double(i), 0.0) on Bottom
+
+public pcb-component edge-connector :
+  val NUM-PADS = 32
+    pin-properties :
+      [ pin : Ref | pads : Int ... ]
+      for i in 1 through NUM-PADS do :
+        [ p[i]    | i  ]
+  
+  assign-landpattern(edge-fingers(NUM-PADS))
+  val box = BoxSymbol(self)
+  assign-symbol(create-symbol(box))
+
+  for i in 0 to 16 do :
+    supports diff-pair :
+      diff-pair.P => self.p[i * 2 + 1]
+      diff-pair.N => self.p[i * 2 + 2]
+
+  for num-lanes in [1, 2, 4] do :
+    val num-options:Int = NUM-PADS / (num-lanes * 4)
+    val e-10G = e10GBASE-KR(num-lanes)
+    for i in 0 to num-options do :
+      supports e-10G :
+        for sub-lane-count in 0 to num-lanes do :
+          require dp-t : diff-pair
+          require dp-r : diff-pair
+          e-10G.lane[sub-lane-count].TX.P => dp-t.P
+          e-10G.lane[sub-lane-count].TX.N => dp-t.N
+          e-10G.lane[sub-lane-count].RX.P => dp-r.P
+          e-10G.lane[sub-lane-count].RX.N => dp-r.N

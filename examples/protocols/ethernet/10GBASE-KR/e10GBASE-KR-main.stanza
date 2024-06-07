@@ -1,0 +1,48 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+
+  import jsl/protocols/ethernet/MDI/e10GBASE-KR
+  import jsl/si/helpers
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+  import jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src
+
+
+pcb-module e10GBASE-KR-example :
+  
+  inst dut1  : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/module(invert = false)
+  inst dut2  : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/module(invert = true)
+  inst conn1 : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/edge-connector
+  require src1 : e10GBASE-KR(2) from dut1
+  require src2 : e10GBASE-KR(2) from dut1
+  require dst1 : e10GBASE-KR(2) from dut2
+  require con1 : e10GBASE-KR(2) from conn1
+
+
+  val ti-10G = e10GBASE-KR-get-trace-impedance()
+  val e10GBASE-KR-constraints = e10GBASE-KR-Constraint(route-struct = diff(ti-10G))
+
+  connect-10GBASE-KR(e10GBASE-KR-constraints, block-cap(100.0e-9), false, src2, con1, null-modem = false)
+  connect-10GBASE-KR(e10GBASE-KR-constraints, block-cap(100.0e-9), block-cap(100.0e-9), src1, dst1, null-modem = true)
+
+
+set-current-design("e10GBASE-KR-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-B)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(e10GBASE-KR-example)
+
+; View the results
+view-design-explorer()
+view-schematic()
+view-board()
