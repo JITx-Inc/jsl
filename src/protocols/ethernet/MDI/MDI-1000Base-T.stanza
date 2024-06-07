@@ -1,0 +1,153 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/MDI/MDI-1000Base-T:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si/constraints
+  import jsl/si/helpers
+
+public val NUM_PAIRS_1000Base-T = 4
+
+doc: \<DOC>
+1000Base-T MDI Bundle
+
+@member TP Array of 4 diff-pairs for the 4 twisted pairs
+that make up the 1000Base-T medium. The pairs are zero
+indexed and the mapping from index to pair identifiers is
+0 => A
+1 => B
+2 => C
+3 => D
+
+<DOC>
+public pcb-bundle MDI-1000Base-T:
+  name = "1000Base-T"
+  port TP : diff-pair[NUM_PAIRS_1000Base-T]
+
+
+doc: \<DOC>
+Construct a 1000Base-T Supports Statement
+
+@param dps Diff-Pairs that make up the A, B, C, D
+twisted pairs of the MDI. Note that these arguments
+are expected to be passed in the right order - otherwise,
+we may setup the wrong pin assignment constraints.
+<DOC>
+public defn make-1000Base-T-supports (dps:JITXObject ...):
+  if length(dps) != 4:
+    throw $ ValueError("Expected 4 diff-pair objects - Received %_" % [length(dps)])
+
+  ; We can swap A & B or
+  ; We can swap C & D
+  ; but we can mix between AB and CD - that is verboten
+  ; because the auto MDI operates over AB
+  val pair-maps = [
+    [0, 1, 2, 3], ; Straight Through
+    [1, 0, 2, 3], ; A/B swapped
+    [0, 1, 3, 2], ; C/D swapped
+    [1, 0, 3, 2], ; A/B & C/D swapped
+  ]
+  inside pcb-module:
+    supports MDI-1000Base-T:
+      for pair-map in pair-maps do:
+        option:
+          for i in 0 to NUM_PAIRS_1000Base-T do:
+            val j = pair-map[i]
+            MDI-1000Base-T.TP[i].P => dps[j].P
+            MDI-1000Base-T.TP[i].N => dps[j].N
+
+
+; Constraints
+public defn MDI-1000Base-T-get-skew-loss () -> [Toleranced, Double]:
+  [0.0 +/- (1.6e-12 / 2.0), 12.0]
+
+public defn MDI-1000Base-T-get-trace-impedance () -> Toleranced :
+  95.0 +/- (15 %)
+
+public defn MDI-1000Base-T-get-pair-to-pair-skew () -> Toleranced :
+  0.0 +/- (330.0e-12 / 2.0)
+
+
+public defstruct MDI-1000Base-T-Constraint <: DP-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Limit in Seconds
+  This value is typically something like `0 +/- (10.0e-12)`
+  <DOC>
+  skew:Toleranced  with: (as-method => true)
+  doc: \<DOC>
+  Max Loss Limit in dB
+  <DOC>
+  loss:Double with: (
+    ensure => ensure-positive!,
+    as-method => true
+    )
+
+  doc: \<DOC>
+  Differential Routing Structure for defining the geometry of the diff-pair
+
+  The user will define a `pcb-differential-routing-structure` and then pass that
+  by ref to this field. This will define how this differential pair realizes in
+  the board view.
+  <DOC>
+  route-struct:DifferentialRoutingStructure with: (as-method => true)
+
+  doc: \<DOC>
+  Max skew between diff-pairs (not between P/N)
+  <DOC>
+  inter-skew:Toleranced
+with:
+  constructor => #MDI-1000Base-T-Constraint
+
+doc: \<DOC>
+SI Constraint For 1000Base-T MDI
+
+This constraint assumes the endpoints are {@link MDI-1000Base-T}
+bundles. The code will construct the necessary skew
+and loss constraints for this bundle according to the
+pass configurations.
+
+@param skew Intra-pair skew for the P/N of the diff-pair
+@param loss Max Loss for any of the diff-pairs
+@param route-struct User provided routing structure for each of the
+diff-pair bundles of the MDI.
+@param inter-skew Inter-pair skew between `TP` diff-pairs.
+<DOC>
+public defn MDI-1000Base-T-Constraint (
+  --
+  skew:Toleranced
+  loss:Double
+  route-struct:DifferentialRoutingStructure
+  inter-skew:Toleranced
+  ) -> MDI-1000Base-T-Constraint:
+  #MDI-1000Base-T-Constraint(skew, loss, route-struct, inter-skew)
+
+doc: \<DOC>
+Construct a Constraint for 1000Base-T MDI with default specs
+
+@param route-struct User provided routing structure for each of the
+diff-pair bundles of the MDI.
+<DOC>
+public defn MDI-1000Base-T-Constraint (
+  --
+  route-struct:DifferentialRoutingStructure
+  ) -> MDI-1000Base-T-Constraint :
+  val [s, ml] = MDI-1000Base-T-get-skew-loss()
+  val int-skew = MDI-1000Base-T-get-pair-to-pair-skew()
+  #MDI-1000Base-T-Constraint(s, ml, route-struct, int-skew)
+
+public defmethod constrain (cst:MDI-1000Base-T-Constraint, src:JITXObject, dst:JITXObject) -> False :
+
+  for i in 0 to NUM_PAIRS_1000Base-T do:
+    dp-constrain(cst, src.TP[i], dst.TP[i])
+
+  ; For each of the pairs - we want to institute a maximum
+  ; inter-pair skew limit
+  timing-window(
+    inter-skew(cst)
+    src.TP[0].P => dst.TP[0].P,
+    src.TP => dst.TP
+    )
