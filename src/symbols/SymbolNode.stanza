@@ -393,7 +393,7 @@ Note that this is applied before the scaling operation.
 the parent's scale factor is used.
 @param name Sets the id name for this child if any
 @param class Set class names that apply to this child.
-@returns Child node in the symbol scene graph.
+@return Child node in the symbol scene graph.
 <DOC>
 public defn create-child (
   sn:SymbolNode

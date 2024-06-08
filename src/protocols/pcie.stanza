@@ -209,7 +209,7 @@ doc: \<DOC>
 This is a helper function that returns the expected differential
 trace impedance for the specified generation of the PCIe standard.
 
-@returns Upper/lower limits for the impedance.
+@return Upper/lower limits for the impedance.
 <DOC>
 
 public defn pcie-get-trace-impedance (gen:jsl/protocols/pcie/PCIeVersion) -> Toleranced :

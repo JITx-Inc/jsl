@@ -49,6 +49,7 @@ public pcb-enum jsl/protocols/sata/SATAGen:
 doc: \<DOC>
 @brief SATA Bundle
 The Data Bundle consists of 1 lane pair (1 RX and TX pair)
+@member lane Lane pair for the SATA bundle (consists of a TX and RX diff pair)
 <DOC>
 
 public pcb-bundle SATA :
@@ -105,7 +106,7 @@ doc: \<DOC>
 This is a helper function that returns the expected differential
 trace impedance.
 
-@returns Upper/lower limits for the impedance.
+@return Upper/lower limits for the impedance.
 <DOC>
 
 public defn SATA-get-trace-impedance () -> Toleranced :

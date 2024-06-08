@@ -18,7 +18,7 @@ producing different signal inputs and outputs.
 
 @param base The base name of the Refs to be constructed. Both
 constructed refs will have this as a prefix.
-@returns Tuple of two Refs `[PosRef, NegRef]` where `PosRef`
+@return Tuple of two Refs `[PosRef, NegRef]` where `PosRef`
 is the reference for the positive input and `NegReg` is the
 reference for the negative input.
 <DOC>
