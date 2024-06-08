@@ -100,7 +100,7 @@ pass to `topo-net` for constructing a daisy-chain topology.
 @param accessor Function that will be passed one of the instances from the
 `obj` Instance array (or the instance itself) to acquire the port of interest
 for constructing the `KeyValue` chain.
-@returns A recursive `KeyValue` chain of ports. This `KeyValue` object can be passed
+@return A recursive `KeyValue` chain of ports. This `KeyValue` object can be passed
 to `topo-net` to construct a series topology.
 
 @snippet

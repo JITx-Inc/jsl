@@ -1,0 +1,130 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/sata/SATA-src :
+  import core
+  import jitx
+  import jitx/commands
+  import math
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/BGA
+  import jsl/landpatterns/QFN
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/pads
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/helpers
+
+  import jsl/design/settings
+  import jsl/si/helpers
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/sata
+
+doc: \<DOC>
+@brief SATA dummy component
+The component defined in this file is an example of how to enable a SATA interface
+on a component. The component demonstrates the use of JSL land-patterns and symbols.
+<DOC>
+
+val pkg = QFN(
+  num-leads = 32,
+  lead-profile = QFN-Lead-Profile(
+    span = 5.0 +/- 0.05,
+    pitch = 0.5,
+    lead-length = 0.4 +/- 0.05,
+    lead-width = 0.25 +/- 0.05
+  ),
+  thermal-lead? = Rectangle(3.7, 3.7),
+  package-body = PackageBody(
+    width = 5.0 +/- 0.05,
+    length = 5.0 +/- 0.05,
+    height = 0.8 +/- 0.05
+  ),
+  pad-planner = Corner-PadPlanner(
+    chamfered-corner-shaper(0.15),
+    rect-shaper,
+    8
+  )
+  density-level = DensityLevelA
+)
+
+
+doc: \<DOC>
+@brief SATA dummy component definition
+This definition assumes a QFN component with pins defined per the SATA standard.
+<DOC>
+
+public pcb-component component :
+  reference-prefix = "U"
+  mpn = "JITX003"
+  description = "Dummy device with one SATA port"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    for i in 1 through 32 do :
+      [ A[i]    | p[i]  ]
+
+  assign-landpattern(create-landpattern(pkg))
+  val box = BoxSymbol(self)
+
+  for i in 1 through 32 do :
+    if i % 2 == 0:
+      set-side(Right, self.A[i])
+    else :
+      set-side(Left, self.A[i])
+  assign-symbol(create-symbol(box))
+
+  for i in 0 to 16 do :
+    supports diff-pair :
+      diff-pair.P => self.A[i * 2 + 1]
+      diff-pair.N => self.A[i * 2 + 2]
+
+
+public pcb-module module (-- invert:True|False = false):
+
+  public inst ctrl : component
+
+  val NUM-IO = 32
+  val num-options = 8
+  for i in 0 to num-options do :
+    supports SATA :
+      require dp-t : diff-pair from ctrl
+      require dp-r : diff-pair from ctrl
+        if invert :
+          SATA.lane.TX.P => dp-t.N
+          SATA.lane.TX.N => dp-t.P
+          SATA.lane.RX.P => dp-r.N
+          SATA.lane.RX.N => dp-r.P
+        else :
+          SATA.lane.TX.P => dp-t.P
+          SATA.lane.TX.N => dp-t.N
+          SATA.lane.RX.P => dp-r.P
+          SATA.lane.RX.N => dp-r.N
+
+
+pcb-landpattern sata-lp :
+  for i in 1 through 7 :
+    pad p[i] : smd-pad(0.80, 2.40) at loc(-1.27 * to-double(i - 1), 0.0) on Top
+
+  pad p[8] : pth-pad(1.35) at loc(2.46, -1.0)
+  pad p[9] : pth-pad(1.35) at loc(-6.0 * 1.27 - 2.46, 0.00)
+  layer(Courtyard(Top)) = Rectangle(16.83, 6.45, loc(-3.0 * 1.27, -1.29  / 2.0))
+
+
+public pcb-component sata-connector :
+  port sata : SATA
+  port GND : pin
+
+  pin-properties :
+    [ pin : Ref | pads : Int ... ]
+    [ GND            | 1 4 7 8 9 ]
+    [ sata.lane.TX.P | 2         ]
+    [ sata.lane.TX.N | 3         ]
+    [ sata.lane.RX.N | 5         ]
+    [ sata.lane.RX.P | 6         ]
+  
+  assign-landpattern(sata-lp)
+  val box = BoxSymbol(self)
+  assign-symbol(create-symbol(box))
+

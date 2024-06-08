@@ -193,7 +193,7 @@ doc: \<DOC>
 This is a helper function that returns the expected differential
 trace impedance for the specified generation of the DisplayPort standard.
 
-@returns Upper/lower limits for the impedance.
+@return Upper/lower limits for the impedance.
 <DOC>
 
 public defn displayport-get-trace-impedance () -> Toleranced :

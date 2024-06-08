@@ -1007,7 +1007,7 @@ Check for an active grid
 Components like resistors, capacitors, etc might not have an active grid.
 
 @param b Box Symbol object
-@returns boolean that indicates of a grid is present on this symbol or not.
+@return boolean that indicates of a grid is present on this symbol or not.
 <DOC>
 public defn has-grid? (b:BoxSymbol) -> True|False :
   active-grid?(grid(b))

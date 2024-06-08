@@ -56,7 +56,7 @@ we are attempting to inspect. This will typically be a port from an internal
 component or abstract port.
 
 @param conn `Pin` object from a `pcb-module`
-@returns The signal end port for this topology. In most applications, this is
+@return The signal end port for this topology. In most applications, this is
 a `Pin` object from a `pcb-component` instance.
 @throws NoSignalEndError When the passed port object does not have a defined
 `signal-end`.
@@ -76,7 +76,7 @@ This function searches through a tree of pcb-module ports to find
 the physical signal end port on a component. The first port found that
 does not have a `signal-end` property will be assumed to be the signal end.
 
-@returns The signal end port for this topology. In most applications, this is
+@return The signal end port for this topology. In most applications, this is
 a `Pin` object from a `pcb-component` instance.
 
 <DOC>

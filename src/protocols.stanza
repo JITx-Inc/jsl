@@ -12,5 +12,6 @@ defpackage jsl/protocols:
   forward jsl/protocols/ethernet/MII/MII
   forward jsl/protocols/ethernet/MII/RGMII
   forward jsl/protocols/ethernet/MII/RMII
+  forward jsl/protocols/sata
   
   

@@ -1,0 +1,47 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/sata/SATA-main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+
+  import jsl/protocols/sata
+  import jsl/si/helpers
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+  import jsl/examples/protocols/sata/SATA-src
+
+
+pcb-module SATA-example :
+  
+  inst dut1  : jsl/examples/protocols/sata/SATA-src/module(invert = false)
+  inst dut2  : jsl/examples/protocols/sata/SATA-src/module(invert = true)
+  inst conn1 : jsl/examples/protocols/sata/SATA-src/sata-connector
+  require src1 : SATA from dut1
+  require src2 : SATA from dut1
+  require dst1 : SATA from dut2
+  ; conn1.sata
+
+  val ti-sata = SATA-get-trace-impedance()
+  val SATA-constraints = SATA-Constraint(route-struct = diff(ti-sata))
+
+  connect-SATA(SATA-constraints, src2, conn1.sata)
+  connect-SATA(SATA-constraints, src1, dst1)
+
+
+set-current-design("SATA-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-B)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(SATA-example)
+
+; View the results
+view-design-explorer()
+view-schematic()
+view-board()

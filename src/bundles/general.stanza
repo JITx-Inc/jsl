@@ -6,7 +6,7 @@ defpackage jsl/bundles/general:
 doc: \<DOC>
 Constructs a indices list for one-based indices
 
-@returns This returns a tuple like `[1,2,3,4]` for
+@return This returns a tuple like `[1,2,3,4]` for
 `num=4`
 <DOC>
 public defn make-indices (num:Int) -> Tuple<Int> :
