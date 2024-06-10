@@ -7,6 +7,8 @@ defpackage jsl/landpatterns/VirtualLP:
 
   import jsl/errors
   import jsl/design/Classable
+  import jsl/geometry/box
+  import jsl/landpatterns/courtyard
 
 doc: \<DOC>
 Base Type for the Elements of the Virtual Landpattern Tree
@@ -331,6 +333,14 @@ public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
 public defn get-coppers (vp:VirtualLP) -> Tuple<VirtualCopper> :
   to-tuple $ metal(vp)
 
+public defn get-silkscreen-outline! (vp:VirtualLP) -> Shape :
+  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
+  if length(outlines) != 1:
+    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+
+  val outline = outlines[0]
+  shape(outline)
+
 public defn add-artwork (
   vp:VirtualLP,
   ls:LayerSpecifier,
@@ -352,6 +362,45 @@ public defn add-artwork (
   val new-art = for sh in shapes seq:
     VirtualArtwork(ls, sh, class = class)
   append-all(vp, new-art)
+
+doc: \<DOC>
+Create a reference designator in the current virtual landpattern
+
+
+If a courtyard exists - This function will place a reference designator outside the courtyard outline
+of the component, just above the upper-left corner of the bounds of the outline.
+
+If no courtyard exists - then this function places the silkscreen reference designator
+at the VirtualLP node origin.
+
+In either case, this placement is really just an initial placement. The user will
+use the placer in the board view to move it to a more reasonable
+location.
+
+@param vp Land Pattern Node where content will be drawn.
+@param ls Layer to draw the reference designator. By default this is the top silkscreen.
+@param text-size Size of designator text height in mm. Default is 1.0 mm.
+@param font Optional Font to use. See the `Text` object in JITX runtime.
+
+<DOC>
+public defn add-reference-designator (
+  vp:VirtualLP,
+  ls:LayerSpecifier = Silkscreen("F-SilkS", Top)
+  text-size:Double = 1.0,
+  font:String = ""
+  ) -> False :
+
+  val o-box? = get-courtyard-boundary(vp)
+  val pos = match(o-box?):
+    (_:False):
+      ; Drop at the origin if there is no courtyard
+      loc(0.0, 0.0)
+    (o-box:Box):
+      val text-margin = 0.25
+      loc(left(o-box), up(o-box) + text-margin)
+
+  val sh = Text(">REF", text-size, SW, pos, font, TrueTypeFont, false, false)
+  add-artwork(vp, ls, [sh], class = "ref-des")
 
 doc: \<DOC>
 Add a `VirtualArtwork` instance to the landpattern
