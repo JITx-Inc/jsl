@@ -63,8 +63,8 @@ public pcb-bundle ARINC818 (type:ARINC818Type) :
   name = "ARINC818"
   description = "ARINC 818 AVDB protocol"
   switch(type) :
-    TX : make-pin(`TX)
-    RX : make-pin(`RX)
+    TX : make-port(`TX, diff-pair)
+    RX : make-port(`RX, diff-pair)
 
 doc: \<DOC>
 @brief Construct the ARINC818 Topology and Constraints
@@ -79,13 +79,13 @@ needs to be between a TX on a transmitter and a RX on a receiver.
 @param dst This is expected to be a port of `Bundle` type `ARINC818`
 
 <DOC>
-public defn connect-ARINC818 (cons:SI-Constraint, version:jsl/protocols/arinc818/ARINC818Version, src:JITXObject, dst:JITXObject) :
+public defn connect-ARINC818 (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
   inside pcb-module :
     check-bundle(ARINC818(TX), src)
-    check-bundle(ARINC818(RX), src)
-    check-correct-pins(src.TX, dst.RX)
+    check-bundle(ARINC818(RX), dst)
+    check-correct-pins(src.TX.P, dst.RX.P)
     within [s,d] = constrain-topology(src.TX => dst.RX, cons) :
-      topo-net(s.TX d.RX)
+      topo-net(s d)
 
 doc: \<DOC>
 @brief Check the presence of a TX and RX version of the ARINC818 bundle
