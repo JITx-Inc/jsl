@@ -162,10 +162,6 @@ elements (pads, artwork, etc) before writing it to the
 ESIR `pcb-landpattern` definition. Once written to ESIR,
 the landpattern cannot be modified.
 
-NOTE: I'm not supporting `copper` statements yet because
-I'm not sure how or why to use them. They don't seem
-particularly useful
-
 <DOC>
 public defstruct VirtualLP <: VirtualElement :
   doc: \<DOC>
