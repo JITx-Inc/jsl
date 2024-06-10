@@ -1,0 +1,77 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/SON:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/examples/landpatterns/board
+
+  import jsl/symbols/SymbolDefn
+  import jsl/symbols/box-symbol
+
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/SON
+
+
+defn create-DSG0008A ():
+  SON(
+    num-leads = 8,
+    lead-profile = Lead-Profile(
+      span = min-max(1.9, 2.1),
+      pitch = 0.5,
+      lead = SON-Lead(
+        length = min-max(0.2, 0.4),
+        width = min-max(0.18, 0.32)
+      )
+    ),
+    thermal-lead? = Rectangle(0.9, 1.6),
+    package-body = PackageBody(
+      width = min-max(1.9, 2.1)
+      length = min-max(1.9, 2.1)
+      height = min-max(0.7, 0.8)
+    )
+  )
+
+pcb-component test-DSG0008A:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [VIN | p[8] | Left ]
+    [EN | p[1] | Left ]
+    [MODE | p[3] | Left ]
+    [GND | p[2] | Left ]
+    [EP | p[9] | Left ]
+
+    [PG | p[6] | Right ]
+    [SW | p[7] | Right ]
+    [VOS | p[5] | Right ]
+    [FB | p[4] | Right ]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = create-DSG0008A()
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-DSG0008A
+  place(c) at loc(0.0, 0.0) on Top
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("SON-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
