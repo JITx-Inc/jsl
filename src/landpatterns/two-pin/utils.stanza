@@ -62,7 +62,7 @@ public defn compute-pad-diam (hole-diam:Double, density-level:DensityLevel) -> D
 
 public defn get-two-pin-pads (vp:VirtualLP) -> [VirtualPad, VirtualPad] :
   val [r1, r2] = if contains?(class(vp), "polarized"):
-    [Ref("c"), Ref("a")]
+    [Ref("a"), Ref("c")]
   else:
     [1, 2]
 
