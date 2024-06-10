@@ -296,3 +296,4 @@ public defmethod build-silkscreen (
   build-radial-outline(pkg, vp)
   if polarized?(pkg):
     build-polarity-marker(pkg, vp)
+  add-reference-designator(vp)

@@ -344,6 +344,8 @@ public defmethod build-silkscreen (
   vp:VirtualLP
   ):
   build-SMT-outline(pkg, vp)
+  add-reference-designator(vp)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   Resistor
