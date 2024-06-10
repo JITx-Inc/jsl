@@ -103,7 +103,7 @@ public defn check-correct-pins (p-tx:JITXObject p-rx:JITXObject):
         throw $ ArgumentError("Expected TX & RX Pins - Received: %_" % [x])
 
 doc: \<DOC>
-@brief Curated values for skew and loss of SATA connection
+@brief Curated values for skew and loss of ARINC818 connection
 This is a helper function that returns the bounds on the intra-pair
 skew timing and maximum loss as expected by the particular standard targeted by
 the user.The values returned are a toleranced value with upper/lower limits for the
@@ -134,7 +134,7 @@ public defn ARINC818-get-skew-loss-vals (version:jsl/protocols/arinc818/ARINC818
 
 
 doc: \<DOC>
-@brief Differential impedance specified by the SATA standard
+@brief Differential impedance specified by the ARINC818 standard
 This is a helper function that returns the expected differential
 trace impedance.
 
