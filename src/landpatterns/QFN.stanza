@@ -237,12 +237,8 @@ public defn QFN-pin-1-marker (
   add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
 
   if density-level(pkg) == DensityLevelA :
-    val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
-    if length(outlines) != 1:
-      throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
-
-    val outline = outlines[0]
-    val o-box = bounds $ shape(outline)
+    val outline = get-silkscreen-outline!(vp)
+    val o-box = bounds(outline)
 
     val marker = compute-triangle-marker(pad-center, o-box, line-width)
     add-artwork(
@@ -259,5 +255,6 @@ public defmethod build-silkscreen (
   ) -> False:
   QFN-outline(pkg, vp)
   QFN-pin-1-marker(pkg, vp)
+  add-reference-designator(vp)
 
 

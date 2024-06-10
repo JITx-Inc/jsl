@@ -179,3 +179,4 @@ public defmethod build-silkscreen (
   ):
   val outline = compute-outline(vp, density-level(pkg))
   add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
+  add-reference-designator(vp)

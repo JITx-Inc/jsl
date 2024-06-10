@@ -298,25 +298,20 @@ public defn build-outline-pin-1 (
   side:Side = Top
   ):
 
-  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
-  if length(outlines) != 1:
-    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+  val outline = get-silkscreen-outline!(vp)
 
-  val outline = outlines[0]
-
-  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
   ; Find the corner of the outline nearest to pad 1
-  val o-sh = shape(outline)
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
 
   ; The Outline is typically a line rectangle which creates a
   ;  single line. We use this to determine the line width
   ;  so that we can place the marker in the mid-line
-  val line-width = match(o-sh):
+  val line-width = match(outline):
     (x:Line): width(x)
     ; TODO - this probably should be a setting
     (_): 0.1
 
-  val o-box = bounds $ o-sh
+  val o-box = bounds(outline)
 
   val pin-1-pos = center $ pose(pin-1-pad)
 

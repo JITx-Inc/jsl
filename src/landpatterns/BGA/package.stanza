@@ -221,20 +221,13 @@ public defn build-outline (
   val outline = compute-outline(vp, body, density-level)
   add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
 
-defn get-outline (vp:VirtualLP) -> Shape:
-  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
-  if length(outlines) != 1:
-    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
-
-  shape $ outlines[0]
-
 public defn build-triangle-marker (
   vp:VirtualLP
   --
   pin-1-id:Int|Ref = 1,
   side:Side = Top
   ):
-  val o-sh = get-outline(vp)
+  val o-sh = get-silkscreen-outline!(vp)
 
   val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
 
@@ -267,7 +260,7 @@ public defn build-pin-1-marker (
   line-width:Double = default-silk-width(),
   mask-clearance:Double = default-mask-clearance(),
   ):
-  val o-sh = get-outline(vp)
+  val o-sh = get-silkscreen-outline!(vp)
   val pin-1-pos = center $ pose $ get-pad-by-ref!(vp, pin-1-id)
 
   val o-box = bounds $ o-sh
@@ -297,3 +290,4 @@ public defmethod build-silkscreen (
   build-outline(vp, package-body(pkg), density-level(pkg))
   build-pin-1-marker(vp, pin-1-id = pin-1-id)
   build-triangle-marker(vp, pin-1-id = pin-1-id)
+  add-reference-designator(vp)

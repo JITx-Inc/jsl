@@ -289,3 +289,4 @@ public defmethod build-silkscreen (
   build-pkg-body-outline(pkg, vp)
   build-smd-pin-1(pkg, vp)
   build-outline-pin-1(pkg, vp)
+  add-reference-designator(vp)
