@@ -6,15 +6,8 @@ defpackage jsl/examples/symbols/logic:
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
-  import jsl/landpatterns/SOIC
-
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/logic/buffer
-  import jsl/symbols/logic/AND
-  import jsl/symbols/logic/OR
-  import jsl/symbols/decorators
+  import jsl/landpatterns
+  import jsl/symbols
 
   import jsl/examples/landpatterns/board
 

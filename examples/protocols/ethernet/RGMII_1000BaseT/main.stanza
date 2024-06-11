@@ -5,19 +5,14 @@ defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
+  import jsl/symbols
 
   import jsl/si/constraints
   import jsl/si/pairs
   import jsl/protocols/ethernet/MDI/MDI-1000Base-T
   import jsl/protocols/ethernet/MII/RGMII
 
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/QFN
-  import jsl/landpatterns/SOIC
-  import jsl/landpatterns/quad
-  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components

@@ -5,8 +5,7 @@ defpackage jsl/examples/symbols/potentiometer:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/potentiometer
+  import jsl/symbols
 
 val symb-defn = PotentiometerSymbol()
 val symb = create-symbol(symb-defn)

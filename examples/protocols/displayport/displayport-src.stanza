@@ -4,10 +4,8 @@ defpackage jsl/examples/protocols/displayport/displayport-src :
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/BGA
+  import jsl/symbols
+  import jsl/landpatterns
 
   import jsl/design/settings
   import jsl/si/helpers
@@ -39,7 +37,7 @@ val BGA-pkg = BGA(
 
 doc: \<DOC>
 @brief DisplayPort dummy component definition
-This definition assumes a BGA component with pins defined per the DisplayPort standard. The component has a single 
+This definition assumes a BGA component with pins defined per the DisplayPort standard. The component has a single
 DP source or sink port per the argument.
 @param source:True|False defines whether the component is a DP source (true) or DP sink (false)
 <DOC>

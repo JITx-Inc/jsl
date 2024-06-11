@@ -6,13 +6,10 @@ defpackage jsl/examples/symbols/capacitor:
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
-  import jsl/landpatterns/SOIC
-  import jsl/examples/landpatterns/board
+  import jsl/landpatterns
+  import jsl/symbols
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/capacitors
+  import jsl/examples/landpatterns/board
 
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)

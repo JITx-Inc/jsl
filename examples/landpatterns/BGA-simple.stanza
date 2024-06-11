@@ -3,11 +3,10 @@ defpackage jsl/examples/landpatterns/BGA-simple:
   import core
   import jitx
   import jitx/commands
+
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-island
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/BGA
+  import jsl/landpatterns
+
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)

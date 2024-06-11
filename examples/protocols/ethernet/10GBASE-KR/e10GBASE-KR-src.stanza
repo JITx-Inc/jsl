@@ -5,15 +5,8 @@ defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src :
   import jitx/commands
   import math
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/BGA
-  import jsl/landpatterns/QFN
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/pads
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/helpers
+  import jsl/symbols
+  import jsl/landpatterns
 
   import jsl/design/settings
   import jsl/si/helpers
@@ -52,7 +45,7 @@ val pkg = QFN(
 
 doc: \<DOC>
 @brief e10GBASE-KR dummy component definition
-This definition assumes a QFN component with pins defined per the e10GBASE-KR standard. 
+This definition assumes a QFN component with pins defined per the e10GBASE-KR standard.
 <DOC>
 
 public pcb-component component :
@@ -117,7 +110,7 @@ public pcb-component edge-connector :
       [ pin : Ref | pads : Int ... ]
       for i in 1 through NUM-PADS do :
         [ p[i]    | i  ]
-  
+
   assign-landpattern(edge-fingers(NUM-PADS))
   val box = BoxSymbol(self)
   assign-symbol(create-symbol(box))

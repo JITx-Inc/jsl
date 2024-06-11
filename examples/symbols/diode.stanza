@@ -5,12 +5,10 @@ defpackage jsl/examples/symbols/diode:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/diodes
-
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
 
 

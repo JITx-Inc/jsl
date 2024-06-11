@@ -3,10 +3,10 @@ defpackage jsl/examples/landpatterns/SOIC32W:
   import core
   import jitx
   import jitx/commands
+
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)

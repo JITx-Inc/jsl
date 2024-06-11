@@ -21,9 +21,8 @@ defpackage jsl/examples/pin-assignment/swizzle:
 
   import jsl/pin-assignment
   import jsl/layerstack
-  import jsl/landpatterns/headers
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/leads
+  import jsl/symbols
+  import jsl/landpatterns
   import jsl/si/helpers
 
 pcb-bundle header (w:Int):
@@ -76,7 +75,7 @@ pcb-module top-level :
 
   topo-net(h1.p, bus)
 
-val stack = LayerStack(name = "Param-Ram Stack")
+val stackup = LayerStack(name = "Swizzle Stack")
 
 val copper-1oz = Copper("cu", 1.0)
 val core-FR4 = FR4("core", 1.0)
@@ -84,13 +83,13 @@ val prepreg-FR4 = FR4("prepreg", 0.5)
 
 add-symmetric(copper-1oz, core-FR4,
   add-symmetric(copper-1oz, prepreg-FR4,
-    add-symmetric(copper-1oz, core-FR4, stack)
+    add-symmetric(copper-1oz, core-FR4, stackup)
   )
 )
 
-validate!(stack)
+validate!(stackup)
 
-val mem-stackup = create-pcb-stackup(stack)
+val mem-stackup = create-pcb-stackup(stackup)
 
 public pcb-via default-via :
   name = "Default TH"

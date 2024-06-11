@@ -5,14 +5,10 @@ defpackage jsl/examples/symbols/opamp:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/op-amps
-  import jsl/symbols/instrumentation-amp
-  import jsl/symbols/comparator
-
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
 
 val pkg = SOIC-N(

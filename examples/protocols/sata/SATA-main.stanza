@@ -17,7 +17,7 @@ defpackage jsl/examples/protocols/sata/SATA-main:
 
 
 pcb-module SATA-example :
-  
+
   inst dut1  : jsl/examples/protocols/sata/SATA-src/module(invert = false)
   inst dut2  : jsl/examples/protocols/sata/SATA-src/module(invert = true)
   inst conn1 : jsl/examples/protocols/sata/SATA-src/sata-connector
