@@ -1,0 +1,17 @@
+doc: \<DOC>
+@brief Land Pattern Generators Package
+
+This is the top-level package for the land pattern generators in the JSL library. This
+package is intended to be used by end-users when creating a new component
+and wish to have an easy way to reference a particular land pattern generator from
+JSL, such as the QFN or BGA generators.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/generators:
+
+  forward jsl/landpatterns/BGA
+  forward jsl/landpatterns/QFN
+  forward jsl/landpatterns/SOIC
+  forward jsl/landpatterns/SON
+  forward jsl/landpatterns/two-pin/generators
+  forward jsl/landpatterns/headers

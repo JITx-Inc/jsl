@@ -1,0 +1,19 @@
+doc: \<DOC>
+@brief Symbols Framework Package
+
+This package is a meta-package to combine all of the features
+of the schematic symbols framework for JSL.
+
+This package is typically used alone when constructing a new
+schematic symbol generator.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/symbols/framework:
+  forward jsl/symbols/SymbolDefn
+  forward jsl/symbols/SymbolNode
+  forward jsl/symbols/decorators
+  forward jsl/symbols/TwoPinSymbol
+  forward jsl/symbols/ThreePinSymbol
+  forward jsl/symbols/pin-refs
+  forward jsl/symbols/hysteresis
+  forward jsl/symbols/arrows

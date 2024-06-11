@@ -1,0 +1,5 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/logic/generators:
+  forward jsl/symbols/logic/AND
+  forward jsl/symbols/logic/buffer
+  forward jsl/symbols/logic/OR
