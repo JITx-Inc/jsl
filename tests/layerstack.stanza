@@ -6,6 +6,7 @@ defpackage jsl/tests/layerstack:
 
   import jsl/layerstack
   import jsl/tests/utils
+  import jsl/errors
 
 deftest(layerstack) test-basic-symmetric:
   val stack = LayerStack(name = "Carl's Crazy Stack")
@@ -154,3 +155,176 @@ deftest(layerstack) test-with-soldermask:
   #EXPECT(sm2? is-not None)
   #EXPECT(core-1? is-not None)
 
+;============================================================================
+;<note>
+LayerStack: Carl's Crazy Stack
+  Layers: 6 copper layers 11 total layers
+    name: cu | Conductor | 0.0347949234160219
+    name: core | Dielectric | 1.0
+    name: cu | Conductor | 0.0347949234160219
+    name: prepreg | Dielectric | 0.5
+    name: cu | Conductor | 0.0347949234160219
+    name: core | Dielectric | 1.0
+    name: cu | Conductor | 0.0347949234160219
+    name: prepreg | Dielectric | 0.5
+    name: cu | Conductor | 0.0347949234160219
+    name: core | Dielectric | 1.0
+    name: cu | Conductor | 0.0347949234160219
+
+add-symmetric : add dielectic on both sides and then copper on both sides
+
+ 0 - copper-3oz
+ 1 - core-FR4-2
+ 2 - copper-2oz
+ 3 - prepreg-FR4
+ 4 - copper-1oz
+ 5 - core-FR4-1
+ 6 - copper-1oz
+ 7 - prepreg-FR4
+ 8 - copper-2oz
+ 9 - core-FR4-2
+ 10 - copper-3oz
+;<note>
+val test-stack = LayerStack(name = "Liang's Crazy Stack")
+val copper-1oz = Copper("cu1", 1.0)
+val copper-2oz = Copper("cu2", 2.0)
+val copper-3oz = Copper("cu3", 3.0)
+val core-FR4-1 = FR4("core1", 1.0)
+val core-FR4-2 = FR4("core2", 2.0)
+val prepreg-FR4 = FR4("prepreg", 0.5)
+
+add-symmetric(copper-3oz, core-FR4-2,
+  add-symmetric(copper-2oz, prepreg-FR4,
+    add-symmetric(copper-1oz, core-FR4-1, test-stack)
+  )
+)
+validate!(test-stack)
+
+;<note>
+  LayerSpec(
+    name = One("cu"), 
+    description = None, 
+    material = ConductorMaterial(
+      name = One("Copper (Cu)"), 
+      type = Conductor,
+      description = None, 
+      material-def = None,
+      density = 0.00877,
+      roughness = One(0.006)), 
+    thickness = 0.0347949234160219)
+  LayerSpec(
+    name = One("core"),
+    description = None,
+    material = DielectricMaterial(
+      name = One("FR4 (Generic)"),
+      type = Dielectric,
+      description = One("Generic FR4 for Ease of Use. For SI - you probably want to define your own"),
+      material-def = None,
+      dielectric-coefficient = One(4.26),
+      loss-tangent = One(0.25),
+      is-soldermask = false),
+    thickness = 1.0)
+;<note>
+defmethod write (o:OutputStream, s:LayerStack) :
+  println(o, "LayerStack: %_" % [value?(name(s))])
+  println(o, "  Layers: %_ copper layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
+  for [idx, l] in enumerate(layers(s)) do:
+    println(o, "    %_ : %_ | %_ | %_" %
+      [idx, value?(name(l)) get-type(material(l)) thickness(l)])
+print("%~" % [test-stack])
+
+doc:\<DOC>
+  Usage: for [idx, line] in enumerate(lines) do: 
+           println(“Line %: %_” % [idx, line])
+<DOC>
+defn enumerate<?T> (s:Seqable<?T>) -> Seq<[Int, T]> :
+  var i = 0
+  for x in s seq :
+    next where:
+      val next = [i, x]
+      i = i + 1
+
+defmethod equal? (la:LayerSpec, lb:LayerSpec) :
+  name(la) == name(lb) and
+  material(la) == material(lb) and
+  thickness(la) == thickness(lb)
+
+defmethod equal? (ma:LayerMaterial, mb:LayerMaterial) :
+  name(ma) == name(mb) and
+  type(ma) == type(mb) and
+  material-def(ma) == material-def(mb)
+
+;<A>
+ 0 - copper-3oz
+ 1 - core-FR4-2
+ 2 - copper-2oz
+ 3 - prepreg-FR4
+ 4 - copper-1oz
+ 5 - core-FR4-1
+ 6 - copper-1oz
+ 7 - prepreg-FR4
+ 8 - copper-2oz
+ 9 - core-FR4-2
+ 10 - copper-3oz
+;<A>
+
+; Test: test-stack[0]
+deftest(layerstack) test-get :
+  #EXPECT(test-stack[0] == copper-3oz)
+  #EXPECT(test-stack[1] == core-FR4-2)
+  #EXPECT(test-stack[2] == copper-2oz)
+  #EXPECT(test-stack[3] == prepreg-FR4)
+
+; Test: test-stack.copper[0]
+deftest(layerstack) test-dot :
+  #EXPECT(test-stack.copper[0] == copper-3oz)
+  #EXPECT(test-stack.copper[1] == copper-2oz)
+  #EXPECT(test-stack.copper[2] == copper-1oz)
+  #EXPECT(test-stack.copper[3] == copper-1oz)
+  #EXPECT(test-stack.copper[4] == copper-2oz)
+  #EXPECT(test-stack.copper[5] == copper-3oz)
+
+; test-stack[0].name = new-name
+; test-stack[0][name] = new-name
+;     defmethod set (this, k:K, v:V) :
+;       put(TableItem<K,V>(key-hash(k), k, v))
+
+; Test: set-name(test-stack[0] One("cu3-new"))
+deftest(layerstack) test-set-name :
+  val copper-3oz = Copper("cu3", 3.0)
+  #EXPECT(test-stack[0] == copper-3oz)
+  val copper-3oz-new = Copper("cu3-new", 3.0)
+  set-name(test-stack[0] One("cu3-new"))
+  #EXPECT(test-stack[0] == copper-3oz-new)
+
+defn set (spec:LayerSpec, field:Symbol, new-name:String) :
+  if field == `name :
+    set-name(spec One(new-name))
+  else :
+    throw(ValueError("No Setter for Field %_" % [field]))
+
+; Test: test-stack[0][`name] = "cu3-new"
+deftest(layerstack) test-set-name2 :
+  val copper-3oz = Copper("cu3", 3.0)
+  #EXPECT(test-stack[0] == copper-3oz)
+  val copper-3oz-new = Copper("cu3-new", 3.0)
+  test-stack[0][`name] = "cu3-new"
+   ;Verify that the layer has the new name
+  #EXPECT(test-stack[0] == copper-3oz-new)
+
+;<A>
+defn dot (spec:LayerSpec, field:Symbol, new-name:String) :
+  if field == `name :
+    set-name(spec One(new-name))
+  else :
+    throw(ValueError("No Setter for Field %_" % [field]))
+
+; Test: test-stack[0].name = "cu3-new"
+deftest(layerstack) test-set-name3 :
+  val copper-3oz = Copper("cu3", 3.0)
+  #EXPECT(test-stack[0] == copper-3oz)
+  val copper-3oz-new = Copper("cu3-new", 3.0)
+  test-stack[0].name = "cu3-new"
+  ;Verify that the layer has the new name
+  #EXPECT(test-stack[0] == copper-3oz-new)
+;<A>

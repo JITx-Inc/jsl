@@ -10,7 +10,7 @@ defpackage jsl/layerstack:
 doc: \<DOC>
 Base class for Defining the Layer Material
 <DOC>
-defstruct LayerMaterial <: Hashable:
+public-when(TESTING) defstruct LayerMaterial <: Hashable & Equalable :
   name:Maybe<String>
   type:MaterialType
   description:Maybe<String>
@@ -30,7 +30,7 @@ defn make-name (x:LayerMaterial):
       (_:None): false
       (v:One<String>): name = value(v)
 
-defn get-type (x:LayerMaterial) -> MaterialType:
+public-when(TESTING) defn get-type (x:LayerMaterial) -> MaterialType:
   type(x)
 
 defn make-description (x:LayerMaterial) :
@@ -214,8 +214,8 @@ public val SoldermaskMaterial = DielectricMaterial(
   is-soldermask = true
 )
 
-public defstruct LayerSpec:
-  name:Maybe<String>
+public defstruct LayerSpec <: Equalable :
+  name:Maybe<String> with: (setter => set-name)
   description:Maybe<String>
   material:LayerMaterial
   thickness:Double with: (
@@ -292,6 +292,29 @@ public defn LayerStack (
   ) -> LayerStack:
   #LayerStack(name, description, to-vector<LayerSpec>(initial-layers))
 
+doc:\<DOC>
+  Get a layer by index
+  Usage: stack[idx]
+<DOC>
+public defn get (stack:LayerStack, idx:Int) -> LayerSpec :
+  layers(stack)[idx]
+
+doc:\<DOC>
+  Usage: stack.copper[idx]
+<DOC>
+public defn dot (stack:LayerStack, name:Symbol) -> Tuple<LayerSpec> :
+  if name == `copper :
+    to-tuple $ for l in layers(stack) filter:
+      material(l) is ConductorMaterial
+  else :
+    throw $ ValueError("dot for field %_ not supported" % [name])
+
+doc:\<DOC>
+  Get a layer by index
+  Usage: stack[idx].name = new-name
+<DOC>
+public defn set-name (stack:LayerStack, idx:Int, new-name:String) :
+  set-name(layers(stack)[idx] One(new-name))
 
 doc: \<DOC>
 Add one or more layers to the top of the board stackup.
