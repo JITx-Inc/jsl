@@ -5,15 +5,8 @@ defpackage jsl/examples/protocols/sata/SATA-src :
   import jitx/commands
   import math
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/BGA
-  import jsl/landpatterns/QFN
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/pads
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/helpers
+  import jsl/symbols
+  import jsl/landpatterns
 
   import jsl/design/settings
   import jsl/si/helpers
@@ -123,7 +116,7 @@ public pcb-component sata-connector :
     [ sata.lane.TX.N | 3         ]
     [ sata.lane.RX.N | 5         ]
     [ sata.lane.RX.P | 6         ]
-  
+
   assign-landpattern(sata-lp)
   val box = BoxSymbol(self)
   assign-symbol(create-symbol(box))

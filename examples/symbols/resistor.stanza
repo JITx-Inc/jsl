@@ -4,15 +4,10 @@ defpackage jsl/examples/symbols/resistor:
   import collections
   import jitx
   import jitx/commands
+
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
-  import jsl/landpatterns/SOIC
-
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/resistors
-  import jsl/symbols/potentiometer
-
+  import jsl/landpatterns
+  import jsl/symbols
 
   import jsl/examples/landpatterns/board
 

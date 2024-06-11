@@ -5,13 +5,10 @@ defpackage jsl/examples/symbols/transformer:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/transformer
-  import jsl/symbols/inductors
-
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
 
 

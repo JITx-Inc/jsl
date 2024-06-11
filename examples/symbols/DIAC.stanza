@@ -5,12 +5,10 @@ defpackage jsl/examples/symbols/DIAC:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/DIAC
-
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
 
 val symb-defn = DiacSymbol()

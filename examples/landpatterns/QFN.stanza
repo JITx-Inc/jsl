@@ -4,11 +4,9 @@ defpackage jsl/examples/landpatterns/QFN:
   import collections
   import jitx
   import jitx/commands
+
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/QFN
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns
 
   import jsl/examples/landpatterns/board
 

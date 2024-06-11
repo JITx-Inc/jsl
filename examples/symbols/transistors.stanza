@@ -5,15 +5,10 @@ defpackage jsl/examples/symbols/transistors:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/transistors/FET
-  import jsl/symbols/transistors/JFET
-  import jsl/symbols/transistors/BJT
-  import jsl/symbols/arrows
-
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SOIC
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
 
 defn setup-fet-params () :

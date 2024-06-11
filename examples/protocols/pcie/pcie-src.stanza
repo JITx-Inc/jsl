@@ -4,10 +4,8 @@ defpackage jsl/examples/protocols/pcie/pcie-src :
   import jitx
   import jitx/commands
 
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/BGA
+  import jsl/symbols
+  import jsl/landpatterns
 
   import jsl/design/settings
   import jsl/si/helpers

@@ -4,9 +4,10 @@ defpackage jsl/examples/landpatterns/SMT:
   import collections
   import jitx
   import jitx/commands
+
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
+  import jsl/landpatterns
+
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)

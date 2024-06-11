@@ -6,12 +6,8 @@ defpackage jsl/examples/symbols/inductor:
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
-  import jsl/landpatterns/SOIC
-
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/inductors
+  import jsl/landpatterns
+  import jsl/symbols
 
   import jsl/examples/landpatterns/board
 

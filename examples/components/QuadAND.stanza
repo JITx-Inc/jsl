@@ -6,12 +6,9 @@ defpackage jsl/examples/components/QuadAND:
 
   import jsl/bundles
   import jsl/design/settings
-  import jsl/symbols/logic/AND
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
+  import jsl/symbols
+  import jsl/landpatterns
 
-  import jsl/landpatterns/SOIC
-  import jsl/landpatterns/packages
   import jsl/examples/landpatterns/board
 
 pcb-component QuadAND:

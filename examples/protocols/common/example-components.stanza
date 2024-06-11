@@ -6,11 +6,8 @@ defpackage jsl/examples/protocols/common/example-components:
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/capacitors
-  import jsl/symbols/resistors
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/two-pin/SMT
+  import jsl/symbols
+  import jsl/landpatterns
 
   import jsl/si/helpers
 

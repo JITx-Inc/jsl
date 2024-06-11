@@ -4,14 +4,10 @@ defpackage jsl/examples/landpatterns/SON:
   import jitx
   import jitx/commands
 
+  import jsl/landpatterns
+  import jsl/symbols
+
   import jsl/examples/landpatterns/board
-
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/box-symbol
-
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/SON
 
 
 defn create-DSG0008A ():
