@@ -1,0 +1,5 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin/generators:
+  forward jsl/landpatterns/two-pin/SMT
+  forward jsl/landpatterns/two-pin/axial
+  forward jsl/landpatterns/two-pin/radial

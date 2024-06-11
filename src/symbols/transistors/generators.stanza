@@ -1,0 +1,5 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/transistors/generators:
+  forward jsl/symbols/transistors/BJT
+  forward jsl/symbols/transistors/FET
+  forward jsl/symbols/transistors/JFET

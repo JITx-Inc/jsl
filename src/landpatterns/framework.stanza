@@ -1,0 +1,23 @@
+doc: \<DOC>
+@brief Land Patterns Framework Package
+
+This package is a meta-package to combine all of the features
+of the land patterns framework for JSL.
+
+This package is typically used alone when constructing a new
+land pattern generator.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/framework:
+  forward jsl/landpatterns/packages
+  forward jsl/landpatterns/numbering
+  forward jsl/landpatterns/VirtualLP
+  forward jsl/landpatterns/pad-planner
+  forward jsl/landpatterns/pad-island
+  forward jsl/landpatterns/leads
+  forward jsl/landpatterns/pads
+  forward jsl/landpatterns/quad
+  forward jsl/landpatterns/dual-row
+  forward jsl/landpatterns/helpers
+  forward jsl/landpatterns/silkscreen
+  forward jsl/landpatterns/courtyard
