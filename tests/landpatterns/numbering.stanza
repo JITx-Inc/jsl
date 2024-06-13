@@ -209,6 +209,29 @@ deftest(numbering) test-omits-grid-numbering:
   val r = to-row-range(uut, "D", "E")
   #EXPECT(r == 1 through 2)
 
+deftest(numbering) test-omit-cols-grid-numbering :
+
+  val rows = 3
+  val columns = 3
+  val uut = Grid-Numbering(rows, columns, 0, 0, DEF-ROW-OMITS, [2])
+
+  val obs = to-tuple $ for r in 0 to rows seq-cat:
+    for c in 0 to columns seq:
+      to-pad-id(uut, r, c)
+
+  val exp = [
+    IndexRef(Ref("A"), 1),
+    IndexRef(Ref("A"), 3),
+    IndexRef(Ref("A"), 4),
+    IndexRef(Ref("B"), 1),
+    IndexRef(Ref("B"), 3),
+    IndexRef(Ref("B"), 4),
+    IndexRef(Ref("C"), 1),
+    IndexRef(Ref("C"), 3),
+    IndexRef(Ref("C"), 4),
+  ]
+
+  #EXPECT(obs == exp)
 
 deftest(numbering) test-row-rollover-grid-numbering:
 
