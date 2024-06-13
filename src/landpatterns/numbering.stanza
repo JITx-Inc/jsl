@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/numbering:
   import core
+  import collections
   import math
 
   import jitx
@@ -198,7 +199,7 @@ public defmethod to-pad-id (x:Uneven-Column-Major-Numbering, row:Int, column:Int
 public defn get-total-pads (x:Uneven-Column-Major-Numbering) -> Int :
   sum(columns(x))
 
-val DEF-ROW-OMITS = "IOQSXZ"
+public val DEF-ROW-OMITS = "IOQSXZ"
 
 doc: \<DOC>
 Create pad Ref sequence for a 2-axis Grid (eg for BGAs)
@@ -248,6 +249,14 @@ public defstruct Grid-Numbering <: Numbering :
   <DOC>
   omit-rows:String
   doc: \<DOC>
+  List of column identifiers which will be omitted.
+  By default, this tuple is empty meaning that all columns
+  are used. The user can pass a black list of column ids
+  as integers. For example, if the user provides [3, 7], then
+  the column sequence would be: 0, 1, 2, 4, 5, 6, 8, ...
+  <DOC>
+  omit-cols:Tuple<Int>
+  doc: \<DOC>
   Lookup table for converting row/column indices to a Ref.
   This lookup is pre-computed based on the `rows/columns/etc`
   <DOC>
@@ -261,6 +270,7 @@ public defn Grid-Numbering (
   start-row:Int = 0,
   start-col:Int = 0,
   omit-rows:String = DEF-ROW-OMITS
+  omit-cols:Tuple<Int> = []
   ) -> Grid-Numbering:
 
   ensure-positive!("Grid-Numbering:rows", rows)
@@ -268,9 +278,9 @@ public defn Grid-Numbering (
   ensure-non-negative!("Grid-Numbering:start-row", start-row)
   ensure-non-negative!("Grid-Numbering:start-col", start-col)
 
-  val pad-names = create-pad-lookup(rows, columns, start-row, start-col, omit-rows)
+  val pad-names = create-pad-lookup(rows, columns, start-row, start-col, omit-rows, omit-cols)
 
-  #Grid-Numbering(rows, columns, start-row, start-col, omit-rows, pad-names)
+  #Grid-Numbering(rows, columns, start-row, start-col, omit-rows, omit-cols, pad-names)
 
 public defmethod to-pad-id (g:Grid-Numbering, row:Int, column:Int) -> Int|Ref :
   if (row < 0 or column < 0):
@@ -348,21 +358,36 @@ defn compute-letters (omit-rows:String) -> Tuple<Char> :
   to-tuple $ for ch in make-letter-seq('A', 'Z') filter:
       not contains?(omits, ch)
 
+defn compute-col-ids (start-col:Int, columns:Int, omit-cols:Tuple<Int>) -> HashTable<Int, Int> :
+  val ret = HashTable<Int, Int>()
+  val omits = to-intset(omit-cols)
+  var index = start-col
+  for i in start-col to (start-col + columns) do:
+    index = index + 1
+    while get(omits, index):
+      index = index + 1
+    ret[i] = index
+  ret
+
+
 defn create-pad-lookup (
   rows:Int,
   columns:Int,
   start-row:Int = 0,
   start-col:Int = 0,
   omit-rows:String = DEF-ROW-OMITS
+  omit-cols:Tuple<Int> = []
   ) -> Tuple<Ref> :
   val letters = compute-letters(omit-rows)
+  val col-ids = compute-col-ids(start-col, columns, omit-cols)
   ; Pre-compute the lookup table for the
   ;  grid of references.
   val pad-names = to-tuple $
   for (row in start-row to (start-row + rows)) seq-cat:
     val row-name = Ref(lookup-row-name(row, letters))
     for col in start-col to (start-col + columns) seq:
-      row-name[col + 1]
+      val col-id = col-ids[col]
+      row-name[col-id]
   pad-names
 
 doc: \<DOC>
