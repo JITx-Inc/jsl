@@ -79,6 +79,8 @@ The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pai
 and it also includes a refclk (100MHz) differential pair
 @param lanes The number of lanes to be configured for this bundle.
 @param opt-pins Optional pin support where the value is an enum from jsl/bundles/pcie/PCIePins
+@member control Control channel for PCIe
+@member data Data channel for PCIe
 <DOC>
 
 ; for the future
@@ -86,7 +88,15 @@ and it also includes a refclk (100MHz) differential pair
 ; all lanes being swapped is ok as well
 ; this should be handled at the component level
 
-public pcb-bundle pcie (lanes:Int -- opt-pins:Collection<PCIePins>|False = false) :
+public defn pcie (lanes:Int, opt-pins:PCIePins ...) :
+  pcie-b(lanes, opt-pins)
+  ; name = "PCI-e"
+  ; description = "PCI-e Serial Communications Link"
+  ; port control : pcie-control(opt-pins)
+  ; port data : pcie-data(lanes)
+
+
+public pcb-bundle pcie-b (lanes:Int, opt-pins:Collection<PCIePins>) :
   name = "PCI-e"
   description = "PCI-e Serial Communications Link"
   port control : pcie-control(opt-pins)
@@ -97,6 +107,8 @@ doc: \<DOC>
 The Data bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 and it also includes a refclk (100MHz) differential pair.
 @param lanes The number of lanes in the bundle.
+@member rx The receive diff-pair (# of lanes wide)
+@member tx The transmit diff-pair (# of lanes wide)
 <DOC>
 
 public pcb-bundle pcie-data (lanes:Int) :
@@ -106,25 +118,28 @@ public pcb-bundle pcie-data (lanes:Int) :
   port tx : diff-pair[lanes]
   port refclk : diff-pair
 
-doc: \<DOC>
-@brief PCI-e Control bundle
-PCI-e is a serial communication supporting high speed data links
-@param pins An optional set of pins to be implemented in the control bundle
-<DOC>
-
-pcb-bundle pcie-control (pins:Collection<PCIePins>|False):
+pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   name = "PCI-e Control"
   description = "PCI-e Serial Communications Link Control"
   pin PEWAKE#
   pin PERST#          ; PCI-E Reset signal
   pin CLKREQ#         ; clock request
-  match(pins) :
-    (cpins:Collection<PCIePins>) :
-      for p in cpins do :
-        switch(p) :
-          PCIe-PRSNT# : make-pin(`PRSNT#) ; hot plug detection
-    (f) : false
+  for p in pins do :
+    switch(p) :
+      PCIe-PRSNT# : make-pin(`PRSNT#) ; hot plug detection
 
+doc: \<DOC>
+@brief PCI-e Control bundle
+PCI-e is a serial communication supporting high speed data links
+@param pins An optional set of pins to be implemented in the control bundle
+@member PEWAKE#
+@member PERST#
+@member CLKREQ#
+@member PRSNT# Optional signal
+<DOC>
+
+public defn pcie-control (pins:Collection<PCIePins>) :
+  pcie-control-b(pins)
 
 doc: \<DOC>
 @brief Construct one direction of a PCIe channel.
