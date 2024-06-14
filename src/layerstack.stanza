@@ -286,7 +286,7 @@ public defstruct LayerStack :
   description:Maybe<String>
 
   layers:Vector<LayerSpec> with: (
-    setter => set-layers
+    setter => sub-layers
   )
 with:
   constructor => #LayerStack
@@ -313,18 +313,6 @@ doc:\<DOC>
 <DOC>
 public defn get (stack:LayerStack, idx:Int) -> LayerSpec :
   layers(stack)[idx]
-
-doc:\<DOC>
-  Modify a layer by index
-  Usage: stack[idx] - new-layer
-<DOC>
-public defn set (stack:LayerStack, idx:Int, layer:LayerSpec) -> False :
-  layers(stack)[idx] = layer
-  ;<A>
-  set-layers(stack new-layers) where :
-    val new-layers = to-tuple $ cat-all $
-      [layers(stack)[0 to idx] [layer] layers(stack)[(idx + 1) to false]]
-  ;<A>
 
 doc:\<DOC>
   Get the idx-th conductor layer
