@@ -236,20 +236,25 @@ public defn LayerSpec (
 
 doc: \<DOC>
 Create a Copper layer
+  Usage: Copper(name, thickness) : specify the thickness directly
+         Copper(name, weight, weight? = true) : specify weight in order to compute thickness
+         Copper(weight, AluminumMaterial, weight? = true) : without name
 <DOC>
-public defn Copper (name:String, weight:Double, material:ConductorMaterial = CopperMaterial
-    -- is-thickness?:True|False = false) -> LayerSpec :
-  if not is-thickness? :
+public defn Copper (name:String, thickness:Double, material:ConductorMaterial = CopperMaterial
+    -- weight?:True|False = false) -> LayerSpec :
+  if weight? :
+    val weight = thickness
     LayerSpec(name = name, thickness = compute-thickness(material, weight), material = material)
   else : 
-    LayerSpec(name = name, thickness = weight, material = material)
+    LayerSpec(name = name, thickness = thickness, material = material)
 
-public defn Copper (weight:Double, material:ConductorMaterial = CopperMaterial
-    -- is-thickness?:True|False = false) -> LayerSpec :
-  if not is-thickness? :
+public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
+    -- weight?:True|False = false) -> LayerSpec :
+  if weight? :
+    val weight = thickness
     LayerSpec(thickness = compute-thickness(material, weight), material = material)
   else :
-    LayerSpec(thickness = weight, material = material)
+    LayerSpec(thickness = thickness, material = material)
 
 public defn FR4 (name:String, thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
   LayerSpec(name = name, material = material, thickness = thickness)
@@ -412,7 +417,7 @@ layers, and 2 more copper layers. This constructs a symmetric stackup.
 ```
 val stack = LayerStack(name = "6-Layer Symmetric Stackup")
 
-val copper-1oz = Copper("cu", 1.0)
+val copper-1oz = Copper("cu", 1.0, weight = true)
 val core-FR4 = FR4("core", 1.0)
 val prepreg-FR4 = FR4("prepreg", 0.5)
 
