@@ -184,35 +184,7 @@ add-symmetric(copper-3oz, core-FR4-2,
   )
 )
 validate!(test-stack)
-
-defmethod write (o:OutputStream, s:LayerStack) :
-  println(o, "LayerStack: %_" % [value?(name(s))])
-  println(o, "  Layers: %_ copper layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
-  for [idx, l] in enumerate(layers(s)) do:
-    println(o, "    %_ : %_ | %_ | %_" %
-      [idx, value?(name(l)) get-type(material(l)) thickness(l)])
 print("%~" % [test-stack])
-
-doc:\<DOC>
-  Usage: for [idx, line] in enumerate(lines) do: 
-           println(“Line %: %_” % [idx, line])
-<DOC>
-defn enumerate<?T> (s:Seqable<?T>) -> Seq<[Int, T]> :
-  var i = 0
-  for x in s seq :
-    next where:
-      val next = [i, x]
-      i = i + 1
-
-defmethod equal? (la:LayerSpec, lb:LayerSpec) :
-  name(la) == name(lb) and
-  material(la) == material(lb) and
-  thickness(la) == thickness(lb)
-
-defmethod equal? (ma:LayerMaterial, mb:LayerMaterial) :
-  name(ma) == name(mb) and
-  type(ma) == type(mb) and
-  material-def(ma) == material-def(mb)
 
 ; Test: test-stack[0]
 deftest(layerstack) test-get :
