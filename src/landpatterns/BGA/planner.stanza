@@ -66,9 +66,7 @@ public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims 
   val func? = shape-generator(x, row, column)
   match(func?):
     (x:False): false
-    (f): build-bga-pad{f(_0) as Circle, pad-config(x)}
-    ;  pcb-struct is broken - so I work around with a closure.
-    ;      jsl/landpatterns/BGA/pads/bga-pad{f(_0), pad-config(x)}
+    (f): build-bga-pad{f(_0), pad-config(x)}
 
 
 doc: \<DOC>
