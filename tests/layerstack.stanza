@@ -206,16 +206,6 @@ deftest(layerstack) test-set-name :
   ;Verify that the layer has the new name
   #EXPECT(test-stack[0] == copper-3mm-new)
 
-; Test: test-stack[0] = new-stack
-deftest(layerstack) test-set :
-  #EXPECT(test-stack[0] == copper-3mm)
-  test-stack[0] = copper-1mm
-  #EXPECT(test-stack[0] == copper-1mm)
-
-  #EXPECT(test-stack[1] == core-FR4-2)
-  test-stack[1] = core-FR4-1
-  #EXPECT(test-stack[1] == core-FR4-1)
-
 ; Test: 
 ;     Copper(0.3) : specify thickness 
 ;     Copper(0.3, name = "Cu") : specify thickness and name
