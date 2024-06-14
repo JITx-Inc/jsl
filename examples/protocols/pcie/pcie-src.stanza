@@ -159,9 +159,23 @@ public pcb-module module :
     bd-4x.data.refclk.N => sw.REFCLKN[0]
 
     bd-4x.control.PEWAKE# => sw.GPIO[5]
-    bd-4x.control.PRSNT#  => sw.GPIO[12]
     bd-4x.control.PERST#  => sw.PERST#[0]
     bd-4x.control.CLKREQ# => sw.GPIO[1]
+
+  val bd-4x-prsnt = pcie(4, PCIe-PRSNT#)
+  supports bd-4x-prsnt :
+    for i in 0 to 4 do :
+      bd-4x-prsnt.data.rx[i].P => sw.PRXP[i]
+      bd-4x-prsnt.data.rx[i].N => sw.PRXN[i]
+      bd-4x-prsnt.data.tx[i].P => sw.PTXP[i]
+      bd-4x-prsnt.data.tx[i].N => sw.PTXN[i]
+    bd-4x-prsnt.data.refclk.P => sw.REFCLKP[0]
+    bd-4x-prsnt.data.refclk.N => sw.REFCLKN[0]
+
+    bd-4x-prsnt.control.PEWAKE# => sw.GPIO[5]
+    bd-4x-prsnt.control.PERST#  => sw.PERST#[0]
+    bd-4x-prsnt.control.PRSNT#  => sw.GPIO[12]
+    bd-4x-prsnt.control.CLKREQ# => sw.GPIO[1]
 
   val ctls-2x = [
     [sw.GPIO[6], sw.GPIO[12], sw.GPIO[1]]
@@ -182,10 +196,27 @@ public pcb-module module :
       val [wake, present, clkreq] = ctls-2x[j]
 
       bd-2x.control.PEWAKE# => wake
-      bd-2x.control.PRSNT#  => present
       bd-2x.control.PERST#  => sw.PERST#[ch-offset]
       bd-2x.control.CLKREQ# => clkreq
 
+  val bd-2x-prsnt = pcie(2, PCIe-PRSNT#)
+  for j in 0 to 2 do:
+    supports bd-2x-prsnt:
+      val ch-offset = (2 * j)
+      for i in 0 to 2 do :
+        bd-2x-prsnt.data.rx[i].P => sw.PRXP[i + ch-offset]
+        bd-2x-prsnt.data.rx[i].N => sw.PRXN[i + ch-offset]
+        bd-2x-prsnt.data.tx[i].P => sw.PTXP[i + ch-offset]
+        bd-2x-prsnt.data.tx[i].N => sw.PTXN[i + ch-offset]
+      bd-2x-prsnt.data.refclk.P => sw.REFCLKP[ch-offset]
+      bd-2x-prsnt.data.refclk.N => sw.REFCLKN[ch-offset]
+
+      val [wake, present, clkreq] = ctls-2x[j]
+
+      bd-2x-prsnt.control.PEWAKE# => wake
+      bd-2x-prsnt.control.PERST#  => sw.PERST#[ch-offset]
+      bd-2x-prsnt.control.PRSNT# => present
+      bd-2x-prsnt.control.CLKREQ# => clkreq
 
   val bd-1x = pcie(1)
   val ctls-1x = [
@@ -206,6 +237,21 @@ public pcb-module module :
       val [wake, present, clkreq] = ctls-1x[j]
       bd-1x.control.PERST#  => sw.PERST#[j]
       bd-1x.control.PEWAKE# => wake
-      bd-1x.control.PRSNT#  => present
       bd-1x.control.CLKREQ# => clkreq
+
+  val bd-1x-prsnt = pcie(1, PCIe-PRSNT#)
+  for j in 0 to 4 do:
+    supports bd-1x-prsnt:
+      bd-1x-prsnt.data.rx[0].P => sw.PRXP[j]
+      bd-1x-prsnt.data.rx[0].N => sw.PRXN[j]
+      bd-1x-prsnt.data.tx[0].P => sw.PTXP[j]
+      bd-1x-prsnt.data.tx[0].N => sw.PTXN[j]
+      bd-1x-prsnt.data.refclk.P => sw.REFCLKP[j]
+      bd-1x-prsnt.data.refclk.N => sw.REFCLKN[j]
+
+      val [wake, present, clkreq] = ctls-1x[j]
+      bd-1x-prsnt.control.PERST#  => sw.PERST#[j]
+      bd-1x-prsnt.control.PEWAKE# => wake
+      bd-1x-prsnt.control.PRSNT# => present
+      bd-1x-prsnt.control.CLKREQ# => clkreq
 
