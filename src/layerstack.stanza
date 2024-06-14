@@ -10,21 +10,18 @@ defpackage jsl/layerstack:
 doc: \<DOC>
 Base class for Defining the Layer Material
 <DOC>
-public-when(TESTING) defstruct LayerMaterial <: Hashable & Equalable :
+public defstruct LayerMaterial <: Hashable & Equalable :
   name:Maybe<String>
   type:MaterialType
   description:Maybe<String>
   material-def:Maybe<JITXDef> with: (
     setter => set-material-def
   )
+with:
+  equalable => true
+  hashable => true
 
 defmulti create-material (x:LayerMaterial) -> JITXDef
-
-defmethod equal? (ma:LayerMaterial, mb:LayerMaterial) :
-  name(ma) == name(mb) and
-  type(ma) == type(mb) and
-  material-def(ma) == material-def(mb)
-
 
 ; I need these accessors because the `name` and `type` tokens
 ;  will get consumed by the macro before they can call the functions.
@@ -36,7 +33,7 @@ defn make-name (x:LayerMaterial):
       (_:None): false
       (v:One<String>): name = value(v)
 
-public-when(TESTING) defn get-type (x:LayerMaterial) -> MaterialType:
+public defn get-type (x:LayerMaterial) -> MaterialType:
   type(x)
 
 defn make-description (x:LayerMaterial) :
@@ -221,7 +218,7 @@ public val SoldermaskMaterial = DielectricMaterial(
 )
 
 public defstruct LayerSpec <: Equalable :
-  name:Maybe<String> with: (setter => set-name)
+  name:Maybe<String> with: (setter => set-name?)
   description:Maybe<String>
   material:LayerMaterial
   thickness:Double with: (
@@ -230,11 +227,10 @@ public defstruct LayerSpec <: Equalable :
 with:
   constructor => #LayerSpec
   printer => true
+  equalable => true
 
-defmethod equal? (la:LayerSpec, lb:LayerSpec) :
-  name(la) == name(lb) and
-  material(la) == material(lb) and
-  thickness(la) == thickness(lb)
+public defn set-name (l:LayerSpec, name:String) :
+  set-name?(l One(name))
 
 public defn LayerSpec (
   --
@@ -247,37 +243,25 @@ public defn LayerSpec (
 
 doc: \<DOC>
 Create a Copper layer
-  Usage: Copper(name, thickness) : specify the thickness directly
-         Copper(name, weight, weight? = true) : specify weight in order to compute thickness
-         Copper(weight, AluminumMaterial, weight? = true) : without name
+  Usage: Copper(0.3) : specify thickness 
+         Copper(0.3, name = "Cu") : specify thickness and name
+         Copper(0.3, AluminumMaterial, name = "Cu") : specify thickness, material and name
+@param thickness : layer thickness in mm
+@param material : optional positional argument
+@param name : optional named argument
 <DOC>
-public defn Copper (name:String, thickness:Double, material:ConductorMaterial = CopperMaterial
-    -- weight?:True|False = false) -> LayerSpec :
-  if weight? :
-    val weight = thickness
-    LayerSpec(name = name, thickness = compute-thickness(material, weight), material = material)
-  else : 
-    LayerSpec(name = name, thickness = thickness, material = material)
-
-public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
-    -- weight?:True|False = false) -> LayerSpec :
-  if weight? :
-    val weight = thickness
-    LayerSpec(thickness = compute-thickness(material, weight), material = material)
-  else :
-    LayerSpec(thickness = thickness, material = material)
-
-public defn FR4 (name:String, thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
-  LayerSpec(name = name, material = material, thickness = thickness)
-
-public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
-  LayerSpec(material = material, thickness = thickness)
-
-public defn Soldermask (name:String, thickness:Double, material:DielectricMaterial = SoldermaskMaterial) -> LayerSpec :
-  LayerSpec(name = name, material = material, thickness = thickness)
-
-public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial) -> LayerSpec :
-  LayerSpec(material = material, thickness = thickness)
+#for (
+  func-name in [Copper FR4 Soldermask]
+  material-type in [ConductorMaterial DielectricMaterial DielectricMaterial ]
+  material-default in [CopperMaterial FR4-Material SoldermaskMaterial]
+) :
+  public defn func-name (thickness:Double, material:material-type = material-default
+      -- name:String = ?) -> LayerSpec :
+    match(name):
+      (name:One) :
+        LayerSpec(name = value(name), thickness = thickness, material = material)
+      (_):
+        LayerSpec(thickness = thickness, material = material)
 
 defn get-name (x:LayerSpec) -> Maybe<String> :
   name(x)
@@ -319,20 +303,9 @@ public defn LayerStack (
 defmethod write (o:OutputStream, s:LayerStack) :
   println(o, "LayerStack: %_" % [value?(name(s))])
   println(o, "  Layers: %_ copper layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
-  for [idx, l] in enumerate(layers(s)) do:
+  for (l in layers(s), idx in 0 to false) do :
     println(o, "    %_ : %_ | %_ | %_" %
       [idx, value?(name(l)) get-type(material(l)) thickness(l)])
-
-doc:\<DOC>
-  Usage: for [idx, line] in enumerate(lines) do: 
-           println(“Line %: %_” % [idx, line])
-<DOC>
-defn enumerate<?T> (s:Seqable<?T>) -> Seq<[Int, T]> :
-  var i = 0
-  for x in s seq :
-    next where:
-      val next = [i, x]
-      i = i + 1
 
 doc:\<DOC>
   Get a layer by index
@@ -446,13 +419,13 @@ layers, and 2 more copper layers. This constructs a symmetric stackup.
 ```
 val stack = LayerStack(name = "6-Layer Symmetric Stackup")
 
-val copper-1oz = Copper("cu", 1.0, weight = true)
-val core-FR4 = FR4("core", 1.0)
-val prepreg-FR4 = FR4("prepreg", 0.5)
+val copper-1mm = Copper(1.0, name = "cu")
+val core-FR4 = FR4(1.0, name = "core")
+val prepreg-FR4 = FR4(0.5, name = "prepreg")
 
-add-symmetric(copper-1oz, core-FR4,
-  add-symmetric(copper-1oz, prepreg-FR4,
-    add-symmetric(copper-1oz, core-FR4, stack)
+add-symmetric(copper-1mm, core-FR4,
+  add-symmetric(copper-1mm, prepreg-FR4,
+    add-symmetric(copper-1mm, core-FR4, stack)
   )
 )
 ```
