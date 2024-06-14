@@ -20,6 +20,12 @@ public-when(TESTING) defstruct LayerMaterial <: Hashable & Equalable :
 
 defmulti create-material (x:LayerMaterial) -> JITXDef
 
+defmethod equal? (ma:LayerMaterial, mb:LayerMaterial) :
+  name(ma) == name(mb) and
+  type(ma) == type(mb) and
+  material-def(ma) == material-def(mb)
+
+
 ; I need these accessors because the `name` and `type` tokens
 ;  will get consumed by the macro before they can call the functions.
 
@@ -225,6 +231,11 @@ with:
   constructor => #LayerSpec
   printer => true
 
+defmethod equal? (la:LayerSpec, lb:LayerSpec) :
+  name(la) == name(lb) and
+  material(la) == material(lb) and
+  thickness(la) == thickness(lb)
+
 public defn LayerSpec (
   --
   name:String = ?,
@@ -304,6 +315,24 @@ public defn LayerStack (
   initial-layers:Seqable<LayerSpec> = []
   ) -> LayerStack:
   #LayerStack(name, description, to-vector<LayerSpec>(initial-layers))
+
+defmethod write (o:OutputStream, s:LayerStack) :
+  println(o, "LayerStack: %_" % [value?(name(s))])
+  println(o, "  Layers: %_ copper layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
+  for [idx, l] in enumerate(layers(s)) do:
+    println(o, "    %_ : %_ | %_ | %_" %
+      [idx, value?(name(l)) get-type(material(l)) thickness(l)])
+
+doc:\<DOC>
+  Usage: for [idx, line] in enumerate(lines) do: 
+           println(“Line %: %_” % [idx, line])
+<DOC>
+defn enumerate<?T> (s:Seqable<?T>) -> Seq<[Int, T]> :
+  var i = 0
+  for x in s seq :
+    next where:
+      val next = [i, x]
+      i = i + 1
 
 doc:\<DOC>
   Get a layer by index
