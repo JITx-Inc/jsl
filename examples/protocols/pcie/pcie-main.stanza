@@ -21,15 +21,20 @@ pcb-module pcie-example :
   inst dut1 : jsl/examples/protocols/pcie/pcie-src/module
   inst dut2 : jsl/examples/protocols/pcie/pcie-src/module
 
-  require src : pcie(4) from dut1
-  require dst : pcie(4) from dut2
+  require src : pcie(2) from dut1
+  require dst : pcie(2) from dut2
+
+  require src-p : pcie(2, PCIe-PRSNT#) from dut1 
+  require dst-p : pcie(2, PCIe-PRSNT#) from dut2
 
   val [skew, loss] = pcie-get-skew-loss-vals(PCIE-V4)
 
   connect-pcie(skew, loss, block-cap(220.0e-9), false, src, dst)
+  connect-pcie(skew, loss, block-cap(220.0e-9), false, src-p, dst-p)
 
   val trace-imped = pcie-get-trace-impedance(PCIE-V4)
   pcie-apply-routing-structure(diff(trace-imped), src, dst)
+  pcie-apply-routing-structure(diff(trace-imped), src-p, dst-p)
 
 set-current-design("pcie-example")
 setup-board()
