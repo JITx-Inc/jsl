@@ -237,11 +237,19 @@ public defn LayerSpec (
 doc: \<DOC>
 Create a Copper layer
 <DOC>
-public defn Copper (name:String, weight:Double, material:ConductorMaterial = CopperMaterial) -> LayerSpec :
-  LayerSpec(name = name, thickness = compute-thickness(material, weight), material = material)
+public defn Copper (name:String, weight:Double, material:ConductorMaterial = CopperMaterial
+    -- is-thickness?:True|False = false) -> LayerSpec :
+  if not is-thickness? :
+    LayerSpec(name = name, thickness = compute-thickness(material, weight), material = material)
+  else : 
+    LayerSpec(name = name, thickness = weight, material = material)
 
-public defn Copper (weight:Double, material:ConductorMaterial = CopperMaterial) -> LayerSpec :
-  LayerSpec(thickness = compute-thickness(material, weight), material = material)
+public defn Copper (weight:Double, material:ConductorMaterial = CopperMaterial
+    -- is-thickness?:True|False = false) -> LayerSpec :
+  if not is-thickness? :
+    LayerSpec(thickness = compute-thickness(material, weight), material = material)
+  else :
+    LayerSpec(thickness = weight, material = material)
 
 public defn FR4 (name:String, thickness:Double, material:DielectricMaterial = FR4-Material) -> LayerSpec :
   LayerSpec(name = name, material = material, thickness = thickness)
@@ -278,7 +286,7 @@ public defstruct LayerStack :
   description:Maybe<String>
 
   layers:Vector<LayerSpec> with: (
-    updater => sub-layers
+    setter => set-layers
   )
 with:
   constructor => #LayerStack
@@ -300,21 +308,23 @@ public defn get (stack:LayerStack, idx:Int) -> LayerSpec :
   layers(stack)[idx]
 
 doc:\<DOC>
-  Usage: stack.copper[idx]
+  Modify a layer by index
+  Usage: stack[idx] - new-layer
 <DOC>
-public defn dot (stack:LayerStack, name:Symbol) -> Tuple<LayerSpec> :
-  if name == `copper :
-    to-tuple $ for l in layers(stack) filter:
-      material(l) is ConductorMaterial
-  else :
-    throw $ ValueError("dot for field %_ not supported" % [name])
+public defn set (stack:LayerStack, idx:Int, layer:LayerSpec) -> False :
+  layers(stack)[idx] = layer
+  ;<A>
+  set-layers(stack new-layers) where :
+    val new-layers = to-tuple $ cat-all $
+      [layers(stack)[0 to idx] [layer] layers(stack)[(idx + 1) to false]]
+  ;<A>
 
 doc:\<DOC>
-  Get a layer by index
-  Usage: stack[idx].name = new-name
+  Get the idx-th conductor layer
+  Usage: conductors(stack)[idx]
 <DOC>
-public defn set-name (stack:LayerStack, idx:Int, new-name:String) :
-  set-name(layers(stack)[idx] One(new-name))
+public defn conductors (stack:LayerStack) -> Tuple<LayerSpec> :
+  to-tuple $ filter({material(_) is ConductorMaterial} layers(stack))
 
 doc: \<DOC>
 Add one or more layers to the top of the board stackup.
