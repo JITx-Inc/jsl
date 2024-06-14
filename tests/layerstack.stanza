@@ -82,7 +82,7 @@ deftest(layerstack) test-get-conductor:
   val stack = LayerStack(name = "6-layer")
 
   val w = 1.0
-  val copper-1oz = Copper("cu", w)
+  val copper-1oz = Copper("cu", w, weight? = true)
   val core-FR4 = FR4("core", 1.0)
   val prepreg-FR4 = FR4("prepreg", 0.5)
 
@@ -132,7 +132,7 @@ deftest(layerstack) test-with-soldermask:
   val stack = LayerStack(name = "2-layer")
 
   val w = 2.0
-  val copper-1oz = Copper("cu", w)
+  val copper-1oz = Copper("cu", w, weight? = true)
   val core-FR4 = FR4("core", 1.0)
 
   add-symmetric(copper-1oz, core-FR4, stack)
@@ -171,9 +171,9 @@ My Crazy Stack - each layer is different for testing
  10 - copper-3oz
 ;<note>
 val test-stack = LayerStack(name = "My Crazy Stack")
-val copper-1oz = Copper("cu1", 1.0)
-val copper-2oz = Copper("cu2", 2.0)
-val copper-3oz = Copper("cu3", 3.0)
+val copper-1oz = Copper("cu1", 1.0, weight? = true)
+val copper-2oz = Copper("cu2", 2.0, weight? = true)
+val copper-3oz = Copper("cu3", 3.0, weight? = true)
 val core-FR4-1 = FR4("core1", 1.0)
 val core-FR4-2 = FR4("core2", 2.0)
 val prepreg-FR4 = FR4("prepreg", 0.5)
@@ -232,9 +232,9 @@ deftest(layerstack) test-conductors :
 
 ; Test: set-name(test-stack[0] One("cu3-new"))
 deftest(layerstack) test-set-name :
-  val copper-3oz = Copper("cu3", 3.0)
+  val copper-3oz = Copper("cu3", 3.0, weight? = true)
   #EXPECT(test-stack[0] == copper-3oz)
-  val copper-3oz-new = Copper("cu3-new", 3.0)
+  val copper-3oz-new = Copper("cu3-new", 3.0, weight? = true)
   set-name(test-stack[0] One("cu3-new"))
   ;Verify that the layer has the new name
   #EXPECT(test-stack[0] == copper-3oz-new)
@@ -251,12 +251,12 @@ deftest(layerstack) test-set :
 
 
 deftest(layerstack) test-thinkness-argument :
-  val copper-1oz-with-weight = Copper("cu", 1.0)
+  val copper-1oz-with-weight = Copper("cu", 1.0, weight? = true)
   val thickness = thickness(copper-1oz-with-weight)
-  val copper-1oz-with-thickness = Copper("cu", thickness, is-thickness? = true)
+  val copper-1oz-with-thickness = Copper("cu", thickness)
   #EXPECT(copper-1oz-with-weight == copper-1oz-with-thickness)
   
-  val aluminum-1oz-with-weight = Copper("cu", 1.0, AluminumMaterial)
+  val aluminum-1oz-with-weight = Copper(1.0, AluminumMaterial, weight? = true)
   val aluminum-thickness = /thickness(aluminum-1oz-with-weight)
-  val aluminum-1oz-with-thickness = Copper("cu", aluminum-thickness, AluminumMaterial, is-thickness? = true)
+  val aluminum-1oz-with-thickness = Copper(aluminum-thickness, AluminumMaterial)
   #EXPECT(aluminum-1oz-with-weight == aluminum-1oz-with-thickness)
