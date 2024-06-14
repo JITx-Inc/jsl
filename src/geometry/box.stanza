@@ -34,6 +34,10 @@ public defn Box (v:Point) -> Box :
 public defn center (b:Box) -> Point :
   0.5 * (lo(b) + hi(b))
 
+public defn area (b:Box) -> Double :
+  val p = dims(b)
+  x(p) * y(p)
+
 public defn dims (b:Box) -> Point :
   hi(b) - lo(b)
 
