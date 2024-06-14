@@ -111,10 +111,23 @@ public pcb-bundle can-logical :
 ; SPI - Serial Peripheral Interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+doc: \<DOC>
+SPI Bundle Pin Names
+A list of possible names for the SPI interface. Note that in order to connect
+SPI interfaces automatically, the constituent pins need to be present on all
+objects to be connected. 
+<DOC>
+
 public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CS
   SPI-MISO
   SPI-MOSI
+  SPI-COPI
+  SPI-CIPO
+  SPI-RDY
+  SPI-SDO
+  SPI-SDI
+
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
   name = "SPI"
@@ -124,6 +137,11 @@ pcb-bundle spi-b (pins:Collection<SPIPins>):
       SPI-CS  : make-pin(`cs)
       SPI-MISO : make-pin(`miso)
       SPI-MOSI : make-pin(`mosi)
+      SPI-COPI : make-pin(`copi)
+      SPI-CIPO : make-pin(`cipo)
+      SPI-RDY  : make-pin(`rdy)
+      SPI-SDO  : make-pin(`sdo)
+      SPI-SDI  : make-pin(`sdi)
 
 doc: \<DOC>
 SPI Bundle Generator

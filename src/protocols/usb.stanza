@@ -63,6 +63,7 @@ defpackage jsl/protocols/usb:
 
 doc: \<DOC>
 Transport Bundle for the USB 2.0 Interface
+@member data Differential pair for USB data
 <DOC>
 public pcb-bundle usb-data :
   name = "USB 2.0 Transport"
@@ -70,6 +71,10 @@ public pcb-bundle usb-data :
 
 doc: \<DOC>
 Connector Bundle for the USB 2.0 Interface
+@member vbus power bundle for USB connector interface
+@member bus usb-data bundle (differential pair)
+@member id ID signal
+
 <DOC>
 public pcb-bundle usb-2-connector :
   name = "USB 2.0 Connector"
@@ -82,6 +87,8 @@ USB SuperSpeed Lane Bundle
 
 This is intended to be a `lane-pair` type - hence the use of
 `TX` and `RX`. See {@link lane-pair} for more information.
+@member TX transmit differential pair
+@member RX receive differential pair
 <DOC>
 public pcb-bundle superspeed-lane:
   name = "USB Superspeed Transport Lane Bundle"
@@ -100,6 +107,8 @@ This bundle type is usually used to construct the ports on MCUs,
 ESD devices, Muxes, etc in the USB 3/4 applications.
 
 @param lane-cnt Number of superspeed lanes in this bundle. Default is 1.
+@member data Differential pair for data
+@member lane A configurable number of superspeed-lanes for data transfer
 <DOC>
 public pcb-bundle usb-superspeed (lane-cnt:Int = 1) :
   name = "USB Superspeed Transport"
@@ -109,6 +118,9 @@ public pcb-bundle usb-superspeed (lane-cnt:Int = 1) :
 
 doc: \<DOC>
 Connector Bundle for USB Type A SuperSpeed(TM) Connectors
+@member vbus Power bundle for connector
+@member bus usb-superspeed bundle for high speed data transfer
+@member shield Pin for connection to cable shield
 <DOC>
 public pcb-bundle usb-a-SS-connector :
   name = "USB Type-A SuperSpeed Connector"
@@ -120,6 +132,10 @@ public pcb-bundle usb-a-SS-connector :
 doc: \<DOC>
 Transport Bundle for USB3/4
 @param lane-cnt Number of superspeed lanes in this bundle. Default is 2
+@member data Differential pair for data transfer
+@member lane High speed differential pairs for data transfer (lane-cnt)
+@member cc CC pins for capability identification
+@member sbu SBU pins for side band utility
 <DOC>
 public pcb-bundle usb-c (lane-cnt:Int = 2):
   name = "USB Type-C Transport"
@@ -133,6 +149,9 @@ Connector Bundle - USB Type C Connector
 
 This bundle is typically applied to a physical connector
 component in a board design.
+@member vbus Power bundle for connector
+@member bus USB-C bundle defined for connector
+@member shield Pin for connection to cable shield
 <DOC>
 public pcb-bundle usb-c-connector :
   name = "USB Type C Connector"

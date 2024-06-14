@@ -33,6 +33,9 @@ defpackage jsl/protocols/displayport:
   import jsl/pin-assignment
 
 
+public val DISPLAYPORT_NUM_LANES = 4
+public val DISPLAYPORT_NUM_CONFIGS = 2
+
 doc: \<DOC>
 @brief DisplayPort Generation enums
 This is a fixed list of possible generation definitions for DisplayPort
@@ -54,15 +57,37 @@ doc: \<DOC>
 @brief DisplayPort Bundle
 The Data Bundle consists of 4 lane pairs (1 RX or TX pair set = 1 lane)
 The bundle also constrains an AUX channel (differential pair) and a HPD pin
+
+@member aux Differential pair for the auxiliary channel
+@member lane Four differential pairs for data transfer
+@member hpd Hot plug detect
 <DOC>
 
 public pcb-bundle displayport :
   name = "DisplayPort"
   description = "DisplayPort Digital Display Interface"
   port aux  : diff-pair
-  port lane : diff-pair[4]
+  port lane : diff-pair[DISPLAYPORT_NUM_LANES]
   port hpd  : pin ; hot plug detect
 
+
+doc: \<DOC>
+Display Port Bundle for Connectors
+This bundle is applicable for connector connections where more than the data lanes are needed.
+
+@member dp DisplayPort bundle for data communication
+@member gnd ground connection
+@member dp_pwr power bundle for DisplayPort
+@member config signals for configuration pins (DISPLAYPORT_NUM_CONFIGS)
+<DOC>
+public pcb-bundle displayport-connector :
+  port dp : displayport
+  ; In the connector, there are 5 ground signals but for
+  ;  this bundle we only place 1 for simplicity. Once on the board,
+  ;  the need for separate ground signals is unnecessary.
+  pin gnd
+  port dp_pwr : power ; DP_PWR and RETURN
+  port config : pin[DISPLAYPORT_NUM_CONFIGS]
 
 doc: \<DOC>
 @brief Construct a DisplayPort lane.
@@ -80,6 +105,7 @@ there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
 <DOC>
 public defn connect-displayport-lane (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False) :
   inside pcb-module:
+    check-bundle(displayport, src, sink)
     for i in indices(src.lane) do :
       match(cap) :
         (c:Instantiable) :
@@ -109,7 +135,7 @@ Note that there are 2 resistors added, one on each of the P,N signals of the pai
 used for the pull-up resistors. Must be valid if the resistors are used.
 
 <DOC>
-public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
+public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
   inside pcb-module:
     match(term, cap) :
       (t:[Instantiable, JITXObject], c:Instantiable) :
@@ -118,23 +144,23 @@ public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, d
         require tx1 : dual-pair from bl-cap
         topo-net(src.aux, shunt-r.A)
         topo-net(shunt-r.B, tx1.A)
-        topo-net(tx1.B, dst.aux)
+        topo-net(tx1.B, sink.aux)
         topo-net(shunt-r.COMMON, t[1] as JITXObject)
       (f:False, c:Instantiable|False) :
-        connect-displayport-aux(sw, ml, src, dst, c)
-    constrain-ch(sw, ml, src.aux, dst.aux)
+        connect-displayport-aux(sw, ml, src, sink, c)
+    constrain-ch(sw, ml, src.aux, sink.aux)
 
-public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
+public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False) :
   inside pcb-module:
     match(cap) :
       (c:Instantiable) :
         inst bl-cap : dp-coupler(c)
         require d-p : dual-pair from bl-cap
         topo-net(src.aux, d-p.A)
-        topo-net(d-p.B, dst.aux)
+        topo-net(d-p.B, sink.aux)
       (f:False) :
-        topo-net(src.aux, dst.aux)
-    constrain-ch(sw, ml, src.aux, dst.aux)
+        topo-net(src.aux, sink.aux)
+    constrain-ch(sw, ml, src.aux, sink.aux)
 
 doc: \<DOC>
 @brief Construct the DisplayPort Topology and Constraints
