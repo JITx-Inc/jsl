@@ -6,6 +6,7 @@ defpackage jsl/landpatterns/BGA/pads:
   import jitx/commands
   import jsl/design/settings
   import jsl/geometry/basics
+  import jsl/geometry/box
   import jsl/landpatterns/pads
 
 ; Collapsible seems to be the same as `NonSolderMaskDefined`
@@ -35,6 +36,13 @@ Compute the IPC recommended copper pad adjustment for BGAs
 This function will generate a `Percentage` value that indicates
 the level of pad expansion or shrinkage that is recommended
 in IPC7351.
+
+These values really only make sense for circular or square
+pads where a percentage can be applied equally in all directions. For
+`Capsule` or `Rectangle` pad shapes, these values don't really
+apply very well because we don't have tools that ratiometrically
+expand or contract arbitrary shapes.
+
 @param pad-type The type of pad technology to be used - either
 `SolderMaskDefined` or `NonSolderMaskDefined`.
 @param density-level Indication of board density and determines
@@ -60,85 +68,97 @@ public defn ipc-bga-copper (
       DensityLevelC: (5 %)
 
 
+doc: \<DOC>
+BGA Pad Configuration
+
+This type is used to modulate the features of each
+BGA pad based on the desired physical characteristics
+of the land pattern.
+
+The parameters of this type are applied to an arbitrary shape
+via the {@link BGA-PadPlanner} interface. This configuration can
+apply to any shape - but it is most typically applied to circular pads.
+
+The copper, soldermask, and paste layers can be modulated
+with either absolute values in mm or relative values as
+a `Percentage`.
+
+If the `adj` value is positive then the copper/soldermask/paste shape is
+increased (inflated) relative to the originating shape.
+If the `adj` value is negative then the copper/soldermask/paste shape is
+decreased (shrunk) relative to the originating shape.
+
+Absolute values are applied radially. So if the originating shape is
+a circle of diameter 1.0 mm and the `adj` value is 0.1, then the resulting
+shape will be a circle with diameter 1.2 mm.
+
+Relative values work best with square or circular pads where the X and Y axis are
+the same. The relative expansion or contraction is computed
+by taking the bounding rectangle of the presented shape. We then
+either expand or shrink by a relative value compared to
+the smaller of the width (X) or the height (Y). This guarantees that
+for convex the shapes, the shape will never become invalid (ie,
+zero area or multi-part).
+
+If you are constructing a concave pad shape, we suggest that you
+don't use `Percentage` values for the adjustment values. It is
+difficult to get this to behave in a reasonable way without causing
+invalid geometry.
+
+As an example, if the originating shape is a circle with diameter 1.0 and
+the `adj = (- 3 %)`, then the new shape will be shrunk by 3% radially,
+resulting in a circle with a diameter of 0.94 mm.
+
+A value of `0.0` for an `adj` parameter would indicate the
+copper/soldermask/paste shape is 1:1 with the originating shape.
+
+<DOC>
 public defstruct PadConfig :
-  ; doc: \<DOC>
-  ; Copper Pad Size Adjustment
-  ; The copper pad for a BGA package will depend on whether
-  ; it is being used in `NonSolderMaskDefined` or `SolderMaskDefined`
-  ; mode. Typically, in NSMD mode the pad size is reduced from the
-  ; total ball diameter between 15-25%. In SMD mode, the pad size is
-  ; typically enlarged over the ball diameter by between 5-15%.
+  doc: \<DOC>
+  Copper Pad Size Adjustment
+  The copper pad for a BGA package will depend on whether
+  it is being used in `NonSolderMaskDefined` or `SolderMaskDefined`
+  mode. Typically, in NSMD mode the pad size is reduced from the
+  total ball diameter between 15-25%. In SMD mode, the pad size is
+  typically enlarged over the ball diameter by between 5-15%.
 
-  ; This parameter allows the user to adjust the copper pad size
-  ; relative to the ball diameter by either shrinking or enlarging
-  ; the pad size.
-
-  ; If the `copper-adj` value is positive then the padsize is
-  ; increased relative to the ball diameter
-  ; If the `copper-adj` value is negative then the padsize is
-  ; decreased relative to the ball diameter.
-
-  ; The `copper-adj` value can be either an absolute value in mm (Double)
-  ; or a relative value as a `Percentage`.
-  ; A value of `0.0` would indicate the copper pad is 1:1 with the
-  ; ball diameter.
-  ; <DOC>
+  This parameter allows the user to adjust the copper pad size
+  relative to the originating shape.
+  <DOC>
   copper-adj:Double|Percentage
-  ; doc: \<DOC>
-  ; Soldermask Opening Adjustment
-  ; The typical soldermask opening for a BGA pad is a 1:1 with
-  ; the copper pad. Depending on BGA `pad-type`, the
-  ; user may want to shrink or enlarge the soldermask opening.
+  doc: \<DOC>
+  Soldermask Opening Adjustment
+  The typical soldermask opening for a BGA pad is a 1:1 with
+  the copper pad. Depending on BGA `pad-type`, the
+  user may want to shrink or enlarge the soldermask opening.
 
-  ; The `mask-adj` is a parameter for shrinking or enlarging
-  ; the soldermask opening for a BGA pad. If this value is
-  ; negative - then the soldermask opening is shrunk.
-  ; If this value is positive - then the soldermask opening
-  ; is enlarged.
+  The `mask-adj` is a parameter for shrinking or enlarging
+  the soldermask opening relative to the originating BGA pad shape.
 
-  ; The `mask-adj` value can be either an absolute value in mm (Double)
-  ; or it can be a relative value as a `Percentage`.
-
-  ; Example:
-
-  ; With `mask-adj = 0.25` - the soldermask opening of each pad will
-  ; be enlarged from the ball shape by 0.25mm radially.
-  ; If the copper pad is a `Circle` with a 1.0mm diameter - then the new
-  ; opening will be 1.5mm in diameter.
-
-  ; With `mask-adj = (- 3 %)` - the soldermask opening of each pad
-  ; will be shrunk from the ball shape by 3%. If the BGA ball diameter
-  ; is 1.0mm, then the resultant soldermask opening will be 0.94mm
-
-  ; <DOC>
+  <DOC>
   mask-adj:Double|Percentage
-  ; doc: \<DOC>
-  ; Pastmask Opening Adjustment
-  ; This value is similar to the `mask-adj` parameter - it allows
-  ; the user to enlarge or shrink the paste mask opening for
-  ; each pad relative to the `ball diameter`
-  ;
-  ; **NominalPasteMask**
-  ;
-  ; `NominalPasteMask` indicates that the paste mask opening should be smaller of:
-  ;
-  ; 1.  1:1 with the copper pad
-  ; 2.  1:1 with the soldermask opening
-  ;
-  ; This allows soldermask defined pads to be created without the pastemask spilling
-  ; on to the soldermask.
-  ;
-  ; **Double|Percentage**
-  ;
-  ; If the `paste-adj` value is negative, the paste mask opening
-  ; is shrunk (less solder paste). If the value is positive, the paste mask opening
-  ; is enlarged (more solder paste).
-  ;
-  ; **NoPasteMask**
-  ; If this value is `NoPasteMask` - then no pastemask opening
-  ; will be generated.
-  ;
-  ; <DOC>
+  doc: \<DOC>
+  Paste Layer Adjustment
+
+  This value is similar to the other `adj` parameters - it allows
+  the user to enlarge or shrink the paste application for
+  each pad relative to the originating shape.
+
+  **NominalPasteMask**
+
+  `NominalPasteMask` indicates that the paste mask opening should be smaller of:
+
+  1.  1:1 with the copper pad
+  2.  1:1 with the soldermask opening
+
+  This allows soldermask defined pads to be created without the pastemask spilling
+  on to the soldermask.
+
+  **NoPasteMask**
+
+  If this value is `NoPasteMask` - then no paste application will be
+  generated for the effected pads.
+  <DOC>
   paste-adj:Double|Percentage|PasteMaskStyle
 
 with:
@@ -146,6 +166,10 @@ with:
 
 doc: \<DOC>
 Construct a `PadConfig` object - Radial Reference
+
+These PadConfig objects are utilities when working with circular
+pads.
+
 @param copper-R-adj Copper adjustment value relative to the radius of the
 BGA ball lead. The default is 0.0 which means that the copper pad radius will
 be 1:1 with the ball radius.
@@ -168,13 +192,17 @@ public defn PadConfig-R (
 
 doc: \<DOC>
 Construct a `PadConfig` object - Diameter Reference
+
+These PadConfig objects are utilities when working with circular
+pads.
+
 @param copper-D-adj Copper adjustment value relative to the diameter of the
 BGA ball lead. The default is 0.0 which means that the copper pad will
 be 1:1 with the ball diameter.
 @param mask-D-adj Soldermask Opening adjustment value relative to the
 diameter of the BGA ball lead. The default is the same as the `copper-D-adj` value.
 This maintains a 1:1 relationship with the copper pad size by default.
-@param paste-D-adj Pastemask Opening adjustment value relative to the diameter of the
+@param paste-D-adj Paste Application adjustment value relative to the diameter of the
 BGA ball lead. The default value is `NominalPasteMask` which means that the
 paste mask opening will be the smaller of the copper pad size or the soldermask
 opening size. A value of `0.0` means that the paste mask diameter is 1:1 with the
@@ -199,35 +227,42 @@ public defn PadConfig-D (
   #PadConfig(cu-R, mask-R, paste-R)
 
 
-defn compute-adj (adj:Double|Percentage, copper:Circle) -> Double :
+defn compute-adj (adj:Double|Percentage, copper:Shape) -> Double :
   match(adj):
     (x:Double): x
     (rel-adj:Percentage):
-      radius(copper) * rel-adj
+      val bbox = bounds(copper)
+      val min-edge = min-width(bbox)
+      min-edge * rel-adj
+
 
 doc: \<DOC>
 BGA Pad Builder
-This function uses a closure to define a BGA pad using `pcb-pad`
+
+This function uses a closure to define a `pcb-pad` for a BGA pad.
+
 The adjustment parameters from {@link PadConfig} are designed to
 modulate the size of those features from the `ball` shape baseline.
-@param ball Circle projection of the ball diameter. This is the
-pad shape that results from a 1:1 pad to ball diameter.
+
+@param ball Originating Shape for the pad. This is typically a circular
+projection of the ball diameter of the BGA. This is the pad shape that
+results from a 1:1 pad to ball diameter (ie zero adjustments)
 @param config Configuration for generating the BGA pad.
 
 @snippet Example
 
 ```stanza
-val cfg = PadConfig(SolderMaskDefined, (5 %), (-1 %))
+val cfg = PadConfig((5 %), (-1 %))
 val ball = Circle(to-radius $ 1.0) ; 1mm Diameter
 pcb-landpattern bga :
   pad p[1] : build-bga-pad(ball, cfg) at loc(0.0, 0.0)
 ```
 @snip-note 1
-This results in a copper pad that is 1.05mm in diameter and a
-soldermask opening that 0.99mm in diameter.
+This results in a copper pad that is 1.1mm in diameter and a
+soldermask opening that 0.98mm in diameter.
 <DOC>
 public defn build-bga-pad (
-  ball:Circle,
+  ball:Shape,
   config:PadConfig
   ):
   pcb-pad bga-pad :
@@ -239,7 +274,8 @@ public defn build-bga-pad (
     shape = copper
 
     val s-adj = compute-adj(mask-adj(config), ball)
-    make-soldermask(Circle(radius(ball) + s-adj))
+    val smask = expand(ball, s-adj)
+    make-soldermask(smask)
 
     match(paste-adj(config)):
       (_:NoPasteMask): false
@@ -249,11 +285,18 @@ public defn build-bga-pad (
         ;   or
         ;  1:1 Soldermask Opening
         ;  Depending on which one is smaller.
-        val p-adj = min(c-adj, s-adj)
-        make-pastemask(Circle(radius(ball) + p-adj))
+        defn size-metric (x):
+          area $ bounds(x)
+
+        val paste-sh = if size-metric(copper) < size-metric(smask):
+          copper
+        else:
+          smask
+
+        make-pastemask(paste-sh)
       (paste:Double|Percentage):
         val p-adj = compute-adj(paste, ball)
-        make-pastemask(Circle(radius(ball) + p-adj))
+        val paste-sh = expand(ball, p-adj)
+        make-pastemask(paste-sh)
+
   bga-pad
-
-
