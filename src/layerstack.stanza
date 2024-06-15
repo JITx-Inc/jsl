@@ -229,6 +229,8 @@ with:
   printer => true
   equalable => true
 
+public defn get-name (x:LayerSpec) -> Maybe<String> :
+  name(x)
 public defn set-name (l:LayerSpec, name:String) :
   set-name?(l One(name))
 
@@ -246,25 +248,33 @@ Create a Copper layer
   Usage: Copper(0.3) : specify thickness 
          Copper(0.3, name = "Cu") : specify thickness and name
          Copper(0.3, AluminumMaterial, name = "Cu") : specify thickness, material and name
-@param thickness : layer thickness in mm
-@param material : optional positional argument
-@param name : optional named argument
+@param thickness thickness of the layer in mm - required argument
+@param material material of the layer - optional positional argument
+@param name name of the layer - optional named argument
 <DOC>
-#for (
-  func-name in [Copper FR4 Soldermask]
-  material-type in [ConductorMaterial DielectricMaterial DielectricMaterial ]
-  material-default in [CopperMaterial FR4-Material SoldermaskMaterial]
-) :
-  public defn func-name (thickness:Double, material:material-type = material-default
-      -- name:String = ?) -> LayerSpec :
-    match(name):
-      (name:One) :
-        LayerSpec(name = value(name), thickness = thickness, material = material)
-      (_):
-        LayerSpec(thickness = thickness, material = material)
+public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
+    -- name:String = ?) -> LayerSpec :
+  match(name):
+    (name:One) :
+      LayerSpec(name = value(name), thickness = thickness, material = material)
+    (_):
+      LayerSpec(thickness = thickness, material = material)
 
-defn get-name (x:LayerSpec) -> Maybe<String> :
-  name(x)
+public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material
+    -- name:String = ?) -> LayerSpec :
+  match(name):
+    (name:One) :
+      LayerSpec(name = value(name), thickness = thickness, material = material)
+    (_):
+      LayerSpec(thickness = thickness, material = material)
+
+public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial
+    -- name:String = ?) -> LayerSpec :
+  match(name):
+    (name:One) :
+      LayerSpec(name = value(name), thickness = thickness, material = material)
+    (_):
+      LayerSpec(thickness = thickness, material = material)
 
 public defn make-layer-statement (x:LayerSpec) :
   val name? = get-name(x)
@@ -286,7 +296,7 @@ public defstruct LayerStack :
   description:Maybe<String>
 
   layers:Vector<LayerSpec> with: (
-    setter => sub-layers
+    updater => sub-layers
   )
 with:
   constructor => #LayerStack
@@ -302,7 +312,7 @@ public defn LayerStack (
 
 defmethod write (o:OutputStream, s:LayerStack) :
   println(o, "LayerStack: %_" % [value?(name(s))])
-  println(o, "  Layers: %_ copper layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
+  println(o, "  Layers: %_ conductor layers %_ total layers" % [get-conductor-count(s) length(layers(s))])
   for (l in layers(s), idx in 0 to false) do :
     println(o, "    %_ : %_ | %_ | %_" %
       [idx, value?(name(l)) get-type(material(l)) thickness(l)])
@@ -343,7 +353,6 @@ on top of that.
 @return The modified layer stack object
 
 <DOC>
-
 public defn add-top (l-set:LayerSpec|Collection<LayerSpec>, s:LayerStack) -> LayerStack :
   ; I don't have a way to insert layers in the front
   ;  So I reverse the layers and then append them to the new "back" (front)
