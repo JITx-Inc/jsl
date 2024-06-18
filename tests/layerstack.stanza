@@ -11,13 +11,18 @@ defpackage jsl/tests/layerstack:
 deftest(layerstack) test-basic-symmetric:
   val stack = LayerStack(name = "Carl's Crazy Stack")
 
-  val copper-1mm = Copper(1.0, name = "cu")
-  val core-FR4 = FR4(1.0, name = "core")
-  val prepreg-FR4 = FR4(0.5, name = "prepreg")
+  ;Realistic thickness for testing:
+  ;    weight 0.5oz -> thickness 17.4um = 0.0174mm
+  ;    weight 1oz -> thickness 35um = 0.035mm
+  ;    weight 2oz -> thickness 70um = 0.070mm
+  ;    weight 3oz -> thickness 105um = 0.105mm
+  val copper-35um = Copper(0.035, name = "cu")
+  val core-FR4 = FR4(0.035, name = "core")
+  val prepreg-FR4 = FR4(0.0175, name = "prepreg")
 
-  add-symmetric(copper-1mm, core-FR4,
-    add-symmetric(copper-1mm, prepreg-FR4,
-      add-symmetric(copper-1mm, core-FR4, stack)
+  add-symmetric(copper-35um, core-FR4,
+    add-symmetric(copper-35um, prepreg-FR4,
+      add-symmetric(copper-35um, core-FR4, stack)
     )
   )
 
@@ -46,11 +51,11 @@ deftest(layerstack) test-validate:
 
   val stack = LayerStack(name = "TwoCoppers")
 
-  val copper-1mm = Copper(1.0, name = "cu")
-  val core-FR4 = FR4(1.0, name = "core")
+  val copper-35um = Copper(0.035, name = "cu")
+  val core-FR4 = FR4(0.035, name = "core")
 
-  add-symmetric(copper-1mm, core-FR4, stack)
-  add-top(copper-1mm, stack)
+  add-symmetric(copper-35um, core-FR4, stack)
+  add-top(copper-35um, stack)
 
   expect-throw({validate!(stack)})
 
@@ -58,7 +63,7 @@ deftest(layerstack) test-validate:
 
   val stack2 = LayerStack(name = "TwoDielectrics")
 
-  add-symmetric(copper-1mm, core-FR4, stack2)
+  add-symmetric(copper-35um, core-FR4, stack2)
   add-bottom(core-FR4, stack2)
   add-bottom(core-FR4, stack2)
 
@@ -81,13 +86,13 @@ deftest(layerstack) test-compute-thickness:
 deftest(layerstack) test-get-conductor:
   val stack = LayerStack(name = "6-layer")
 
-  val copper-1mm = Copper(1.0, name = "cu")
-  val core-FR4 = FR4(1.0, name = "core")
-  val prepreg-FR4 = FR4(0.5, name = "prepreg")
+  val copper-35um = Copper(0.035, name = "cu")
+  val core-FR4 = FR4(0.035, name = "core")
+  val prepreg-FR4 = FR4(0.0175, name = "prepreg")
 
-  add-symmetric(copper-1mm, core-FR4,
-    add-symmetric(copper-1mm, prepreg-FR4,
-      add-symmetric(copper-1mm, core-FR4, stack)
+  add-symmetric(copper-35um, core-FR4,
+    add-symmetric(copper-35um, prepreg-FR4,
+      add-symmetric(copper-35um, core-FR4, stack)
     )
   )
 
@@ -105,17 +110,17 @@ deftest(layerstack) test-get-conductor:
   #EXPECT(name(prepreg-2) is-not None)
   #EXPECT(value!(name(prepreg-2)) == "prepreg")
   #EXPECT(description(prepreg-2) is None)
-  #EXPECT(thickness(prepreg-2) == 0.5)
+  #EXPECT(thickness(prepreg-2) == 0.0175)
 
   #EXPECT(name(core-2) is-not None)
   #EXPECT(value!(name(core-2)) == "core")
   #EXPECT(description(core-2) is None)
-  #EXPECT(thickness(core-2) == 1.0)
+  #EXPECT(thickness(core-2) == 0.035)
 
   #EXPECT(name(cu-2) is-not None)
   #EXPECT(value!(name(cu-2)) == "cu")
   #EXPECT(description(cu-2) is None)
-  #EXPECT(thickness(cu-2) == 1.0)
+  #EXPECT(thickness(cu-2) == 0.035)
 
   ; Check the `get-copper` under failure cases:
 
@@ -127,10 +132,10 @@ deftest(layerstack) test-with-soldermask:
 
   val stack = LayerStack(name = "2-layer")
 
-  val copper-1mm = Copper(2.0, name = "cu")
-  val core-FR4 = FR4(1.0, name = "core")
+  val copper-35um = Copper(0.035, name = "cu")
+  val core-FR4 = FR4(0.035, name = "core")
 
-  add-symmetric(copper-1mm, core-FR4, stack)
+  add-symmetric(copper-35um, core-FR4, stack)
   add-soldermask(Soldermask(0.025), stack)
 
   validate!(stack)
@@ -153,29 +158,29 @@ deftest(layerstack) test-with-soldermask:
 ;============================================================================
 ;<note>
 My Crazy Stack - each layer is different for testing
- 0 - copper-3oz
+ 0 - copper-105um
  1 - core-FR4-2
- 2 - copper-2oz
+ 2 - copper-70um
  3 - prepreg-FR4
- 4 - copper-1oz
+ 4 - copper-35um
  5 - core-FR4-1
- 6 - copper-1oz
+ 6 - copper-35um
  7 - prepreg-FR4
- 8 - copper-2oz
+ 8 - copper-70um
  9 - core-FR4-2
- 10 - copper-3oz
+ 10 - copper-105um
 ;<note>
 val test-stack = LayerStack(name = "My Crazy Stack")
-val copper-1mm = Copper(1.0, name = "cu1")
-val copper-2mm = Copper(2.0, name = "cu2")
-val copper-3mm = Copper(3.0, name = "cu3")
-val core-FR4-1 = FR4(1.0, name = "core1")
-val core-FR4-2 = FR4(2.0, name = "core2")
-val prepreg-FR4 = FR4(0.5, name = "prepreg")
+val copper-35um = Copper(0.035, name = "cu1")
+val copper-70um = Copper(0.070, name = "cu2")
+val copper-105um = Copper(0.105, name = "cu3")
+val core-FR4-1 = FR4(0.035, name = "core1")
+val core-FR4-2 = FR4(0.070, name = "core2")
+val prepreg-FR4 = FR4(0.0175, name = "prepreg")
 
-add-symmetric(copper-3mm, core-FR4-2,
-  add-symmetric(copper-2mm, prepreg-FR4,
-    add-symmetric(copper-1mm, core-FR4-1, test-stack)
+add-symmetric(copper-105um, core-FR4-2,
+  add-symmetric(copper-70um, prepreg-FR4,
+    add-symmetric(copper-35um, core-FR4-1, test-stack)
   )
 )
 validate!(test-stack)
@@ -183,45 +188,45 @@ print("%~" % [test-stack])
 
 ; Test: test-stack[0]
 deftest(layerstack) test-get :
-  #EXPECT(test-stack[0] == copper-3mm)
+  #EXPECT(test-stack[0] == copper-105um)
   #EXPECT(test-stack[1] == core-FR4-2)
-  #EXPECT(test-stack[2] == copper-2mm)
+  #EXPECT(test-stack[2] == copper-70um)
   #EXPECT(test-stack[3] == prepreg-FR4)
 
 ; Test: conductors(test-stack)[0]
 deftest(layerstack) test-conductors :
-  #EXPECT(conductors(test-stack)[0] == copper-3mm)
-  #EXPECT(conductors(test-stack)[1] == copper-2mm)
-  #EXPECT(conductors(test-stack)[2] == copper-1mm)
-  #EXPECT(conductors(test-stack)[3] == copper-1mm)
-  #EXPECT(conductors(test-stack)[4] == copper-2mm)
-  #EXPECT(conductors(test-stack)[5] == copper-3mm)
+  #EXPECT(conductors(test-stack)[0] == copper-105um)
+  #EXPECT(conductors(test-stack)[1] == copper-70um)
+  #EXPECT(conductors(test-stack)[2] == copper-35um)
+  #EXPECT(conductors(test-stack)[3] == copper-35um)
+  #EXPECT(conductors(test-stack)[4] == copper-70um)
+  #EXPECT(conductors(test-stack)[5] == copper-105um)
 
 ; Test: set-name(test-stack[0] One("cu3-new"))
 deftest(layerstack) test-set-name :
-  val copper-3mm = Copper(3.0, name = "cu3")
-  #EXPECT(test-stack[0] == copper-3mm)
-  val copper-3mm-new = Copper(3.0, name = "cu3-new")
+  val copper-105um = Copper(0.105, name = "cu3")
+  #EXPECT(test-stack[0] == copper-105um)
+  val copper-105um-new = Copper(0.105, name = "cu3-new")
   set-name(test-stack[0] "cu3-new")
   ;Verify that the layer has the new name
-  #EXPECT(test-stack[0] == copper-3mm-new)
+  #EXPECT(test-stack[0] == copper-105um-new)
 
 ; Test: 
-;     Copper(0.3) : specify thickness 
-;     Copper(0.3, name = "Cu") : specify thickness and name
-;     Copper(0.3, AluminumMaterial, name = "Cu") : specify thickness, material and name
+;     Copper(0.035) : specify thickness 
+;     Copper(0.035, name = "Cu") : specify thickness and name
+;     Copper(0.035, AluminumMaterial, name = "Cu") : specify thickness, material and name
 deftest(layerstack) test-copper-optional-arguments :
-  val copper-1mm = Copper(1.0)
-  val copper-1mm-explicit = Copper(1.0, CopperMaterial)
-  #EXPECT(copper-1mm == copper-1mm-explicit)
+  val copper-35um = Copper(0.035)
+  val copper-35um-explicit = Copper(0.035, CopperMaterial)
+  #EXPECT(copper-35um == copper-35um-explicit)
 
-  val copper-1mm-with-name = Copper(1.0, name = "new-Cu")
-  set-name(copper-1mm "new-Cu")
-  #EXPECT(copper-1mm-with-name == copper-1mm)
+  val copper-35um-with-name = Copper(0.035, name = "new-Cu")
+  set-name(copper-35um "new-Cu")
+  #EXPECT(copper-35um-with-name == copper-35um)
   
-  val aluminum-1mm = Copper(1.0, AluminumMaterial)
-  val aluminum-1mm-with-name = Copper(1.0, AluminumMaterial, name = "alum")
-  set-name(aluminum-1mm "alum")
-   #EXPECT(aluminum-1mm-with-name == aluminum-1mm)
+  val aluminum-35um = Copper(0.035, AluminumMaterial)
+  val aluminum-35um-with-name = Copper(0.035, AluminumMaterial, name = "alum")
+  set-name(aluminum-35um "alum")
+   #EXPECT(aluminum-35um-with-name == aluminum-35um)
  
 

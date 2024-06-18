@@ -253,28 +253,16 @@ Create a Copper layer
 @param name name of the layer - optional named argument
 <DOC>
 public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
-    -- name:String = ?) -> LayerSpec :
-  match(name):
-    (name:One) :
-      LayerSpec(name = value(name), thickness = thickness, material = material)
-    (_):
-      LayerSpec(thickness = thickness, material = material)
+    -- name:String = ?, description:String = ?) -> LayerSpec :
+  #LayerSpec(name, description, material, thickness) 
 
 public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material
-    -- name:String = ?) -> LayerSpec :
-  match(name):
-    (name:One) :
-      LayerSpec(name = value(name), thickness = thickness, material = material)
-    (_):
-      LayerSpec(thickness = thickness, material = material)
+    -- name:String = ?, description:String = ?) -> LayerSpec :
+  #LayerSpec(name, description, material, thickness) 
 
 public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial
-    -- name:String = ?) -> LayerSpec :
-  match(name):
-    (name:One) :
-      LayerSpec(name = value(name), thickness = thickness, material = material)
-    (_):
-      LayerSpec(thickness = thickness, material = material)
+    -- name:String = ?, description:String = ?) -> LayerSpec :
+  #LayerSpec(name, description, material, thickness) 
 
 public defn make-layer-statement (x:LayerSpec) :
   val name? = get-name(x)
