@@ -17,8 +17,8 @@ deftest(layerstack) test-basic-symmetric:
   ;    weight 2oz -> thickness 70um = 0.070mm
   ;    weight 3oz -> thickness 105um = 0.105mm
   val copper-35um = Copper(0.035, name = "cu")
-  val core-FR4 = FR4(0.035, name = "core")
-  val prepreg-FR4 = FR4(0.0175, name = "prepreg")
+  val core-FR4 = FR4(1.0, name = "core")
+  val prepreg-FR4 = FR4(0.5, name = "prepreg")
 
   add-symmetric(copper-35um, core-FR4,
     add-symmetric(copper-35um, prepreg-FR4,
@@ -52,7 +52,7 @@ deftest(layerstack) test-validate:
   val stack = LayerStack(name = "TwoCoppers")
 
   val copper-35um = Copper(0.035, name = "cu")
-  val core-FR4 = FR4(0.035, name = "core")
+  val core-FR4 = FR4(1.5, name = "core")
 
   add-symmetric(copper-35um, core-FR4, stack)
   add-top(copper-35um, stack)
@@ -87,8 +87,8 @@ deftest(layerstack) test-get-conductor:
   val stack = LayerStack(name = "6-layer")
 
   val copper-35um = Copper(0.035, name = "cu")
-  val core-FR4 = FR4(0.035, name = "core")
-  val prepreg-FR4 = FR4(0.0175, name = "prepreg")
+  val core-FR4 = FR4(1.2, name = "core")
+  val prepreg-FR4 = FR4(0.6, name = "prepreg")
 
   add-symmetric(copper-35um, core-FR4,
     add-symmetric(copper-35um, prepreg-FR4,
@@ -110,12 +110,12 @@ deftest(layerstack) test-get-conductor:
   #EXPECT(name(prepreg-2) is-not None)
   #EXPECT(value!(name(prepreg-2)) == "prepreg")
   #EXPECT(description(prepreg-2) is None)
-  #EXPECT(thickness(prepreg-2) == 0.0175)
+  #EXPECT(thickness(prepreg-2) == 0.6)
 
   #EXPECT(name(core-2) is-not None)
   #EXPECT(value!(name(core-2)) == "core")
   #EXPECT(description(core-2) is None)
-  #EXPECT(thickness(core-2) == 0.035)
+  #EXPECT(thickness(core-2) == 1.2)
 
   #EXPECT(name(cu-2) is-not None)
   #EXPECT(value!(name(cu-2)) == "cu")
@@ -133,7 +133,7 @@ deftest(layerstack) test-with-soldermask:
   val stack = LayerStack(name = "2-layer")
 
   val copper-35um = Copper(0.035, name = "cu")
-  val core-FR4 = FR4(0.035, name = "core")
+  val core-FR4 = FR4(1.4, name = "core")
 
   add-symmetric(copper-35um, core-FR4, stack)
   add-soldermask(Soldermask(0.025), stack)
@@ -174,9 +174,9 @@ val test-stack = LayerStack(name = "My Crazy Stack")
 val copper-35um = Copper(0.035, name = "cu1")
 val copper-70um = Copper(0.070, name = "cu2")
 val copper-105um = Copper(0.105, name = "cu3")
-val core-FR4-1 = FR4(0.035, name = "core1")
-val core-FR4-2 = FR4(0.070, name = "core2")
-val prepreg-FR4 = FR4(0.0175, name = "prepreg")
+val core-FR4-1 = FR4(1.0, name = "core1")
+val core-FR4-2 = FR4(1.2, name = "core2")
+val prepreg-FR4 = FR4(0.4, name = "prepreg")
 
 add-symmetric(copper-105um, core-FR4-2,
   add-symmetric(copper-70um, prepreg-FR4,

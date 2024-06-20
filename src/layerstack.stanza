@@ -247,19 +247,37 @@ doc: \<DOC>
 Create a Copper layer
   Usage: Copper(0.3) : specify thickness 
          Copper(0.3, name = "Cu") : specify thickness and name
-         Copper(0.3, AluminumMaterial, name = "Cu") : specify thickness, material and name
-@param thickness thickness of the layer in mm - required argument
-@param material material of the layer - optional positional argument
-@param name name of the layer - optional named argument
+         Copper(0.3, CustomCuMaterial, name = "PWR") : specify thickness, material and name
+@param thickness thickness of the layer in mm
+@param material material of the layer. The default is the generic {@link CopperMaterial} definition.
+@param name name of the layer - by default this is `None()` implying no name.
+@param description Descriptive text for this layer. By default this is `None()` implying no description
 <DOC>
 public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
     -- name:String = ?, description:String = ?) -> LayerSpec :
   #LayerSpec(name, description, material, thickness) 
 
+doc: \<DOC>
+Create a Generic FR4 layer
+  Usage: FR4(1.0) : specify thickness in mm
+         FR4(1.2, name = "core-1") : specify thickness and name
+         FR4(0.3, Isola370, name = "prepreg") : specify thickness, material and name
+@param thickness thickness of the layer in mm
+@param material material of the layer. The default is the generic {@link FR4-Material} definition.
+@param name name of the layer - by default this is `None()` implying no name.
+@param description Descriptive text for this layer. By default this is `None()` implying no description
+<DOC>
 public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material
     -- name:String = ?, description:String = ?) -> LayerSpec :
   #LayerSpec(name, description, material, thickness) 
 
+doc: \<DOC>
+Create a Generic Soldermask layer
+@param thickness thickness of the layer in mm
+@param material material of the layer. The default is the generic {@link SoldermaskMaterial} definition.
+@param name name of the layer - by default this is `None()` implying no name.
+@param description Descriptive text for this layer. By default this is `None()` implying no description
+<DOC>
 public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial
     -- name:String = ?, description:String = ?) -> LayerSpec :
   #LayerSpec(name, description, material, thickness) 
@@ -364,7 +382,7 @@ layer stack.
 that if this value is a collection, then the layers will be added to
 the stack one at a time. For example:
 
-```
+```stanza
 add-bottom( [dielectric, copper], stack)
 ```
 
@@ -401,16 +419,16 @@ layers, and 2 more copper layers. This constructs a symmetric stackup.
 
 @snippet
 
-```
+```stanza
 val stack = LayerStack(name = "6-Layer Symmetric Stackup")
 
-val copper-1mm = Copper(1.0, name = "cu")
+val copper-35um = Copper(0.035, name = "cu")
 val core-FR4 = FR4(1.0, name = "core")
 val prepreg-FR4 = FR4(0.5, name = "prepreg")
 
-add-symmetric(copper-1mm, core-FR4,
-  add-symmetric(copper-1mm, prepreg-FR4,
-    add-symmetric(copper-1mm, core-FR4, stack)
+add-symmetric(copper-35um, core-FR4,
+  add-symmetric(copper-35um, prepreg-FR4,
+    add-symmetric(copper-35um, core-FR4, stack)
   )
 )
 ```
@@ -525,7 +543,7 @@ defn make-name (x:LayerStack) :
         name = value(d)
 
 defn make-description (x:LayerStack) :
-  ; I can't use the `description` string in the pcb-stackup definition
+  ; I can't use the `description` symbol in the pcb-stackup definition
   ;  because the macro overrides it.
   val v? = description(x)
   inside pcb-stackup:
