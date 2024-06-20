@@ -107,7 +107,7 @@ This bundle type is usually used to construct the ports on MCUs,
 ESD devices, Muxes, etc in the USB 3/4 applications.
 
 @param lane-cnt Number of superspeed lanes in this bundle. Default is 1.
-@member data Differential pair for data
+@member data Differential pair for USB2.0 data
 @member lane A configurable number of superspeed-lanes for data transfer
 <DOC>
 public pcb-bundle usb-superspeed (lane-cnt:Int = 1) :
