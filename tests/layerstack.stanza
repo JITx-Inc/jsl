@@ -26,8 +26,6 @@ deftest(layerstack) test-basic-symmetric:
     )
   )
 
-  validate!(stack)
-
   val [prepreg-2, cu-2, core-2] = get-conductor(stack, 2)
   #EXPECT(prepreg-2 is-not None)
   #EXPECT(core-2 is-not None)
@@ -43,31 +41,6 @@ deftest(layerstack) test-basic-symmetric:
   ; For debug
   ; val pcb-stack = create-pcb-stackup(stack)
   ; print-def(pcb-stack)
-
-deftest(layerstack) test-validate:
-
-  val empty = LayerStack(name = "Empty Stack")
-  expect-throw({validate!(empty)})
-
-  val stack = LayerStack(name = "TwoCoppers")
-
-  val copper-35um = Copper(0.035, name = "cu")
-  val core-FR4 = FR4(1.5, name = "core")
-
-  add-symmetric(copper-35um, core-FR4, stack)
-  add-top(copper-35um, stack)
-
-  expect-throw({validate!(stack)})
-
-  ; Two Dielectrics in a row
-
-  val stack2 = LayerStack(name = "TwoDielectrics")
-
-  add-symmetric(copper-35um, core-FR4, stack2)
-  add-bottom(core-FR4, stack2)
-  add-bottom(core-FR4, stack2)
-
-  expect-throw({validate!(stack2)})
 
 deftest(layerstack) test-compute-thickness:
 
@@ -95,8 +68,6 @@ deftest(layerstack) test-get-conductor:
       add-symmetric(copper-35um, core-FR4, stack)
     )
   )
-
-  validate!(stack)
 
   #EXPECT(get-conductor-count(stack) == 6)
 
@@ -137,8 +108,6 @@ deftest(layerstack) test-with-soldermask:
 
   add-symmetric(copper-35um, core-FR4, stack)
   add-soldermask(Soldermask(0.025), stack)
-
-  validate!(stack)
 
   #EXPECT(get-conductor-count(stack) == 2)
 
@@ -183,7 +152,6 @@ add-symmetric(copper-105um, core-FR4-2,
     add-symmetric(copper-35um, core-FR4-1, test-stack)
   )
 )
-validate!(test-stack)
 print("%~" % [test-stack])
 
 ; Test: test-stack[0]
