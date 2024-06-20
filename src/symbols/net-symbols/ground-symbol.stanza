@@ -1,0 +1,136 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/ground-symbol:
+  import core
+  import collections
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/framework
+  import jsl/symbols/net-symbols/framework
+  import jsl/symbols/net-symbols/symbol-builder
+  import jsl/symbols/net-symbols/bar-ground
+
+
+var DEF_GND_SYM_PARAMS = BarGroundSymbol()
+
+doc: \<DOC>
+Retrieve the default styling parameters for the ground symbol
+
+This is where the user can get the default net symbol styling
+for the `GroundSymbol()` type. By default it is a
+{@link /jsl/symbols/net-symbols/bar-ground/BarGroundSymbol}.
+
+<DOC>
+public defn get-default-gnd-symbol-builder () -> SymbolBuilder :
+  DEF_GND_SYM_PARAMS
+
+doc: \<DOC>
+Set the default styling parameters for the ground symbol
+
+This is where the user can set a new default styling for
+the `GroundSymbol()` type.
+
+@param v New {@link SymbolBuilder} that will implement the net symbol
+styling.
+<DOC>
+public defn set-default-gnd-symbol-builder (v:SymbolBuilder) -> False :
+  DEF_GND_SYM_PARAMS = v
+
+val DEF_GND_SYM_LABEL = 0.5
+val DEF_GND_SYM_NAME = "Ground-Symbol"
+
+doc: \<DOC>
+Ground Symbol Generator
+
+This type is used to define and construct net symbols
+for the ground signals.
+
+These net symbols are orientated such that their preferred
+orientation is 0 degrees. Most, if not all of the symbol lines
+will be drawn in the -Y half of the plane.
+
+The text label for the net of the net symbol is drawn with
+`N` anchor (ie, anchor centered and at the top of the text).
+
+Alternate ground symbols may be defined by constructing
+a type that implements the {@link SymbolBuilder} interface.
+This interface allows the user to define symbol construction
+using a {@link SymbolNode} scene graph and define the net label
+position.
+<DOC>
+public defstruct GroundSymbol <: NetSymbol :
+  doc: \<DOC>
+  Unique name for this ground symbol.
+  <DOC>
+  name : String with:
+    ; SymbolDefn
+    as-method  => true
+    default => DEF_GND_SYM_NAME
+  doc: \<DOC>
+  Backend Substitutions if any
+
+  See {@link NetSymbol} for more information.
+  <DOC>
+  backend-subs:Vector<KeyValue<String, SchematicSymbol>> with:
+    ; NetSymbol
+    as-method => true
+    default => Vector<KeyValue<String, SchematicSymbol>>()
+  doc: \<DOC>
+  Set the Label Size in Schematic Symbol Units
+
+  The symbol framework handles scaling this text into the right
+  physical dimensions.
+  <DOC>
+  label-size:Double with:
+    default => DEF_GND_SYM_LABEL
+    ensure => ensure-positive!
+  doc: \<DOC>
+  Set the explicit `SymbolBuilder` for rendered net symbol
+
+  This argument is optional and defaults to `None()`.
+  If `None()` - then the default symbol builder is queried from
+  {@link get-default-gnd-symbol-builder}.
+  If an explicit builder is provided, then this builder is used
+  to generate the symbol.
+  <DOC>
+  builder:Maybe<SymbolBuilder> with:
+    default => None()
+
+with:
+  constructor => #GroundSymbol
+
+defn get-builder (x:GroundSymbol) -> SymbolBuilder :
+  match(builder(x)):
+    (_:None): get-default-gnd-symbol-builder()
+    (v:One<SymbolBuilder>): value(v)
+
+doc: \<DOC>
+Constructor for a Ground Net Symbol
+<DOC>
+public defn GroundSymbol (
+  --
+  name:String = DEF_GND_SYM_NAME,
+  label-size:Double = DEF_GND_SYM_LABEL,
+  builder:SymbolBuilder = ?,
+  backend-subs:Seqable<KeyValue<String, SchematicSymbol>> = ?
+  ) -> GroundSymbol :
+
+  val b-subs = Vector<KeyValue<String, SchematicSymbol>>()
+  match(backend-subs):
+    (_:None): false
+    (v:One<Seqable<KeyValue<String, SchematicSymbol>>>):
+      add-all(b-subs, value(v))
+
+  #GroundSymbol(name, b-subs, label-size, builder)
+
+
+defmethod build-artwork (x:GroundSymbol, node:SymbolNode) :
+  val p = get-builder(x)
+  build-symbol-glyph(p, node)
+
+defmethod build-params (x:GroundSymbol, node:SymbolNode):
+  val p = get-builder(x)
+  one-pin-build-params(x, node)
+
+  add-value-label(node, value-label(p), anchor = N, unit-size = label-size(x))
+  set-preferred-orientation(node, PreferRotation([0]))
