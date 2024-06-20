@@ -1,0 +1,121 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/ground-symbol:
+  import core
+  import collections
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/framework
+  import jsl/symbols/net-symbols/framework
+
+val DEF_GND_SYMB_LINE_WIDTH = 0.05
+val DEF_GND_SYMB_PORCH_WIDTH = 1.0
+val DEF_BAR_GND_SYMB_SPACING = 0.2
+val DEF_BAR_GND_SYMB_LINES = [2.0, 1.5, 0.75]
+
+public deftype GroundSymbolParams <: Equalable
+public defmulti value-label (x:GroundSymbolParams) -> Pose
+public defmulti build-symbol-glyph (x:GroundSymbolParams, node:SymbolNode) -> False
+
+public defstruct BarGroundSymbolParams <: GroundSymbolParams :
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_GND_SYMB_LINE_WIDTH
+  )
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width,
+    default => DEF_GND_SYMB_PORCH_WIDTH
+  )
+  spacing:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-spacing,
+    default => DEF_BAR_GND_SYMB_SPACING,
+  )
+  lines:Tuple<Double> with: (
+    updater => sub-lines
+    default => DEF_BAR_GND_SYMB_LINES
+  )
+with:
+  constructor => #BarGroundSymbolParams
+  equalable => true
+
+public defn BarGroundSymbolParams (
+  --
+  line-width:Double = DEF_GND_SYMB_LINE_WIDTH,
+  porch-width:Double = DEF_GND_SYMB_PORCH_WIDTH,
+  spacing:Double = DEF_BAR_GND_SYMB_SPACING,
+  lines:Tuple<Double> = DEF_BAR_GND_SYMB_LINES
+) -> BarGroundSymbolParams :
+  #BarGroundSymbolParams(line-width, porch-width, spacing, lines)
+
+defmethod value-label (x:BarGroundSymbolParams) -> Pose :
+  loc(0.0, -1.0)
+
+
+defmethod build-symbol-glyph (x:BarGroundSymbolParams, node:SymbolNode) :
+  ; TODO - implement the bar ground from parameterization here
+  false
+
+
+; TODO - similar structure here for the `Chassis` ground symb
+;
+; public defstruct ChassisGroundSymbolParams <: GroundSymbolParams :
+;   ...
+
+
+var DEF_GND_SYM_PARAMS = BarGroundSymbolParams()
+public defn get-default-gnd-symbol-params () -> GroundSymbolParams :
+  DEF_GND_SYM_PARAMS
+
+public defn set-default-gnd-symbol-params (v:GroundSymbolParams) -> False :
+  DEF_GND_SYM_PARAMS = v
+
+public defstruct GroundSymbol <: NetSymbol :
+  name : String with: (
+    ; SymbolDefn
+    as-method  => true
+  )
+  backend-subs:Vector<KeyValue<String, SchematicSymbol>> with: (
+    ; NetSymbol
+    as-method => true
+    default => Vector<KeyValue<String, SchematicSymbol>>()
+    )
+  params:Maybe<GroundSymbolParams> with: (
+    default => None()
+  )
+with:
+  constructor => #GroundSymbol
+
+defn get-params (x:GroundSymbol) -> GroundSymbolParams :
+  match(params(x)):
+    (_:None): get-default-gnd-symbol-params()
+    (v:One<GroundSymbolParams>): value(v)
+
+public defn GroundSymbol (
+  --
+  name:String = "Ground-Symbol",
+  params:GroundSymbolParams = ?
+  backend-subs:Seqable<KeyValue<String, SchematicSymbol>> = ?
+  ) -> GroundSymbol :
+
+  val b-subs = Vector<KeyValue<String, SchematicSymbol>>()
+  match(backend-subs):
+    (_:None): false
+    (v:One<Seqable<KeyValue<String, SchematicSymbol>>>):
+      add-all(b-subs, value(v))
+
+  #GroundSymbol(name, b-subs, params)
+
+
+public defmethod build-artwork (x:GroundSymbol, node:SymbolNode) :
+  val p = get-params(x)
+  build-symbol-glyph(p, node)
+
+public defmethod build-params (x:GroundSymbol, node:SymbolNode):
+
+  val p = get-params(x)
+  one-pin-build-params(x, node)
+
+  add-value-label(node, value-label(p))
