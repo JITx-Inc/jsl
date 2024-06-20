@@ -1,0 +1,61 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/framework:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/utils
+  import jsl/symbols/framework
+
+public val NS-PINREF = Ref(`p)
+
+doc: \<DOC>
+Base Type for Net Symbols
+
+The user is expected to derive from this type and provide
+specific net symbol implementations like for Ground or
+voltage rail symbols.
+
+This implementation assumes that the net symbol connection
+location is at (0.0, 0.0). The user is expected to implement
+the graphical aspect of the symbol around that point. This
+pin is by default labeled `p[0]`
+
+This type is not intended to be instantiated on its down.
+It is more likely to be used for its interface definition
+and the base implementions of `SymbolDefn`
+
+<DOC>
+public defstruct NetSymbol <: SymbolDefn :
+  doc: \<DOC>
+  Optional Backend symbol substitution
+  The passed symbol definition can be used to replace the
+  net symbol with a backend specific definition. The
+  default is `None()`
+  <DOC>
+  backend-subs:Vector<KeyValue<String, SchematicSymbol>> with: (
+    default => Vector<KeyValue<String, SchematicSymbol>>()
+    )
+with:
+  constructor => #NetSymbol
+
+
+; This function exists so that derived types
+;  can include the base functionality.
+; Low likelihood that the derived types need to override `build-pins`
+public defn one-pin-build-pins (x:NetSymbol, node:SymbolNode) :
+  add-pin(node, NS-PINREF[0], [0.0, 0.0], name = "ns-pin-0" )
+
+public defmethod build-pins (x:NetSymbol, node:SymbolNode) :
+  one-pin-build-pins(x, node)
+
+; This function exists so that derived types
+;  can include the base functionality
+; Higher likelihood that the derived types need to override `build-params`
+;  Specifically to add the `>VALUE`
+public defn one-pin-build-params (x:NetSymbol, node:SymbolNode) :
+  add-backend-substitutions(node, backend-subs(x))
+
+public defmethod build-params (x:NetSymbol, node:SymbolNode) :
+  one-pin-build-params(x, node)

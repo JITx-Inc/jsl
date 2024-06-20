@@ -1,0 +1,82 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/power-symbol:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/symbols/framework
+  import jsl/symbols/net-symbols/framework
+  import jsl/symbols/net-symbols/symbol-builder
+  import jsl/symbols/net-symbols/bar-power
+
+
+var DEF_PWR_SYM_PARAMS = BarPowerSymbolParams()
+public defn get-default-pwr-symbol-builder () -> SymbolBuilder :
+  DEF_PWR_SYM_PARAMS
+
+public defn set-default-pwr-symbol-builder (v:SymbolBuilder) -> False :
+  DEF_PWR_SYM_PARAMS = v
+
+val DEF_PWR_SYM_LABEL = 0.5
+val DEF_PWR_SYM_NAME = "Power-Symbol"
+
+public defstruct PowerSymbol <: NetSymbol :
+  name : String with: (
+    ; SymbolDefn
+    as-method  => true
+    default => DEF_PWR_SYM_NAME
+  )
+  backend-subs:Vector<KeyValue<String, SchematicSymbol>> with: (
+    ; NetSymbol
+    as-method => true
+    default => Vector<KeyValue<String, SchematicSymbol>>()
+    )
+  doc: \<DOC>
+  Set the Label Size in Schematic Symbol Units
+
+  The symbol framework handles scaling this text into the right
+  physical dimensions.
+  <DOC>
+  label-size:Double with:
+    default => DEF_PWR_SYM_LABEL
+    ensure => ensure-positive!
+  builder:Maybe<SymbolBuilder> with: (
+    default => None()
+  )
+with:
+  constructor => #PowerSymbol
+
+defn get-builder (x:PowerSymbol) -> SymbolBuilder :
+  match(builder(x)):
+    (_:None): get-default-pwr-symbol-builder()
+    (v:One<SymbolBuilder>): value(v)
+
+public defn PowerSymbol (
+  --
+  name:String = DEF_PWR_SYM_NAME,
+  label-size:Double = DEF_PWR_SYM_LABEL,
+  builder:SymbolBuilder = ?
+  backend-subs:Seqable<KeyValue<String, SchematicSymbol>> = ?
+  ) -> PowerSymbol :
+
+  val b-subs = Vector<KeyValue<String, SchematicSymbol>>()
+  match(backend-subs):
+    (_:None): false
+    (v:One<Seqable<KeyValue<String, SchematicSymbol>>>):
+      add-all(b-subs, value(v))
+
+  #PowerSymbol(name, b-subs, label-size, builder)
+
+
+defmethod build-artwork (x:PowerSymbol, node:SymbolNode) :
+  val p = get-builder(x)
+  build-symbol-glyph(p, node)
+
+defmethod build-params (x:PowerSymbol, node:SymbolNode):
+  val p = get-builder(x)
+  one-pin-build-params(x, node)
+
+  add-value-label(node, value-label(p), anchor = S, unit-size = label-size(x))
+  set-preferred-orientation(node, PreferRotation([0]))
