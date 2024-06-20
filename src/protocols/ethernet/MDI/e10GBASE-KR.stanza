@@ -40,6 +40,7 @@ doc: \<DOC>
 @brief e10GBASE-KR Bundle
 The Data Bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 @param num-lanes The number of lanes to be configured for this bundle.
+@member lane Lane pairs for the ethernet interface (num-lanes)
 <DOC>
 public pcb-bundle e10GBASE-KR (num-lanes:Int) :
   name = "10GBASE-KR"

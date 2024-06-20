@@ -111,10 +111,17 @@ public pcb-bundle can-logical :
 ; SPI - Serial Peripheral Interface
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+doc: \<DOC>
+SPI Bundle Pin Names
+A list of possible names for the SPI interface. Note that in order to connect
+SPI interfaces automatically, the constituent pins need to be present on all
+objects to be connected. 
+<DOC>
+
 public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CS
-  SPI-MISO
-  SPI-MOSI
+  SPI-COPI
+  SPI-CIPO
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
   name = "SPI"
@@ -122,8 +129,9 @@ pcb-bundle spi-b (pins:Collection<SPIPins>):
   for p in pins do :
     switch(p) :
       SPI-CS  : make-pin(`cs)
-      SPI-MISO : make-pin(`miso)
-      SPI-MOSI : make-pin(`mosi)
+      SPI-COPI : make-pin(`copi)
+      SPI-CIPO : make-pin(`cipo)
+      SPI-RDY  : make-pin(`rdy)
 
 doc: \<DOC>
 SPI Bundle Generator
@@ -135,8 +143,8 @@ Serial Peripheral Interface is a serial communication protocol.
 the SPI interface. Some devices don't have a `MISO` pin for example.
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member miso Master In Slave Out
-@member mosi Master Out Slave In
+@member cipo Controller In Peripheral Out
+@member copi Controller Out Peripheral In
 <DOC>
 public defn spi (pins:SPIPins ...) :
   spi-b(pins)
@@ -148,11 +156,11 @@ This generator will construct an SPI bundle with the following
 pins:
 
 @member sck Synchronous Clock Line
-@member miso Master In Slave Out
-@member mosi Master Out Slave In
+@member cipo Controller In Peripheral Out
+@member copi Controller Out Peripheral In
 <DOC>
 public defn std-spi () :
-  spi(SPI-MISO, SPI-MOSI)
+  spi(SPI-CIPO, SPI-COPI)
 
 doc: \<DOC>
 Standard SPI with Chip Select Generator
@@ -162,11 +170,11 @@ pins:
 
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member miso Master In Slave Out
-@member mosi Master Out Slave In
+@member cipo Controller In Peripheral Out
+@member copi Controller Out Peripheral In
 <DOC>
 public defn spi-with-cs () :
-  spi(SPI-MISO, SPI-MOSI, SPI-CS)
+  spi(SPI-CIPO, SPI-COPI, SPI-CS)
 
 defn to-wide-name (x:Int) -> String:
   switch(x):
@@ -186,7 +194,7 @@ or on flash chips.
 @param width Number of datalines to include in this bundle. Common
   values are 2, 4, and 8
 @param pins Optionally allow for Chip Select pin on this interface.
-  Note MISO and MOSI are not supported.
+  Note CIPO and COPI are not supported.
 @member sck Synchronous Clock Line
 @member cs Chip Select
 @member data Variable Width Data Bus depending on `width` parameter
