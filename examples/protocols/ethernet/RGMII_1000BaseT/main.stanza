@@ -9,13 +9,15 @@ defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
 
   import jsl/si/constraints
   import jsl/si/pairs
+  import jsl/si/helpers
+  import jsl/bundles
+  import jsl/pin-assignment
   import jsl/protocols/ethernet/MDI/MDI-1000Base-T
   import jsl/protocols/ethernet/MII/RGMII
 
   import jsl/landpatterns
 
   import jsl/examples/protocols/common/example-board
-  import jsl/examples/protocols/common/example-components
 
 
 pcb-component MAC :
@@ -66,6 +68,14 @@ pcb-component MAC :
   )
 
   assign-landpattern $ create-landpattern(QFN-pkg)
+
+  pin-model(self.mii.TX.ctl) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.RX.ctl) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.TX.clk) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.RX.clk) = PinModel(typ(0.0), typ(0.0))
+  for i in 0 to length(self.mii.TX.data) do:
+    pin-model(self.mii.TX.data[i]) = PinModel(typ(0.0), typ(0.0))
+    pin-model(self.mii.RX.data[i]) = PinModel(typ(0.0), typ(0.0))
 
 
 pcb-component PHY :
@@ -128,6 +138,24 @@ pcb-component PHY :
 
   assign-landpattern $ create-landpattern(QFN-pkg)
 
+  pin-model(self.mii.TX.ctl) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.RX.ctl) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.TX.clk) = PinModel(typ(0.0), typ(0.0))
+  pin-model(self.mii.RX.clk) = PinModel(typ(0.0), typ(0.0))
+  for i in 0 to length(self.mii.TX.data) do:
+    pin-model(self.mii.TX.data[i]) = PinModel(typ(0.0), typ(0.0))
+    pin-model(self.mii.RX.data[i]) = PinModel(typ(0.0), typ(0.0))
+
+  ; This constructs a 
+  for i in 0 to length(self.mdi.TP) do:
+    diff-pin-model(self.mdi.TP[i], delay = typ(0.0))
+    swappable-diff-pair(self.mdi.TP[i])
+
+  supports MDI-1000Base-T:
+    require md-pairs:diff-pair[4]
+    for i in 0 to length(md-pairs) do:
+      MDI-1000Base-T.TP[i].P => md-pairs[i].P
+      MDI-1000Base-T.TP[i].N => md-pairs[i].N
 
 pcb-component RJ45 :
   port mdi : MDI-1000Base-T
@@ -163,6 +191,9 @@ pcb-component RJ45 :
     mdi.TP[3]
   )
 
+  for i in 0 to length(self.mdi.TP) do:
+    diff-pin-model(self.mdi.TP[i], delay = typ(0.0))
+
 
 pcb-module rgmii-1000BaseT-uut:
   inst m : MAC
@@ -173,23 +204,15 @@ pcb-module rgmii-1000BaseT-uut:
   val rgmii-constraints = RGMII-Constraint(version = RGMII-STD, route-struct = se-50)
   val lane-constraint = LaneConstraint(rgmii-constraints)
 
-  ; NOTE - currently this will fail with an exception
-  ;   on JITX 3.9.0 but succeeds on develop
-  ; Uncaught Exception: TopologySegmentNotOnPorts(a = [9tHFPCPWyZTut2yBEM9363], b = [11111111115JT1djG9])
-  ; TopologySegmentNotOnPorts(a = [3JdzbzsP7z8oZ4jPYvvdWG], b = [11111111115JNJUveq])
-  ; TopologySegmentNotOnPorts(a = [D57MKszvyEC3jtWCtFi1gC], b = [11111111115JE7fsM6])
-  ; TopologySegmentNotOnPorts(a = [4AyVmePRijodvmZcuAgYy8], b = [11111111115J14VSXd])
   constrain-topology(m.mii => reverse-lane(p.mii), lane-constraint)
-  ; This will succeed on JITX 3.9.0 - but would typically be
-  ;  "incorrect" - ie TX => TX instead of TX => RX
-  ; constrain-topology(m.mii => p.mii, lane-constraint)
 
+  require phy-mdi:MDI-1000Base-T from p
   require gig-mdi:MDI-1000Base-T from c
 
   val mdi-constraint = MDI-1000Base-T-Constraint(
     route-struct = diff(100.0)
   )
-  constrain-topology(p.mdi => gig-mdi, mdi-constraint)
+  constrain-topology(phy-mdi => gig-mdi, mdi-constraint)
 
 
 set-current-design("rgmii-1000BaseT-example")
@@ -203,5 +226,3 @@ set-main-module(rgmii-1000BaseT-uut)
 ; View the results
 view-board()
 view-schematic()
-view-design-explorer()
-; view-bom(BOM-STD)
