@@ -456,32 +456,6 @@ public defn add-soldermask (sm:LayerSpec, s:LayerStack) -> LayerStack :
   add-bottom(sm, s)
 
 doc: \<DOC>
-Check that the LayerStack has a valid sequence of layers.
-
-This type expects the layers to be added as an alternating
-sequence of Conductors and Dielectrics. This function
-checks for this order and throws an exception if an invalid
-order is detected.
-<DOC>
-public defn validate! (stack:LayerStack) -> False :
-  if length(layers(stack)) == 0:
-    throw $ ValueError("Invalid Stack - No Layers Found")
-  var last:Maybe<LayerSpec> = None()
-  for l in layers(stack) do:
-    match(last):
-      (_:None): false
-      (o:One<LayerSpec>):
-        val err-msg = "Invalid Stackup - Expected alternating Dielectric/Conductor Layers"
-        match(material(l), material $ value(o)):
-          (prev:DielectricMaterial, curr:DielectricMaterial):
-            throw $ ValueError(err-msg)
-          (prev:ConductorMaterial, curr:ConductorMaterial):
-            throw $ ValueError(err-msg)
-          (prev, curr):
-            false
-    last = One(l)
-
-doc: \<DOC>
 Get the total number of conductor layers in the layer stack.
 
 This is the number of signal and plane layers that are available
