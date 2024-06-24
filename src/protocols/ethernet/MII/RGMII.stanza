@@ -149,7 +149,7 @@ public defmethod constrain (cst:RGMII-Constraint, src:JITXObject, dst:JITXObject
     max-loss(loss(cst), clk-route, bus-route, ctl-route)
 
     val data-to-clk = TimingDifferenceConstraint(clk-delay(cst))
-    timing-difference(ctl-route, clk-route) = data-to-clk
+    timing-difference(clk-route, ctl-route) = data-to-clk
 
     val se-50 = route-struct(cst)
     structure(clk-route) = se-50
