@@ -152,7 +152,7 @@ add-symmetric(copper-105um, core-FR4-2,
     add-symmetric(copper-35um, core-FR4-1, test-stack)
   )
 )
-print("%~" % [test-stack])
+;print("%~" % [test-stack])
 
 ; Test: test-stack[0]
 deftest(layerstack) test-get :
