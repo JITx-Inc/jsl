@@ -196,5 +196,106 @@ deftest(layerstack) test-copper-optional-arguments :
   val aluminum-35um-with-name = Copper(0.035, AluminumMaterial, name = "alum")
   set-name(aluminum-35um "alum")
    #EXPECT(aluminum-35um-with-name == aluminum-35um)
- 
+
+;========== Test different ways to create LayerStack ==========
+doc:\<DOC>
+  Verify the layers in a stack.
+@param stack The LayerStack to verify
+@param top-layers the top layaers, including the middle layer
+<DOC>
+defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>) :
+  #EXPECT(length(layers(stack)) == length(top-layers) * 2 - 1)
+  #EXPECT(length(conductors(stack)) == length(top-layers) - 1)
+  val total-layers = length(layers(stack))
+  val middle = total-layers / 2
+  for idx in 0 through middle do :
+    #EXPECT(stack[idx] == top-layers[idx])
+    #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
+
+defn verify-stack-jlcpcb-jlc2313 (stack:LayerStack) :
+  val soldermask = Soldermask(0.019, SoldermaskMaterial)
+  val copper-35um = Copper(0.035)
+  val prepreg-2313 = FR4(0.1, FR4-Material)
+  val copper-17_5um = Copper(0.0175)
+  val core = FR4(1.265, FR4-Material)
+  val top-layers = [
+      soldermask
+      copper-35um 
+      prepreg-2313 
+      copper-17_5um
+      core
+    ]
+  verify-layers(stack, top-layers)
+
+;Use a series of add-symmetric functions to create a LayerStack
+deftest(layerstack) make-layer-stack-method1 :
+  val stack = LayerStack(name = "JLCPCB 4-layer 1.6mm")
+  let:
+    val soldermask = Soldermask(0.019, SoldermaskMaterial)
+    val copper-35um = Copper(0.035)
+    val prepreg-2313 = FR4(0.1, FR4-Material)
+    val copper-17_5um = Copper(0.0175)
+    val core = FR4(1.265, FR4-Material)
+    add-soldermask(soldermask,
+      add-symmetric(copper-35um, prepreg-2313,
+        add-symmetric(copper-17_5um, core, stack)
+      )
+    )
+  verify-stack-jlcpcb-jlc2313(stack)
+
+;Use a series of add-symmetric functions to create a LayerStack
+deftest(layerstack) make-layer-stack-method2 :
+  defn make-jlcpcb-jlc2313 (name:String) :
+    val stack = LayerStack(name = name)
+    val soldermask = Soldermask(0.019, SoldermaskMaterial)
+    val copper-35um = Copper(0.035)
+    val prepreg-2313 = FR4(0.1, FR4-Material)
+    val copper-17_5um = Copper(0.0175)
+    val core = FR4(1.265, FR4-Material)
+    add-soldermask(soldermask,
+      add-symmetric(copper-35um, prepreg-2313,
+        add-symmetric(copper-17_5um, core, stack)
+      )
+    )
+    stack
+
+  ;Create stack
+  val stack = make-jlcpcb-jlc2313("JLCPCB 4-layer 1.6mm")
+  verify-stack-jlcpcb-jlc2313(stack)
+
+;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
+deftest(layerstack) make-layer-stack-method3 :
+  val stack = make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers) where :
+      val soldermask = Soldermask(0.019, SoldermaskMaterial)
+      val copper-35um = Copper(0.035)
+      val prepreg-2313 = FR4(0.1, FR4-Material)
+      val copper-17_5um = Copper(0.0175)
+      val core = FR4(1.265, FR4-Material)
+      val top-layers =  [
+          soldermask
+          copper-35um 
+          prepreg-2313 
+          copper-17_5um
+          core
+        ]
+  verify-stack-jlcpcb-jlc2313(stack)
+
+;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
+deftest(layerstack) make-layer-stack-method4 :
+  defn make-jlcpcb-jlc2313 (name:String) :
+    make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers) where :
+      val soldermask = Soldermask(0.019, SoldermaskMaterial)
+      val copper-35um = Copper(0.035)
+      val prepreg-2313 = FR4(0.1, FR4-Material)
+      val copper-17_5um = Copper(0.0175)
+      val core = FR4(1.265, FR4-Material)
+      val top-layers =  [
+          soldermask
+          copper-35um 
+          prepreg-2313 
+          copper-17_5um
+          core
+        ]
+  val stack = make-jlcpcb-jlc2313("JLCPCB 4-layer 1.6mm")
+  verify-stack-jlcpcb-jlc2313(stack)
 
