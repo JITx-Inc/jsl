@@ -549,35 +549,27 @@ public defn create-pcb-stackup (stack:LayerStack) :
   custom-stackup
 
 doc:\<DOC>
-  Construct a LayerStack from a tuple of top layers and create the bottom symmetric layers. 
+  Construct a LayerStack with a tuple of outer layers. 
 
   Example:
   ```
-    val jlcpcb-jlc2313 = make-layer-stack("JLCPCB 4-layer 1.6mm",
-      [
-        soldermask
-        copper-35um 
-        prepreg-2313 
-        copper-17_5um
-        core
-      ]) where :
-        val soldermask = Soldermask(0.019, Soldermask-Material-BSN4000)
-        val copper-35um = Copper(0.035)
-        val prepreg-2313 = FR4(0.1, FR4-Material-2313)
-        val copper-17_5um = Copper(0.0175)
-        val core = FR4(1.265, FR4-Material-Core)
+    val jlcpcb-jlc2313 = make-layer-stack("JLCPCB 4-layer 1.6mm", outer-layers) where :
+      val copper-35um = Copper(0.035)
+      val prepreg-2313 = FR4(0.1, FR4-Material-2313)
+      val copper-17_5um = Copper(0.0175)
+      val core = FR4(1.265, FR4-Material-Core)
+      val outer-layers = [
+        [copper-35um prepreg-2313] 
+        [copper-17_5um core]
+      ]
   ```
 <DOC>
-public defn make-layer-stack (name:String, top-layers:Tuple<LayerSpec>) -> LayerStack :
+public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>) -> LayerStack :
   ;Access top-layers with reversed index
   ; - so the middle layer is index 0
-  defn reversed-layers (idx:Int) :
-    top-layers[length(top-layers) - 1 - idx]
   val stack = LayerStack(name = name)
-  add-symmetric(reversed-layers(1), reversed-layers(0), stack)
-  for idx in 2 to length(top-layers) by 2 do :
-    if is-soldermask(reversed-layers(idx)) :
-      add-soldermask(reversed-layers(idx), stack)
-    else :
-      add-symmetric(reversed-layers(idx + 1), reversed-layers(idx), stack)
+  for outer in in-reverse(outers) do:
+    val [metal, insul] = outer
+      add-symmetric(metal, insul, stack)
   stack
+

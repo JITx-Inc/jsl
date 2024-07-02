@@ -257,7 +257,6 @@ deftest(layerstack) make-layer-stack-method2 :
         add-symmetric(copper-17_5um, core, stack)
       )
     )
-    stack
 
   ;Create stack
   val stack = make-jlcpcb-jlc2313("JLCPCB 4-layer 1.6mm")
@@ -265,36 +264,32 @@ deftest(layerstack) make-layer-stack-method2 :
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
 deftest(layerstack) make-layer-stack-method3 :
-  val stack = make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers) where :
+  val stack = add-soldermask(soldermask, 
+    make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers)) where :
       val soldermask = Soldermask(0.019, SoldermaskMaterial)
       val copper-35um = Copper(0.035)
       val prepreg-2313 = FR4(0.1, FR4-Material)
       val copper-17_5um = Copper(0.0175)
       val core = FR4(1.265, FR4-Material)
       val top-layers =  [
-          soldermask
-          copper-35um 
-          prepreg-2313 
-          copper-17_5um
-          core
+          [copper-35um prepreg-2313] 
+          [copper-17_5um core]
         ]
   verify-stack-jlcpcb-jlc2313(stack)
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
 deftest(layerstack) make-layer-stack-method4 :
   defn make-jlcpcb-jlc2313 (name:String) :
-    make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers) where :
-      val soldermask = Soldermask(0.019, SoldermaskMaterial)
-      val copper-35um = Copper(0.035)
-      val prepreg-2313 = FR4(0.1, FR4-Material)
-      val copper-17_5um = Copper(0.0175)
-      val core = FR4(1.265, FR4-Material)
-      val top-layers =  [
-          soldermask
-          copper-35um 
-          prepreg-2313 
-          copper-17_5um
-          core
+    add-soldermask(soldermask, 
+      make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers)) where :
+        val soldermask = Soldermask(0.019, SoldermaskMaterial)
+        val copper-35um = Copper(0.035)
+        val prepreg-2313 = FR4(0.1, FR4-Material)
+        val copper-17_5um = Copper(0.0175)
+        val core = FR4(1.265, FR4-Material)
+        val top-layers =  [
+          [copper-35um prepreg-2313] 
+          [copper-17_5um core]
         ]
   val stack = make-jlcpcb-jlc2313("JLCPCB 4-layer 1.6mm")
   verify-stack-jlcpcb-jlc2313(stack)
