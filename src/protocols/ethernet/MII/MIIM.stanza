@@ -1,0 +1,23 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet/MII/MIIM:
+  import core
+  import jitx
+  import jitx/commands
+
+doc: \<DOC>
+Media Independent Interface Management (MIIM) bundle
+
+This is a typical management interface for PHYs and other
+similar ethernet devices.
+
+This interface is also known as Management Data Input/Output (MDIO)
+or the Serial Management Inteface (SMI).
+
+@see https://en.wikipedia.org/wiki/Management_Data_Input/Output
+
+@member mdc Clock Line for the Serial Interface
+@member mdio Bidirectional Data Line for the Serial Interface
+<DOC>
+public pcb-bundle miim :
+  port mdc : pin
+  port mdio : pin
