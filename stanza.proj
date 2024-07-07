@@ -26,6 +26,7 @@ build-test tests:
     jsl/tests/pin-assignment
     jsl/tests/layerstack
     jsl/tests/ensure
+    jsl/tests/via-structures
     jsl/tests/si/Microstrip
     jsl/tests/si/couplers
     jsl/tests/si/signal-ends

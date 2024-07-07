@@ -1,0 +1,49 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/via-structures/se-via-structures:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/via-structures
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+
+
+pcb-module top-level :
+  val se-via = SingleViaStructure(
+    name = "SE-1",
+    via-def = uTop-2
+  )
+
+  val gc = PolarViaGroundCage(
+    via-def = default-TH,
+    count = 12,
+    radius = 0.85,
+    skips = [0, 2, 3, 4, 6, 8, 9, 10]
+  )
+  add-ground-cage(se-via, gc)
+  add-anti-pad(
+    se-via,
+    SimpleAntiPad(
+      shape = Circle(0.5),
+      start = LayerIndex(0, Top),
+      end = LayerIndex(1,Top))
+  )
+  add-std-insertion-points(se-via, 0.75)
+
+  inst vs1 : create-via-structure(se-via)
+
+
+set-current-design("SE-ViaStructure")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(top-level)
+
+; View the results
+view-board()
+
+
+

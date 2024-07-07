@@ -1,0 +1,64 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/via-structures/diff-via-structures:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/via-structures
+  import jsl/si/helpers
+  import jsl/si/pairs
+  import jsl/si/couplers
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+
+
+pcb-module top-level :
+  val diff-via = DifferentialViaStructure(
+    name = "DF-1",
+    via-def = uTop-2,
+    pitch = 0.4
+  )
+
+  val gc = PolarViaGroundCage(
+    via-def = default-TH,
+    count = 12,
+    radius = 0.6,
+    skips = [2, 3, 4, 8, 9, 10]
+  )
+  add-ground-cage(diff-via, gc)
+  add-anti-pad(
+    diff-via,
+    SimpleAntiPad(
+      shape = RoundedRectangle(0.8, 0.4, 0.1),
+      start = LayerIndex(0, Top),
+      end = LayerIndex(1,Top))
+  )
+  add-std-insertion-points(diff-via, 0.3)
+
+  val diff-via-struct = create-via-structure(diff-via)
+  inst vs1 : diff-via-struct
+  inst vs2 : diff-via-struct
+
+  net GND (vs1.COMMON, vs2.COMMON)
+
+  val b-cap = block-cap(100.0e-9)
+  inst tx-bcap : dp-coupler(b-cap)
+
+  topo-pair(vs1.sig-out => tx-bcap => vs2.sig-in)
+  diff-structure(diff(100.0), vs1.sig-out => vs2.sig-in)
+
+
+set-current-design("DF-ViaStructure")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(top-level)
+
+; View the results
+view-board()
+
+
+
