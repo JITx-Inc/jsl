@@ -1,0 +1,94 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/via-structures:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/via-structures
+
+public pcb-via default-TH:
+  start = Top
+  stop = Bottom
+  diameter = 0.45
+  hole-diameter = 0.3
+  type = MechanicalDrill
+
+public pcb-via uvia-T:
+  start = LayerIndex(0, Top)
+  stop = LayerIndex(1, Top)
+  diameter = 0.35
+  hole-diameter = 0.2
+  type = LaserDrill
+
+deftest(via-structures) test-se-basic:
+
+  pcb-module top-level :
+    val se-via = SingleViaStructure(
+      name = "SE-1",
+      via-def = uvia-T
+    )
+
+    val gc = PolarViaGroundCage(
+      via-def = default-TH,
+      count = 12,
+      radius = 2.0,
+      skips = [0, 2, 3, 4, 6, 8, 9, 10]
+    )
+    add-ground-cage(se-via, gc)
+    add-anti-pad(
+      se-via,
+      SimpleAntiPad(
+        shape = Circle(1.0),
+        start = LayerIndex(0, Top),
+        end = LayerIndex(1, Top))
+    )
+    add-std-insertion-points(se-via, 1.5)
+
+    public inst vs1 : create-via-structure(se-via)
+
+  set-main-module(top-level)
+
+  val pts = ports(top-level.vs1)
+  #EXPECT(length(pts) == 3)
+
+  #EXPECT(instance-type(top-level.vs1) == SingleModule)
+
+
+deftest(via-structures) test-diff-basic:
+
+  pcb-module top-level :
+    val diff-via = DifferentialViaStructure(
+      name = "DF-1",
+      via-def = uvia-T,
+      pitch = 0.5
+    )
+
+    val gc = PolarViaGroundCage(
+      via-def = default-TH,
+      count = 12,
+      radius = 1.25,
+      skips = [2, 3, 4, 8, 9, 10]
+    )
+    add-ground-cage(diff-via, gc)
+    add-anti-pad(
+      diff-via,
+      SimpleAntiPad(
+        shape = RoundedRectangle(1.5, 0.75, 0.2),
+        start = LayerIndex(0, Top),
+        end = LayerIndex(1,Top))
+    )
+    add-std-insertion-points(diff-via, 0.5)
+
+    val diff-via-struct = create-via-structure(diff-via)
+    public inst vs1 : diff-via-struct
+
+  set-main-module(top-level)
+
+  val pts = ports(top-level.vs1)
+  #EXPECT(length(pts) == 3)
+
+  #EXPECT(port-type(top-level.vs1.sig-in) is Bundle)
+  #EXPECT(port-type(top-level.vs1.sig-out) is Bundle)
+  #EXPECT(port-type(top-level.vs1.COMMON) is SinglePin)
+
+  #EXPECT(instance-type(top-level.vs1) == SingleModule)
