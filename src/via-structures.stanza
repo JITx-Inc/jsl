@@ -146,7 +146,7 @@ defmethod make-ground-cage (v:PolarViaGroundCage, n:JITXObject -- pose:Pose) -> 
     geom(n):
       for i in valid-pos do:
         val pos = pose * compute-pos(v, i)
-        via(via-def(v)) at apply(pos, Point(0.0, 0.0))
+        via(via-def(v)) at pos * Point(0.0, 0.0)
 
     if debug-mode:
       for i in 0 to count(v) do:
@@ -225,7 +225,7 @@ defmethod make-anti-pad (a:SimpleAntiPad -- pose:Pose) -> False:
   val st = start(a)
   val ed = end(a)
   val s = side(st)
-  ; The ordering can be kind of funny when user pass the layer
+  ; The ordering can be kind of funny when user passes the start/end layers
   ;  especially when we consider the `Bottom`. We use a `min/max` style
   ;  so that we cover all the layers but don't have to be too particular
   ;  about how the user specs the order.
@@ -455,7 +455,7 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
       make-ground-cage(cv, cage, pose = pose)
 
     geom(via-net):
-      via(via-def(v)) at apply(pose, Point(0.0, 0.0))
+      via(via-def(v)) at pose * Point(0.0, 0.0)
 
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
@@ -589,10 +589,10 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
       (obj2:[Via, Via]): obj2
 
     geom(via-net-P):
-      via(vd-P) at apply(pose, Point(vp, 0.0))
+      via(vd-P) at pose * Point(vp, 0.0)
 
     geom(via-net-N):
-      via(vd-N) at apply(pose, Point((- vp), 0.0))
+      via(vd-N) at pose * Point((- vp), 0.0)
 
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
