@@ -6,6 +6,7 @@ defpackage jsl/tests/geometry:
 
   import jsl/tests/utils
   import jsl/geometry/basics
+  import jsl/geometry/NotchedShapes
 
 deftest(geometry) test-expand-dims:
   val uut = Dims(2.0, 1.0)
@@ -109,3 +110,46 @@ deftest(geometry) test-scale-shape:
         #EXPECT(almost-equal?(a*, b*))
       (a*, b*):
         #EXPECT("Unhandled Types" == "")
+
+deftest(geometry) test-notched-rect:
+
+  val a = NotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 0.1)
+  #EXPECT(a is Polygon)
+
+  expect-throw({NotchedRectangle(width = -1.0, height = 1.0, notch-width = 0.1, notch-height = 0.1)})
+  expect-throw({NotchedRectangle(width = 1.0, height = -1.0, notch-width = 0.1, notch-height = 0.1)})
+  expect-throw({NotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 1.5)})
+  expect-throw({NotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 1.0)})
+  expect-throw({NotchedRectangle(width = 1.0, height = 1.0, notch-width = 2.0, notch-height = 0.1)})
+
+deftest(geometry) test-double-notched-rect:
+
+  val a = DoubleNotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 0.1)
+  #EXPECT(a is Polygon)
+
+  expect-throw({DoubleNotchedRectangle(width = -1.0, height = 1.0, notch-width = 0.1, notch-height = 0.1)})
+  expect-throw({DoubleNotchedRectangle(width = 1.0, height = -1.0, notch-width = 0.1, notch-height = 0.1)})
+  expect-throw({DoubleNotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 1.5)})
+  expect-throw({DoubleNotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 0.75)})
+  expect-throw({DoubleNotchedRectangle(width = 1.0, height = 1.0, notch-width = 0.1, notch-height = 0.5)})
+  expect-throw({DoubleNotchedRectangle(width = 1.0, height = 1.0, notch-width = 2.0, notch-height = 0.1)})
+
+deftest(geometry) test-chipped-circle:
+
+  val a = ChippedCircle(radius = 1.0, edge-dist = 0.1)
+  #EXPECT(a is PolygonWithArcs)
+
+  expect-throw({ChippedCircle(radius = -1.0, edge-dist = 0.1)})
+  expect-throw({ChippedCircle(radius = 1.0, edge-dist = -0.1)})
+  expect-throw({ChippedCircle(radius = 1.0, edge-dist = 1.0)})
+  expect-throw({ChippedCircle(radius = 1.0, edge-dist = 1.5)})
+
+deftest(geometry) test-double-chipped-circle:
+
+  val a = DoubleChippedCircle(radius = 1.0, edge-dist = 0.1)
+  #EXPECT(a is PolygonWithArcs)
+
+  expect-throw({DoubleChippedCircle(radius = -1.0, edge-dist = 0.1)})
+  expect-throw({DoubleChippedCircle(radius = 1.0, edge-dist = -0.1)})
+  expect-throw({DoubleChippedCircle(radius = 1.0, edge-dist = 1.0)})
+  expect-throw({DoubleChippedCircle(radius = 1.0, edge-dist = 1.5)})
