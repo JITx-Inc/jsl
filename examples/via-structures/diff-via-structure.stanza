@@ -8,7 +8,7 @@ defpackage jsl/examples/via-structures/diff-via-structures:
   import jsl/si/helpers
   import jsl/si/pairs
   import jsl/si/couplers
-
+  import jsl/geometry/NotchedShapes
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
 
@@ -30,7 +30,8 @@ pcb-module top-level :
   add-anti-pad(
     diff-via,
     SimpleAntiPad(
-      shape = RoundedRectangle(0.8, 0.4, 0.1),
+      shape = DoubleNotchedRectangle(width = 0.8, height = 0.4, notch-width = 0.4, notch-height = 0.15)
+      ; shape = RoundedRectangle(0.8, 0.4, 0.1),
       start = LayerIndex(0, Top),
       end = LayerIndex(1,Top))
   )

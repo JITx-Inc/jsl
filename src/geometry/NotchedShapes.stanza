@@ -1,0 +1,220 @@
+#use-added-syntax(jitx)
+defpackage jsl/geometry/NotchedShapes:
+  import core
+  import math
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+
+defn compute-anchor-offset (anchor:Anchor, w2:Double, h2:Double -- w2E:Double = (- w2), h2N:Double = (- h2)) -> Pose :
+  val [vt, hr] = components(anchor)
+  val dx = match(hr) :
+    (hr:W) : w2
+    (hr:C) : 0.0
+    (hr:E) : w2E
+  val dy = match(vt) :
+    (vt:S) : h2
+    (vt:C) : 0.0
+    (vt:N) : h2N
+  loc(dx, dy)
+
+doc: \<DOC>
+Construct a Rectangle with a notch of defined shape on the long side.
+
+This function will construct a rectangle with a triangle shaped notched
+cut on the long edge in the +Y half of the plane.
+
+@param width Rectangle Width (X) in mm.
+@param height Rectangle Height (Y) in mm.
+@param notch-width Base of the triangle that will be notched from
+the width of the rectangle. This value must be less than or equal to the
+width of the triangle.
+@param notch-height Height of the triangle that will be notched. This
+value must be strictly less than the height to prevent a non-simple
+polygon or a self-intersection.
+@param anchor Origin of the resulting shape. The default is `C` or
+centered at the origin.
+<DOC>
+public defn NotchedRectangle (
+  --
+  width:Double,
+  height:Double,
+  notch-width:Double,
+  notch-height:Double,
+  anchor:Anchor = C
+  ) -> Shape:
+  ensure-positive!("width", width)
+  ensure-positive!("height", height)
+
+  if notch-width > width:
+    throw $ ValueError("Invalid Notch Width '%_' - Must be less tha or equal to Width: '%_'" % [notch-width, width])
+  if notch-height >= height:
+    throw $ ValueError("Invalid Notch Height '%_' - Must be less than Height: '%_'" % [notch-height, height])
+
+  val w2 = width / 2.0
+  val h2 = height / 2.0
+  val nw2 = notch-width / 2.0
+  val nh = notch-height
+
+  val sh = Polygon([
+    Point(w2, h2),
+    Point(w2, (- h2)),
+    Point((- w2), (- h2)),
+    Point((- w2), h2),
+    ; Start of the Notch
+    Point((- nw2), h2),
+    Point( 0.0, (h2 - nh)),
+    Point(nw2, h2)
+  ])
+  val offset = compute-anchor-offset(anchor, w2, h2)
+  offset * sh
+
+doc: \<DOC>
+Construct a Double Notched Rectangle.
+
+This function is similar to the `NotchedRectangle` but adds
+an additional notch in the -Y half plane as well.
+
+@param width Rectangle Width (X) in mm.
+@param height Rectangle Height (Y) in mm.
+@param notch-width Base of the triangle that will be notched from
+the width of the rectangle. This value must be less than or equal to the
+width of the triangle.
+@param notch-height Height of the triangle that will be notched. This
+value must be strictly less than the height to prevent a non-simple
+polygon or a self-intersection.
+@param anchor Origin of the resulting shape. The default is `C` or
+centered at the origin.
+<DOC>
+public defn DoubleNotchedRectangle (
+  --
+  width:Double,
+  height:Double,
+  notch-width:Double,
+  notch-height:Double,
+  anchor:Anchor = C
+  ) -> Shape:
+  ensure-positive!("width", width)
+  ensure-positive!("height", height)
+
+  if notch-width > width:
+    throw $ ValueError("Invalid Notch Width '%_' - Must be less tha or equal to Width: '%_'" % [notch-width, width])
+  if notch-height >= (height / 2.0):
+    throw $ ValueError("Invalid Notch Height '%_' - Must be less than Height / 2.0: '%_'" % [notch-height, height / 2.0])
+
+  val w2 = width / 2.0
+  val h2 = height / 2.0
+  val nw2 = notch-width / 2.0
+  val nh = notch-height
+
+  val sh = Polygon([
+    ; Right Side
+    Point(w2, h2),
+    Point(w2, (- h2)),
+    ; Start Bottom Notch
+    Point(nw2, (- h2)),
+    Point( 0.0, (- (h2 - nh))),
+    Point((- nw2), (- h2)),
+    ; Left Side
+    Point((- w2), (- h2)),
+    Point((- w2), h2),
+    ; Start of Top Notch
+    Point((- nw2), h2),
+    Point( 0.0, (h2 - nh)),
+    Point(nw2, h2)
+  ])
+  val offset = compute-anchor-offset(anchor, w2, h2)
+  offset * sh
+
+doc: \<DOC>
+Construct a chipped circle shape.
+
+A chipped circle is a circle with a chord drawn across one side
+and the [circular segment](https://en.wikipedia.org/wiki/Circular_segment)
+removed from the circle. The remaining circle has one straight edge and
+contains the origin.
+
+The current implementation construct a circle that has this straight
+edge aligned with the X axis and in the +Y half of the plane.
+
+@param radius Radial dimension of the originating circle in mm.
+@param edge-dist Distance from the center of the circle to the chord
+in the radial direction in mm.
+@param anchor Where the origin of this resulting shape will be.
+By default this value is `C` indicating the origin is the center
+of the circle.
+
+<DOC>
+public defn ChippedCircle (
+  --
+  radius:Double
+  edge-dist:Double,
+  anchor:Anchor = C
+  ) -> Shape:
+
+  ensure-positive!("radius", radius)
+  ensure-positive!("edge-dist", edge-dist)
+
+  if edge-dist >= radius:
+    throw $ ValueError("Invalid Edge Distance - Must be less than radius")
+
+  val start-angle = acos(edge-dist / radius)
+  val total-angle = 2.0 * PI - (2.0 * start-angle)
+  val start-y = radius * sin(start-angle)
+
+  val sh = PolygonWithArcs([
+    Arc(Point(0.0, 0.0), radius, to-degrees(start-angle), to-degrees(total-angle)),
+    Point(edge-dist, start-y)
+  ])
+
+  val offset = compute-anchor-offset(anchor, radius, radius, h2N = (- (edge-dist)))
+  offset * loc(0.0, 0.0, 90.0) * sh
+
+doc: \<DOC>
+Construct a double chipped circle shape.
+
+A chipped circle is a circle with a chord drawn across one side
+and the [circular segment](https://en.wikipedia.org/wiki/Circular_segment)
+removed from the circle. The remaining circle has one straight edge and
+contains the origin.
+
+A double chipped circle has this circular segment clipped off two edges. The
+current implementation construct a circle that has two straight
+edges aligned with the X axis and in the +Y and -Y halves of the plane.
+
+@param radius Radial dimension of the originating circle in mm.
+@param edge-dist Distance from the center of the circle to the chord
+in the radial direction in mm.
+@param anchor Where the origin of this resulting shape will be.
+By default this value is `C` indicating the origin is the center
+of the circle.
+
+<DOC>
+  public defn DoubleChippedCircle (
+    --
+    radius:Double
+    edge-dist:Double,
+    anchor:Anchor = C
+    ) -> Shape:
+
+    ensure-positive!("radius", radius)
+    ensure-positive!("edge-dist", edge-dist)
+
+    if edge-dist >= radius:
+      throw $ ValueError("Invalid Edge Distance - Must be less than radius")
+
+    val start-angle = acos(edge-dist / radius)
+    val total-angle = PI - (2.0 * start-angle)
+    val start-y = radius * sin(start-angle)
+
+    val sh = PolygonWithArcs([
+      Arc(Point(0.0, 0.0), radius, to-degrees(start-angle), to-degrees(total-angle)),
+      Point((- edge-dist), (- start-y)),
+      Arc(Point(0.0, 0.0), radius, to-degrees(PI + start-angle), to-degrees(total-angle)),
+      Point(edge-dist, start-y)
+    ])
+
+    val offset = compute-anchor-offset(anchor, radius, edge-dist)
+    offset * loc(0.0, 0.0, 90.0) * sh

@@ -5,6 +5,7 @@ defpackage jsl/examples/via-structures/se-via-structures:
   import jitx/commands
 
   import jsl/via-structures
+  import jsl/geometry/NotchedShapes
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
 
@@ -25,7 +26,7 @@ pcb-module top-level :
   add-anti-pad(
     se-via,
     SimpleAntiPad(
-      shape = Circle(0.5),
+      shape = DoubleChippedCircle(radius = 0.5, edge-dist = 0.4)
       start = LayerIndex(0, Top),
       end = LayerIndex(1,Top))
   )
