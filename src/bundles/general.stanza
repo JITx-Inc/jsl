@@ -100,39 +100,55 @@ public pcb-bundle power :
 doc: \<DOC>
 GPIO Interface Bundle
 
-@member p GPIO Pin
+@member gpio GPIO Pin
 <DOC>
 public pcb-bundle gpio :
-  pin p
+  pin gpio
 
 doc: \<DOC>
 Timer Interface Bundle
 
-@member p Timer Pin
+@member timer Timer Pin
 <DOC>
 public pcb-bundle timer :
-  pin p
+  pin timer
 
 doc: \<DOC>
 Single-Ended ADC Interface Bundle
 
-@member p ADC Pin
+@member adc ADC Pin
 <DOC>
 public pcb-bundle adc :
-  pin p
+  pin adc
+
+doc: \<DOC>
+Differential Pair ADC Interface Bundle
+
+@member adc-pair ADC Differential Pair
+<DOC>
+public pcb-bundle adc-pair :
+  port adc-pair : diff-pair
 
 doc: \<DOC>
 Single-Ended DAC Interface Bundle
 
-@member p DAC Pin
+@member dac DAC Pin
 <DOC>
 public pcb-bundle dac :
-  pin p
+  pin dac
+
+doc: \<DOC>
+Differential Pair DAC Interface Bundle
+
+@member dac-pair DAC Differential Pair
+<DOC>
+public pcb-bundle dac-pair :
+  port dac-pair : diff-pair
 
 doc: \<DOC>
 Reset Interface Bundle
 
-@member p Reset Pin
+@member reset Reset Pin
 <DOC>
 public pcb-bundle reset :
-  pin p
+  pin reset
