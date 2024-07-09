@@ -531,7 +531,9 @@ public defmethod make-landpattern (vp:VirtualLP, parent-pose:Pose = DEF_VLP_POSE
     for child in children(vp) do:
       make-landpattern(child, curr-pose)
 
-
+doc: \<DOC>
+Find all virtual landpattern elements with the given name
+<DOC>
 public defn find-by-name (vp:VirtualLP, name:String) -> Seqable<VirtualElement> :
   val local-elems = for elem in cat( [vp], elements(vp) ) filter:
     name?(elem) is-not None
@@ -544,6 +546,9 @@ public defn find-by-name (vp:VirtualLP, name:String) -> Seqable<VirtualElement> 
 
   cat(local-elems, kid-elems)
 
+doc: \<DOC>
+Find all virtual landpattern elements with the given class
+<DOC>
 public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> :
   val local-elems = for elem in cat([vp], elements(vp)) filter:
     contains?(class(elem), cls)
@@ -551,6 +556,9 @@ public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> 
     find-by-class(child, cls)
   cat(local-elems, kid-elems)
 
+doc: \<DOC>
+Find a virtual pad with the given reference
+<DOC>
 public defn get-pad-by-ref (vp:VirtualLP, r:Ref|Int) -> Maybe<VirtualPad> :
   for lp-pad in get-pads(vp) first:
     if pad-id(lp-pad) == r:
@@ -558,12 +566,18 @@ public defn get-pad-by-ref (vp:VirtualLP, r:Ref|Int) -> Maybe<VirtualPad> :
     else:
       None()
 
+doc: \<DOC>
+Forcefully find a virtual pad with the given reference
+<DOC>
 public defn get-pad-by-ref! (vp:VirtualLP, r:Ref|Int) -> VirtualPad :
   val pin-1-pad? = get-pad-by-ref(vp, r)
   match(pin-1-pad?):
     (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [r])
     (x:One<VirtualPad>): value(x)
 
+doc: \<DOC>
+Find the earliest virtual pad in the given landpattern by comparing pad references
+<DOC>
 public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
   defn earlier-pad (p1:VirtualPad, p2:VirtualPad) -> VirtualPad :
     p2 when compare-pad-id(pad-id(p2), pad-id(p1)) < 0 else p1
@@ -582,7 +596,9 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
 ;================= Pad Reference Comparison =================
 ;============================================================
 
-; Compares two pad IDs to determine the "earlier" one
+doc: \<DOC>
+Compare two pad references
+<DOC>
 public defn compare-pad-id (r1:Ref|Int, r2:Ref|Int) -> Int :
   ; Returns the result of the second compare if the first is 0
   defn comp-join (comp0:Int, comp1:(() -> Int)) -> Int :
