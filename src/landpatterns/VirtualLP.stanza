@@ -531,7 +531,9 @@ public defmethod make-landpattern (vp:VirtualLP, parent-pose:Pose = DEF_VLP_POSE
     for child in children(vp) do:
       make-landpattern(child, curr-pose)
 
-
+doc: \<DOC>
+Find all virtual landpattern elements with the given name
+<DOC>
 public defn find-by-name (vp:VirtualLP, name:String) -> Seqable<VirtualElement> :
   val local-elems = for elem in cat( [vp], elements(vp) ) filter:
     name?(elem) is-not None
@@ -544,6 +546,9 @@ public defn find-by-name (vp:VirtualLP, name:String) -> Seqable<VirtualElement> 
 
   cat(local-elems, kid-elems)
 
+doc: \<DOC>
+Find all virtual landpattern elements with the given class
+<DOC>
 public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> :
   val local-elems = for elem in cat([vp], elements(vp)) filter:
     contains?(class(elem), cls)
@@ -551,6 +556,9 @@ public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> 
     find-by-class(child, cls)
   cat(local-elems, kid-elems)
 
+doc: \<DOC>
+Find a virtual pad with the given reference
+<DOC>
 public defn get-pad-by-ref (vp:VirtualLP, r:Ref|Int) -> Maybe<VirtualPad> :
   for lp-pad in get-pads(vp) first:
     if pad-id(lp-pad) == r:
@@ -558,14 +566,68 @@ public defn get-pad-by-ref (vp:VirtualLP, r:Ref|Int) -> Maybe<VirtualPad> :
     else:
       None()
 
+doc: \<DOC>
+Forcefully find a virtual pad with the given reference
+<DOC>
 public defn get-pad-by-ref! (vp:VirtualLP, r:Ref|Int) -> VirtualPad :
   val pin-1-pad? = get-pad-by-ref(vp, r)
   match(pin-1-pad?):
     (_:None): throw $ ValueError("Failed to find Pad with Ref: %_" % [r])
     (x:One<VirtualPad>): value(x)
 
+doc: \<DOC>
+Find the earliest virtual pad in the given landpattern by comparing pad references
+<DOC>
+public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
+  defn earlier-pad (p1:VirtualPad, p2:VirtualPad) -> VirtualPad :
+    p2 when compare-pad-id(pad-id(p2), pad-id(p1)) < 0 else p1
+  val pads = get-pads(vp)
+  if empty?(pads) :
+    throw(Exception("Virtual landpattern has no pads"))
+  reduce(earlier-pad, pads)
+
 ; Converters
 #for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
   funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualLP]) :
   public defn funcName (e:VirtualElement) -> vType :
     e as vType
+
+;============================================================
+;================= Pad Reference Comparison =================
+;============================================================
+
+doc: \<DOC>
+Compare two pad references
+<DOC>
+public defn compare-pad-id (r1:Ref|Int, r2:Ref|Int) -> Int :
+  ; Returns the result of the second compare if the first is 0
+  defn comp-join (comp0:Int, comp1:(() -> Int)) -> Int :
+    comp1() when (comp0 == 0) else comp0
+
+  ; Compares symbolic row names such that A < Y < AA
+  defn row-comp (r1:Symbol, r2:Symbol) -> Int :
+    val s1 = to-string(r1)
+    val s2 = to-string(r2)
+    comp-join(compare(length(s1), length(s2)), {compare(s1, s2)})
+
+  ; Converts ref into list of symbols and ints
+  defn* to-list (r:Ref|Int, tail:List<Symbol|Int>) :
+    match(r) :
+      (r:Int) : cons(r, tail)
+      (r:VarRef) : cons(name(r), tail)
+      (r:FieldRef) : to-list(ref(r), cons(name(field(r)), tail))
+      (r:IndexRef) : to-list(ref(r), cons(index(r), tail))
+
+  val l1 = to-list(r1, List())
+  val l2 = to-list(r2, List())
+  let loop (l1:List<Symbol|Int> = l1, l2:List<Symbol|Int> = l2) :
+    if empty?(l1) : 0 when empty?(l2) else -1
+    else if empty?(l2) : 1
+    else :
+      match(head(l1), head(l2)) :
+        (s1:Symbol, s2:Symbol) :
+          comp-join(row-comp(s1, s2), {loop(tail(l1), tail(l2))})
+        (s1:Symbol, s2:Int) : -1
+        (s1:Int, s2:Symbol) : 1
+        (s1:Int, s2:Int) :
+          comp-join(compare(s1, s2), {loop(tail(l1), tail(l2))})

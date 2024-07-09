@@ -250,3 +250,50 @@ public defmethod active? (p:ThermallyEnhanced-Matrix-Planner, row:Int, column:In
   is-active?(active(p), row, column) or
     not-inactive?(inactive(p), row, column)
 
+doc: \<DOC>
+Corner Cut Matrix - A triangle of pads in each corner are inactive
+
+Example: corner-cut = 2
+  ```
+    X | X | O  ...  O | X | X
+    X | O | O  ...  O | O | X
+    O | O | O  ...  O | O | O
+       ...     ...     ...
+    O | O | O  ...  O | O | O
+    X | O | O  ...  O | O | X
+    X | X | O  ...  O | X | X
+  ```
+<DOC>
+public defstruct Corner-Cut-Matrix-Planner <: BGA-PadPlanner :
+  doc: \<DOC>
+  Number of rows in the Grid
+  <DOC>
+  rows:Int
+  doc: \<DOC>
+  Number of columns in the Grid
+  <DOC>
+  columns:Int
+  doc: \<DOC>
+  Width of the triangular region in each corner that will be inactive
+  <DOC>
+  corner-cut:Int
+  pad-config:PadConfig with: (
+    as-method => true
+    default => DEF-PAD-CONFIG
+    )
+with:
+  constructor => #Corner-Cut-Matrix-Planner
+
+public defn Corner-Cut-Matrix-Planner (
+  --
+  rows:Int
+  columns:Int
+  corner-cut:Int
+  pad-config:PadConfig = DEF-PAD-CONFIG
+  ) -> Corner-Cut-Matrix-Planner :
+  #Corner-Cut-Matrix-Planner(rows, columns, corner-cut, pad-config)
+
+public defmethod active? (x:Corner-Cut-Matrix-Planner, row:Int, column:Int) -> True|False:
+  val r-inv = rows(x) - row - 1
+  val c-inv = columns(x) - column - 1
+  min(row, r-inv) + min(column, c-inv) >= corner-cut(x)
