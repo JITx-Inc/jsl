@@ -286,7 +286,9 @@ public defmethod build-silkscreen (
   pkg:BGA,
   vp:VirtualLP,
   ):
-  val pin-1-id = IndexRef(Ref("A"), 1)
+  val pin-1-id = match(get-pad-by-ref(vp, IndexRef(Ref("A"), 1))) :
+    (p:VirtualPad) : pad-id(p)
+    (_) : pad-id(get-first-pad(vp))
   build-outline(vp, package-body(pkg), density-level(pkg))
   build-pin-1-marker(vp, pin-1-id = pin-1-id)
   build-triangle-marker(vp, pin-1-id = pin-1-id)
