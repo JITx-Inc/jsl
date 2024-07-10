@@ -239,17 +239,15 @@ defn verify-stack-jlcpcb-2313 (stack:LayerStack) :
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
 deftest(layerstack) make-layer-stack-jlcpcb-2313 :
-  defn make-jlcpcb-2313 (name:String) :
-    make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers, soldermask = soldermask) where :
-      val soldermask = Soldermask(0.019, SoldermaskMaterial)
-      val copper-35um = Copper(0.035)
-      val prepreg-2313 = FR4(0.1, FR4-Material)
-      val copper-17_5um = Copper(0.0175)
-      val core = FR4(1.265, FR4-Material)
-      val top-layers =  [
-        [copper-35um prepreg-2313] 
-        [copper-17_5um core]
-      ]
-  val stack = make-jlcpcb-2313("JLCPCB 4-layer 1.6mm")
+  val stack = make-layer-stack("JLCPCB 4-layer 1.6mm", top-layers, soldermask = soldermask) where :
+    val soldermask = Soldermask(0.019, SoldermaskMaterial)
+    val copper-35um = Copper(0.035)
+    val prepreg-2313 = FR4(0.1, FR4-Material)
+    val copper-17_5um = Copper(0.0175)
+    val core-2313 = FR4(1.265, FR4-Material)
+    val top-layers =  [
+      [copper-35um prepreg-2313] 
+      [copper-17_5um core-2313]
+    ]
   verify-stack-jlcpcb-2313(stack)
 
