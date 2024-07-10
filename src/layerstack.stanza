@@ -314,7 +314,7 @@ public defstruct LayerStack :
 
   layers:Vector<LayerSpec> with: (
     updater => sub-layers
-  )
+    default => Vector<LayerSpec>())
 with:
   constructor => #LayerStack
   printer => true
@@ -553,23 +553,38 @@ doc:\<DOC>
 
   Example:
   ```
-    val jlcpcb-jlc2313 = make-layer-stack("JLCPCB 4-layer 1.6mm", outer-layers) where :
-      val copper-35um = Copper(0.035)
+    val copper-35um = Copper(0.035)
+    val copper-17_5um = Copper(0.0175)
+    val jlcpcb-jlc2313 = make-layer-stack("JLCPCB 4-layer 1.6mm", outer-layers,
+      soldermask = soldermask) where :
+      val soldermask = Soldermask(0.019, SoldermaskMaterial)
       val prepreg-2313 = FR4(0.1, FR4-Material-2313)
-      val copper-17_5um = Copper(0.0175)
-      val core = FR4(1.265, FR4-Material-Core)
+      val core-2313 = FR4(1.265, FR4-Material-Core)
       val outer-layers = [
         [copper-35um prepreg-2313] 
-        [copper-17_5um core]
+        [copper-17_5um core-2313]
       ]
   ```
+  The LayerStack created has these layers:
+     [ soldermask
+       copper-35um prepreg-2313
+       copper-17_5um core-2313
+       copper-17_5um core-2313
+       copper-35um prepreg-2313
+       soldermask
+     ]
+  @param name The name of the LayerStack
+  @param top-layers The pairs of mechanical and dielectric layaers
+  @param description The description of the LayerStack
 <DOC>
-public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>) -> LayerStack :
-  ;Access top-layers with reversed index
-  ; - so the middle layer is index 0
-  val stack = LayerStack(name = name)
+public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
+      -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
+  val stack = #LayerStack(One(name), description)
+  ;Access pairs of outer-layers in reverse order
   for outer in in-reverse(outers) do:
     val [metal, insul] = outer
       add-symmetric(metal, insul, stack)
+  if value?(soldermask) is LayerSpec :
+    add-soldermask(value!(soldermask), stack) 
   stack
 
