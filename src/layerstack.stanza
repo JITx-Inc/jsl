@@ -574,7 +574,7 @@ doc:\<DOC>
        soldermask
      ]
   @param name The name of the LayerStack
-  @param top-layers The pairs of mechanical and dielectric layaers
+  @param top-layers The pairs of mechanical and dielectric layers
   @param description The description of the LayerStack
 <DOC>
 public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
