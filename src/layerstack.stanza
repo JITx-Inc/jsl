@@ -567,10 +567,13 @@ doc:\<DOC>
   ```
   The LayerStack created has these layers:
      [ soldermask
-       copper-35um prepreg-2313
-       copper-17_5um core-2313
-       copper-17_5um core-2313
-       copper-35um prepreg-2313
+       copper-35um
+       prepreg-2313
+       copper-17_5um
+       core-2313
+       copper-17_5um
+       prepreg-2313
+       copper-35um
        soldermask
      ]
   @param name The name of the LayerStack
@@ -583,7 +586,7 @@ public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
   ;Access pairs of outer-layers in reverse order
   for outer in in-reverse(outers) do:
     val [metal, insul] = outer
-      add-symmetric(metal, insul, stack)
+    add-symmetric(metal, insul, stack)
   if value?(soldermask) is LayerSpec :
     add-soldermask(value!(soldermask), stack) 
   stack
