@@ -1,0 +1,38 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/introspection:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+
+doc: \<DOC>
+Retrieve a pad from a landpattern by name
+
+@param obj LandPattern object that we will interrogate
+@param name Name of the pad like `p[1]` or `A[3]`, etc
+@return If we find a pad with that name, we will require a JITXObject
+of that pad. We we don't find a pad by that name, we return `None()`
+<DOC>
+public defn get-pad-by-name (obj:LandPattern, name:String) -> Maybe<JITXObject> :
+  for p in pads(obj) first:
+    val refName = to-string("%_" % [ref(p)])
+    if suffix?(refName, name) :
+      One(p)
+    else:
+      None()
+
+doc: \<DOC>
+Retrieve a pad from a landpattern by name
+
+@param obj LandPattern object that we will interrogate
+@param name Name of the pad like `p[1]` or `A[3]`, etc
+@return A pad object by that name if one is present.
+@throws ValueError when no pad is found by the passed name
+<DOC>
+public defn get-pad-by-name! (obj:LandPattern, name:String) -> JITXObject :
+  val v? = get-pad-by-name(obj, name)
+  match(v?):
+    (_:None):
+      throw $ ValueError("No Pad by name '%_' found in LandPattern '%_'" % [name, obj])
+    (v:One<JITXObject>): value(v)
