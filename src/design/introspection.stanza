@@ -1,0 +1,26 @@
+#use-added-syntax(jitx)
+defpackage jsl/design/introspection:
+  import core
+  import jitx
+  import jitx/commands
+
+
+doc: \<DOC>
+Retrieve the `Instantiable` that generates the instances of the passed object.
+
+NOTE: This function is recursive.
+
+@param comps This is a instantiated component or module, or an array
+ of instances (all of the same type).
+@return The originating instantiable of either the instance or the elements
+of the array.
+<DOC>
+public defn get-instantiable (comps:JITXObject|InstantiableType) -> Instantiable:
+  val hc-type = match(comps):
+    (jcomps:JITXObject): instantiable-type(jcomps)
+    (insttype:InstantiableType): insttype
+  match(hc-type):
+    (hc-arr:InstantiableArray):
+      get-instantiable(base(hc-arr))
+    (hc-inst:Instantiable):
+      hc-inst
