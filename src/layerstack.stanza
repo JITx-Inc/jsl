@@ -243,6 +243,17 @@ public defn LayerSpec (
   ) -> LayerSpec:
   #LayerSpec(name, desc, material, thickness)
 
+public defn is-soldermask (l:LayerSpec) -> True|False :
+  match(material(l)):
+    (m:DielectricMaterial): is-soldermask(m)
+    (_): false
+
+;<A>
+public defn is-soldermask (m:LayerMaterial) -> True|False :
+  match(m) :
+    (m:DielectricMaterial): is-soldermask(m)
+    (_): false
+;<A>
 doc: \<DOC>
 Create a Copper layer
   Usage: Copper(0.3) : specify thickness 
@@ -303,7 +314,7 @@ public defstruct LayerStack :
 
   layers:Vector<LayerSpec> with: (
     updater => sub-layers
-  )
+    default => Vector<LayerSpec>())
 with:
   constructor => #LayerStack
   printer => true
@@ -536,3 +547,79 @@ public defn create-pcb-stackup (stack:LayerStack) :
       make-layer-statement(l)
 
   custom-stackup
+
+doc:\<DOC>
+  Construct a LayerStack with a tuple of outer layers. 
+
+  Example 1: 4-Layer Stack with Soldermask
+  ```
+    val copper-35um = Copper(0.035)
+    val copper-17_5um = Copper(0.0175)
+    val stack = make-layer-stack("4-Layer Stack with Soldermask", outer-layers,
+      soldermask = soldermask) where :
+      val soldermask = Soldermask(0.019, SoldermaskMaterial)
+      val prepreg = FR4(0.1, FR4-Material)
+      val core = FR4(1.265, FR4-Material)
+      val outer-layers = [
+        [copper-35um prepreg] 
+        [copper-17_5um core]
+      ]
+  ```
+  The LayerStack created has these layers:
+     [ soldermask
+       copper-35um
+       prepreg
+       copper-17_5um
+       core
+       copper-17_5um
+       prepreg
+       copper-35um
+       soldermask
+     ]
+  
+  Example 2: 4-layer with two adjacent prepreg layers
+  ```
+    val copper-35um = Copper(0.035)
+    val prepreg = FR4(0.1, FR4-Material)
+    val copper-17_5um = Copper(0.0175)
+    val core = FR4(1.265, FR4-Material)
+    val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+      val top-layers =  [
+        [copper-35um prepreg]
+        prepreg
+        [copper-17_5um core]
+      ]
+  ```
+  The LayerStack created has these layers:
+     [ copper-35um
+       prepreg
+       prepreg ; two adjacent prepreg layers
+       copper-17_5um
+       core
+       copper-17_5um
+       prepreg
+       prepreg
+       copper-35um
+     ]
+
+  @param name The name of the LayerStack
+  @param top-layers The pairs of mechanical and dielectric layers, from outer to inner layers.
+  @param description The description of the LayerStack
+<DOC>
+public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]|LayerSpec>
+      -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
+  val stack = #LayerStack(One(name), description)
+  ;Access pairs of outer-layers in reverse order
+  for outer in in-reverse(outers) do:
+    match(outer):
+      (outer:LayerSpec):
+        ; add one prepreg layer to top and bottom
+        add-top(outer, stack)
+        add-bottom(outer, stack)
+      ([metal, insul]:[LayerSpec LayerSpec]):
+        ; add [copper, prepreg] layers to top and bottom
+        add-symmetric(metal, insul, stack)
+  if value?(soldermask) is LayerSpec :
+    add-soldermask(value!(soldermask), stack) 
+  stack
+

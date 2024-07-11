@@ -1,6 +1,7 @@
 #use-added-syntax(jitx,tests)
 defpackage jsl/tests/layerstack:
   import core
+  import collections
   import jitx
   import jitx/commands
 
@@ -140,6 +141,7 @@ My Crazy Stack - each layer is different for testing
  10 - copper-105um
 ;<note>
 val test-stack = LayerStack(name = "My Crazy Stack")
+val copper-17_5um = Copper(0.0175, name = "cu1")
 val copper-35um = Copper(0.035, name = "cu1")
 val copper-70um = Copper(0.070, name = "cu2")
 val copper-105um = Copper(0.105, name = "cu3")
@@ -196,5 +198,123 @@ deftest(layerstack) test-copper-optional-arguments :
   val aluminum-35um-with-name = Copper(0.035, AluminumMaterial, name = "alum")
   set-name(aluminum-35um "alum")
    #EXPECT(aluminum-35um-with-name == aluminum-35um)
- 
 
+;========== Test different ways to create LayerStack ==========
+doc:\<DOC>
+  Verify the layers in a stack.
+  The middle layer, at the bottom of the `top-layers` tuple, appears only once.
+  The bottom layers are symmetric to the top layers in reverse order.
+
+  Usage Example:
+  ```
+    val top-layers = [
+      soldermask
+      copper-35um
+      prepreg 
+      copper-17_5um
+      core
+    ]
+    verify-layers(stack, top-layers)
+  ```
+  The expected `layers(stack)` equals
+  ```
+    [
+      soldermask
+      copper-35um
+      prepreg 
+      copper-17_5um
+      core            ; the middle layer
+      copper-17_5um
+      prepreg
+      copper-35um
+      soldermask
+    ]
+  ```  
+@param stack The LayerStack to verify
+@param top-layers the top layers, from the top of the stack to the middle layer.
+<DOC>
+public defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>) :
+  #EXPECT(length(layers(stack)) == length(top-layers) * 2 - 1)
+  val total-layers = length(layers(stack))
+  val middle = total-layers / 2
+  for idx in 0 through middle do :
+    #EXPECT(stack[idx] == top-layers[idx])
+    #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
+
+;Verify the 4-layers stack
+defn verify-4-layer-stack (stack:LayerStack, soldermask?:True|False) :
+  val soldermask = [Soldermask(0.019, SoldermaskMaterial)]
+    when soldermask? else []
+  val prepreg = FR4(0.1, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val top-layers = to-tuple $ cat(soldermask, [
+      copper-35um
+      prepreg 
+      copper-17_5um
+      core
+    ])
+  verify-layers(stack, top-layers)
+
+;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
+deftest(layerstack) make-4-layer-stack :
+  val soldermask = Soldermask(0.019, SoldermaskMaterial)
+  val prepreg = FR4(0.1, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("4-Layer Stack without Soldermask", top-layers, soldermask = soldermask) where :
+    val top-layers =  [
+      [copper-35um prepreg] 
+      [copper-17_5um core]
+    ]
+  verify-4-layer-stack(stack, true)
+
+;Without the soldermask layer
+deftest(layerstack) make-4-layer-layer-stack-no-soldermask :
+  val prepreg = FR4(0.1, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("4-Layer Stack with Soldermask", top-layers) where :
+    val top-layers =  [
+      [copper-35um prepreg] 
+      [copper-17_5um core]
+    ]
+  verify-4-layer-stack(stack, false)
+
+;Verify the layers with multiple adjacent prepreg layers
+; - insert the `adjacent-prepregs` layers right below the outer [copper prepreg] layers
+defn verify-4-layer-stack-with-adjacent-prepregs (stack:LayerStack, adjacent-prepregs:Tuple<LayerSpec>) :
+  val prepreg = FR4(0.1, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val top-layers = Vector<LayerSpec>()
+  add-all(top-layers, [copper-35um prepreg ])
+  add-all(top-layers, adjacent-prepregs)
+  add-all(top-layers, [copper-17_5um core])
+  verify-layers(stack, to-tuple $ top-layers)
+
+; Two adjacent prepreg layers
+; Example: "JLC04161H-7628A"
+deftest(layerstack) make-layer-stack-two-adjacent-prepreg-layers :
+  val prepreg = FR4(0.1, FR4-Material)
+  val prepreg2 = FR4(0.2, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+    val top-layers =  [
+      [copper-35um prepreg]
+      prepreg2
+      [copper-17_5um core]
+    ]
+  verify-4-layer-stack-with-adjacent-prepregs(stack, [prepreg2])
+
+; Two adjacent prepreg layers
+; Example: "JLC04161H-7628A"
+deftest(layerstack) make-layer-stack-three-adjacent-prepreg-layers :
+  val prepreg = FR4(0.1, FR4-Material)
+  val prepreg2 = FR4(0.2, FR4-Material)
+  val prepreg3 = FR4(0.3, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+    val top-layers =  [
+      [copper-35um prepreg]
+      prepreg2
+      prepreg3
+      [copper-17_5um core]
+    ]
+  verify-4-layer-stack-with-adjacent-prepregs(stack, [prepreg2 prepreg3])
