@@ -270,18 +270,25 @@ public defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>
       #EXPECT(stack[idx] == top-layers[idx])
       #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
 
-;Verify the 4-layers stack
-defn verify-4-layer-stack (stack:LayerStack, soldermask?:True|False) :
+doc:\<DOC>
+  Verify a typical 4-layers stack used in this package
+
+  @param soldermask? When true, add the soldermask layer
+  @param add-prepreg-layers When the tuple is not empty, insert the multiple `add-prepreg-layers` right below the outer [copper prepreg] layers
+<DOC>
+defn verify-4-layer-stack (stack:LayerStack
+      -- soldermask?:True|False = false
+         add-prepreg-layers:Tuple<LayerSpec> = []) :
   val soldermask = [Soldermask(0.019, SoldermaskMaterial)]
     when soldermask? else []
   val prepreg = FR4(0.1, FR4-Material)
   val core = FR4(1.265, FR4-Material)
-  val top-layers = to-tuple $ cat(soldermask, [
-      copper-35um
-      prepreg 
-      copper-17_5um
-      core
-    ])
+  val top-layers = to-tuple $ cat-all $
+    [ soldermask
+      [copper-35um prepreg]
+      add-prepreg-layers 
+      [copper-17_5um core]
+    ]
   verify-layers(stack, top-layers)
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
@@ -294,7 +301,7 @@ deftest(layerstack) make-4-layer-stack :
       [copper-35um prepreg] 
       [copper-17_5um core]
     ]
-  verify-4-layer-stack(stack, true)
+  verify-4-layer-stack(stack, soldermask? = true)
 
 ;Without the soldermask layer
 deftest(layerstack) make-4-layer-layer-stack-no-soldermask :
@@ -305,18 +312,7 @@ deftest(layerstack) make-4-layer-layer-stack-no-soldermask :
       [copper-35um prepreg] 
       [copper-17_5um core]
     ]
-  verify-4-layer-stack(stack, false)
-
-;Verify the layers with multiple adjacent prepreg layers
-; - insert the `adjacent-prepregs` layers right below the outer [copper prepreg] layers
-defn verify-4-layer-stack-with-adjacent-prepregs (stack:LayerStack, adjacent-prepregs:Tuple<LayerSpec>) :
-  val prepreg = FR4(0.1, FR4-Material)
-  val core = FR4(1.265, FR4-Material)
-  val top-layers = Vector<LayerSpec>()
-  add-all(top-layers, [copper-35um prepreg ])
-  add-all(top-layers, adjacent-prepregs)
-  add-all(top-layers, [copper-17_5um core])
-  verify-layers(stack, to-tuple $ top-layers)
+  verify-4-layer-stack(stack)
 
 ; Two adjacent prepreg layers
 ; Example: "JLC04161H-7628A"
@@ -324,26 +320,45 @@ deftest(layerstack) make-layer-stack-two-adjacent-prepreg-layers :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val core = FR4(1.265, FR4-Material)
-  val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+  val stack = make-layer-stack("4-layer stack with two adjacent prepreg layers", top-layers) where :
     val top-layers =  [
-      [copper-35um prepreg]
-      prepreg2
+      [copper-35um [prepreg prepreg2]]
       [copper-17_5um core]
     ]
-  verify-4-layer-stack-with-adjacent-prepregs(stack, [prepreg2])
+  verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2])
 
-; Two adjacent prepreg layers
+; Three adjacent prepreg layers
 ; Example: "JLC04161H-7628A"
 deftest(layerstack) make-layer-stack-three-adjacent-prepreg-layers :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val prepreg3 = FR4(0.3, FR4-Material)
   val core = FR4(1.265, FR4-Material)
-  val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+  val stack = make-layer-stack("4-layer stack with three adjacent prepreg layers", top-layers) where :
     val top-layers =  [
-      [copper-35um prepreg]
-      prepreg2
-      prepreg3
+      [copper-35um [prepreg prepreg2 prepreg3]]
       [copper-17_5um core]
     ]
-  verify-4-layer-stack-with-adjacent-prepregs(stack, [prepreg2 prepreg3])
+  verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2 prepreg3])
+
+; Even number of layers
+; Example: "JLC06201H-3313A"
+deftest(layerstack) make-layer-stack-even-number-of-layers :
+  val prepreg = FR4(0.1, FR4-Material)
+  val prepreg2 = FR4(0.2, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("6-layer stack with even number of layers", outers, even-layers? = true) where :
+    val outers =
+      [
+        [copper-35um prepreg]
+        [copper-17_5um core]
+        [copper-17_5um prepreg2] ; => two layers of prepreg2 in the center
+      ]
+
+  ;Verify the layer stack with even number of layers
+  verify-layers(stack, top-layers, even-layers? = true) where :
+    val top-layers = [
+        copper-35um prepreg
+        copper-17_5um core
+        copper-17_5um prepreg2]
+

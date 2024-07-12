@@ -355,9 +355,11 @@ When used on its own, this function is useful for creating asymmetric
 pcb stackups. This function is most useful when used on a non-empty
 layer stack.
 
-@param l-set layer or set of layers to add to the top of the stack. Note
+@param l-set layer or set of layers to add to the top of the stack, ordered from inner to outer (bottom to top). Note
 that if this value is a collection, then the layers will be added to
 the stack one at a time. For example:
+
+
 
 ```
 add-top( [dielectric, copper], stack)
@@ -389,7 +391,7 @@ When used on its own, this function is useful for creating asymmetric
 pcb stackups. This function is most useful when used on a non-empty
 layer stack.
 
-@param l-set layer or set of layers to add to the top of the stack. Note
+@param l-set layer or set of layers to add to the top of the stack, ordered from inner to outer (top to bottom). Note
 that if this value is a collection, then the layers will be added to
 the stack one at a time. For example:
 
@@ -447,9 +449,9 @@ add-symmetric(copper-35um, core-FR4,
 <DOC>
 public defn add-symmetric (copper:LayerSpec, dielectric:LayerSpec, s:LayerStack) -> LayerStack:
   if length(layers(s)) > 0:
-    val ls = [dielectric, copper]
-    add-bottom(ls, s)
+    val ls = [dielectric copper]
     add-top(ls, s)
+    add-bottom(ls, s)
   else:
     ; If there are no layers yet - then we need to just create
     ;  a single dielectric layer.
@@ -555,11 +557,11 @@ doc:\<DOC>
   ```
     val copper-35um = Copper(0.035)
     val copper-17_5um = Copper(0.0175)
+    val core = FR4(1.265, FR4-Material)
     val stack = make-layer-stack("4-Layer Stack with Soldermask", outer-layers,
       soldermask = soldermask) where :
       val soldermask = Soldermask(0.019, SoldermaskMaterial)
       val prepreg = FR4(0.1, FR4-Material)
-      val core = FR4(1.265, FR4-Material)
       val outer-layers = [
         [copper-35um prepreg] 
         [copper-17_5um core]
@@ -577,48 +579,101 @@ doc:\<DOC>
        soldermask
      ]
   
-  Example 2: 4-layer with two adjacent prepreg layers
+  Example 2: 4-layer stack with three adjacent prepreg layers, such as "JLC04161H-7628B"
   ```
-    val copper-35um = Copper(0.035)
-    val prepreg = FR4(0.1, FR4-Material)
-    val copper-17_5um = Copper(0.0175)
-    val core = FR4(1.265, FR4-Material)
-    val stack = make-layer-stack("4-layer with two adjacent prepreg layers", top-layers) where :
+    make-layer-stack("4-layer stack with three adjacent prepreg layers", top-layers) where :
+      val prepreg = FR4(0.1, FR4-Material)
+      val prepreg2 = FR4(0.2, FR4-Material)
+      val prepreg3 = FR4(0.3, FR4-Material)
       val top-layers =  [
-        [copper-35um prepreg]
-        prepreg
+        [copper-35um [prepreg prepreg2 prepreg3]]
         [copper-17_5um core]
       ]
   ```
   The LayerStack created has these layers:
      [ copper-35um
-       prepreg
-       prepreg ; two adjacent prepreg layers
+       prepreg ; three adjacent prepreg layers
+       prepreg2
+       prepreg3
        copper-17_5um
        core
        copper-17_5um
-       prepreg
+       prepreg3
+       prepreg2
        prepreg
        copper-35um
      ]
 
+  Example 3: 6-layer stack with even number of layers, such as "JLC06201H-3313A"
+  ```
+    make-layer-stack("6-layer stack with even number of layers", outers, even-layers? = true) where :
+      val prepreg = FR4(0.1, FR4-Material)
+      val prepreg2 = FR4(0.2, FR4-Material)
+      val outers =
+        [
+          [copper-35um prepreg]
+          [copper-17_5um core]
+          [copper-17_5um prepreg2] ; => two layers of prepreg2 in the center
+        ]
+  ```
+  The LayerStack created has these layers:
+     [ copper-35um
+       prepreg
+       copper-17_5um
+       core
+       copper-17_5um
+       prepreg2         ; two layers of prepreg2 in the center, not one single core/prepreg layer 
+       prepreg2         ;
+       copper-17_5um
+       core
+       copper-17_5um
+       prepreg
+       copper-35um
+     ]
+
+
   @param name The name of the LayerStack
-  @param top-layers The pairs of mechanical and dielectric layers, from outer to inner layers.
-  @param description The description of the LayerStack
+  @param top-layers A tuple of pairs of the mechanical layer and one dielectric layer or 
+    of the mechanical layer and a tuple of two or more dielectric layers, from outer to inner layers.
+  @param description (optional) The description of the LayerStack
+  @param soldermask (optional) The soldermask layer to be added as the outermost layer
+  @param even-layers? (optional) Whether there are an even number of layers. The default is `false`.
 <DOC>
-public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]|LayerSpec>
-      -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
+public defn make-layer-stack (name:String,
+  outers:Tuple<[LayerSpec LayerSpec]|[LayerSpec Tuple<LayerSpec>]>
+      -- description:String = ?, 
+         soldermask:LayerSpec = ?,
+         even-layers?:True|False = false) -> LayerStack :
   val stack = #LayerStack(One(name), description)
   ;Access pairs of outer-layers in reverse order
   for outer in in-reverse(outers) do:
-    match(outer):
-      (outer:LayerSpec):
-        ; add one prepreg layer to top and bottom
-        add-top(outer, stack)
-        add-bottom(outer, stack)
-      ([metal, insul]:[LayerSpec LayerSpec]):
-        ; add [copper, prepreg] layers to top and bottom
+    ;Verify input
+    if outer[1] is Tuple<LayerSpec> and length(outer[1] as Tuple<LayerSpec>) < 2 :
+      throw(Exception("Invalid argument: Expect 2 or more layers in the tuple of dialectric layers in [LayerSpec Tuple<LayerSpec>]. Found %_" % [outer]))
+    if not even-layers? :
+      if outer[1] is LayerSpec :
+        val [metal insul] = outer as [LayerSpec LayerSpec]
         add-symmetric(metal, insul, stack)
+      else : ; outer[1] is Tuple<LayerSpec>
+        val [metal insuls] = outer as [LayerSpec Tuple<LayerSpec>]
+        ; add the innermost layers first
+        val n-insuls = length(insuls) ; insuls[n-insuls - 1] is the innermost layer
+        add-symmetric(insuls[n-insuls - 2], insuls[n-insuls - 1], stack)
+        ; then add the rest of the layers
+        val layers = to-list $ cat([metal], insuls[0 to n-insuls - 2]) ; from outer to inner layers
+        add-top(reverse(layers), stack) ; ordered from inner to outer
+        add-bottom(reverse(layers), stack)
+    else : ; even-layers? = true
+      if outer[1] is LayerSpec :
+        val [metal insul] = outer as [LayerSpec LayerSpec]
+        add-top([insul metal], stack) ; reversed order - from inner to outer layers
+        add-bottom([insul metal], stack)
+      else : ; outer[1] is Tuple<LayerSpec>
+        val [metal insuls] = outer as [LayerSpec Tuple<LayerSpec>]
+        val layers = to-list $ cat([metal], insuls) ; from outer to inner layers
+        add-top(reverse(layers), stack) ; reversed order - from inner to outer layers
+        add-bottom(reverse(layers), stack)
+        
   if value?(soldermask) is LayerSpec :
     add-soldermask(value!(soldermask), stack) 
   stack
