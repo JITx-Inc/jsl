@@ -205,7 +205,7 @@ doc:\<DOC>
   The middle layer, at the bottom of the `top-layers` tuple, appears only once.
   The bottom layers are symmetric to the top layers in reverse order.
 
-  Usage Example:
+  Example 1: when even-layers? = false (the middle layer is a singleton)
   ```
     val top-layers = [
       soldermask
@@ -230,16 +230,45 @@ doc:\<DOC>
       soldermask
     ]
   ```  
+
+  Example 2: When even-layers? = true, the middle layer is also duplicated.
+  ```
+    val top-layers = [
+      copper-35um
+      prepreg 
+      copper-17_5um
+      core
+    ]
+    verify-layers(stack, top-layers, even-layers? = true)
+  ```
+  The expected `layers(stack)` equals
+  ```
+    [
+      copper-35um
+      prepreg 
+      copper-17_5um
+      core            ; the middle layer at top
+      core            ; the middle layer at bottom
+      copper-17_5um
+      prepreg
+      copper-35um
+    ]
+  ```  
 @param stack The LayerStack to verify
 @param top-layers the top layers, from the top of the stack to the middle layer.
 <DOC>
-public defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>) :
-  #EXPECT(length(layers(stack)) == length(top-layers) * 2 - 1)
+public defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>
+      -- even-layers? = false) :
+  if even-layers? :
+    #EXPECT(length(layers(stack)) == length(top-layers) * 2)
+  else :
+    #EXPECT(length(layers(stack)) == length(top-layers) * 2 - 1)
   val total-layers = length(layers(stack))
   val middle = total-layers / 2
   for idx in 0 through middle do :
-    #EXPECT(stack[idx] == top-layers[idx])
-    #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
+    if not even-layers? or idx < length(top-layers) :
+      #EXPECT(stack[idx] == top-layers[idx])
+      #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
 
 ;Verify the 4-layers stack
 defn verify-4-layer-stack (stack:LayerStack, soldermask?:True|False) :
