@@ -314,7 +314,7 @@ deftest(layerstack) make-4-layer-layer-stack-no-soldermask :
     ]
   verify-4-layer-stack(stack)
 
-; Two adjacent prepreg layers
+; Two adjacent prepreg layers, right below the outer copper layer
 ; Example: "JLC04161H-7628A"
 deftest(layerstack) make-layer-stack-two-adjacent-prepreg-layers :
   val prepreg = FR4(0.1, FR4-Material)
@@ -327,7 +327,7 @@ deftest(layerstack) make-layer-stack-two-adjacent-prepreg-layers :
     ]
   verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2])
 
-; Three adjacent prepreg layers
+; Three adjacent prepreg layers, right below the outer copper layer
 ; Example: "JLC04161H-7628A"
 deftest(layerstack) make-layer-stack-three-adjacent-prepreg-layers :
   val prepreg = FR4(0.1, FR4-Material)
@@ -340,6 +340,25 @@ deftest(layerstack) make-layer-stack-three-adjacent-prepreg-layers :
       [copper-17_5um core]
     ]
   verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2 prepreg3])
+
+; Two adjacent prepreg layers in the middle, , right below the inner copper layer
+; Example: JLC06161H-1080B"
+deftest(layerstack) make-layer-stack-three-adjacent-prepreg-layers :
+  val prepreg = FR4(0.1, FR4-Material)
+  val prepreg2 = FR4(0.2, FR4-Material)
+  val prepreg3 = FR4(0.3, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("6-layer stack with two adjacent prepreg layers in the middle", top-layers) where :
+    val top-layers =  [
+      [copper-35um prepreg]
+      [copper-17_5um core]
+      [copper-17_5um [prepreg2 prepreg3]]
+    ]
+  verify-layers(stack, top-layers) where :
+    val top-layers = [
+      copper-35um prepreg
+      copper-17_5um core
+      copper-17_5um prepreg2 prepreg3]
 
 ; Even number of layers
 ; Example: "JLC06201H-3313A"
