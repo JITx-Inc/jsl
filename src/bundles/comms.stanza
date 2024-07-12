@@ -312,6 +312,6 @@ specification is present in NXP's references
 @member sd Data Signal
 <DOC>
 public pcb-bundle i2s :
-  port sck
-  port ws
-  port sd
+  pin sck
+  pin ws
+  pin sd
