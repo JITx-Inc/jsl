@@ -558,16 +558,17 @@ doc:\<DOC>
     val copper-35um = Copper(0.035)
     val copper-17_5um = Copper(0.0175)
     val core = FR4(1.265, FR4-Material)
+    val prepreg = FR4(0.1, FR4-Material)
     val stack = make-layer-stack("4-Layer Stack with Soldermask", outer-layers,
       soldermask = soldermask) where :
       val soldermask = Soldermask(0.019, SoldermaskMaterial)
-      val prepreg = FR4(0.1, FR4-Material)
       val outer-layers = [
         [copper-35um prepreg] 
         [copper-17_5um core]
       ]
   ```
   The LayerStack created has these layers:
+    ```
      [ soldermask
        copper-35um
        prepreg
@@ -578,20 +579,21 @@ doc:\<DOC>
        copper-35um
        soldermask
      ]
+    ```
   
   Example 2: 4-layer stack with three adjacent prepreg layers, such as "JLC04161H-7628B"
   ```
+    val prepreg2 = FR4(0.2, FR4-Material)
+    val prepreg3 = FR4(0.3, FR4-Material)
     make-layer-stack("4-layer stack with three adjacent prepreg layers", top-layers) where :
-      val prepreg = FR4(0.1, FR4-Material)
-      val prepreg2 = FR4(0.2, FR4-Material)
-      val prepreg3 = FR4(0.3, FR4-Material)
       val top-layers =  [
         [copper-35um [prepreg prepreg2 prepreg3]]
         [copper-17_5um core]
       ]
   ```
   The LayerStack created has these layers:
-     [ copper-35um
+    ```
+     [  copper-35um
        prepreg ; three adjacent prepreg layers
        prepreg2
        prepreg3
@@ -603,12 +605,11 @@ doc:\<DOC>
        prepreg
        copper-35um
      ]
+    ```
 
   Example 3: 6-layer stack with even number of layers, such as "JLC06201H-3313A"
   ```
     make-layer-stack("6-layer stack with even number of layers", outers, even-layers? = true) where :
-      val prepreg = FR4(0.1, FR4-Material)
-      val prepreg2 = FR4(0.2, FR4-Material)
       val outers =
         [
           [copper-35um prepreg]
@@ -617,6 +618,7 @@ doc:\<DOC>
         ]
   ```
   The LayerStack created has these layers:
+    ```
      [ copper-35um
        prepreg
        copper-17_5um
@@ -630,7 +632,7 @@ doc:\<DOC>
        prepreg
        copper-35um
      ]
-
+    ```
 
   @param name The name of the LayerStack
   @param top-layers A tuple of pairs of the mechanical layer and one dielectric layer or 
