@@ -6,7 +6,7 @@ used to define a series of configuration straps.
 
 <DOC>
 #use-added-syntax(jitx)
-defpackage jsl/design/ConfigStrap:
+defpackage jsl/circuits/ConfigStrap:
 
   import core
   import collections
