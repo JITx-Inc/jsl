@@ -77,12 +77,28 @@ public defn make-1000Base-T-supports (dps:JITXObject ...):
   make-1000Base-T-supports(dps = dps-pairs)
 
 ; Constraints
+doc: \<DOC>
+Retrieve the expected Intra-pair skew and diff-pair loss limits
+@return Tuple of [Skew, Loss] where
+
+*  Skew - Allowable delay difference as a `Toleranced` value in Seconds.
+*  Loss - Max allowable power loss limit in dB.
+<DOC>
 public defn MDI-1000Base-T-get-skew-loss () -> [Toleranced, Double]:
   [0.0 +/- (1.6e-12 / 2.0), 12.0]
 
+doc: \<DOC>
+Retrieve the expected differential impedance for the differentiali pairs
+@return Toleranced in ohms.
+<DOC>
 public defn MDI-1000Base-T-get-trace-impedance () -> Toleranced :
   95.0 +/- (15 %)
 
+doc: \<DOC>
+Retrieve expected Inter-pair skew
+
+@return Allowable delay difference as a `Toleranced` value in Seconds.
+<DOC>
 public defn MDI-1000Base-T-get-pair-to-pair-skew () -> Toleranced :
   0.0 +/- (330.0e-12 / 2.0)
 
