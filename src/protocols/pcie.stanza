@@ -114,8 +114,9 @@ and it also includes a refclk (100MHz) differential pair.
 public pcb-bundle pcie-data (lanes:Int) :
   name = "PCI-e Data"
   description = "PCI-e Serial Communications Link Data"
-  port rx : diff-pair[lanes]
-  port tx : diff-pair[lanes]
+  port lane : lane-pair[lanes]
+  ; port rx : diff-pair[lanes]
+  ; port tx : diff-pair[lanes]
   port refclk : diff-pair
 
 pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
@@ -153,20 +154,19 @@ arguments must both be of type `pcie` with equal lane counts.
 @param dst This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `pcie`
 @param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
 there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
-
 <DOC>
 public defn connect-pcie-channel (sw:Toleranced, ml:Double, src:JITXObject, dst:JITXObject, cap:Instantiable|False) :
   inside pcb-module:
-    for i in indices(src.data.tx) do :
+    for i in indices(src.data.lane) do :
       match(cap) :
         (c:Instantiable) :
           inst bl-cap-xy : dp-coupler(c)
           require tx1 : dual-pair from bl-cap-xy
-          topo-net(src.data.tx[i], tx1.A)
-          topo-net(tx1.B, dst.data.rx[i])
+          topo-net(src.data.lane[i].TX, tx1.A)
+          topo-net(tx1.B, dst.data.lane[i].RX)
         (f:False) :
-          topo-net(src.data.tx[i], dst.data.rx[i])
-      constrain-ch(sw, ml, src.data.tx[i], dst.data.rx[i])
+          topo-net(src.data.lane[i].TX, dst.data.lane[i].RX)
+      constrain-ch(sw, ml, src.data.lane[i].TX, dst.data.lane[i].RX)
 
 doc: \<DOC>
 @brief Construct the PCIe Topology and Constraints
@@ -259,8 +259,8 @@ need to be connected to physical component pins either directly or via pin assig
 
 public defn pcie-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) :
   inside pcb-module :
-    for i in indices(x.data.tx) do :
-      diff-structure(rs, x.data.tx[i] => y.data.rx[i])
-    for i in indices(y.data.tx) do :
-      diff-structure(rs, y.data.tx[i] => x.data.rx[i])
+    for i in indices(x.data.lane) do :
+      diff-structure(rs, x.data.lane[i].TX => y.data.lane[i].RX)
+    for i in indices(y.data.lane) do :
+      diff-structure(rs, y.data.lane[i].TX => x.data.lane[i].RX)
     diff-structure(rs, x.data.refclk => y.data.refclk)
