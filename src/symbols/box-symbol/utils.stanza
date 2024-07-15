@@ -8,7 +8,6 @@ defpackage jsl/symbols/box-symbol/utils:
   import jitx
   import jitx/commands
   import jitx/utils/got
-  import jitx/schematic/analysis
   import jsl/ensure
   import jsl/symbols/utils
   import jsl/symbols/box-symbol/errors

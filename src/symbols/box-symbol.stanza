@@ -9,7 +9,6 @@ defpackage jsl/symbols/box-symbol:
   import jitx
   import jitx/commands
   import jitx/utils/got
-  import jitx/schematic/analysis
 
   import jsl/ensure
   import jsl/design/Classable
