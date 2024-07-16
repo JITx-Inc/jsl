@@ -128,6 +128,28 @@ public defmethod make-landpattern (cu:VirtualCopper, pose:Pose = DEF_VLP_LOC) :
   inside pcb-landpattern:
     copper(layer-index(cu)) = pose * shape(cu)
 
+public defstruct VirtualCutout <: VirtualElement :
+  shape:Shape
+
+  ; Virtual Element
+  name?:Maybe<String> with: (as-method => true)
+  class:Vector<String> with: (as-method => true)
+with:
+  constructor => #VirtualCutout
+  printer => true
+
+public defn VirtualCutout (
+  shape:Shape
+  --
+  name?:Maybe<String> = None(),
+  class:Seqable<String>|String = []
+  ) -> VirtualCutout :
+  #VirtualCutout(shape, name?, to-class-vector(class))
+
+public defmethod make-landpattern (p:VirtualCutout, pose:Pose = DEF_VLP_LOC) :
+  inside pcb-landpattern:
+    layer(Cutout()) = pose * shape(p)
+
 public defstruct VirtualArtwork <: VirtualElement :
   layer-spec:LayerSpecifier
   shape:Shape
@@ -189,10 +211,16 @@ public defstruct VirtualLP <: VirtualElement :
   artwork:Vector<VirtualArtwork>
 
   doc: \<DOC>
-  Virtual `copper` statements as placced in the virtual landpattern
+  Virtual `copper` statements as placed in the virtual landpattern
   frame of reference.
   <DOC>
   metal:Vector<VirtualCopper>
+
+  doc: \<DOC>
+  Virtual `cutout` statements as placed in the virtual landpattern
+  frame of reference.
+  <DOC>
+  cutouts:Vector<VirtualCutout>
 
   doc: \<DOC>
   Kinematic transform of this node of the virtual landpattern tree.
@@ -234,6 +262,7 @@ defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
+    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -254,6 +283,7 @@ public defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
+    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -465,6 +495,26 @@ public defn add-copper (
     VirtualCopper(li, sh, class = class)
   append-all(vp, new-cu)
 
+public defn add-cutout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualCutout(shape, name? = name, class = class))
+
+doc: \<DOC>
+Add a virtual `cutout` statement to virtual landpattern
+<DOC>
+public defn append (vp:VirtualLP, cu:VirtualCutout) -> False:
+  add{_, cu} $ cutouts(vp)
+
+doc: \<DOC>
+Add multiple virtual `cutout` statements to virtual landpattern
+<DOC>
+public defn append-all (vp:VirtualLP, cus:Seqable<VirtualCutout>) -> False:
+  add-all{_, cus} $ cutouts(vp)
 
 doc: \<DOC>
 Add a new child virtual landpattern node
@@ -587,8 +637,8 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
   reduce(earlier-pad, pads)
 
 ; Converters
-#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
-  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualLP]) :
+#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualCutout, VirtualLP]
+  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualCutout ,as-VirtualLP]) :
   public defn funcName (e:VirtualElement) -> vType :
     e as vType
 
