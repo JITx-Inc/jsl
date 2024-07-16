@@ -40,6 +40,10 @@ deftest(numbering) test-row-major:
     for r in 0 to 3 seq:
       to-pad-id(uut, r, c)
 
+  ;  1   2   3    4    5    6   7
+  ;  8   9   10   11   12   13  14
+  ;  15  16  17   18   19   20  21
+
   val exp = [1, 8, 15, 2, 9, 16, 3, 10, 17, 4, 11, 18, 5, 12, 19, 6, 13, 20, 7, 14, 21]
   #EXPECT(obs == exp)
 
@@ -62,8 +66,47 @@ deftest(numbering) test-row-major:
   expect-throw({to-pad-id(uut, 6, 8)})
   expect-throw({to-pad-id(uut, 0, 10)})
 
+deftest(numbering) test-row-major-with-row-offset:
+  val uut = Row-Major-Numbering(21, 3, row-offset = 3)
+
+  val obs = to-tuple $ for c in 0 to 7 seq-cat:
+    for r in 0 to 3 seq:
+      to-pad-id(uut, r, c)
+
+  ;  22  23  24   25   26   27  28
+  ;  29  30  31   32   33   34  35
+  ;  36  37  38   39   40   41  42
+
+  val exp = [22, 29, 36, 23, 30, 37, 24, 31, 38, 25, 32, 39, 26, 33, 40, 27, 34, 41, 28, 35, 42 ]
+  #EXPECT(obs == exp)
+
+  expect-throw({Row-Major-Numbering(21, 3, row-offset = -1)})
+  expect-throw({Row-Major-Numbering(21, 3, row-offset = -13)})
+
+deftest(numbering) test-row-major-with-col-offset:
+  val uut = Row-Major-Numbering(21, 3, col-offset = 2)
+
+  val obs = to-tuple $ for c in 0 to 7 seq-cat:
+    for r in 0 to 3 seq:
+      to-pad-id(uut, r, c)
+
+  ;  3    4    5    6   7   8   9
+  ;  10   11   12   13  14  15  16
+  ;  17   18   19   20  21  22  23
+
+
+  val exp = [3, 10, 17, 4, 11, 18, 5, 12, 19, 6, 13, 20, 7, 14, 21, 8, 15, 22, 9, 16, 23 ]
+  #EXPECT(obs == exp)
+
+  expect-throw({Row-Major-Numbering(21, 3, col-offset = -1)})
+  expect-throw({Row-Major-Numbering(21, 3, col-offset = -11)})
+
 deftest(numbering) test-column-major:
   val uut = Column-Major-Numbering(18, 6)
+
+  ;  1   4   7   10   13   16
+  ;  2   5   8   11   14   17
+  ;  3   6   9   12   15   18
 
   val obs = to-tuple $ for r in 0 to 3 seq-cat:
     for c in 0 to 6 seq:
@@ -90,6 +133,39 @@ deftest(numbering) test-column-major:
   expect-throw({to-pad-id(uut, 6, 8)})
   expect-throw({to-pad-id(uut, 0, 10)})
 
+deftest(numbering) test-column-major-with-row-offset:
+  val uut = Column-Major-Numbering(18, 6, row-offset = 2)
+
+  val obs = to-tuple $ for r in 0 to 3 seq-cat:
+    for c in 0 to 6 seq:
+      to-pad-id(uut, r, c)
+
+  ;  3   6   9    12   15   18
+  ;  4   7   10   13   16   19
+  ;  5   8   11   14   17   20
+
+  val exp = [3, 6, 9, 12, 15, 18, 4, 7, 10, 13, 16, 19, 5, 8, 11, 14, 17, 20]
+  #EXPECT(obs == exp)
+
+  expect-throw({Column-Major-Numbering(10, 2, row-offset = -1)})
+  expect-throw({Column-Major-Numbering(10, 2, row-offset = -10)})
+
+deftest(numbering) test-column-major-with-col-offset:
+  val uut = Column-Major-Numbering(18, 6, col-offset = 3)
+
+  val obs = to-tuple $ for r in 0 to 3 seq-cat:
+    for c in 0 to 6 seq:
+      to-pad-id(uut, r, c)
+
+  ; 10   13   16   19   22  25
+  ; 11   14   17   20   23  26
+  ; 12   15   18   21   24  27
+
+  val exp = [10, 13, 16, 19, 22, 25, 11, 14, 17, 20, 23, 26, 12, 15, 18, 21, 24, 27]
+  #EXPECT(obs == exp)
+
+  expect-throw({Column-Major-Numbering(10, 2, col-offset = -1)})
+  expect-throw({Column-Major-Numbering(10, 2, col-offset = -10)})
 
 deftest(numbering) test-grid-numbering:
   val rows = 3
