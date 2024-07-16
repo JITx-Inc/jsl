@@ -355,7 +355,7 @@ public defmulti build-cut-out (
   ) -> False
 
 doc: \<DOC>
-Default `build-keep-out` - No cut-out regions created.
+Default `build-cut-out` - No cut-out regions created.
 <DOC>
 public defmethod build-cut-out (
   pkg:Package,
