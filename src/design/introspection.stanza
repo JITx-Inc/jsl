@@ -24,3 +24,49 @@ public defn get-instantiable (comps:JITXObject|InstantiableType) -> Instantiable
       get-instantiable(base(hc-arr))
     (hc-inst:Instantiable):
       hc-inst
+
+
+doc: \<DOC>
+Get the Cathode / Anode Pins of a device if they exist
+@param obj Two-pin component or module instance that may or
+may not be a polarized device with cathode (`c`) and anode (`a`) pins.
+@return If the passed object is a polarized device, then this returns
+One<Tuple> of the pins in the order `[c, a]`. If not a polarized device,
+this function returns `None()`
+<DOC>
+public defn get-cathode-anode (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
+  val mC = get-pin-by-name(obj, "c")
+  val mA = get-pin-by-name(obj, "a")
+  match(mC, mA) :
+    (oC:One<JITXObject>, oA:One<JITXObject>): One([value(oC), value(oA)])
+    (x,y): None()
+
+doc: \<DOC>
+Retrieve the two pins of a 2-pin device.
+
+Two-pin devices come typically in one of two forms:
+
+1.  The `p[1]` and `p[2]` form for non-polatized devices.
+2.  The `c` and `a` form for the cathode / anode of polarized
+devices.
+
+This function interrogates an object and retrievs the pins
+in a known order for use in circuits.
+
+@param obj Two-Pin component or module instance
+@return Tuple of two pins of the component - They are returned either as:
+1.  `[p[1], p[2]]`
+2.  `[c, a]`
+
+Depending on whether the passed device is polarized.
+
+<DOC>
+public defn get-pins (obj:JITXObject) -> [JITXObject, JITXObject] :
+  val mCA = get-cathode-anode(obj)
+  match(mCA):
+    (oCA:One<[JITXObject, JITXObject]>):
+      val ret = value(oCA)
+      ret
+    (_:None):
+      [obj.p[1], obj.p[2]]
+
