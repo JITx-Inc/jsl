@@ -3,55 +3,190 @@ defpackage jsl/landpatterns/QFP:
   import core
   import jitx
 
+  import jsl/ensure
   import jsl/design/settings
   import jsl/landpatterns/leads
   import jsl/landpatterns/quad
+  import jsl/landpatterns/packages
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/numbering
 
+doc: \<DOC>
+QFN Lead Type
+<DOC>
+public defstruct QFP-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with: (
+      as-method => true,
+      default => SmallGullWingLeads(), ; TODO: is this OK?
+    )
+  length:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+  width:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #QFN-Lead
 
-public defn make-qfp-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
+doc: \<DOC>
+Constructor for `QFP-Lead` type
+<DOC>
+public defn QFP-Lead (
   --
-  density-level: DensityLevel = DENSITY-LEVEL,
-  corner-pads?:False|[Pad, Pad] = false,
-  thermal-pad?: Shape|False = false
+  lead-type:LeadProtrusion,
+  length:Toleranced,
+  width:Toleranced
   ):
-  val lead-type = BigGullWingLeads when pitch >= 0.0625 else SmallGullWingLeads
-  make-quad-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size, ; lead-span
-    lead-type,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?
-    thermal-pad? = thermal-pad?
+  #QFN-Lead(lead-type, length, width)
+
+doc: \<DOC>
+Helper for Creating QFP Lead Profiles
+<DOC>
+public defn QFP-Lead-Profile (
+  --
+  lead-type : LeadProtrusion
+  span : Toleranced,
+  pitch : Double,
+  lead-length : Toleranced,
+  lead-width : Toleranced,
+  ) -> Quad-Lead-Profile:
+  val lead = QFP-Lead(lead-type = lead-type, length = lead-length, width = lead-width)
+  val profile = Lead-Profile(span = span, pitch = pitch, lead = lead)
+  #Quad-Lead-Profile(profile, None(), profile, None())
+
+public defstruct QFP <: Quad-Package :
+  doc: \<DOC>
+  Number of leads ignoring any depopulated leads and thermal leads
+  <DOC>
+  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+
+  doc: \<DOC>
+  Lead Profiles for all of the QFP's edges
+
+  By default the QFN uses the {@link SmallGullWingLeads} protrusion
+  type by default.
+  <DOC>
+  lead-profile:Quad-Lead-Profile with: (as-method => true)
+  doc: \<DOC>
+  Optional thermal lead for the package.
+  <DOC>
+  thermal-lead?:False|Shape with: (as-method => true)
+
+  doc: \<DOC>
+  Package Body for the Quad-based Package.
+  <DOC>
+  package-body:PackageBody with: (as-method => true)
+
+  doc: \<DOC>
+  Pad Planner for the Quad package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with: (as-method => true)
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the Quad Package
+
+  This provides a numbering scheme for the leads of the Quad
+  package. By default, it uses {@link Column-Major-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with: (as-method => true)
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with: (as-method => true)
+
+with:
+  printer => true
+  constructor => #QFP
+
+public defn QFP (
+  --
+  num-leads:Int,
+  lead-profile:Quad-Lead-Profile,
+  thermal-lead?:False|Shape,
+  package-body:PackageBody,
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  #QFP(
+    num-leads, lead-profile, thermal-lead?,
+    package-body, pad-planner, lead-numbering,
+    density-level
   )
 
-public pcb-landpattern qfp-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
-  --
-  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
-  corner-pads?:False|[Pad, Pad] = false, ; corner pads
-  thermal-pad?: Shape|False = false
-  ):
-  name = to-string("QFP%_X%_" % [package-size, package-size])
-  make-qfp-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?,
-    thermal-pad? = thermal-pad?
-  )
+public defmethod name (pkg:QFP) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+  val body = package-body(pkg)
+  val p = to-deci(pitch $ x-leads $ lead-profile(pkg))
+  val w = to-deci(typ $ width(body))
+  val l = to-deci(typ $ length(body))
+  val h = to-deci(typ $ height(body))
+  val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
+  to-string("QFP%_P%_X%_X%_-%_N" % [p, w, l, h, n])
+
+public defmethod courtyard-excess (pkg:QFP) -> Double :
+  val protrusion = lead-type $ lead $ x-leads $ lead-profile $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
+  courtyard-excess(fillets)
+
+;public defn make-qfp-landpattern (
+;  num-pins:Int,
+;  pitch:Double,
+;  ; Lead Parameters
+;  lead-length: Toleranced,
+;  lead-width: Toleranced,
+;  ; Pkg Parameters
+;  package-size: Toleranced,
+;  --
+;  density-level: DensityLevel = DENSITY-LEVEL,
+;  corner-pads?:False|[Pad, Pad] = false,
+;  thermal-pad?: Shape|False = false
+;  ):
+;  val lead-type = BigGullWingLeads when pitch >= 0.0625 else SmallGullWingLeads
+;  make-quad-landpattern(
+;    num-pins, pitch,
+;    lead-length, lead-width,
+;    package-size, ; lead-span
+;    lead-type,
+;    package-size,
+;    density-level = density-level,
+;    corner-pads? = corner-pads?
+;    thermal-pad? = thermal-pad?
+;  )
+;
+;public pcb-landpattern qfp-landpattern (
+;  num-pins:Int,
+;  pitch:Double,
+;  ; Lead Parameters
+;  lead-length: Toleranced,
+;  lead-width: Toleranced,
+;  ; Pkg Parameters
+;  package-size: Toleranced,
+;  --
+;  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
+;  corner-pads?:False|[Pad, Pad] = false, ; corner pads
+;  thermal-pad?: Shape|False = false
+;  ):
+;  name = to-string("QFP%_X%_" % [package-size, package-size])
+;  make-qfp-landpattern(
+;    num-pins, pitch,
+;    lead-length, lead-width,
+;    package-size,
+;    density-level = density-level,
+;    corner-pads? = corner-pads?,
+;    thermal-pad? = thermal-pad?
+;  )
+;
