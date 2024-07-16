@@ -129,7 +129,6 @@ public defmethod make-landpattern (cu:VirtualCopper, pose:Pose = DEF_VLP_LOC) :
     copper(layer-index(cu)) = pose * shape(cu)
 
 public defstruct VirtualCutout <: VirtualElement :
-  pose:Pose
   shape:Shape
 
   ; Virtual Element
@@ -140,17 +139,16 @@ with:
   printer => true
 
 public defn VirtualCutout (
-  pose:Pose,
   shape:Shape
   --
   name?:Maybe<String> = None(),
   class:Seqable<String>|String = []
   ) -> VirtualCutout :
-  #VirtualCutout(pose, shape, name?, to-class-vector(class))
+  #VirtualCutout(shape, name?, to-class-vector(class))
 
 public defmethod make-landpattern (p:VirtualCutout, pose:Pose = DEF_VLP_LOC) :
   inside pcb-landpattern:
-    layer(Cutout()) = transform(pose * /pose(p), shape(p))
+    layer(Cutout()) = pose * shape(p)
 
 public defstruct VirtualArtwork <: VirtualElement :
   layer-spec:LayerSpecifier
@@ -499,13 +497,12 @@ public defn add-copper (
 
 public defn add-cutout (
   vp:VirtualLP,
-  pose:Pose,
   shape:Shape
   --
   name:String = ?,
   class:Seqable<String>|String = []
   ) -> False:
-  append(vp, VirtualCutout(pose, shape, name? = name, class = class))
+  append(vp, VirtualCutout(shape, name? = name, class = class))
 
 doc: \<DOC>
 Add a virtual `cutout` statement to virtual landpattern
