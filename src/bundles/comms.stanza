@@ -311,7 +311,51 @@ specification is present in NXP's references
 @member ws Word Select - typically for left vs right differentiation
 @member sd Data Signal
 <DOC>
-public pcb-bundle i2s :
+
+public pcb-enum jsl/bundles/comms/I2SPins :
+  I2S-MCK 
+  I2S-SDI
+
+pcb-bundle i2s-b (pins:Collection<I2SPins>):
   pin sck
   pin ws
-  pin sd
+  pin sdo
+  for p in pins do :
+    switch(p) :
+      I2S-MCK : mak-pin(`mck)
+      I2S-SDI : mak-pin(`sdi)
+
+doc: \<DOC>
+Inter-Integrated Sound - I2S Protocol
+
+The I2S protocol is a synchronous serial communication
+protocol similar to SPI
+
+Originally Specification was from Phillips. Current
+specification is present in NXP's references
+
+@see https://www.nxp.com/docs/en/user-manual/UM11732.pdf
+
+@member sck Serial Interface Clock
+@member ws Word Select - typically for left vs right differentiation
+@member sdo Data Signal
+<DOC>
+public defn i2s-minimal () : i2s-b()
+
+doc: \<DOC>
+Inter-Integrated Sound - I2S Protocol
+
+The I2S protocol is a synchronous serial communication
+protocol similar to SPI
+
+This interface admits i2s master mode via additional pins.
+
+@see https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52832.ps.v1.1%2Fi2s.html 
+
+@member sck Serial Interface Clock
+@member ws Word Select - typically for left vs right differentiation
+@member sdo Data Signal
+@member mck Master Clock
+@member sdi Data Input
+<DOC>
+public defn i2s-master () : i2s-b([I2S-MCK, I2S-SDI])
