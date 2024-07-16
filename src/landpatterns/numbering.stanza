@@ -90,17 +90,50 @@ Example for 2-column grid:
   of the grid placements are active. This function assumes that all
   rows have an equal number of columns.
 @param num-rows Total number of rows of pads in the grid.
+@param row-offset Value to shift the grid numbers created by this
+numbering scheme. For example - a `row-offset` of 2 would construct:
+
+  ```
+    5   6
+    7   8
+    9   10
+    ...
+  ```
+@param col-offset Value to shift the grid numbers created by this
+numbering scheme. For example - a `col-offset = 1` would construct:
+
+  ```
+    2   3
+    4   5
+    6   7
+    ...
+  ```
+
 @throws ValueError If num-pads is not divisible by num-rows.
 <DOC>
 public defstruct Row-Major-Numbering <: Numbering :
-  num-pads:Int with: (ensure => ensure-positive!)
-  num-rows:Int with: (ensure => ensure-positive!)
+  num-pads:Int with:
+    ensure => ensure-positive!
+  num-rows:Int with:
+    ensure => ensure-positive!
+  row-offset:Int with:
+    ensure => ensure-non-negative!
+    default => 0
+  col-offset:Int with:
+    ensure => ensure-non-negative!
+    default => 0
+
 with:
   constructor => #Row-Major-Numbering
 
-public defn Row-Major-Numbering (num-pads:Int, num-rows:Int) -> Row-Major-Numbering :
+public defn Row-Major-Numbering (
+  num-pads:Int, num-rows:Int,
+  --
+  row-offset:Int = 0
+  col-offset:Int = 0
+  ) -> Row-Major-Numbering :
   ensure-divisible!(num-pads, num-rows, "Row-Major-Numbering")
-  #Row-Major-Numbering(num-pads, num-rows)
+  #Row-Major-Numbering(num-pads, num-rows, row-offset, col-offset)
 
 public defmethod to-pad-id (x:Row-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val rows = num-rows(x)
@@ -115,7 +148,7 @@ public defmethod to-pad-id (x:Row-Major-Numbering, row:Int, column:Int) -> Int|R
   if not (column < cols):
     throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
 
-  (row * cols) + column + 1
+  ((row + row-offset(x)) * cols) + (column + col-offset(x) + 1)
 
 doc: \<DOC>
 Column Major Pad Numbering
@@ -131,17 +164,49 @@ Example for 2-column grid:
   of the grid placements are active. This function assumes that all
   columns have an equal number of rows.
 @param num-columns Total number of columns in the grid.
+@param row-offset Value to shift the grid numbers created by this
+numbering scheme. For example - a `row-offset` of 2 would construct:
+
+  ```
+    3   7
+    4   8
+    5   9
+    6   10
+  ```
+@param col-offset Value to shift the grid numbers created by this
+numbering scheme. For example - a `col-offset = 1` would construct:
+
+  ```
+    5   9
+    6   10
+    7   11
+    8   12
+  ```
+
 @throws ValueError If num-pads is not divisible by num-columns.
 <DOC>
 public defstruct Column-Major-Numbering <: Numbering :
-  num-pads:Int with: (ensure => ensure-positive!)
-  num-columns:Int with: (ensure => ensure-positive!)
+  num-pads:Int with:
+    ensure => ensure-positive!
+  num-columns:Int with:
+    ensure => ensure-positive!
+  row-offset:Int with:
+    ensure => ensure-non-negative!
+    default => 0
+  col-offset:Int with:
+    ensure => ensure-non-negative!
+    default => 0
 with:
   constructor => #Column-Major-Numbering
 
-public defn Column-Major-Numbering (num-pads:Int, num-columns:Int) -> Column-Major-Numbering :
+public defn Column-Major-Numbering (
+  num-pads:Int, num-columns:Int
+  --
+  row-offset:Int = 0
+  col-offset:Int = 0
+  ) -> Column-Major-Numbering :
   ensure-divisible!(num-pads, num-columns, "Column-Major-Numbering")
-  #Column-Major-Numbering(num-pads, num-columns)
+  #Column-Major-Numbering(num-pads, num-columns, row-offset, col-offset)
 
 public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val cols = num-columns(x)
@@ -156,7 +221,7 @@ public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> In
   if not (column < cols):
     throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
 
-  (column * rows) + row + 1
+  ((column + col-offset(x)) * rows) + (row + 1 + row-offset(x))
 
 doc: \<DOC>
 Uneven (Asymmetric) Column Major Numbering
