@@ -319,7 +319,7 @@ public defmulti make-keep-out (
   )
 
 doc: \<DOC>
-Default `make-keep-out` - No Keep-out Regions Applied.
+Default `make-keep-out` - Constructs the Keepouts Only.
 <DOC>
 public defmethod make-keep-out (
   pkg:Package
@@ -329,6 +329,67 @@ public defmethod make-keep-out (
   inside pcb-landpattern:
     val virt = VirtualLP(pose)
     build-keep-out(pkg, virt)
+    make-landpattern(virt)
+
+doc: \<DOC>
+Create `cut-out` regions in a virtual landpattern
+
+This function is used to build the landpattern's
+cut-out regions in a virtual landpattern environment.
+
+The cut-outs are routed areas where the board is
+completely removed. Sharp corners (zero radius) are
+difficult to manufacturer so filleted edges should be
+used where appropriate.
+
+The VirtualLP environment will be written out to a
+`pcb-landpattern` definition by the `make-cut-out`
+function.
+
+@param pkg Package definition to build
+@param vp Virtual Landpattern Container
+<DOC>
+public defmulti build-cut-out (
+  pkg:Package,
+  vp:VirtualLP,
+  ) -> False
+
+doc: \<DOC>
+Default `build-keep-out` - No cut-out regions created.
+<DOC>
+public defmethod build-cut-out (
+  pkg:Package,
+  vp:VirtualLP,
+  ) -> False:
+  false
+
+doc: \<DOC>
+Generator for creating cutout regions in the landpattern.
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the `Cutout()` layer regions for this component.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+<DOC>
+public defmulti make-cut-out (
+  pkg:Package
+  --
+  pose:Pose = ?
+  )
+
+doc: \<DOC>
+Default Generator `make-cut-out` - Constructs the cutouts only.
+<DOC>
+public defmethod make-cut-out (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  ):
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-cut-out(pkg, virt)
     make-landpattern(virt)
 
 doc: \<DOC>
@@ -418,6 +479,7 @@ Builders are applied in the following order:
 1.  {@link build-courtyard}
 1.  {@link build-silkscreen}
 1.  {@link build-keep-out}
+1.  {@link build-cut-out}
 1.  {@link build-conformal-mask}
 
 <DOC>
@@ -429,6 +491,7 @@ public defmethod build-all (
   build-courtyard(pkg, virt)
   build-silkscreen(pkg, virt)
   build-keep-out(pkg, virt)
+  build-cut-out(pkg, virt)
   build-conformal-mask(pkg, virt)
 
 
