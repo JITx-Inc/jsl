@@ -80,3 +80,6 @@ defmethod build-params (x:PowerSymbol, node:SymbolNode):
 
   add-value-label(node, value-label(p), anchor = S, unit-size = label-size(x))
   set-preferred-orientation(node, PreferRotation([0]))
+
+public val PWR-SYMB-GEN = PowerSymbol()
+public val PWR-SYMB = create-symbol(PWR-SYMB-GEN)

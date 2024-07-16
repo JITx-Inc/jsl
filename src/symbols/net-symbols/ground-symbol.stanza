@@ -134,3 +134,6 @@ defmethod build-params (x:GroundSymbol, node:SymbolNode):
 
   add-value-label(node, value-label(p), anchor = N, unit-size = label-size(x))
   set-preferred-orientation(node, PreferRotation([0]))
+
+public val GND-SYMB-GEN = GroundSymbol()
+public val GND-SYMB = create-symbol(GND-SYMB-GEN)
