@@ -29,8 +29,7 @@ defpackage jsl/protocols/pcie:
 
   import jsl/bundles
   import jsl/errors
-  import jsl/si/helpers
-  import jsl/si/couplers
+  import jsl/si
   import jsl/pin-assignment
 
 
