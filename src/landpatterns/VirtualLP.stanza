@@ -211,13 +211,13 @@ public defstruct VirtualLP <: VirtualElement :
   artwork:Vector<VirtualArtwork>
 
   doc: \<DOC>
-  Virtual `copper` statements as placced in the virtual landpattern
+  Virtual `copper` statements as placed in the virtual landpattern
   frame of reference.
   <DOC>
   metal:Vector<VirtualCopper>
 
   doc: \<DOC>
-  Virtual `cutout` statements as placced in the virtual landpattern
+  Virtual `cutout` statements as placed in the virtual landpattern
   frame of reference.
   <DOC>
   cutouts:Vector<VirtualCutout>
