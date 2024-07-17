@@ -34,8 +34,3 @@ deftest(box-symbol) test-props-filter:
     #EXPECT(length(vdd-pins-bank) == 1)
 
   evaluate(basic-bank)
-
-
-
-
-
