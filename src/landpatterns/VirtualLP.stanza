@@ -560,7 +560,7 @@ This does not search recursively into the children, it just
 reports the elements of this node.
 <DOC>
 public defn elements (vp:VirtualLP) -> Seqable<VirtualElement> :
-  for grp in [lands(vp), artwork(vp), metal(vp)] seq-cat:
+  for grp in [lands(vp), artwork(vp), metal(vp), cutouts(vp)] seq-cat:
     for elem in grp seq:
       elem as VirtualElement
 
