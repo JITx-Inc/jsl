@@ -147,40 +147,24 @@ public defmethod name (pkg:QFP) -> String :
     val v* = to-int( v * 100.0 )
     to-string("%_" % [v*])
   val body = package-body(pkg)
-  val p = to-deci(pitch $ x-leads $ lead-profile(pkg))
+  val p = pitch $ x-leads $ lead-profile(pkg)
   val w = to-deci(typ $ width(body))
   val l = to-deci(typ $ length(body))
   val h = to-deci(typ $ height(body))
-  val lsL1 = w ; TODO: what is this?
-  val lsL2 = w ; TODO: what is this?
+  val lsL1 = max(w,l)
+  val lsL2 = min(w,l)
   val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
-  val name = "QFP" ; TODO: accumulate prefixes (S,T,C...)
-  to-string("%_%_P%_X%_-%_" % [name, p, lsL1, lsL2, n])
+  val prefixes = seq?({_}, [
+    if p <= 0.50 : One("S") else : None(), ; shrink
+    ; TODO: thin, ceramic, others?
+  ]) 
+  to-string("%_QFP%_P%_X%_-%_" % [append-all(prefixes), to-deci(p), lsL1, lsL2, n])
 
 public defmethod courtyard-excess (pkg:QFP) -> Double :
   val protrusion = lead-type $ lead $ x-leads $ lead-profile $ pkg
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-; TODO: this is copied from QFN
-public defn QFP-overall-outline (
-  pkg:QFP,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
-  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
-
-  val overall = union(pkg-outline, pad-outline*)
-  LineRectangle(overall, line-width = line-width)
-  LineRectangle(pkg-outline, line-width = line-width)
-
-; TODO: this is copied from QFN
 public defn QFP-pkg-outline (
   pkg:QFP,
   vp:VirtualLP
@@ -191,12 +175,10 @@ public defn QFP-pkg-outline (
   ):
   val pkg-body = package-body(pkg)
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+  ; TODO: consider clearance when shrinking
+  val pkg-outline* = shrink(line-width / 2.0, pkg-outline)
   LineRectangle(pkg-outline*, line-width = line-width)
-  ; TODO - Here is where I want to use `Difference` to substract out
-  ;  the combined soldermask on all sides.
 
-; TODO: this is copied from QFN
 public defn QFP-outline (
   pkg:QFP,
   vp:VirtualLP
@@ -205,14 +187,11 @@ public defn QFP-outline (
   mask-clearance:Double = default-mask-clearance(),
   side:Side = Top
   ):
-  val outline-geom = switch(density-level(pkg)):
-    DensityLevelA: QFP-overall-outline(pkg, vp)
-    DensityLevelB: QFP-overall-outline(pkg, vp)
-    DensityLevelC: QFP-pkg-outline(pkg, vp)
+  val outline-geom =
+    QFP-pkg-outline(pkg, vp, line-width = line-width, mask-clearance = mask-clearance, side = side)
 
   add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
 
-; TODO: this is copied from QFN
 public defn QFP-pin-1-marker (
   pkg:QFP,
   vp:VirtualLP
@@ -222,11 +201,6 @@ public defn QFP-pin-1-marker (
   mask-clearance:Double = default-mask-clearance(),
   side:Side = Top
   ):
-
-  val extra-margin = switch(density-level(pkg)):
-    DensityLevelA: mask-clearance + line-width
-    DensityLevelB: mask-clearance + line-width
-    DensityLevelC: 0.0
 
   val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
 
@@ -243,24 +217,23 @@ public defn QFP-pin-1-marker (
   val smask = smasks[0]
 
   val width = x $ dims(smask)
-  val offset = Point((- (width / 2.0) + mask-clearance + line-width + extra-margin), 0.0)
+  val offset = Point((- (width / 2.0) + mask-clearance + line-width), 0.0)
   val marker-shape = Circle(offset, line-width)
 
   val marker-geom = pad-loc * marker-shape
 
   add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
 
-  if density-level(pkg) == DensityLevelA :
-    val outline = get-silkscreen-outline!(vp)
-    val o-box = bounds(outline)
+  val outline = get-silkscreen-outline!(vp)
+  val o-box = bounds(outline)
 
-    val marker = compute-triangle-marker(pad-center, o-box, line-width)
-    add-artwork(
-      vp, Silkscreen("pin-1-marker", side),
-      marker,
-      name = "pin-1-triangle",
-      class = "pin-1-marker"
-      )
+  val marker = compute-triangle-marker(pad-center, o-box, line-width)
+  add-artwork(
+    vp, Silkscreen("pin-1-marker", side),
+    marker,
+    name = "pin-1-triangle",
+    class = "pin-1-marker"
+    )
 
 public defmethod build-silkscreen (
   pkg:QFP,

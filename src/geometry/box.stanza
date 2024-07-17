@@ -47,6 +47,12 @@ public defn fatten (dims:Point, b:Box) -> Box :
 public defn fatten (dims:Double, b:Box) -> Box :
   fatten(Point(dims, dims), b)
 
+public defn shrink (dims:Point, b:Box) -> Box :
+  Box(lo(b) + dims, hi(b) - dims)
+
+public defn shrink (dims:Double, b:Box) -> Box :
+  fatten(Point(dims, dims), b)
+
 public defn corners (b:Box) -> Tuple<Point> :
   val [l, h] = [lo(b), hi(b)]
   [Point(x(l), y(l)), Point(x(h), y(l)), Point(x(h), y(h)), Point(x(l), y(h))]
