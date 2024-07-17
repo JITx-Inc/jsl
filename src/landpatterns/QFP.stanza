@@ -154,6 +154,7 @@ public defmethod name (pkg:QFP) -> String :
   val lsL1 = max(w,l)
   val lsL2 = min(w,l)
   val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
+  ; TODO: naming is probably not correct in general
   val prefixes = seq?({_}, [
     if p <= 0.50 : One("S") else : None(), ; shrink
     ; TODO: thin, ceramic, others?
