@@ -1,0 +1,41 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/symbols/SymbolNode:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/Classable
+  import jsl/symbols/box-symbol
+  import jsl/tests/utils
+
+deftest(box-symbol) test-props-filter:
+
+  pcb-component basic-bank:
+    pin-properties:
+      [pin:Ref | pads:Ref ... | side:Dir]
+        [ VDD1 | p[8] | Right]
+        [ VDD2 | p[9] | Right]
+        [ DIN  | p[1] | Left]
+        [ EN | p[2] | Left]
+        [ CLK | p[3] | Left]
+        [ DOUT | p[5] | Right ]
+        [ ALERT | p[6] | Right ]
+        [ NC    | p[7] | Left ]
+        [ GND | p[4] | Left]
+
+    val box = BoxSymbol(self)
+    ; first set all banks to some default bank
+    set-bank(0, self.VDD1)
+    set-bank(1, self.VDD2)
+
+    val vdd-pins = find-pins-by-regex(box, "VDD.*")
+    #EXPECT(length(vdd-pins) == 2)
+    val vdd-pins-bank = find-pins-by-regex(box, "VDD.*", bank = 1)
+    #EXPECT(length(vdd-pins-bank) == 1)
+
+  evaluate(basic-bank)
+
+
+
+
+
