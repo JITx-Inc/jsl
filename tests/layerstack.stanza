@@ -205,7 +205,7 @@ doc:\<DOC>
   The middle layer, at the bottom of the `top-layers` tuple, appears only once.
   The bottom layers are symmetric to the top layers in reverse order.
 
-  Example 1: when even-layers? = false (the middle layer is a singleton)
+  @snippet When even-layers? = false (the middle layer is a singleton)
   ```
     val top-layers = [
       soldermask
@@ -231,7 +231,7 @@ doc:\<DOC>
     ]
   ```  
 
-  Example 2: When even-layers? = true, the middle layer is also duplicated.
+  @snippet When even-layers? = true, the middle layer is also duplicated.
   ```
     val top-layers = [
       copper-35um
