@@ -27,9 +27,7 @@ defpackage jsl/protocols/sata:
   import jsl/errors
   import jsl/bundles
   import jsl/pin-assignment
-  import jsl/si/helpers
-  import jsl/si/pairs
-  import jsl/si/constraints
+  import jsl/si
 
 
 doc: \<DOC>
