@@ -175,8 +175,9 @@ public defn QFP-pkg-outline (
   ):
   val pkg-body = package-body(pkg)
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  ; TODO: consider clearance when shrinking
-  val pkg-outline* = shrink(line-width / 2.0, pkg-outline)
+  ; Note: this is a very conservative outline computation
+  ; We shrink the outline by mask-clearance regardless of any existing clearance
+  val pkg-outline* = shrink(mask-clearance + line-width / 2.0, pkg-outline)
   LineRectangle(pkg-outline*, line-width = line-width)
 
 public defn QFP-outline (
