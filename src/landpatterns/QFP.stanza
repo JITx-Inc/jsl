@@ -147,19 +147,18 @@ public defmethod name (pkg:QFP) -> String :
     val v* = to-int( v * 100.0 )
     to-string("%_" % [v*])
   val body = package-body(pkg)
-  val p = pitch $ x-leads $ lead-profile(pkg)
+  val p-mm = pitch $ x-leads $ lead-profile(pkg)
   val w = to-deci(typ $ width(body))
   val l = to-deci(typ $ length(body))
-  val h = to-deci(typ $ height(body))
-  val lsL1 = max(w,l)
-  val lsL2 = min(w,l)
+  val h-mm = typ $ height(body)
+  val ls1 = max(w,l)
+  val ls2 = min(w,l)
   val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
-  ; TODO: naming is probably not correct in general
   val prefixes = seq?({_}, [
-    if p <= 0.50 : One("S") else : None(), ; shrink
-    ; TODO: thin, ceramic, others?
+    if h-mm <= 0.50 : One("T") else : None(), ; Thin   : height <= 1.60mm
+    if p-mm <= 0.50 : One("S") else : None(), ; Shrink : pitch <= 0.50mm
   ]) 
-  to-string("%_QFP%_P%_X%_-%_" % [append-all(prefixes), to-deci(p), lsL1, lsL2, n])
+  to-string("%_QFP%_P%_X%_X%_-%_N" % [append-all(prefixes), to-deci(p-mm), ls1, ls2, to-deci(h-mm), n])
 
 public defmethod courtyard-excess (pkg:QFP) -> Double :
   val protrusion = lead-type $ lead $ x-leads $ lead-profile $ pkg
