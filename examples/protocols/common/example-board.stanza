@@ -138,28 +138,28 @@ public pcb-differential-routing-structure diff (trace-impedance:Toleranced|Doubl
     90.0 : 0.1475
     100.0 : 0.1510
   ; whatever layers are to be used for routing the differential pairs (defined by the user)
-  layer(Top) :
+  layer-constraints(Top) :
     trace-width  = tw       ; mm
     pair-spacing = tw / 1.2 ; mm
     clearance    = 0.150    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(LayerIndex(1, Top)) :
+  layer-constraints(LayerIndex(1, Top)) :
     trace-width  = tw       ; mm
     pair-spacing = 2.0 * tw ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(LayerIndex(1, Bottom)) :
+  layer-constraints(LayerIndex(1, Bottom)) :
     trace-width  = tw       ; mm
     pair-spacing = 2.0 * tw ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(Bottom) :
+  layer-constraints(Bottom) :
     trace-width  = tw       ; mm
     pair-spacing = tw / 1.2 ; mm
     clearance    = 0.150    ; mm
@@ -176,7 +176,7 @@ in the project code because they are dependant on the stack-up and other factors
 <DOC>
 public pcb-routing-structure se-50 :
   name = "50 Ohm single-ended"
-  layer(Top) :
+  layer-constraints(Top) :
     trace-width = 0.10    ; mm
     clearance = 0.15     ; mm
     velocity = 0.19e12   ; mm/s
@@ -186,7 +186,7 @@ public pcb-routing-structure se-50 :
       clearance = 0.1
     )
 
-  layer(Bottom) :
+  layer-constraints(Bottom) :
     trace-width = 0.10    ; mm
     clearance = 0.15         ; mm
     velocity = 0.19e12   ; mm/s
