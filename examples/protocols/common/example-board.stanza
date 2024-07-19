@@ -56,19 +56,19 @@ pcb-material prepreg :
 
 public pcb-stackup example-stackup :
   name = "Example 6-layer 0.032in"
-  layer(0.013, soldermask)
-  layer(0.030, copper    )
-  layer(0.060, prepreg   )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.015, copper    )
-  layer(0.070, core      )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.030, copper    )
-  layer(0.013, soldermask)
+  stack(0.013, soldermask)
+  stack(0.030, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.015, copper    )
+  stack(0.070, core      )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.030, copper    )
+  stack(0.013, soldermask)
 
 doc: \<DOC>
 @brief Parametric via generator for laser-drilled vias
