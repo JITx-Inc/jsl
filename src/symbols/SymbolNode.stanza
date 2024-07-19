@@ -518,7 +518,7 @@ defn make-full-vpin (vp:VirtualPin, scale:Double, pose:Pose) :
 
     val dec-pose =  pose * loc(pt) * dec-rot()
     for dec in decorators(vp) do:
-      layer("decorators") =  dec-pose * scale-shape(art(dec), scale)
+      draw("decorators") =  dec-pose * scale-shape(art(dec), scale)
 
 
 public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNODE_POSE) :
@@ -536,7 +536,7 @@ public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNO
         ;  the user should provide a parameters object
         val dec-pose = pose * loc(pt)
         for dec in decorators(vp) do:
-          layer("decorators") = dec-pose * scale-shape(art(dec), scale)
+          draw("decorators") = dec-pose * scale-shape(art(dec), scale)
 
       (x:One<VirtualPinParams>):
         make-full-vpin(vp, scale, pose)
@@ -545,7 +545,7 @@ public defn make-glyph-symbol (g:Glyph, scale:Double, pose:Pose = DEF_SYMNODE_PO
   inside pcb-symbol:
     val art* = scale-shape(pose * art(g), scale)
     val lname = build-layer-name $ name?(g)
-    layer( lname ) = art*
+    draw( lname ) = art*
 
 public defn make-symbol (sn:SymbolNode, parent-pose:Pose = DEF_SYMNODE_POSE) :
   inside pcb-symbol:
