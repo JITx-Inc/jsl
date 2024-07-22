@@ -24,8 +24,8 @@ ports/bundles.
 <DOC>
 public pcb-bundle diff-pair :
   name = "Differential Signal Pair"
-  pin N
-  pin P
+  port N
+  port P
 
 doc: \<DOC>
 Two Differential Pairs - a Dual Pair

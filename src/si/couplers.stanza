@@ -72,7 +72,7 @@ restricted to those nets.
 public pcb-module symmetric-shunt (comp:Instantiable -- margin:Double = 0.0) :
   port A : diff-pair
   port B : diff-pair
-  pin COMMON
+  port COMMON
 
   inst RC : comp[2]
 
