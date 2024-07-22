@@ -364,7 +364,7 @@ public defn add-artwork (
   append-all(vp, new-art)
 
 doc: \<DOC>
-  Add a cutout to the landpattern with a given shape.
+  Add cutouts to the landpattern based on specified shapes.
 <DOC>
 public defn add-cutout (
   vp:VirtualLP,
@@ -375,10 +375,33 @@ public defn add-cutout (
   ) -> False:
   append(vp, VirtualArtwork(Cutout(), shape, name? = name, class = class))
 
+public defn add-cutout (
+  vp:VirtualLP,
+  shapes:Seqable<Shape>
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  val new-cos =
+    for s in shapes seq :
+      VirtualArtwork(Cutout(), s, name? = name, class = class)
+  append-all(vp, new-cos)
+
 doc: \<DOC>
-  Add keepout regions to the landpattern with a sequence of given shapes.
+  Add keepout regions to the landpattern based on specified shapes.
 <DOC>
-public defn add-keepouts (
+public defn add-keepout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  start:LayerIndex = LayerIndex(0)
+  end:LayerIndex = LayerIndex(0)
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualArtwork(ForbidCopper(start, end), shape, name? = name, class = class))
+
+public defn add-keepout (
   vp:VirtualLP,
   shapes:Seqable<Shape>
   --
@@ -387,8 +410,10 @@ public defn add-keepouts (
   name:String = ?,
   class:Seqable<String>|String = []
   ) -> False:
-  for s in shapes do :
-    append(vp, VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class))
+  val new-kos =
+    for s in shapes seq :
+      VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class)
+  append-all(vp, new-kos)
 
 doc: \<DOC>
 Create a reference designator in the current virtual landpattern

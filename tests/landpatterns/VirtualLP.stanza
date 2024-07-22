@@ -248,15 +248,18 @@ deftest(virtual-lp) test-artwork-layer :
 
   ; Simple single cutout layer Landpattern test
   add-cutout(root, Circle(0.5))
-  add-keepouts(root, [Circle(1.0), Circle(2.0)])
-  add-keepouts(root, [Circle(3.0)], start = LayerIndex(1), end = LayerIndex(2))
+  add-cutout(root, [Circle(0.25), Circle(0.25)])
+  add-keepout(root, [Circle(1.0), Circle(2.0)])
+  add-keepout(root, Circle(3.0), start = LayerIndex(1), end = LayerIndex(2))
   ; Generate the landpattern
   pcb-landpattern simple:
     make-landpattern(root)
 
   val layers = layers(simple)
-  #EXPECT(length(layers) == 4)
+  #EXPECT(length(layers) == 6)
   #EXPECT(specifier(layers[0]) == Cutout())
-  #EXPECT(specifier(layers[1]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
-  #EXPECT(specifier(layers[2]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
-  #EXPECT(specifier(layers[3]) == ForbidCopper(LayerIndex(1), LayerIndex(2)))
+  #EXPECT(specifier(layers[1]) == Cutout())
+  #EXPECT(specifier(layers[2]) == Cutout())
+  #EXPECT(specifier(layers[3]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[4]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[5]) == ForbidCopper(LayerIndex(1), LayerIndex(2)))

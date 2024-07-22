@@ -364,6 +364,35 @@ public defmethod build-cut-out (
   false
 
 doc: \<DOC>
+Generator for creating cutout regions in the landpattern.
+
+This generator is typically called within a `pcb-landpattern`
+definition to create the `Cutout()` layer regions for this component.
+
+@param pkg IC Package for which we are creating silkscreen artwork
+@param pkg pose Offset to apply to all of the geometry generated
+by this generator function. By default, no offset is applied.
+<DOC>
+public defmulti make-cut-out (
+  pkg:Package
+  --
+  pose:Pose = ?
+  )
+
+doc: \<DOC>
+Default Generator `make-cut-out` - Constructs the cutouts only.
+<DOC>
+public defmethod make-cut-out (
+  pkg:Package
+  --
+  pose:Pose = DEF_LP_POSE
+  ):
+  inside pcb-landpattern:
+    val virt = VirtualLP(pose)
+    build-cut-out(pkg, virt)
+    make-landpattern(virt)
+
+doc: \<DOC>
 Create conformal coat mask regions in a virtual landpattern
 
 This function is used to build the landpattern's
