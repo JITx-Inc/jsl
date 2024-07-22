@@ -128,28 +128,6 @@ public defmethod make-landpattern (cu:VirtualCopper, pose:Pose = DEF_VLP_LOC) :
   inside pcb-landpattern:
     copper(layer-index(cu)) = pose * shape(cu)
 
-public defstruct VirtualCutout <: VirtualElement :
-  shape:Shape
-
-  ; Virtual Element
-  name?:Maybe<String> with: (as-method => true)
-  class:Vector<String> with: (as-method => true)
-with:
-  constructor => #VirtualCutout
-  printer => true
-
-public defn VirtualCutout (
-  shape:Shape
-  --
-  name?:Maybe<String> = None(),
-  class:Seqable<String>|String = []
-  ) -> VirtualCutout :
-  #VirtualCutout(shape, name?, to-class-vector(class))
-
-public defmethod make-landpattern (p:VirtualCutout, pose:Pose = DEF_VLP_LOC) :
-  inside pcb-landpattern:
-    layer(Cutout()) = pose * shape(p)
-
 public defstruct VirtualArtwork <: VirtualElement :
   layer-spec:LayerSpecifier
   shape:Shape
@@ -217,12 +195,6 @@ public defstruct VirtualLP <: VirtualElement :
   metal:Vector<VirtualCopper>
 
   doc: \<DOC>
-  Virtual `cutout` statements as placed in the virtual landpattern
-  frame of reference.
-  <DOC>
-  cutouts:Vector<VirtualCutout>
-
-  doc: \<DOC>
   Kinematic transform of this node of the virtual landpattern tree.
 
   This pose will be applied to the reference frame of this node.
@@ -262,7 +234,6 @@ defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
-    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -283,7 +254,6 @@ public defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
-    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -394,6 +364,58 @@ public defn add-artwork (
   append-all(vp, new-art)
 
 doc: \<DOC>
+  Add cutouts to the landpattern based on specified shapes.
+<DOC>
+public defn add-cutout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualArtwork(Cutout(), shape, name? = name, class = class))
+
+public defn add-cutout (
+  vp:VirtualLP,
+  shapes:Seqable<Shape>
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  val new-cos =
+    for s in shapes seq :
+      VirtualArtwork(Cutout(), s, name? = name, class = class)
+  append-all(vp, new-cos)
+
+doc: \<DOC>
+  Add keepout regions to the landpattern based on specified shapes.
+<DOC>
+public defn add-keepout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  start:LayerIndex = LayerIndex(0)
+  end:LayerIndex = LayerIndex(0)
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualArtwork(ForbidCopper(start, end), shape, name? = name, class = class))
+
+public defn add-keepout (
+  vp:VirtualLP,
+  shapes:Seqable<Shape>
+  --
+  start:LayerIndex = LayerIndex(0)
+  end:LayerIndex = LayerIndex(0)
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  val new-kos =
+    for s in shapes seq :
+      VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class)
+  append-all(vp, new-kos)
+
+doc: \<DOC>
 Create a reference designator in the current virtual landpattern
 
 
@@ -495,27 +517,6 @@ public defn add-copper (
     VirtualCopper(li, sh, class = class)
   append-all(vp, new-cu)
 
-public defn add-cutout (
-  vp:VirtualLP,
-  shape:Shape
-  --
-  name:String = ?,
-  class:Seqable<String>|String = []
-  ) -> False:
-  append(vp, VirtualCutout(shape, name? = name, class = class))
-
-doc: \<DOC>
-Add a virtual `cutout` statement to virtual landpattern
-<DOC>
-public defn append (vp:VirtualLP, cu:VirtualCutout) -> False:
-  add{_, cu} $ cutouts(vp)
-
-doc: \<DOC>
-Add multiple virtual `cutout` statements to virtual landpattern
-<DOC>
-public defn append-all (vp:VirtualLP, cus:Seqable<VirtualCutout>) -> False:
-  add-all{_, cus} $ cutouts(vp)
-
 doc: \<DOC>
 Add a new child virtual landpattern node
 @param vp Self
@@ -560,7 +561,7 @@ This does not search recursively into the children, it just
 reports the elements of this node.
 <DOC>
 public defn elements (vp:VirtualLP) -> Seqable<VirtualElement> :
-  for grp in [lands(vp), artwork(vp), metal(vp), cutouts(vp)] seq-cat:
+  for grp in [lands(vp), artwork(vp), metal(vp)] seq-cat:
     for elem in grp seq:
       elem as VirtualElement
 
@@ -637,8 +638,8 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
   reduce(earlier-pad, pads)
 
 ; Converters
-#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualCutout, VirtualLP]
-  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualCutout ,as-VirtualLP]) :
+#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
+  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper ,as-VirtualLP]) :
   public defn funcName (e:VirtualElement) -> vType :
     e as vType
 
