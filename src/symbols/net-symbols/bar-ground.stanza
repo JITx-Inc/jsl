@@ -1,0 +1,113 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/bar-ground:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/framework
+  import jsl/symbols/net-symbols/symbol-builder
+
+public val DEF_GND_SYMB_LINE_WIDTH = 0.05
+public val DEF_GND_SYMB_PORCH_WIDTH = 0.5
+public val DEF_BAR_GND_SYMB_SPACING = 0.2
+public val DEF_BAR_GND_SYMB_LINES = [1.0, 0.6, 0.2]
+
+doc: \<DOC>
+Bar Ground Symbol Builder
+
+This builds a typical power ground net symbol consisting
+of 3 or more horizontal lines of decreasing length, evenly
+spaced in the -Y dimension.
+
+TODO - Diagram here.
+
+All units are in schematic symbol grid units.
+<DOC>
+public defstruct BarGroundSymbol <: SymbolBuilder :
+  doc: \<DOC>
+  Set the width of the constructed lines.
+  Default value is 0.05
+  <DOC>
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_GND_SYMB_LINE_WIDTH
+  )
+  doc: \<DOC>
+  Set the porch width of the net symbol
+
+  The porch width is the distance from the symbol pin to
+  the start of the first horizontal line in the -Y direction.
+  By default, this value is 0.5.
+  <DOC>
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width,
+    default => DEF_GND_SYMB_PORCH_WIDTH
+  )
+  doc: \<DOC>
+  Spacing between horizontal lines of this symbol
+
+  This parameter is used for consistent spacing
+  between all of the horizontal lines.
+  The default value is 0.2.
+  <DOC>
+  spacing:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-spacing,
+    default => DEF_BAR_GND_SYMB_SPACING,
+  )
+  doc: \<DOC>
+  A set of lengths for the horizontal lines to construct.
+
+  The default set is [1.0, 0.6, 0.2]. This will
+  construct 3 horizontal lines starting with the longest at
+  the highest Y, and then going further negative in the
+  Y direction by `spacing` amount for each line there after.
+  <DOC>
+  lines:Tuple<Double> with: (
+    updater => sub-lines
+    default => DEF_BAR_GND_SYMB_LINES
+  )
+with:
+  constructor => #BarGroundSymbol
+  equalable => true
+
+doc: \<DOC>
+Constructor for the BarGroundSymbol
+<DOC>
+public defn BarGroundSymbol (
+  --
+  line-width:Double = DEF_GND_SYMB_LINE_WIDTH,
+  porch-width:Double = DEF_GND_SYMB_PORCH_WIDTH,
+  spacing:Double = DEF_BAR_GND_SYMB_SPACING,
+  lines:Tuple<Double> = DEF_BAR_GND_SYMB_LINES
+) -> BarGroundSymbol :
+  if length(lines) < 1:
+    throw $ ValueError("Invalid Lines - Must be at least length 1")
+  #BarGroundSymbol(line-width, porch-width, spacing, lines)
+
+defmethod value-label (x:BarGroundSymbol) -> Pose :
+  val text-margin = 0.1
+  val y = porch-width(x) +
+    (to-double((length(lines(x)) - 1)) * spacing(x)) +
+    (line-width(x) / 2.0) +
+    text-margin
+  loc(0.0, (- y))
+
+defmethod build-symbol-glyph (x:BarGroundSymbol, node:SymbolNode) :
+  line(node, [
+    Point(0.0, 0.0),
+    Point(0.0, (- porch-width(x)))
+  ], width = line-width(x))
+  val l-set = lines(x)
+  for i in 0 to length(l-set) do:
+    val lw = l-set[i] / 2.0
+    val y = (- porch-width(x)) - (to-double(i) * spacing(x))
+    line(node, [
+      Point((- lw), y),
+      Point(lw, y),
+    ], width = line-width(x))
+

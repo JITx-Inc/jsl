@@ -1,0 +1,13 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/ethernet:
+  ; MDI
+  forward jsl/protocols/ethernet/MDI/e10GBASE-KR
+  forward jsl/protocols/ethernet/MDI/MDI-1000Base-T
+
+  ; MII
+  forward jsl/protocols/ethernet/MII/MII
+  forward jsl/protocols/ethernet/MII/RMII
+  forward jsl/protocols/ethernet/MII/RGMII
+  forward jsl/protocols/ethernet/MII/MIIM
+
+  forward jsl/protocols/ethernet/utils

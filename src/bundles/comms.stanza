@@ -115,7 +115,7 @@ doc: \<DOC>
 SPI Bundle Pin Names
 A list of possible names for the SPI interface. Note that in order to connect
 SPI interfaces automatically, the constituent pins need to be present on all
-objects to be connected. 
+objects to be connected.
 <DOC>
 
 public pcb-enum jsl/bundles/comms/SPIPins :
@@ -294,3 +294,24 @@ This generator constructs a UART bundle consisting of:
 <DOC>
 public defn minimal-uart () :
   uart(UART-RX, UART-TX)
+
+
+doc: \<DOC>
+Inter-Integrated Sound - I2S Protocol
+
+The I2S protocol is a synchronous serial communication
+protocol similar to SPI
+
+Originally Specification was from Phillips. Current
+specification is present in NXP's references
+
+@see https://www.nxp.com/docs/en/user-manual/UM11732.pdf
+
+@member sck Serial Interface Clock
+@member ws Word Select - typically for left vs right differentiation
+@member sd Data Signal
+<DOC>
+public pcb-bundle i2s :
+  pin sck
+  pin ws
+  pin sd

@@ -570,11 +570,11 @@ doc:\<DOC>
   The LayerStack created has these layers:
      [ soldermask
        copper-35um
-       prepreg
+       prepreg-2313
        copper-17_5um
        core            ; single dielectric layer in the center
        copper-17_5um
-       prepreg
+       prepreg-2313
        copper-35um
        soldermask
      ]

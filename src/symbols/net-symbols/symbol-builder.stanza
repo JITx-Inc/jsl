@@ -1,0 +1,38 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/symbol-builder:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/framework
+
+doc: \<DOC>
+Parameterized Symbol Builder
+
+This type defines the interface for the parameterized ground symbols
+to be constructed using this framework.
+<DOC>
+public deftype SymbolBuilder <: Equalable
+doc: \<DOC>
+Selects the position of the net label with respect to the symbol
+
+Typically, this will be net symbol type dependent. For example, the
+ground symbol builders all put this in the -Y half of the plane
+centered at X = 0.0. The -Y value will depend on the size of the
+created net symbol.
+@param x This `SymbolBuilder`
+<DOC>
+public defmulti value-label (x:SymbolBuilder) -> Pose
+doc: \<DOC>
+Symbol Glyphs Generator Function
+
+This is the function where the user creates the geometry
+of the rendered net symbol. The `node` object provides
+the net symbols scene graph. The user can choose to
+draw shapes and other content via the {@link SymbolNode}
+interface.
+
+@param x This `SymbolBuilder`
+@param node The scene graph object to draw content to.
+<DOC>
+public defmulti build-symbol-glyph (x:SymbolBuilder, node:SymbolNode) -> False

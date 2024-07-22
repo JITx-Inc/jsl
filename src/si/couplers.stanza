@@ -7,18 +7,7 @@ defpackage jsl/si/couplers:
   import jsl/bundles
   import jsl/si/helpers
   import jsl/pin-assignment
-
-doc: \<DOC>
-Extract the courtyard dimensions for the landpattern of a component.
-<DOC>
-defn get-courtyard-dims (comp:Instantiable) -> Dims:
-  val lp = landpattern(comp)
-  val topC = Courtyard(Top)
-  dims $ Union $ for lspec in layers(lp) seq?:
-    switch(specifier(lspec)):
-      Courtyard(Top):
-        One $ shape(lspec)
-      else: None()
+  import jsl/landpatterns/courtyard
 
 
 doc: \<DOC>
@@ -72,8 +61,8 @@ Construct Aligned Symmetric Shunt Components
 
 This function constructs a shunt module where two 2-pin components
 are instantiated with p[1] of both components adjacent to each other.
-The far pin (p[2]) on both components is connected to a `COMMON` terminal 
-which typically could be either a ground or a power supply net but is not 
+The far pin (p[2]) on both components is connected to a `COMMON` terminal
+which typically could be either a ground or a power supply net but is not
 restricted to those nets.
 
 @param comp 2-pin component like a resistors/capacitor with `p[1]` and `p[2]`
@@ -98,4 +87,3 @@ public pcb-module symmetric-shunt (comp:Instantiable -- margin:Double = 0.0) :
 
   place(RC[0]) at loc(0.0, y-off, 180.0) on Top
   place(RC[1]) at loc(0.0, (- y-off)) on Top
-  

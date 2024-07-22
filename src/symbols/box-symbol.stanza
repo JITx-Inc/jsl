@@ -9,7 +9,6 @@ defpackage jsl/symbols/box-symbol:
   import jitx
   import jitx/commands
   import jitx/utils/got
-  import jitx/schematic/analysis
 
   import jsl/ensure
   import jsl/design/Classable
@@ -442,8 +441,8 @@ defn check-prop (prop: ?, filter: ?) -> True|False :
         false
       (n, f: None) :
         true
-      (v: One<Int|Ref>, p) :
-        value(v) == p
+      (v: One<Int|Ref>, p: One<?>) :
+        value(v) == value(p)
       (n, f) :
         throw $ GenericBoxSymbolError("Unsupported args to check-prop %_ %_"
           % [prop, filter])

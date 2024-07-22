@@ -28,16 +28,17 @@ public pcb-bundle MDI-1000Base-T:
   name = "1000Base-T"
   port TP : diff-pair[NUM_PAIRS_1000Base-T]
 
-
 doc: \<DOC>
 Construct a 1000Base-T Supports Statement
 
-@param dps Diff-Pairs that make up the A, B, C, D
+@param dps Tuple of [P, N] ports that make up each of the
+differential pairs that make up the A, B, C, D
 twisted pairs of the MDI. Note that these arguments
 are expected to be passed in the right order - otherwise,
 we may setup the wrong pin assignment constraints.
+This argument is expected to be length 4.
 <DOC>
-public defn make-1000Base-T-supports (dps:JITXObject ...):
+public defn make-1000Base-T-supports (dps:[JITXObject, JITXObject], ...):
   if length(dps) != 4:
     throw $ ValueError("Expected 4 diff-pair objects - Received %_" % [length(dps)])
 
@@ -57,17 +58,50 @@ public defn make-1000Base-T-supports (dps:JITXObject ...):
         option:
           for i in 0 to NUM_PAIRS_1000Base-T do:
             val j = pair-map[i]
-            MDI-1000Base-T.TP[i].P => dps[j].P
-            MDI-1000Base-T.TP[i].N => dps[j].N
+            val [P, N] = [dps[j][0], dps[j][1]]
+            MDI-1000Base-T.TP[i].P => P
+            MDI-1000Base-T.TP[i].N => N
 
+doc: \<DOC>
+Construct a 1000Base-T Supports Statement
+
+@param dps Diff-Pairs that make up the A, B, C, D
+twisted pairs of the MDI. Note that these arguments
+are expected to be passed in the right order - otherwise,
+we may setup the wrong pin assignment constraints.
+<DOC>
+public defn make-1000Base-T-supports (dps:JITXObject ...):
+   make-1000Base-T-supports(dps)
+
+public defn make-1000Base-T-supports (dps:Tuple<JITXObject>):
+  val dps-pairs = to-tuple $ for i in 0 to length(dps) seq:
+    [dps[i].P, dps[i].N]
+
+  make-1000Base-T-supports(dps = dps-pairs)
 
 ; Constraints
+doc: \<DOC>
+Retrieve the expected Intra-pair skew and diff-pair loss limits
+@return Tuple of [Skew, Loss] where
+
+*  Skew - Allowable delay difference as a `Toleranced` value in Seconds.
+*  Loss - Max allowable power loss limit in dB.
+<DOC>
 public defn MDI-1000Base-T-get-skew-loss () -> [Toleranced, Double]:
   [0.0 +/- (1.6e-12 / 2.0), 12.0]
 
+doc: \<DOC>
+Retrieve the expected differential impedance for the differentiali pairs
+@return Toleranced in ohms.
+<DOC>
 public defn MDI-1000Base-T-get-trace-impedance () -> Toleranced :
   95.0 +/- (15 %)
 
+doc: \<DOC>
+Retrieve expected Inter-pair skew
+
+@return Allowable delay difference as a `Toleranced` value in Seconds.
+<DOC>
 public defn MDI-1000Base-T-get-pair-to-pair-skew () -> Toleranced :
   0.0 +/- (330.0e-12 / 2.0)
 

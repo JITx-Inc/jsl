@@ -1,7 +1,6 @@
 #use-added-syntax(jitx,tests)
 defpackage jsl/tests/layerstack:
   import core
-  import collections
   import jitx
   import jitx/commands
 
@@ -141,7 +140,6 @@ My Crazy Stack - each layer is different for testing
  10 - copper-105um
 ;<note>
 val test-stack = LayerStack(name = "My Crazy Stack")
-val copper-17_5um = Copper(0.0175, name = "cu1")
 val copper-35um = Copper(0.035, name = "cu1")
 val copper-70um = Copper(0.070, name = "cu2")
 val copper-105um = Copper(0.105, name = "cu3")
@@ -210,9 +208,9 @@ doc:\<DOC>
     val top-layers = [
       soldermask
       copper-35um
-      prepreg 
+      prepreg-2313 
       copper-17_5um
-      core
+      core-2313
     ]
     verify-layers(stack, top-layers)
   ```
@@ -221,11 +219,11 @@ doc:\<DOC>
     [
       soldermask
       copper-35um
-      prepreg 
+      prepreg-2313 
       copper-17_5um
-      core            ; the middle layer
+      core-2313       ; the middle layer
       copper-17_5um
-      prepreg
+      prepreg-2313
       copper-35um
       soldermask
     ]
@@ -235,7 +233,7 @@ doc:\<DOC>
   ```
     val top-layers = [
       copper-35um
-      prepreg 
+      prepreg-2313 
       copper-17_5um
       core
     ]
@@ -290,6 +288,10 @@ defn verify-4-layer-stack (stack:LayerStack
       [copper-17_5um core]
     ]
   verify-layers(stack, top-layers)
+  if soldermask? :
+    #EXPECT(length(conductors(stack)) == length(top-layers) - 1)
+  else :
+    #EXPECT(length(conductors(stack)) == length(top-layers))
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
 deftest(layerstack) make-4-layer-stack-with-soldermask :
@@ -298,8 +300,8 @@ deftest(layerstack) make-4-layer-stack-with-soldermask :
   val core = FR4(1.265, FR4-Material)
   val stack = make-layer-stack("4-Layer Stack with Soldermask", top-layers, soldermask = soldermask) where :
     val top-layers =  [
-      [copper-35um prepreg] 
-      [copper-17_5um core]
+      [copper-35um prepreg-2313] 
+      [copper-17_5um core-2313]
     ]
   verify-4-layer-stack(stack, soldermask? = true)
 
@@ -309,8 +311,8 @@ deftest(layerstack) make-4-layer-layer-stack-without-soldermask :
   val core = FR4(1.265, FR4-Material)
   val stack = make-layer-stack("4-Layer Stack without Soldermask", top-layers) where :
     val top-layers =  [
-      [copper-35um prepreg] 
-      [copper-17_5um core]
+      [copper-35um prepreg-2313] 
+      [copper-17_5um core-2313]
     ]
   verify-4-layer-stack(stack)
 
@@ -410,3 +412,4 @@ deftest(layerstack) test-add-symmetric-layers-with-even-number-of-layers :
         copper-35um prepreg
         copper-17_5um core
         copper-17_5um prepreg2]
+

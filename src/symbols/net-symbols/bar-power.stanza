@@ -1,0 +1,64 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/net-symbols/bar-power:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/symbols/framework
+  import jsl/symbols/net-symbols/symbol-builder
+
+val DEF_PWR_SYMB_LINE_WIDTH = 0.05
+val DEF_PWR_SYMB_PORCH_WIDTH = 0.5
+val DEF_PWR_SYMB_BAR_WIDTH = 0.75
+
+public defstruct BarPowerSymbolParams <: SymbolBuilder :
+  line-width:Double with: (
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_PWR_SYMB_LINE_WIDTH
+  )
+  porch-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-porch-width,
+    default => DEF_PWR_SYMB_PORCH_WIDTH
+  )
+  bar-width:Double with: (
+    ensure => ensure-positive!,
+    updater => sub-bar-width,
+    default => DEF_PWR_SYMB_BAR_WIDTH
+  )
+with:
+  constructor => #BarPowerSymbolParams
+  equalable => true
+
+public defn BarPowerSymbolParams (
+  --
+  line-width:Double = DEF_PWR_SYMB_LINE_WIDTH,
+  porch-width:Double = DEF_PWR_SYMB_PORCH_WIDTH,
+  bar-width:Double = DEF_PWR_SYMB_BAR_WIDTH
+  ) -> BarPowerSymbolParams :
+  #BarPowerSymbolParams(line-width, porch-width, bar-width)
+
+defmethod value-label (x:BarPowerSymbolParams) -> Pose :
+  val text-margin = 0.1
+  val y = porch-width(x) +
+    (line-width(x) / 2.0) +
+    text-margin
+  loc(0.0, y)
+
+defmethod build-symbol-glyph (x:BarPowerSymbolParams, node:SymbolNode) :
+
+  val y = porch-width(x)
+
+  line(node, [
+    Point(0.0, 0.0),
+    Point(0.0, y)
+  ], width = line-width(x))
+
+  val bw = bar-width(x)
+  line(node, [
+    Point((- bw), y),
+    Point(bw, y),
+  ], width = line-width(x))
+  false

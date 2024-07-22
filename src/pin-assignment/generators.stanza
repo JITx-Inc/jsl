@@ -20,7 +20,7 @@ You could construct this support with:
 
 ```
 supports timer:
-  timer.p => one-of(self.A[1], self.B[3], self.B[6])
+  timer.timer => one-of(self.A[1], self.B[3], self.B[6])
 ```
 
 @param pins list of SinglePin/PortArray/Bundle objects that will be selected from.

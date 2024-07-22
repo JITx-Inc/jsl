@@ -1,0 +1,224 @@
+doc: \<DOC>
+@brief Configuration Strap Module
+
+This package contains a module generator that can be
+used to define a series of configuration straps.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/circuits/ConfigStrap:
+
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/design/introspection
+  import jsl/landpatterns/framework
+
+public deftype ArrayPacking
+doc: \<DOC>
+This function implements the packing algorithm for a `ArrayPacking` type.
+
+This function will look at the passed components or arrays of components and
+then structure the array according to some heuristic.
+<DOC>
+public defmulti pack-array (ap:ArrayPacking, hi-comps:JITXObject, lo-comps:JITXObject)
+
+doc: \<DOC>
+Longitudinal Packing for Configuration Component Arrays
+
+This packing type will place the components in the
+following structure:
+
+  H0  H1  H2  ...
+  L0  L1  L2
+
+This will typically place the VDD rail on one side and ground rail
+on the other for easier connecting.
+
+<DOC>
+public defstruct LongitudinalPacking <: ArrayPacking:
+  doc: \<DOC>
+  Set the extra distance between components in the packing array.
+  <DOC>
+  margin:Double with:
+    default => 0.0
+    ensure => ensure-non-negative!
+with:
+  keyword-constructor => true
+
+
+defn is-pad-L2R? (comp:Instantiable) -> True|False :
+  val lp = landpattern(comp)
+  val p1 = get-pad-by-name!(lp, "p[1]")
+  val p2 = get-pad-by-name!(lp, "p[2]")
+
+  val p1-loc = center $ pose(p1)
+  val p2-loc = center $ pose(p2)
+
+  x(p1-loc) < x(p2-loc)
+
+defn is-pad-T2B? (comp:Instantiable) -> True|False :
+  val lp = landpattern(comp)
+  val p1 = get-pad-by-name!(lp, "p[1]")
+  val p2 = get-pad-by-name!(lp, "p[2]")
+
+  val p1-loc = center $ pose(p1)
+  val p2-loc = center $ pose(p2)
+
+  y(p1-loc) > y(p2-loc)
+
+
+defmethod pack-array (ap:LongitudinalPacking, hi-comps:JITXObject, lo-comps:JITXObject):
+  inside pcb-module:
+    val h-type = get-instantiable(hi-comps)
+    val hd = get-courtyard-dims $ h-type
+    val ld = get-courtyard-dims $ get-instantiable(lo-comps)
+
+    ; We use the aspect ratio of the part to determine whether the component
+    ; grid needs to be oriented in the X direction or the Y direction.
+    val is-Y-aligned = x(hd) < y(hd)
+
+    if is-Y-aligned:
+      val is-t2b? = is-pad-T2B?(h-type)
+      val [t-comp, b-comp] = if is-pad-T2B?(h-type):
+        [hi-comps, lo-comps]
+      else:
+        [lo-comps, hi-comps]
+
+      val w = max(x(hd), x(ld))
+      val m2 = margin(ap) / 2.0
+
+      for i in 0 to length(hi-comps) do:
+        val x-p = (w + margin(ap)) * to-double(i)
+        val y-h = (y(hd) / 2.0) + m2
+        place(t-comp[i]) at loc(x-p, y-h) on Top
+        val y-l = (y(ld) / 2.0) + m2
+        place(b-comp[i]) at loc(x-p, (- y-l)) on Top
+    else:
+      ; We are X aligned
+      val [l-comp, r-comp] = if is-pad-L2R?(h-type):
+        [hi-comps, lo-comps]
+      else:
+        [lo-comps, hi-comps]
+
+      val h = max(y(hd), y(ld))
+      val m2 = margin(ap) / 2.0
+
+      for i in 0 to length(hi-comps) do:
+        val y-p = (h + margin(ap)) * to-double(i)
+        val x-h = (x(hd) / 2.0) + m2
+        place(r-comp[i]) at loc(x-h, y-p) on Top
+        val x-l = (x(ld) / 2.0) + m2
+        place(l-comp[i]) at loc((- x-l), y-p) on Top
+
+
+doc: \<DOC>
+Configuration Bus Bundle
+
+This bundle is what is used to access the
+pin assignment supports for the ConfigStrap module.
+<DOC>
+public pcb-bundle config-strap-bus (num-elems:Int) :
+  port config : pin[num-elems]
+
+doc: \<DOC>
+Construct a configuration strap sub-circuit.
+
+With complex ICs, one or more pins may be exposed as "Configuration Straps." The
+idea is that the IC will check the status of these pins are boot time and
+depending on whether those pins are pulled high or low, this will change the
+behavior of the chip.
+
+This module provides a configurable means of defining a set of config strap
+resistors using pin assignment for optimal layout.
+
+The configuration strap resistors are typically created as a high-side
+resistor in series with a low side resistor, like a voltage divider. The
+middle node is the configuration node and depending on whether the
+high-side or low side is populated, it will be pulled to one side
+or another.
+
+This module exposes the array of high side and low side components as public
+in `hi-comps` and `lo-comps` arrays.
+
+This module exposes a support for a {@link config-strap-bus} bundle of length `num-elems`
+that can be used
+
+@param num-elems Number of configuration strap channels to create. Must be greater than 0.
+@param comp Component to instantiate for the divider.
+This component is expected to follow typical 2-pin convention of providing ports `p[1]`
+and `p[2]`.
+@param lo-comp Optional component for instantiating the low-side of the divider. If `lo` is
+not provided then `comp` is used for both the high and low side of the divider.
+@param pack? Optional Component Array Packing Generator. By default, this value
+is a {@link LongitudinalPacking}. If the user passes `None()` then no `place`
+statements for the components in the array are created.
+@param name? Optional name for the configuration strap definition
+@return This function creates a `pcb-module` within a closure and then
+returns the constructed `pcb-module`.
+<DOC>
+
+public defn ConfigStrap (
+  --
+  num-elems:Int,
+  comp:Instantiable,
+  lo-comp:Instantiable = comp,
+  pack?:Maybe<ArrayPacking> = One(LongitudinalPacking()),
+  name?:String = ?
+  ) -> Instantiable :
+  pcb-module config-strap :
+    match(name?):
+      (n:One<String>):
+        name = value(n)
+      (_:None): false
+
+    port hi : pin
+    port configs : pin[num-elems]
+    port lo : pin
+
+    ; I've set these as public because I'm theorizing
+    ;  that a user could pass a custom component that isn't
+    ;  just `p[1]` and `p[2]`. It could have other ports,
+    ;  that the user might want to connect to.
+    public inst hi-comps : comp[num-elems]
+    public inst lo-comps : lo-comp[num-elems]
+
+    for i in 0 to num-elems do:
+      net (hi, hi-comps[i].p[1])
+      net (configs[i], hi-comps[i].p[2], lo-comps[i].p[1])
+      net (lo, lo-comps[i].p[2])
+
+    ; Construct an internal bundle type so that
+    ;  the user can't mess with the pin assignment
+    ;  problem from outside this module.
+    pcb-bundle int-pin :
+      port p : pin
+
+    ; Create pin assignment problem where we can use any
+    ;  of the config pins in any order.
+    for i in 0 to num-elems do :
+      supports int-pin :
+        int-pin.p => lo-comps[i].p[1]
+
+    ; User can access a `config-strap-bus` bundle to access
+    ;   the configuration straps.
+    val b = config-strap-bus(num-elems)
+    supports b:
+      for i in 0 to num-elems do:
+        require elem:int-pin
+        b.config[i] => elem.p
+
+    ; Construct the layout for the components in this component.
+    ; Typically, the resistor strap is organized together in
+    ; non-space constrained designs.
+    match(pack?):
+      (_:None): false
+      (given:One<ArrayPacking>):
+        val pack = value(given)
+        pack-array(pack, hi-comps, lo-comps)
+
+  config-strap
