@@ -243,16 +243,20 @@ deftest(virtual-lp) test-find-by-class:
   val no-elems = to-tuple $ find-by-class(root, "asdfasdf")
   #EXPECT(length(no-elems) == 0)
 
-deftest(virtual-lp) test-cutout-layer :
+deftest(virtual-lp) test-artwork-layer :
   val root = VirtualLP()
 
   ; Simple single cutout layer Landpattern test
-  append(root, VirtualCutout(Circle(0.5)))
-
+  add-cutout(root, Circle(0.5))
+  add-keepouts(root, [Circle(1.0), Circle(2.0)])
+  add-keepouts(root, [Circle(3.0)], start = LayerIndex(1), end = LayerIndex(2))
   ; Generate the landpattern
   pcb-landpattern simple:
     make-landpattern(root)
 
   val layers = layers(simple)
-  #EXPECT(length(layers) == 1)
+  #EXPECT(length(layers) == 4)
   #EXPECT(specifier(layers[0]) == Cutout())
+  #EXPECT(specifier(layers[1]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[2]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[3]) == ForbidCopper(LayerIndex(1), LayerIndex(2)))
