@@ -553,11 +553,11 @@ public defn create-pcb-stackup (stack:LayerStack) :
 doc:\<DOC>
   Construct a LayerStack with a series of outer layers. 
 
-  @snippet Stackup with Soldermask
+  @snippet 4-Layer Stackup with Soldermask
   ```
     val copper-35um = Copper(0.035)
     val copper-17_5um = Copper(0.0175)
-    val stack = make-layer-stack("4-Layer Stack with Soldermask", top-layers,
+    val stack = make-layer-stack("4-Layer Stackup with Soldermask", top-layers,
       soldermask = soldermask) where :
       val soldermask = Soldermask(0.019, SoldermaskMaterial)
       val prepreg = FR4(0.1, FR4-Material)
@@ -570,16 +570,16 @@ doc:\<DOC>
   The LayerStack created has these layers:
      [ soldermask
        copper-35um
-       prepreg-2313
+       prepreg
        copper-17_5um
        core            ; single dielectric layer in the center
        copper-17_5um
-       prepreg-2313
+       prepreg
        copper-35um
        soldermask
      ]
   
-  @snippet Stackup with Three Dielectric Layers Below the Outer Copper Layer
+  @snippet 4-Layer Stackup with Three Dielectric Layers Below the Outer Copper Layer
   ```
     val prepreg = FR4(0.1, FR4-Material)
     val prepreg2 = FR4(0.2, FR4-Material)
@@ -607,9 +607,9 @@ doc:\<DOC>
      ]
     ```
 
-  @snippet Stackup with an Even Number of Layers
+  @snippet 4-Layer Stackup with an Even Number of Layers
   ```
-    make-layer-stack("4-layer stack with an even number of layers", top-layers, even-layers? = true) where :
+    make-layer-stack("4-layer stackup with an even number of layers", top-layers, even-layers? = true) where :
       val top-layers =
         [
           [copper-35um prepreg]
@@ -632,7 +632,7 @@ doc:\<DOC>
   @param name The name of the LayerStack
   @param series-of-top-layers A tuple of tuples of LayerSpec's, from outer to inner layers.
   @param description (optional) The description of the LayerStack
-  @param soldermask (optional) The soldermask layer to be added as the outermost layer
+  @param soldermask (optional) The soldermask layer to be added as the outer-most layer
   @param even-layers? (optional) Whether there are an even number of layers. The default is `false`.
   @return The created LayerStack object
 <DOC>
@@ -644,7 +644,7 @@ public defn make-layer-stack (name:String,
   val stack = #LayerStack(One(name), description)
   ;Access pairs of outer-layers in reverse order
   for top-layers in in-reverse(series-of-top-layers) do :
-    add-symmetric(top-layers, stack, even-layers? = even-layers?)
+    add-symmetric-layers(top-layers, stack, even-layers? = even-layers?)
   ;Add soldermask
   if value?(soldermask) is LayerSpec :
     add-soldermask(value!(soldermask), stack)
@@ -654,15 +654,17 @@ public defn make-layer-stack (name:String,
 doc: \<DOC>
 Symmetrically add a series of layers to the stack.
 
-Given a stack, this function adds a series of layers, ordered from outer-most to inner most, to the stack on the top side
-and on the bottom side to construct a symmetric stackup.
+This function takes the current stack and adds a series of layers, from outer-most to inner-most, to the stack on the top side
+and to the bottom side.
+This constructs a symmetric stackup.
 
-@param top-layers a series of LayerSpec's to add to the top and the bottom, from outer-most to inner-most
+@param top-layers a series of LayerSpec's to add to the top and the bottom
 @param stack The LayerStack object
-@param even-layers? (optional) Whether there are an even number of layers. The default is `false`.
+@param 
+
 @return The LayerStack object that was passed in.
 
-@snippet Stackup with Three Adjacent Dielectric Layers
+@snippet 4-Layer Stackup with Adjacent Dielectric Layers
 
 ```stanza
   val copper-35um = Copper(0.035)
@@ -671,30 +673,28 @@ and on the bottom side to construct a symmetric stackup.
   val prepreg2 = FR4(0.2, FR4-Material)
   val prepreg3 = FR4(0.3, FR4-Material)
   val core = FR4(1.265, FR4-Material)
-  val stack = LayerStack(name = "4-layer stack with adjacent dielectric layers")
-  add-symmetric([copper-35um prepreg prepreg2 prepreg3],
-    add-symmetric([copper-17_5um core], stack)
+  val stack = LayerStack(name = "4-layer stackup with adjacent dielectric layers")
+  add-symmetric-layers([copper-35um prepreg prepreg2 prepreg3],
+    add-symmetric-layers([copper-17_5um core], stack)
   )
 ```
-@snippet 6 Add adjacent dielectric layers below the outer copper layer
 
-@snippet Stackup with an Even Number of Layers
+@snippet 6-Layer Stackup with an Even Number of Layers
 ```
-  val stack = LayerStack(name = "4-layer stack with an even number of layers")
-  add-symmetric([copper-35um prepreg],
-      add-symmetric([copper-17_5um prepreg2], stack, even-layers? = true)
+  val stack = LayerStack(name = "6-layer stackup with an even number of layers")
+  add-symmetric-layers([copper-35um prepreg],
+    add-symmetric-layers([copper-17_5um core],
+      add-symmetric-layers([copper-17_5um prepreg2], stack, even-layers? = true)
     )
   )
 ```
-@snippet-note 6 In the center of the stack, the `prepreg2` layer is added to the top and the bottom. 
-
 <DOC>
-public defn add-symmetric (top-layers:Tuple<LayerSpec>, stack:LayerStack
+public defn add-symmetric-layers (top-layers:Tuple<LayerSpec>, stack:LayerStack
       -- even-layers?:True|False = false) -> LayerStack :
   ;Verify input
   if length(top-layers) <= 1 :
     throw(Exception("Invalid argument: Expect two or more layers in the tuple. Found %_" % [top-layers]))
-  ;Get layers from outermost to innermost layers
+  ;Get layers from outer-most to inner-most layers
   val layers-vec = to-vector<LayerSpec> $ top-layers
   ;Add innermost layer
   if length(layers(stack)) == 0 and not even-layers? :
@@ -706,3 +706,4 @@ public defn add-symmetric (top-layers:Tuple<LayerSpec>, stack:LayerStack
   add-top(reversed-layers, stack) 
   add-bottom(reversed-layers, stack)
   stack
+

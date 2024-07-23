@@ -140,6 +140,7 @@ My Crazy Stack - each layer is different for testing
  10 - copper-105um
 ;<note>
 val test-stack = LayerStack(name = "My Crazy Stack")
+val copper-17_5um = Copper(0.0175, name = "cu1")
 val copper-35um = Copper(0.035, name = "cu1")
 val copper-70um = Copper(0.070, name = "cu2")
 val copper-105um = Copper(0.105, name = "cu3")
@@ -208,9 +209,9 @@ doc:\<DOC>
     val top-layers = [
       soldermask
       copper-35um
-      prepreg-2313 
+      prepreg 
       copper-17_5um
-      core-2313
+      core
     ]
     verify-layers(stack, top-layers)
   ```
@@ -219,11 +220,11 @@ doc:\<DOC>
     [
       soldermask
       copper-35um
-      prepreg-2313 
+      prepreg 
       copper-17_5um
-      core-2313       ; the middle layer
+      core       ; the middle layer
       copper-17_5um
-      prepreg-2313
+      prepreg
       copper-35um
       soldermask
     ]
@@ -233,7 +234,7 @@ doc:\<DOC>
   ```
     val top-layers = [
       copper-35um
-      prepreg-2313 
+      prepreg 
       copper-17_5um
       core
     ]
@@ -269,7 +270,7 @@ public defn verify-layers (stack:LayerStack, top-layers:Tuple<LayerSpec>
       #EXPECT(stack[total-layers - 1 - idx] == top-layers[idx])
 
 doc:\<DOC>
-  Verify a typical 4-layers stack used in this package
+  Verify a typical 4-layers stack used in this test package
 
   @param soldermask? When true, add the soldermask layer
   @param add-prepreg-layers When the tuple is not empty, insert the multiple `add-prepreg-layers` right below the outer [copper prepreg] layers
@@ -288,10 +289,9 @@ defn verify-4-layer-stack (stack:LayerStack
       [copper-17_5um core]
     ]
   verify-layers(stack, top-layers)
-  if soldermask? :
-    #EXPECT(length(conductors(stack)) == length(top-layers) - 1)
-  else :
-    #EXPECT(length(conductors(stack)) == length(top-layers))
+  val n-soldermask = 1 when soldermask? else 0
+  val n-additional-prepreg-layers = length(add-prepreg-layers)
+  #EXPECT(length(conductors(stack)) + n-additional-prepreg-layers + n-soldermask == length(top-layers))
 
 ;Use the function make-layer-stack to create a LayerStack from a tuple of LayerSpect
 deftest(layerstack) make-4-layer-stack-with-soldermask :
@@ -300,8 +300,8 @@ deftest(layerstack) make-4-layer-stack-with-soldermask :
   val core = FR4(1.265, FR4-Material)
   val stack = make-layer-stack("4-Layer Stack with Soldermask", top-layers, soldermask = soldermask) where :
     val top-layers =  [
-      [copper-35um prepreg-2313] 
-      [copper-17_5um core-2313]
+      [copper-35um prepreg] 
+      [copper-17_5um core]
     ]
   verify-4-layer-stack(stack, soldermask? = true)
 
@@ -311,14 +311,14 @@ deftest(layerstack) make-4-layer-layer-stack-without-soldermask :
   val core = FR4(1.265, FR4-Material)
   val stack = make-layer-stack("4-Layer Stack without Soldermask", top-layers) where :
     val top-layers =  [
-      [copper-35um prepreg-2313] 
-      [copper-17_5um core-2313]
+      [copper-35um prepreg] 
+      [copper-17_5um core]
     ]
   verify-4-layer-stack(stack)
 
 ; Two adjacent dielectric layers, right below the outer copper layer
 ; Example: "JLC04161H-7628A"
-deftest(layerstack) make-layer-stack-two-dielectric-prepreg-layers-below-outer-copper :
+deftest(layerstack) make-4-layer-stack-two-adjacent-dielectric-layers-below-outer-copper :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val core = FR4(1.265, FR4-Material)
@@ -331,7 +331,7 @@ deftest(layerstack) make-layer-stack-two-dielectric-prepreg-layers-below-outer-c
 
 ; Three adjacent dielectric layers, right below the outer copper layer
 ; Example: "JLC04161H-7628A"
-deftest(layerstack) make-layer-stack-three-adjacent-dielectric-layers-below-outer-copper :
+deftest(layerstack) make-4-layer-stack-three-adjacent-dielectric-layers-below-outer-copper :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val prepreg3 = FR4(0.3, FR4-Material)
@@ -343,18 +343,32 @@ deftest(layerstack) make-layer-stack-three-adjacent-dielectric-layers-below-oute
     ]
   verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2 prepreg3])
 
-; Two adjacent dielectric layers in the middle, , right below the inner copper layer
-; Example: JLC06161H-1080B"
-deftest(layerstack) make-layer-stack-with-two-adjacent-dielectric-layers-in-center :
+; Three adjacent dielectric layers, right below the outer copper layer
+; Example: "JLC04161H-7628A"
+deftest(layerstack) test-add-symmetric-layers-with-three-adjacent-dielectric-layers :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val prepreg3 = FR4(0.3, FR4-Material)
   val core = FR4(1.265, FR4-Material)
-  val stack = make-layer-stack("6-layer stack with two adjacent dielectric layers in the center", top-layers) where :
+  val stack = LayerStack(name = "4-layer symmetric stack with three adjacent dielectric layers")
+  add-symmetric-layers([copper-35um prepreg prepreg2 prepreg3],
+    add-symmetric-layers([copper-17_5um core], stack)
+  )
+  verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2 prepreg3])
+
+
+; Two adjacent dielectric layers in the middle, , right below the inner copper layer
+; Example: JLC06161H-1080B"
+deftest(layerstack) make-6-layer-stack-with-two-adjacent-dielectric-layers-below-inner-copper :
+  val prepreg = FR4(0.1, FR4-Material)
+  val prepreg2 = FR4(0.2, FR4-Material)
+  val prepreg3 = FR4(0.3, FR4-Material)
+  val core = FR4(1.265, FR4-Material)
+  val stack = make-layer-stack("6-layer stack with two adjacent dielectric layers in the middle", top-layers) where :
     val top-layers =  [
       [copper-35um prepreg]
       [copper-17_5um core]
-      [copper-17_5um prepreg2 prepreg3] ; => The center of the stack has [copper-17_5um prepreg2 prepreg3 prepreg2 copper-17_5um]
+      [copper-17_5um prepreg2 prepreg3]
     ]
   verify-layers(stack, top-layers) where :
     val top-layers = [
@@ -364,7 +378,7 @@ deftest(layerstack) make-layer-stack-with-two-adjacent-dielectric-layers-in-cent
 
 ; Even number of layers
 ; Example: "JLC06201H-3313A"
-deftest(layerstack) make-layer-stack-with-even-number-of-layers :
+deftest(layerstack) make-6-layer-stack-with-even-number-of-layers :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val core = FR4(1.265, FR4-Material)
@@ -383,27 +397,14 @@ deftest(layerstack) make-layer-stack-with-even-number-of-layers :
         copper-17_5um core
         copper-17_5um prepreg2]
 
-; Three adjacent dielectric layers, right below the outer copper layer
-; Example: "JLC04161H-7628A"
-deftest(layerstack) test-add-symmetric-layers-with-three-adjacent-dielectric-layers-below-outer-copper :
-  val prepreg = FR4(0.1, FR4-Material)
-  val prepreg2 = FR4(0.2, FR4-Material)
-  val prepreg3 = FR4(0.3, FR4-Material)
-  val core = FR4(1.265, FR4-Material)
-  val stack = LayerStack(name = "4-layer symmetric stack with three adjacent dielectric layers")
-  add-symmetric([copper-35um prepreg prepreg2 prepreg3],
-    add-symmetric([copper-17_5um core], stack)
-  )
-  verify-4-layer-stack(stack, add-prepreg-layers = [prepreg2 prepreg3])
-
 deftest(layerstack) test-add-symmetric-layers-with-even-number-of-layers :
   val prepreg = FR4(0.1, FR4-Material)
   val prepreg2 = FR4(0.2, FR4-Material)
   val core = FR4(1.265, FR4-Material)
   val stack = LayerStack(name = "6-layer stack with even number of layers")
-  add-symmetric([copper-35um prepreg],
-    add-symmetric([copper-17_5um core],
-      add-symmetric([copper-17_5um prepreg2], stack, even-layers? = true) ; => The center of the stack has [copper-17_5um prepreg2 prepreg2 copper-17_5um]
+  add-symmetric-layers([copper-35um prepreg],
+    add-symmetric-layers([copper-17_5um core],
+      add-symmetric-layers([copper-17_5um prepreg2], stack, even-layers? = true)
     )
   )
   ;Verify the layer stack with even number of layers
