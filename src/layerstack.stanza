@@ -256,7 +256,7 @@ public defn is-soldermask (m:LayerMaterial) -> True|False :
 ;<A>
 doc: \<DOC>
 Create a Copper layer
-  Usage: Copper(0.3) : specify thickness 
+  Usage: Copper(0.3) : specify thickness
          Copper(0.3, name = "Cu") : specify thickness and name
          Copper(0.3, CustomCuMaterial, name = "PWR") : specify thickness, material and name
 @param thickness thickness of the layer in mm
@@ -266,7 +266,7 @@ Create a Copper layer
 <DOC>
 public defn Copper (thickness:Double, material:ConductorMaterial = CopperMaterial
     -- name:String = ?, description:String = ?) -> LayerSpec :
-  #LayerSpec(name, description, material, thickness) 
+  #LayerSpec(name, description, material, thickness)
 
 doc: \<DOC>
 Create a Generic FR4 layer
@@ -280,7 +280,7 @@ Create a Generic FR4 layer
 <DOC>
 public defn FR4 (thickness:Double, material:DielectricMaterial = FR4-Material
     -- name:String = ?, description:String = ?) -> LayerSpec :
-  #LayerSpec(name, description, material, thickness) 
+  #LayerSpec(name, description, material, thickness)
 
 doc: \<DOC>
 Create a Generic Soldermask layer
@@ -291,7 +291,7 @@ Create a Generic Soldermask layer
 <DOC>
 public defn Soldermask (thickness:Double, material:DielectricMaterial = SoldermaskMaterial
     -- name:String = ?, description:String = ?) -> LayerSpec :
-  #LayerSpec(name, description, material, thickness) 
+  #LayerSpec(name, description, material, thickness)
 
 public defn make-layer-statement (x:LayerSpec) :
   val name? = get-name(x)
@@ -338,15 +338,15 @@ doc:\<DOC>
   Get a layer by index
   Usage: stack[idx]
 <DOC>
-public defn get (stack:LayerStack, idx:Int) -> LayerSpec :
-  layers(stack)[idx]
+public defn get (ls:LayerStack, idx:Int) -> LayerSpec :
+  layers(ls)[idx]
 
 doc:\<DOC>
   Get the idx-th conductor layer
   Usage: conductors(stack)[idx]
 <DOC>
-public defn conductors (stack:LayerStack) -> Tuple<LayerSpec> :
-  to-tuple $ filter({material(_) is ConductorMaterial} layers(stack))
+public defn conductors (ls:LayerStack) -> Tuple<LayerSpec> :
+  to-tuple $ filter({material(_) is ConductorMaterial}, layers(ls))
 
 doc: \<DOC>
 Add one or more layers to the top of the board stackup.
@@ -472,8 +472,8 @@ Get the total number of conductor layers in the layer stack.
 This is the number of signal and plane layers that are available
 in this stackup.
 <DOC>
-public defn get-conductor-count (stack:LayerStack) -> Int :
-  length $ to-tuple $ for l in layers(stack) filter:
+public defn get-conductor-count (ls:LayerStack) -> Int :
+  length $ to-tuple $ for l in layers(ls) filter:
     material(l) is ConductorMaterial
 
 doc: \<DOC>
@@ -487,12 +487,12 @@ layers if any.
 @param index Conductor layer to inspect. This is a zero-based index
 where the top layer is 0, the first inner layer is 1, etc.
 <DOC>
-public defn get-conductor (stack:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
+public defn get-conductor (ls:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
   if index < 0:
     throw $ ValueError("Invalid Copper Layer Index: %_" % [index])
   var cnt = 0
-  val ls = layers(stack)
-  val cu-index? = for l in ls index-when:
+  val l-set = layers(ls)
+  val cu-index? = for l in l-set index-when:
     if material(l) is ConductorMaterial:
       val cu-match = cnt == index
       if not cu-match:
@@ -501,21 +501,21 @@ public defn get-conductor (stack:LayerStack, index:Int) -> [Maybe<LayerSpec>, La
 
   defn get-pre-dielectric (cu-index):
     if cu-index > 0:
-      One(ls[cu-index - 1])
+      One(l-set[cu-index - 1])
     else:
       None()
 
   defn get-post-dielectric (cu-index):
-    val num = length(ls)
+    val num = length(l-set)
     if cu-index < (num - 1):
-      One(ls[cu-index + 1])
+      One(l-set[cu-index + 1])
     else:
       None()
 
   match(cu-index?):
     (_:False): throw $ ValueError("No Copper Layer with Index: %_" % [index])
     (cu-index:Int):
-      [get-pre-dielectric(cu-index), ls[cu-index], get-post-dielectric(cu-index)]
+      [get-pre-dielectric(cu-index), l-set[cu-index], get-post-dielectric(cu-index)]
 
 defn make-name (x:LayerStack) :
   ; I can't use the `name` string in the pcb-stackup definition
@@ -537,19 +537,19 @@ defn make-description (x:LayerStack) :
       (d:One<String>):
         description = value(d)
 
-public defn create-pcb-stackup (stack:LayerStack) :
+public defn create-pcb-stackup (ls:LayerStack) :
 
   pcb-stackup custom-stackup :
-    make-name(stack)
-    make-description(stack)
+    make-name(ls)
+    make-description(ls)
 
-    for l in layers(stack) do:
+    for l in layers(ls) do:
       make-layer-statement(l)
 
   custom-stackup
 
 doc:\<DOC>
-  Construct a LayerStack with a tuple of outer layers. 
+  Construct a LayerStack with a tuple of outer layers.
 
   Example:
   ```
@@ -561,7 +561,7 @@ doc:\<DOC>
       val prepreg-2313 = FR4(0.1, FR4-Material-2313)
       val core-2313 = FR4(1.265, FR4-Material-Core)
       val outer-layers = [
-        [copper-35um prepreg-2313] 
+        [copper-35um prepreg-2313]
         [copper-17_5um core-2313]
       ]
   ```
@@ -582,12 +582,12 @@ doc:\<DOC>
 <DOC>
 public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
       -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
-  val stack = #LayerStack(One(name), description)
+  val ls = #LayerStack(One(name), description)
   ;Access pairs of outer-layers in reverse order
   for outer in in-reverse(outers) do:
     val [metal, insul] = outer
-    add-symmetric(metal, insul, stack)
+    add-symmetric(metal, insul, ls)
   if value?(soldermask) is LayerSpec :
-    add-soldermask(value!(soldermask), stack) 
-  stack
+    add-soldermask(value!(soldermask), ls)
+  ls
 
