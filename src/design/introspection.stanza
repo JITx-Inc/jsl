@@ -25,6 +25,26 @@ public defn get-instantiable (comps:JITXObject|InstantiableType) -> Instantiable
     (hc-inst:Instantiable):
       hc-inst
 
+doc: \<DOC>
+Retrieve a Port by its symbol name
+
+This function retrieves a port on a component but doesn't
+throw an error if that port does not exist.
+
+@param obj Component or Module to interrogate for a port
+@param name Name of port to interrogate. This name can include
+dot-notation style introspection if needed.
+@return `None()` if no port by this name exists.
+`One<JITXObject>` if a port is found by the passed name.
+<DOC>
+public defn get-port-by-name (obj:JITXObject, name:String) -> Maybe<JITXObject> :
+  label<Maybe<JITXObject>> return:
+    val pat = to-string(".%_" % [name])
+    for p in pins(obj) do:
+      val refName = to-string $ ref(p)
+      if suffix?(refName, pat) :
+        return(One(p))
+    return(None())
 
 doc: \<DOC>
 Get the Cathode / Anode Pins of a device if they exist
@@ -34,9 +54,9 @@ may not be a polarized device with cathode (`c`) and anode (`a`) pins.
 One<Tuple> of the pins in the order `[c, a]`. If not a polarized device,
 this function returns `None()`
 <DOC>
-public defn get-cathode-anode (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
-  val mC = get-pin-by-name(obj, "c")
-  val mA = get-pin-by-name(obj, "a")
+public defn cathode-anode? (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
+  val mC = get-port-by-name(obj, "c")
+  val mA = get-port-by-name(obj, "a")
   match(mC, mA) :
     (oC:One<JITXObject>, oA:One<JITXObject>): One([value(oC), value(oA)])
     (x,y): None()
@@ -62,11 +82,9 @@ Depending on whether the passed device is polarized.
 
 <DOC>
 public defn get-pins (obj:JITXObject) -> [JITXObject, JITXObject] :
-  val mCA = get-cathode-anode(obj)
+  val mCA = cathode-anode?(obj)
   match(mCA):
-    (oCA:One<[JITXObject, JITXObject]>):
-      val ret = value(oCA)
-      ret
+    (given:One<[JITXObject, JITXObject]>): value(given)
     (_:None):
       [obj.p[1], obj.p[2]]
 
