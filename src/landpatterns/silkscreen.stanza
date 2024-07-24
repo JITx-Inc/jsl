@@ -5,8 +5,10 @@ defpackage jsl/landpatterns/silkscreen:
   import jitx
   import jitx/commands
 
+  import jsl/design/settings
   import jsl/geometry/box
-  import jsl/landpatterns/helpers
+  import jsl/geometry/LineRectangle
+  import jsl/landpatterns/framework
 
 public defn default-silk-width () -> Double :
   clearance(current-rules(), MinSilkscreenWidth)
@@ -133,3 +135,19 @@ public defn compute-triangle-marker (
   ; Place the marker in the closest corner.
   val marker-pose = loc(closest, rot)
   marker-pose * marker-shape
+
+public defn create-silkscreen-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  ) -> False :
+
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+  val outline-geom = LineRectangle(pkg-outline*, line-width = line-width)
+
+  add-artwork(vp, Silkscreen("outline", Top), outline-geom, class = "outline")
+
+
