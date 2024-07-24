@@ -33,7 +33,7 @@ public defn one-of (pins:JITXObject ...) :
   check-matching-port-types(ports = pins)
 
   pcb-bundle int-pin :
-    pin p
+    port p
   inside pcb-module : ; Works for `component` too
     for p0 in pins do :
       supports int-pin :
@@ -282,7 +282,7 @@ public defn swizzle-bus (bus-bundle:JITXObject -- locked:Tuple<Int>) :
   ;   we can have it be unique on the module.
 
   pcb-bundle lane-bit :
-    pin p
+    port p
 
   pcb-bundle swiz-Bus :
     port D : pin[cnt]

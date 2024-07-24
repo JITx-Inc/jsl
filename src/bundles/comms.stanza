@@ -17,8 +17,8 @@ protocol
 public pcb-bundle i2c:
   name = "I2C"
   description = "Inter-Integrated Circuit (I2C) - Serial Communication Protocol"
-  pin sda
-  pin scl
+  port sda
+  port scl
 
 
 doc: \<DOC>
@@ -33,8 +33,8 @@ public pcb-enum jsl/bundles/comms/SMBUSPins :
 pcb-bundle smbus-b (pins:Collection<SMBUSPins>):
   name = "SMBus"
   description = "System Management Bus (SMBus) - Serial Communication Protocol"
-  pin smbclk
-  pin smbdat
+  port smbclk
+  port smbdat
   for p in pins do :
     switch(p) :
       SMBALERT#  : make-pin(`smbalert#)
@@ -89,8 +89,8 @@ which consists of a differential pair `H` / `L`
 <DOC>
 public pcb-bundle can-phy :
   name = "CAN Physical Interface"
-  pin H
-  pin L
+  port H
+  port L
 
 doc: \<DOC>
 CAN Logical Interface Bundle
@@ -104,8 +104,8 @@ TODO - Add optional error line ?
 @member tx Transmit line
 <DOC>
 public pcb-bundle can-logical :
-  pin rx
-  pin tx
+  port rx
+  port tx
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; SPI - Serial Peripheral Interface
@@ -125,7 +125,7 @@ public pcb-enum jsl/bundles/comms/SPIPins :
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
   name = "SPI"
-  pin sck
+  port sck
   for p in pins do :
     switch(p) :
       SPI-CS  : make-pin(`cs)
@@ -200,7 +200,7 @@ or on flash chips.
 <DOC>
 public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
   name = to-wide-name(width)
-  pin sck
+  port sck
   port data : pin[width]
   for p in pins do :
     switch(p):
@@ -312,6 +312,6 @@ specification is present in NXP's references
 @member sd Data Signal
 <DOC>
 public pcb-bundle i2s :
-  pin sck
-  pin ws
-  pin sd
+  port sck
+  port ws
+  port sd

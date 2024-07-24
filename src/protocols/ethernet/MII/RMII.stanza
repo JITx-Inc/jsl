@@ -11,13 +11,13 @@ pcb-bundle rmii-b (add-rx-error:True|False):
   port txd : pin[RMII_BUS_WIDTH]
   port rxd : pin[RMII_BUS_WIDTH]
 
-  pin ref-clk
+  port ref-clk
 
-  pin tx-en
-  pin crs-dv
+  port tx-en
+  port crs-dv
 
   if add-rx-error:
-    pin rx-er
+    port rx-er
 
 doc: \<DOC>
 Reduced Medium Independent Interface (RMII) Bundle Generator

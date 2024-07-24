@@ -119,8 +119,8 @@ public pcb-component component :
 
 
 public pcb-module module (-- source:True|False = true) :
-  port VDD : pin
-  port GND : pin
+  port VDD
+  port GND
 
   public inst sw : component
 

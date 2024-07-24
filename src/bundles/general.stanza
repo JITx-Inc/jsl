@@ -24,8 +24,8 @@ ports/bundles.
 <DOC>
 public pcb-bundle diff-pair :
   name = "Differential Signal Pair"
-  pin N
-  pin P
+  port N
+  port P
 
 doc: \<DOC>
 Two Differential Pairs - a Dual Pair
@@ -76,8 +76,8 @@ minimal affect on the impedance of the trace.
 @member B SinglePin Port
 <DOC>
 public pcb-bundle pass-through :
-  pin A
-  pin B
+  port A
+  port B
 
 doc: \<DOC>
 Power Bundle define a DC power source
@@ -90,8 +90,8 @@ of a DC power source.
 <DOC>
 public pcb-bundle power :
   name = "DC Power"
-  pin V+
-  pin V-
+  port V+
+  port V-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; General IO Classes
@@ -103,7 +103,7 @@ GPIO Interface Bundle
 @member gpio GPIO Pin
 <DOC>
 public pcb-bundle gpio :
-  pin gpio
+  port gpio
 
 doc: \<DOC>
 Timer Interface Bundle
@@ -111,7 +111,7 @@ Timer Interface Bundle
 @member timer Timer Pin
 <DOC>
 public pcb-bundle timer :
-  pin timer
+  port timer
 
 doc: \<DOC>
 Single-Ended ADC Interface Bundle
@@ -119,7 +119,7 @@ Single-Ended ADC Interface Bundle
 @member adc ADC Pin
 <DOC>
 public pcb-bundle adc :
-  pin adc
+  port adc
 
 doc: \<DOC>
 Differential Pair ADC Interface Bundle
@@ -135,7 +135,7 @@ Single-Ended DAC Interface Bundle
 @member dac DAC Pin
 <DOC>
 public pcb-bundle dac :
-  pin dac
+  port dac
 
 doc: \<DOC>
 Differential Pair DAC Interface Bundle
@@ -151,4 +151,4 @@ Reset Interface Bundle
 @member reset Reset Pin
 <DOC>
 public pcb-bundle reset :
-  pin reset
+  port reset

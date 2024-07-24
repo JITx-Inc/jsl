@@ -22,8 +22,8 @@ RGMII Lane Bundle
 <DOC>
 public pcb-bundle rgmii-lane :
   port data : pin[RGMII_BUS_WIDTH]
-  port clk : pin
-  port ctl : pin
+  port clk
+  port ctl
 
 doc: \<DOC>
 Reduced Gigabit Media Independent Interface (RGMII)

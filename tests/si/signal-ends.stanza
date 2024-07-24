@@ -39,8 +39,8 @@ deftest(signal-ends) test-basic-signal-ends:
 
   pcb-module inner-mod:
 
-    port sig : pin
-    port gnd : pin
+    port sig
+    port gnd
 
     inst src : test-R
     net (src.p[2], gnd)
@@ -53,8 +53,8 @@ deftest(signal-ends) test-basic-signal-ends:
     set-signal-end(sig, src.p[1])
 
   pcb-module middle-mod:
-    port sig : pin
-    port gnd : pin
+    port sig
+    port gnd
 
     inst inner : inner-mod
 

@@ -19,5 +19,5 @@ or the Serial Management Inteface (SMI).
 @member mdio Bidirectional Data Line for the Serial Interface
 <DOC>
 public pcb-bundle miim :
-  port mdc : pin
-  port mdio : pin
+  port mdc
+  port mdio
