@@ -1,0 +1,148 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/thermal-vias:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/design/introspection
+  import jsl/landpatterns/grid-planner
+
+doc: \<DOC>
+Thermal Via Interface
+
+This interface outlines the functions needed to create a thermal via
+grid. The idea is that the `make-thermal-vias` function gets called
+as a generator inside a `pcb-module` definition and targets one of
+the pads of a component instantiated in that module.
+
+<DOC>
+public deftype ThermalVias
+
+doc: \<DOC>
+Check if this via grid location is active.
+
+In this context, `active` means that there should be a via
+at this location. `inactive` means that no via should be
+placed at this location.
+
+@param x ThermaVias (self)
+@param row Zero-based Index into the grid of a via positions.
+@param column Zero-based Index into the grid of a via positions.
+@return Thermal Via location is Active.
+<DOC>
+public defmulti active? (x:ThermalVias, row:Int, column:Int) -> True|False
+
+doc: \<DOC>
+Via Definition for Populating the Thermal Via Grid.
+<DOC>
+public defmulti via-def (tv:ThermalVias) -> Via
+
+doc: \<DOC>
+Generator for creating the thermal vias
+
+This function is intended to be called from a `pcb-module` context.
+
+@param tv The Thermal Via type
+@param pt Port for a `pcb-component` which we will inspect for net and pad features. This
+cannot be a `pcb-module` port.
+@param offset Optional offset of the via grid in the `pcb-module` frame of reference.
+<DOC>
+public defmulti make-thermal-vias (tv:ThermalVias, pt:JITXObject, offset:Pose = ?) -> False
+
+
+doc: \<DOC>
+Helper for checking `Via` defstruct definitions
+@param field Name of the field
+@param obj Via definition as argument for the struct construction.
+@throws ValueError if the passed `obj` via is not capable of `via-in-pad`
+<DOC>
+public defn ensure-via-in-pad (field:String, obj:Via):
+  val is-valid = via-in-pad(obj)
+  if not is-valid:
+    throw $ ValueError("Via Does Not Support Via-In-Pad")
+
+doc: \<DOC>
+Manual Grid of Thermal Vias
+
+This type is used to manually construct a grid of vias for a
+component. It does not leverage the pad shape for optimization.
+
+@snippet Example Grid
+
+```stanza
+pcb-module circuit:
+  ...
+  val tv-g = GridThermalVias(
+    via-def = therm-via,
+    grid-def = GridPlanner(
+      pitch = 1.2,
+      columns = 6,
+      rows = 6
+    )
+  )
+
+  make-thermal-vias(tv-g, netsw.C.PAD)
+```
+
+@snip-note 1 Note that these functions must be called within a pcb-module
+@snip-note 12 This generates a `geom` statement with child `via` statements
+for the grid.
+
+<DOC>
+public defstruct GridThermalVias <: ThermalVias:
+  doc: \<DOC>
+  Via definition used to construct the via grid.
+  This definition must have `via-in-pad` definition set true.
+  This via's layer span must include either the top or bottom layer
+  depending on what side the `thermal-lead` pad is located on.
+  <DOC>
+  via-def:Via with:
+    as-method => true
+    ensure => ensure-via-in-pad
+
+  doc: \<DOC>
+  Grid Generator
+
+  This type defines the shape and construction of the grid and
+  provides the pose locations for each via.
+  <DOC>
+  grid-def:GridPlanner
+
+with:
+  printer => true
+  keyword-constructor => true
+
+public defmethod active? (tv:GridThermalVias, row:Int, column:Int) -> True|False :
+  true
+
+defn is-valid-via-for-pad (v:Via, thermal-lead:LandPatternPad) -> True|False :
+  val pd = pad(thermal-lead)
+  val pd-side = side(thermal-lead)
+
+  val start = via-start(v)
+  val end = via-stop(v)
+  if index(start) == 0 and side(start) == pd-side:   ; Top Match
+    true
+  else if index(end) == 0 and side(end) == pd-side:  ; Bottom Match
+    true
+  else:
+    false
+
+public defmethod make-thermal-vias (tv:GridThermalVias, pt:JITXObject, offset:Pose = loc(0.0, 0.0)) -> False:
+  inside pcb-module:
+    val v-def = via-def(tv)
+    val n = get-connected-net!(pt)
+
+    ; I don't have the land pattern pad yet.
+    ; if not is-valid-via-for-pad(v-def, thermal-lead):
+    ;   throw $ ValueError("Invalid Via Definition For Thermal Lead")
+
+    geom(n):
+      for pos in grid(grid-def(tv)) do:
+        val [r, c] = [row(pos), column(pos)]
+        if active?(tv, r, c):
+          via(v-def) at center(offset * pose(pos))
+
+  false
