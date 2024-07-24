@@ -41,7 +41,6 @@ pcb-component two-pin-polar :
   val symb = create-symbol(symb-gen)
 
   symbol = symb(a => symb.p[1], c => symb.p[2])
-  ; assign-symbol(create-symbol(symb))
 
   val pkg = get-chip-pkg("1206")
   val lp = create-landpattern(pkg)
@@ -53,12 +52,12 @@ deftest(design_introspection) test-port-introspection :
     inst B : two-pin-non-polar
     inst D : two-pin-polar
 
-    val obs = get-pins(B)
+    val obs = get-element-ports(B)
     #EXPECT(length(obs) == 2)
     #EXPECT(to-string(ref(obs[0])) == "B.p[1]")
     #EXPECT(to-string(ref(obs[1])) == "B.p[2]")
 
-    val obs2 = get-pins(D)
+    val obs2 = get-element-ports(D)
     #EXPECT(length(obs2) == 2)
     #EXPECT(to-string(ref(obs2[0])) == "D.c")
     #EXPECT(to-string(ref(obs2[1])) == "D.a")

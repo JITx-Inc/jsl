@@ -47,11 +47,11 @@ public defn get-port-by-name (obj:JITXObject, name:String) -> Maybe<JITXObject> 
     return(None())
 
 doc: \<DOC>
-Get the Cathode / Anode Pins of a device if they exist
+Get the Cathode / Anode Ports of a device if they exist
 @param obj Two-pin component or module instance that may or
-may not be a polarized device with cathode (`c`) and anode (`a`) pins.
+may not be a polarized device with cathode (`c`) and anode (`a`) ports.
 @return If the passed object is a polarized device, then this returns
-One<Tuple> of the pins in the order `[c, a]`. If not a polarized device,
+One<Tuple> of the ports in the order `[c, a]`. If not a polarized device,
 this function returns `None()`
 <DOC>
 public defn cathode-anode? (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
@@ -62,26 +62,27 @@ public defn cathode-anode? (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
     (x,y): None()
 
 doc: \<DOC>
-Retrieve the two pins of a 2-pin device.
+Retrieve the two ports of a 2-pin element device.
 
-Two-pin devices come typically in one of two forms:
+Two-pin lumped circuit element devices (like resistors, capacitors, etc)
+come typically in one of two forms:
 
 1.  The `p[1]` and `p[2]` form for non-polatized devices.
 2.  The `c` and `a` form for the cathode / anode of polarized
 devices.
 
-This function interrogates an object and retrievs the pins
+This function interrogates an object and retrieves the ports
 in a known order for use in circuits.
 
 @param obj Two-Pin component or module instance
-@return Tuple of two pins of the component - They are returned either as:
+@return Tuple of two ports of the component - They are returned either as:
 1.  `[p[1], p[2]]`
 2.  `[c, a]`
 
 Depending on whether the passed device is polarized.
 
 <DOC>
-public defn get-pins (obj:JITXObject) -> [JITXObject, JITXObject] :
+public defn get-element-ports (obj:JITXObject) -> [JITXObject, JITXObject] :
   val mCA = cathode-anode?(obj)
   match(mCA):
     (given:One<[JITXObject, JITXObject]>): value(given)
