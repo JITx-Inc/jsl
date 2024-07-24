@@ -470,6 +470,17 @@ public defmulti build-all (
   virt:VirtualLP
   ) -> False
 
+public defn package-build-all-seq (
+  pkg:Package,
+  virt:VirtualLP
+  ) -> False:
+  build-pads(pkg, virt)
+  build-courtyard(pkg, virt)
+  build-silkscreen(pkg, virt)
+  build-keep-out(pkg, virt)
+  build-cut-out(pkg, virt)
+  build-conformal-mask(pkg, virt)
+
 doc: \<DOC>
 Default `build-all` implementation
 
@@ -487,13 +498,7 @@ public defmethod build-all (
   pkg:Package,
   virt:VirtualLP
   ) -> False :
-  build-pads(pkg, virt)
-  build-courtyard(pkg, virt)
-  build-silkscreen(pkg, virt)
-  build-keep-out(pkg, virt)
-  build-cut-out(pkg, virt)
-  build-conformal-mask(pkg, virt)
-
+  package-build-all-seq(pkg, virt)
 
 doc: \<DOC>
 Generator for applying all `Package` generators
