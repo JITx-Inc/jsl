@@ -555,6 +555,32 @@ public defn create-child (
   ret
 
 doc: \<DOC>
+Retrieve a child node by name from the parent virtual land pattern
+
+This function is recursive. It will attempt to match to a child
+node in the `vp` scene graph by name.
+
+@param vp The parent scope to search
+@param name Child name that we will match on. Unnamed children will
+be ignored.
+@return One<VirtualLP> if we find a child with `name? = name` else `None()`
+<DOC>
+public defn get-child (vp:VirtualLP, name:String) -> Maybe<VirtualLP> :
+  val elems = to-tuple $ for elem in find-by-name(vp, name) filter:
+    elem is VirtualLP
+  if length(elems) > 1:
+    println("Found Multiple Nodes with name='%_'")
+
+  if length(elems) > 0:
+    One(elems[0] as VirtualLP)
+  else:
+    None()
+
+public defn get-child! (vp:VirtualLP, name:String) -> VirtualLP :
+  val child? = get-child(vp, name)
+  value!(child?)
+
+doc: \<DOC>
 Local Elements for this Virtual Landpattern
 
 This does not search recursively into the children, it just
