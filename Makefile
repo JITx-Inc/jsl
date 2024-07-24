@@ -1,5 +1,6 @@
 
-STANZA=jstanza
+SLM_STANZA ?= jstanza
+STANZA=$(SLM_STANZA)
 CWD=$(shell pwd)
 
 TEST_DIR=$(CWD)/tests
