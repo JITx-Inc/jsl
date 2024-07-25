@@ -470,7 +470,13 @@ public defmulti build-all (
   virt:VirtualLP
   ) -> False
 
-public defn package-build-all-seq (
+doc: \<DOC>
+Externally Defined Build All Order
+
+This function can be used when you want to override the
+default behavior of default `build-all` defmethod.
+<DOC>
+public defn package-build-all-order (
   pkg:Package,
   virt:VirtualLP
   ) -> False:
@@ -498,7 +504,7 @@ public defmethod build-all (
   pkg:Package,
   virt:VirtualLP
   ) -> False :
-  package-build-all-seq(pkg, virt)
+  package-build-all-order(pkg, virt)
 
 doc: \<DOC>
 Generator for applying all `Package` generators
