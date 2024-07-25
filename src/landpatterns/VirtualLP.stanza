@@ -362,13 +362,22 @@ public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
 public defn get-coppers (vp:VirtualLP) -> Tuple<VirtualCopper> :
   to-tuple $ metal(vp)
 
-public defn get-silkscreen-outline! (vp:VirtualLP) -> Shape :
+doc: \<DOC>
+Retrieve the silkscreen outline shape as a `VirtualArtwork` object.
+
+This function looks for a `VirtualArtwork` object with class `outline`.
+If it finds a single object meeting this description - it will be
+returned. Otherwise it throws a `ValueError`
+
+This function will search recursively through the passed `vp` node
+and all child nodes for the `outline` artwork.
+<DOC>
+public defn get-silkscreen-outline! (vp:VirtualLP) -> VirtualArtwork :
   val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
   if length(outlines) != 1:
     throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
 
-  val outline = outlines[0]
-  shape(outline)
+  outlines[0]
 
 public defn add-artwork (
   vp:VirtualLP,

@@ -290,38 +290,4 @@ public defn build-smd-pin-1 (
 
   add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
 
-public defn build-outline-pin-1 (
-  pkg:Dual-Package,
-  vp:VirtualLP
-  --
-  pin-1-id:Int|Ref = 1,
-  side:Side = Top
-  ):
-
-  val outline = get-silkscreen-outline!(vp)
-
-  ; Find the corner of the outline nearest to pad 1
-  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
-
-  ; The Outline is typically a line rectangle which creates a
-  ;  single line. We use this to determine the line width
-  ;  so that we can place the marker in the mid-line
-  val line-width = match(outline):
-    (x:Line): width(x)
-    ; TODO - this probably should be a setting
-    (_): 0.1
-
-  val o-box = bounds(outline)
-
-  val pin-1-pos = center $ pose(pin-1-pad)
-
-  val marker = compute-triangle-marker(pin-1-pos, o-box, line-width)
-
-  add-artwork(
-    vp, Silkscreen("pin-1-marker", side),
-    marker,
-    name = "pin-1-triangle",
-    class = "pin-1-marker"
-    )
-
 
