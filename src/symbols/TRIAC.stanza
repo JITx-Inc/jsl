@@ -6,9 +6,7 @@ defpackage jsl/symbols/TRIAC:
 
   import jsl/ensure
   import jsl/geometry/box
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/ThreePinSymbol
-  import jsl/symbols/SymbolNode
+  import jsl/symbols/framework
   import jsl/symbols/DIAC
 
 val DEF_PORCH_WIDTH = 1.0

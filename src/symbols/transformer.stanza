@@ -11,8 +11,7 @@ defpackage jsl/symbols/transformer:
   import jsl/utils
   import jsl/geometry/basics
   import jsl/geometry/box
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
+  import jsl/symbols/framework
   import jsl/symbols/inductors
 
 public defn ensure-left-right! (

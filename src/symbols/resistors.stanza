@@ -9,10 +9,7 @@ defpackage jsl/symbols/resistors:
   import jsl/ensure
   import jsl/geometry/LineRectangle
   import jsl/design/Classable
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/TwoPinSymbol
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/arrows
+  import jsl/symbols/framework
 
 public defenum ResistorStyle:
   TriangleWaveStyle

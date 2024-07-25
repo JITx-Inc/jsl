@@ -12,10 +12,8 @@ defpackage jsl/symbols/box-symbol:
 
   import jsl/ensure
   import jsl/design/Classable
-  import jsl/symbols/decorators
+  import jsl/symbols/framework
   import jsl/symbols/utils
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
   import jsl/symbols/box-symbol/utils
   import jsl/symbols/box-symbol/errors
   import jsl/geometry/box

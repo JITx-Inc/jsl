@@ -5,11 +5,8 @@ defpackage jsl/symbols/potentiometer:
   import jitx
 
   import jsl/design/Classable
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/TwoPinSymbol
+  import jsl/symbols/framework
   import jsl/symbols/resistors
-  import jsl/symbols/arrows
 
 public defn build-potentiometer-glyphs (
   node:SymbolNode,
