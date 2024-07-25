@@ -1,0 +1,118 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/grid-planner:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+
+public defstruct GridPosition :
+  row:Int with:
+    ensure => ensure-non-negative!
+  column:Int with:
+    ensure => ensure-non-negative!
+  pose:Pose
+with:
+  printer => true
+
+doc: \<DOC>
+Pad Grid Pose Planner
+
+This type defines the interface for the grid creation of a land pattern.
+The most obvious package with a grid is a Ball Grid Array (BGA) which is
+typically 2D orthonormal. But there is a wide diversity of different land
+pattern grids even within BGAs.
+
+In JSL, the land pattern framework assumes that all land patterns have a
+grid. Some of those grids may be quite trivial - ie a single row or column
+with N pins. Others can be quite complex with Uneven sides, unpopulated grid
+locations, among other idiosyncracies.
+
+The Grid Planner type allows us to define typical grid patterns in a common
+reusable way so that we don't have to copy and paste the same implementations
+over and over.
+
+<DOC>
+public deftype GridPlanner
+
+doc: \<DOC>
+Compute the Pitch (inter-pad distance) for the grid.
+
+The interpretation of the `pitch` is up to the `GridPlanner` implementation.
+For example a `Equilateral Triangle` grid generator may interpret the
+pitch as being non-orthonormal and instead be the equidistant distance between
+pads.
+
+@return The value return can be either:
+1.  A `Double` where the X and Y pitches are the same creating a regular grid
+2.  A `Dims` where the X and Y pitches are different creating an irregular grid.
+
+The values of this grid are expected to be positive values only.
+<DOC>
+public defmulti pitch (g:GridPlanner) -> Double|Dims
+
+
+doc: \<DOC>
+Number of Columns in the Grid
+
+This value is expected to be a positive integer
+The rows traverse the X dimension.
+<DOC>
+public defmulti columns (g:GridPlanner) -> Int
+
+public defmulti rows (g:GridPlanner) -> Int
+
+doc: \<DOC>
+Number of Rows in the Grid
+
+This value is expected to be a positive integer
+The rows traverse the Y dimension.
+@param c In some grids, the number of rows is variable. This
+means that from column to column the row count might change.
+The optional `c` argument identifies the column which may or
+may not be used.
+<DOC>
+public defmulti rows (g:GridPlanner, c:Int) -> Int
+
+public defmethod rows (g:GridPlanner, c:Int) -> Int :
+  rows(g)
+
+doc: \<DOC>
+Grid Generator
+
+This method constructs a sequence of `Pose` locations for the desired grid.
+
+This method must be implemented by the derived grid type to generate
+this sequence.
+
+@param g This Grid Planner
+@param rows Number of rows for the grid (Y)
+@param columns Number of columns for the grid (X)
+@return The generated grid consists of `GridPosition` objects which provide
+the row index, column index, and a `Pose` object for identifying the location
+of that grid position.
+
+<DOC>
+public defmulti grid (g:GridPlanner) -> Seq<GridPosition>
+
+doc: \<DOC>
+Default Grid Generator
+
+This default implementation creates either a regular or irregular grid
+leveraging the `grid-locs` function.
+<DOC>
+public defmethod grid (g:GridPlanner) -> Seq<GridPosition> :
+  val rs:Int = rows(g)
+  val cs:Int = columns(g)
+  val raw-grid = to-seq $ match(pitch(g)):
+    (p:Double):
+      grid-locs(rs, cs, p, p)
+    (pa:Dims):
+      grid-locs(rs, cs, y(pa), x(pa))
+
+  for r in 0 to rs seq-cat:
+    for c in 0 to cs seq:
+      val raw-pos = next(raw-grid)
+      GridPosition(r, c, raw-pos)
+

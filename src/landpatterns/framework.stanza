@@ -13,6 +13,7 @@ defpackage jsl/landpatterns/framework:
   forward jsl/landpatterns/numbering
   forward jsl/landpatterns/VirtualLP
   forward jsl/landpatterns/pad-planner
+  forward jsl/landpatterns/grid-planner
   forward jsl/landpatterns/pad-island
   forward jsl/landpatterns/leads
   forward jsl/landpatterns/pads
