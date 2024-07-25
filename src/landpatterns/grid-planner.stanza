@@ -116,3 +116,32 @@ public defmethod grid (g:GridPlanner) -> Seq<GridPosition> :
       val raw-pos = next(raw-grid)
       GridPosition(r, c, raw-pos)
 
+doc: \<DOC>
+Stagger Phase Definition
+
+This type is used to construct Staggered Grid implementations.
+The phase indicates whether the first row pad 0 is empty or populated.
+
+In the following examples, the `X` indicates a location where the
+pad is not populated. An `O` indicates a location where the pad
+is populated.
+
+## Pattern #1 - `Odd-Phase` :
+
+  ```
+    X | O | X  ...
+    O | X | O  ...
+    ...
+  ```
+
+## Pattern #2 - `Even-Phase` :
+
+  ```
+    O | X | O  ...
+    X | O | X  ...
+    ...
+  ```
+<DOC>
+public defenum StaggerPhase :
+  Even-Phase
+  Odd-Phase
