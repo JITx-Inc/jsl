@@ -9,13 +9,7 @@ defpackage jsl/landpatterns/QFN:
   import jsl/ensure
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/quad
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/framework
 
 doc: \<DOC>
 QFN Lead Type

@@ -12,13 +12,9 @@ defpackage jsl/landpatterns/BGA/package:
   import jsl/errors
   import jsl/ensure
 
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/framework
+  import jsl/landpatterns/BGA/pads
   import jsl/landpatterns/BGA/planner
-  import jsl/landpatterns/silkscreen
 
 doc: \<DOC>
 Ball Grid Array Package

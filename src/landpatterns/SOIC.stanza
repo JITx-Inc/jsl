@@ -33,14 +33,7 @@ defpackage jsl/landpatterns/SOIC:
 
   import jsl/ensure
   import jsl/design/settings
-  import jsl/landpatterns/pads
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/dual-row
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/framework
 
 val SOIC-DEF-PITCH = 1.27
 
