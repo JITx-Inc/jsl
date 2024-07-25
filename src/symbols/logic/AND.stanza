@@ -6,9 +6,7 @@ defpackage jsl/symbols/logic/AND:
 
   import jsl/ensure
   import jsl/errors
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/decorators
+  import jsl/symbols/framework
 
 ; IEEE sets the AND gate symbol w/h ratio
 ;  to 32.0 / 26.0 = 1.231

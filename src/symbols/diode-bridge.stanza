@@ -7,8 +7,7 @@ defpackage jsl/symbols/diode-bridge:
   import jsl/ensure
   import jsl/errors
   import jsl/geometry/box
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
+  import jsl/symbols/framework
   import jsl/symbols/diodes
 
 doc: \<DOC>
