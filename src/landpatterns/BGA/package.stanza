@@ -198,7 +198,7 @@ public defmethod build-pads (
   ) -> False :
   build-vpads(pkg, vp)
 
-public defn compute-outline (
+public defn compute-overall-outline (
   vp:VirtualLP,
   body:PackageBody,
   density-level:DensityLevel
@@ -218,7 +218,7 @@ public defn build-outline (
   body:PackageBody,
   density-level:DensityLevel
   ) -> False:
-  val outline = compute-outline(vp, body, density-level)
+  val outline = compute-overall-outline(vp, body, density-level)
   add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
 
 public defn build-pin-1-marker (
