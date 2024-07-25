@@ -6,6 +6,7 @@ defpackage jsl/landpatterns/silkscreen:
   import jitx/commands
 
   import jsl/design/settings
+  import jsl/errors
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
   import jsl/landpatterns/framework
@@ -136,6 +137,69 @@ public defn compute-triangle-marker (
   val marker-pose = loc(closest, rot)
   marker-pose * marker-shape
 
+doc: \<DOC>
+Create a triangle shaped marker in the outline on the silkscreen
+
+This function looks for the outline shape in the virtual artwork
+of this VirtualLP node and then attempts to find the corner
+of that outline closest to the `pin-1-id` pad of the land pattern.
+
+It then construct a triangle shaped marker and places it in that
+corner for a heavy indication of the pin 1 location. This corner
+marker will be placed in the silkscreen layer on the same side
+of the board as the outline is found.
+
+@param vp Land Pattern scene graph node we will search for the outline
+@param pin-1-id This argument accepts either an `Int` or a `Ref` for
+identifying the "Pin 1" of the component. If this is an `Int` it will
+map to the conventional `p[N]` ref syntax used for land patterns. The
+default value is `1`.
+@throws ValueError If we find more than one `outline` in the silkscreen,
+or if we fail to find the `pin-1-id` pad.
+
+<DOC>
+public defn build-outline-pin-1-triangle (
+  vp:VirtualLP
+  --
+  pin-1-id:Int|Ref = 1
+  ):
+
+  val outline = get-silkscreen-outline!(vp)
+  val o-side = side $ (layer-spec(outline) as Silkscreen)
+  val o-sh = shape(outline)
+
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
+  ; Find the corner of the outline nearest to pad 1
+
+  ; The Outline is typically a line rectangle which creates a
+  ;  single line. We use this to determine the line width
+  ;  so that we can place the marker in the mid-line
+  val line-width = match(o-sh):
+    (x:Line): width(x)
+    (_): default-silk-width()
+
+  val o-box = bounds $ o-sh
+
+  val pin-1-pos = center $ pose(pin-1-pad)
+
+  val marker = compute-triangle-marker(pin-1-pos, o-box, line-width)
+
+  add-artwork(
+    vp, Silkscreen("pin-1-marker", o-side),
+    marker,
+    name = "pin-1-triangle",
+    class = "pin-1-marker"
+    )
+
+doc: \<DOC>
+Construct a silkscreen outline of a component based on the Package Body
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+<DOC>
 public defn create-silkscreen-outline (
   vp:VirtualLP, pkg-body:PackageBody
   --
@@ -147,6 +211,9 @@ public defn create-silkscreen-outline (
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
   val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
   val outline-geom = LineRectangle(pkg-outline*, line-width = line-width)
+
+  ; TODO - I want to use `Difference` here will all of the soldermask openings
+  ;  defined by the pads.
 
   add-artwork(vp, Silkscreen("outline", Top), outline-geom, class = "outline")
 
