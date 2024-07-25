@@ -12,13 +12,9 @@ defpackage jsl/landpatterns/BGA/package:
   import jsl/errors
   import jsl/ensure
 
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/framework
+  import jsl/landpatterns/BGA/pads
   import jsl/landpatterns/BGA/planner
-  import jsl/landpatterns/silkscreen
 
 doc: \<DOC>
 Ball Grid Array Package
@@ -198,7 +194,7 @@ public defmethod build-pads (
   ) -> False :
   build-vpads(pkg, vp)
 
-public defn compute-outline (
+public defn compute-overall-outline (
   vp:VirtualLP,
   body:PackageBody,
   density-level:DensityLevel
@@ -218,39 +214,8 @@ public defn build-outline (
   body:PackageBody,
   density-level:DensityLevel
   ) -> False:
-  val outline = compute-outline(vp, body, density-level)
+  val outline = compute-overall-outline(vp, body, density-level)
   add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
-
-public defn build-triangle-marker (
-  vp:VirtualLP
-  --
-  pin-1-id:Int|Ref = 1,
-  side:Side = Top
-  ):
-  val o-sh = get-silkscreen-outline!(vp)
-
-  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
-
-  ; The Outline is typically a line rectangle which creates a
-  ;  single line. We use this to determine the line width
-  ;  so that we can place the marker in the mid-line
-  val line-width = match(o-sh):
-    (x:Line): width(x)
-    ; TODO - this probably should be a setting
-    (_): 0.1
-
-  val o-box = bounds $ o-sh
-
-  val pin-1-pos = center $ pose(pin-1-pad)
-
-  val marker = compute-triangle-marker(pin-1-pos, o-box, line-width)
-
-  add-artwork(
-    vp, Silkscreen("pin-1-marker", side),
-    marker,
-    name = "pin-1-triangle",
-    class = "pin-1-marker"
-    )
 
 public defn build-pin-1-marker (
   vp:VirtualLP
@@ -260,7 +225,9 @@ public defn build-pin-1-marker (
   line-width:Double = default-silk-width(),
   mask-clearance:Double = default-mask-clearance(),
   ):
-  val o-sh = get-silkscreen-outline!(vp)
+  val outline = get-silkscreen-outline!(vp)
+  val o-sh = shape(outline)
+
   val pin-1-pos = center $ pose $ get-pad-by-ref!(vp, pin-1-id)
 
   val o-box = bounds $ o-sh
@@ -291,5 +258,5 @@ public defmethod build-silkscreen (
     (_) : pad-id(get-first-pad(vp))
   build-outline(vp, package-body(pkg), density-level(pkg))
   build-pin-1-marker(vp, pin-1-id = pin-1-id)
-  build-triangle-marker(vp, pin-1-id = pin-1-id)
+  build-outline-pin-1-triangle(vp, pin-1-id = pin-1-id)
   add-reference-designator(vp)

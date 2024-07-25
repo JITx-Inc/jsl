@@ -5,9 +5,8 @@ defpackage jsl/symbols/instrumentation-amp:
 
   import jsl/ensure
   import jsl/errors
+  import jsl/symbols/framework
   import jsl/symbols/op-amps
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
 
 
 ; Increased pitch so that we can insert

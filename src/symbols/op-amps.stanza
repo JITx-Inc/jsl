@@ -5,9 +5,7 @@ defpackage jsl/symbols/op-amps:
 
   import jsl/ensure
   import jsl/design/Classable
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/pin-refs
+  import jsl/symbols/framework
 
 doc: \<DOC>
 Op-Amp Triangle Symbol Parameterization
