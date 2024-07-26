@@ -183,6 +183,16 @@ numbering scheme. For example - a `col-offset = 1` would construct:
     8   12
   ```
 
+@param col-skip Value to divide the raw column value by. This parameter
+is useful when working with staggered grids where a pad is active every
+other column. When this value is greater than 1 - then the numbering scheme
+will accept twice as many columns as normal.
+
+@param row-skip Value to divide the raw row value by. This parameter
+is useful when working with a staggered grid where a pad is active every
+other row. When this value is greater than 1 - then the numbering scheme
+will accept twice as many rows as normal.
+
 @throws ValueError If num-pads is not divisible by num-columns.
 <DOC>
 public defstruct Column-Major-Numbering <: Numbering :
@@ -196,6 +206,12 @@ public defstruct Column-Major-Numbering <: Numbering :
   col-offset:Int with:
     ensure => ensure-non-negative!
     default => 0
+  col-skip:Int with:
+    ensure => ensure-positive!
+    default => 1
+  row-skip:Int with:
+    ensure => ensure-positive!
+    default => 1
 with:
   constructor => #Column-Major-Numbering
 
@@ -204,9 +220,11 @@ public defn Column-Major-Numbering (
   --
   row-offset:Int = 0
   col-offset:Int = 0
+  col-skip:Int = 1
+  row-skip:Int = 1
   ) -> Column-Major-Numbering :
   ensure-divisible!(num-pads, num-columns, "Column-Major-Numbering")
-  #Column-Major-Numbering(num-pads, num-columns, row-offset, col-offset)
+  #Column-Major-Numbering(num-pads, num-columns, row-offset, col-offset, col-skip, row-skip)
 
 public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> Int|Ref :
   val cols = num-columns(x)
@@ -215,13 +233,13 @@ public defmethod to-pad-id (x:Column-Major-Numbering, row:Int, column:Int) -> In
   if (row < 0 or column < 0):
     throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
 
-  if not (row < rows):
+  if not (row < (rows * row-skip(x))):
     throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, rows])
 
-  if not (column < cols):
+  if not (column < (cols * col-skip(x))):
     throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, cols])
 
-  ((column + col-offset(x)) * rows) + (row + 1 + row-offset(x))
+  (((column / col-skip(x)) + col-offset(x)) * rows) + ((row / row-skip(x)) + 1 + row-offset(x))
 
 doc: \<DOC>
 Uneven (Asymmetric) Column Major Numbering
