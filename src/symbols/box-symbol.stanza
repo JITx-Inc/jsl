@@ -342,26 +342,21 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
   val decorators = HashTable<Ref,DecoratorInfo>()
 
   val sorted-pins = sort-by-row-index(pins(obj(x)))
-  val banked-pins = Vector<JITXObject>()
-  val unbanked-pins = Vector<JITXObject>()
 
-  for p in sorted-pins do :
-    match(get-property?(p, BANK_PROP)) :
-      (o:One):
-        add(banked-pins, p)
-      (n:None):
-        add(unbanked-pins, p)
+  val [banked, unbanked] = for p in sorted-pins split :
+    get-property?(p, BANK_PROP) is One
 
-  if length(banked-pins) > 0 and length(unbanked-pins) > 0 :
+  if not empty?(banked) and not empty?(unbanked) :
+    val unbanked-refs = to-tuple $ seq(ref, unbanked)
     throw $ Exception("Cannot mix pins with and without 'bank' property.\
-      Unbanked pins: %_" % [unbanked-pins])
+      Unbanked pins: %_" % [unbanked-refs])
 
   val matched-pins = to-tuple $
     match(bank):
       (b:Int|Ref) :
-        filter({get-property(_, BANK_PROP) == b}, banked-pins)
+        filter({get-property(_, BANK_PROP) == b}, banked)
       (f) :
-        unbanked-pins
+        unbanked
 
   if length(matched-pins) == 0 :
     throw $ Exception("No pins found for bank %_, box-symbol %_" % [bank, name(x)])

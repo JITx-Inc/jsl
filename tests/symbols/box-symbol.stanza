@@ -32,28 +32,33 @@ deftest(box-symbol) test-props-filter:
     )
   evaluate(basic-bank)
 
-deftest(box-symbol) test-mixed-bank-unbank:
+deftest(box-symbol) test-mixed-bank-unbank-msg:
   pcb-component basic-bank:
     pin-properties:
       [pin:Ref | pads:Ref ... | side:Dir]
         [ VDD1 | p[1] | Right]
-        [ OUT  | p[3] | Right]
+        [ OUT1  | p[2] | Right]
+        [ OUT2  | p[3] | Right]
 
     val box = BoxSymbol(self)
     ; first set all banks to some default bank
     set-bank(0, self.VDD1)
 
     val assign-f = {
-      assign-symbols(
-        [
-          0 => box
-        ]
-      )}
-    expect-throw(assign-f)
+      assign-symbols([0 => box])
+    }
+
+    val unbanked-pins = map({to-string(ref(_))}, [self.OUT1, self.OUT2])
+    match(expect-throw(assign-f)) :
+      (o:One) :
+        #EXPECT(all?({substring?(value(o), _)}, unbanked-pins))
+      ; Fail if this doesn't return a message we can check
     expect-throw(
       {assign-symbol $ create-symbol(box, false)}
     )
-    set-bank(0, self.OUT)
+
+    set-bank(0, self.OUT1)
+    set-bank(0, self.OUT2)
     assign-f()
 
   evaluate(basic-bank)
