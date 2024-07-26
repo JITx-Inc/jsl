@@ -12,18 +12,18 @@ defpackage jsl/landpatterns/courtyard:
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/packages with:
     only => (PackageBody, envelope)
-  import jsl/geometry/LineRectangle
 
-public val DEF_COURTYARD_WIDTH = 0.1
+public val DEF_COURTYARD_LINE_WIDTH = 0.1
 
 public defn build-courtyard-origin (
   vp:VirtualLP,
   --
+  line-width:Double = DEF_COURTYARD_LINE_WIDTH
   pose:Pose = loc(0.0, 0.0)
   side:Side = Top
   ) -> False:
 
-  val shape = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
+  val shape = PlusSymbol(line-width = line-width, pose = pose)
   add-artwork(vp, Courtyard(side), shape, class = "courtyard")
 
 doc: \<DOC>
@@ -39,11 +39,12 @@ per convention is the top.
 <DOC>
 public defn make-courtyard-origin (
   --
+  line-width:Double = DEF_COURTYARD_LINE_WIDTH
   pose:Pose = loc(0.0, 0.0)
   side:Side = Top
   ):
   inside pcb-landpattern:
-    layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
+    layer(Courtyard(side)) = PlusSymbol(line-width = line-width, pose = pose)
 
 
 public defn compute-courtyard-boundary (
