@@ -85,6 +85,40 @@ with:
   printer => true
 
 doc: \<DOC>
+Construct GridPlanner with Anchor
+<DOC>
+public defn GridPlanner (
+  --
+  pitch:Double|Dims
+  columns:Int
+  rows:Int
+  anchor:Anchor
+  ) -> GridPlanner:
+
+  val r = to-double(rows - 1)
+  val c = to-double(columns - 1)
+  val [w, h] = match(pitch):
+    (sp:Double): [c * sp, r * sp]
+    (dp:Dims): [c * x(dp), r * y(dp)]
+
+  val [vt, hr] = components(anchor)
+  val dx = match(hr) :
+    (hr:W) : w / 2.0
+    (hr:C) : 0.0
+    (hr:E) : w / -2.0
+  val dy = match(vt) :
+    (vt:S) : h / 2.0
+    (vt:C) : 0.0
+    (vt:N) : h / -2.0
+
+  GridPlanner(
+    pitch = pitch,
+    columns = columns,
+    rows = rows,
+    pose = loc(dx, dy)
+    )
+
+doc: \<DOC>
 Number of Rows in the Grid
 
 This value is expected to be a positive integer
