@@ -10,12 +10,7 @@ defpackage jsl/landpatterns/headers:
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
 
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/framework
 
 doc: \<DOC>
 Landpattern Generator for Headers
@@ -29,10 +24,10 @@ planner and numbering objects would likely fill the gap.
 <DOC>
 public defstruct Header <: Package :
 
-  num-leads:Int with: (
+  num-leads:Int with:
     ensure => ensure-positive!,
     as-method => true
-  )
+
   doc: \<DOC>
   Lead Type indicates TH vs SMT leads and their parameters.
   <DOC>
@@ -40,41 +35,45 @@ public defstruct Header <: Package :
   doc: \<DOC>
   Set the size of the pad diameter for through-hole and width for SMT.
   <DOC>
-  pad-diam:Double with: (
+  pad-diam:Double with:
     ensure => ensure-positive!
-  )
+
   doc: \<DOC>
   Number of Rows of leads on this package
   <DOC>
-  rows:Int with: (
+  rows:Int with:
     ensure => ensure-positive!
-  )
 
-  pitch:Double|Dims with: (
+  pitch:Double|Dims with:
     ensure => ensure-positive!
-  )
 
   doc: \<DOC>
   Package Body for the Header.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Header
   The planner determines which pads will be created in the
   grid. See {@link PadPlanner} for more info.
+  This planner will also determine whether through-hole or
+  surface-mount pads are created for this land pattern.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Header
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   hashable => true
@@ -85,7 +84,10 @@ defn default-pad-planner (lead-type:Lead) -> PadPlanner :
   PthPadPlanner(capsule-shaper)
 
 defn default-numbering (num-leads:Int, rows:Int) -> Numbering:
-  Row-Major-Numbering(num-leads, num-leads / rows)
+  ; This is a bit strange - but the typical numbering
+  ;  for a dual-row header is usually column wise
+  ;  not row wise.
+  Column-Major-Numbering(num-leads, num-leads / rows)
 
 public defn Header (
   --
@@ -99,13 +101,45 @@ public defn Header (
   lead-numbering:Numbering = default-numbering(num-leads, rows),
   density-level:DensityLevel = DENSITY-LEVEL
   ) -> Header :
+  if (num-leads % rows) != 0 :
+    throw $ ValueError("Number of Leads is not easily divisible by 'rows': num-leads=%_ rows=%_"  % [num-leads, rows])
   #Header(num-leads, lead-type, pad-diam, rows, pitch, package-body, pad-planner, lead-numbering, density-level)
 
-public defmethod name (bga:Header) -> String:
+public defmethod name (pkg:Header) -> String:
   "Header"
 
 public defmethod courtyard-excess (pkg:Header) -> Double :
-  0.0
+  0.2
+
+defn build-smt-pads (
+  pkg:Header,
+  lt:SMT-Lead,
+  pgrid:GridPlanner,
+  ) -> Seq<VirtualPad> :
+
+  ; FIX ME - we should pull from the lead data.
+  val pad-size = Dims(pad-diam(pkg), pad-diam(pkg))
+  pad-grid-smt(
+    pad-size = pad-size
+    planner = pad-planner(pkg)
+    lead-grid = pgrid
+    num-scheme = lead-numbering(pkg),
+  )
+
+defn build-th-pads (
+  pkg:Header,
+  lt:TH-Lead,
+  pgrid:GridPlanner,
+  ) -> Seq<VirtualPad> :
+
+  pad-grid-th(
+    lead-type = lt
+    planner = pad-planner(pkg),
+    lead-grid = pgrid
+    num-scheme = lead-numbering(pkg),
+    density-level = density-level(pkg),
+  )
+
 
 public defn build-vpads (
   pkg:Header,
@@ -113,46 +147,26 @@ public defn build-vpads (
   ):
   val lt = lead-type(pkg)
 
-  ; We call them rows for convenience in the definition
-  ;  but for our grid construction - the rows are actually columns
+  val rows = rows(pkg)
+  val cols = num-leads(pkg) / rows
+  val pgrid = GridPlanner(
+    pitch = pitch(pkg),
+    rows = rows,
+    columns = cols,
+    ; The grid gets constructed horizontally because of the "row"
+    ;  nomenclature but we want the resultant header to be shown vertically.
+    ;  The FlipY puts the pad ordering in the right direction.
+    pose = loc(0.0, 0.0, -90.0, FlipY)
+    )
 
-  val cols = rows(pkg)
-  val rows = num-leads(pkg) / cols
-  val pad-size = Dims(pad-diam(pkg), pad-diam(pkg))
-  val hole-size = Dims(typ $ width(lt), typ $ width(lt))
-  ; Generate the grid
-  val planner = pad-planner(pkg)
-  defn gen-pad-info () -> Seq<VirtualPad> :
-    val [xp, yp] = match(pitch(pkg)):
-      (p1:Double):
-        [p1, p1]
-      (p2:Dims):
-        [x(p2), y(p2)]
+  val pad-set = match(lt):
+    (smt:SMT-Lead):
+      build-smt-pads(pkg, smt, pgrid)
+    (th:TH-Lead):
+      build-th-pads(pkg, th, pgrid)
 
-    val grid = to-seq $ grid-locs(rows, cols, xp, yp)
-    for (c in 0 to cols) seq-cat :
-      for (r in 0 to rows) seq?:
-        val pos = next(grid)
-        val pad-id = to-pad-id(lead-numbering(pkg), r, c)
-        val pad-gen? = match(lt):
-          (smt:SMT-Lead):
-            pad-generator(planner, r, c)
-          (th:TH-Lead):
-            val g = th-pad-generator(planner, r, c)
-            match(g):
-              (_:False): false
-              (func): {func(hole-size, _0)}
-        match(pad-gen?):
-          (_:False): None()
-          (pad-gen):
-            val cls = [
-              "pad",
-              to-string("col-%_" % [c]),
-              to-string("row-%_" % [r])
-            ]
-            One $ VirtualPad(pad-id, pad-gen(pad-size), pos, class = cls)
+  append-all(vp, pad-set)
 
-  append-all(vp, gen-pad-info())
 
 public defmethod build-pads (
   pkg:Header,

@@ -173,22 +173,32 @@ public defn build-vpads (
   val pad-size = Dims(lead-diam(pkg), lead-diam(pkg))
   ; Generate the grid
   val planner = get-bga-planner(pkg)
-  defn gen-pad-info () -> Seq<VirtualPad> :
-    for pos in grid(planner) seq?:
-      val [r, c] = [row(pos), column(pos)]
-      val pad-id = to-pad-id(lead-numbering(pkg), r, c)
-      val pad-gen? = pad-generator(planner, r, c)
-      match(pad-gen?):
-        (_:False): None()
-        (pad-gen):
-          val cls = [
-            "pad",
-            to-string("col-%_" % [c]),
-            to-string("row-%_" % [r])
-          ]
-          One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
+  ; defn gen-pad-info () -> Seq<VirtualPad> :
+  ;   for pos in grid(planner) seq?:
+  ;     val [r, c] = [row(pos), column(pos)]
+  ;     val pad-id = to-pad-id(lead-numbering(pkg), r, c)
+  ;     val pad-gen? = pad-generator(planner, r, c)
+  ;     match(pad-gen?):
+  ;       (_:False): None()
+  ;       (pad-gen):
+  ;         val cls = [
+  ;           "pad",
+  ;           to-string("col-%_" % [c]),
+  ;           to-string("row-%_" % [r])
+  ;         ]
+  ;         One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
 
-  append-all(vp, gen-pad-info())
+  ; append-all(vp, gen-pad-info())
+
+  val pad-seq = pad-grid-smt(
+    pad-size = pad-size,
+    planner = planner,
+    lead-grid = planner,
+    num-scheme = lead-numbering(pkg)
+  )
+
+  append-all(vp, pad-seq)
+
 
 public defmethod build-pads (
   pkg:BGA,

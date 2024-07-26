@@ -22,6 +22,7 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/IPC
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/pad-grid
 
 public val DUAL-ROW-COLS = 2
 
@@ -87,35 +88,20 @@ public defmethod build-pads (
   ) -> False :
 
   val profile = lead-profile(pkg)
-  val num-scheme = lead-numbering(pkg)
-  val pad-planner = pad-planner(pkg)
-
   val rows = num-leads(pkg) / DUAL-ROW-COLS
   val params = compute-params(profile)
 
-  defn gen-pad-info () -> Seq<VirtualPad> :
-
-    val grid-gen = DualGridPlanner(
+  val pad-seq = pad-grid-smt(
+    pad-size = pad-size(params),
+    planner = pad-planner(pkg),
+    lead-grid = DualGridPlanner(
       lead-params = params
       rows = rows,
-      )
-    val pad-size = pad-size(params)
+    ),
+    num-scheme = lead-numbering(pkg) ;  num-scheme,
+  )
 
-    for pos in grid(grid-gen) seq? :
-      val [r, c] = [row(pos), column(pos)]
-      val pad-id = to-pad-id(num-scheme, r, c)
-      val pad-gen? = pad-generator(pad-planner, r, c)
-      match(pad-gen?):
-        (_:False): None()
-        (pad-gen):
-          val cls = [
-            "pad",
-            to-string("col-%_" % [c]),
-            to-string("row-%_" % [r])
-          ]
-          One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
-
-  append-all(vp, gen-pad-info())
+  append-all(vp, pad-seq)
 
   match(thermal-lead?(pkg)):
     (lead-shape:Shape):

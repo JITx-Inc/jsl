@@ -23,3 +23,4 @@ defpackage jsl/landpatterns/framework:
   forward jsl/landpatterns/silkscreen
   forward jsl/landpatterns/courtyard
   forward jsl/landpatterns/introspection
+  forward jsl/landpatterns/pad-grid
