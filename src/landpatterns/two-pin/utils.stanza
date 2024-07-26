@@ -45,7 +45,7 @@ public defn compute-hole-diam (
 
   hole-diameter
 
-; Helper function to compute the pad and hole size of through hoel components
+; Helper function to compute the pad and hole size of through hole components
 public defn compute-pad-diam (hole-diam:Double, density-level:DensityLevel) -> Double :
   val min-outer-layer-pad-size = MIN-OUTER-LAYER-PAD-SIZE
   val max-hole-size-tolerance  = MAX-HOLE-SIZE-TOLERANCE
