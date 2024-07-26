@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/grid-planner:
   import core
+  import math
   import jitx
   import jitx/commands
 
@@ -145,3 +146,38 @@ is populated.
 public defenum StaggerPhase :
   Even-Phase
   Odd-Phase
+
+doc: \<DOC>
+Stagger Pattern for Marking Active Pads
+
+This function is a re-usable pattern generator for the
+staggered phase grid approach.
+
+@param phase This indicates the ordering of when a location is populated or not.
+@param row Row index (zero-based)
+@param column Column index (zero-based)
+<DOC>
+public defn stagger-pattern (phase:StaggerPhase, row:Int, column:Int) -> True|False :
+  val row-offset = 1 when phase == Even-Phase else 0
+  ((row + row-offset) % 2) == (column % 2)
+
+
+doc: \<DOC>
+Construct the asymmetric pitch for an equilateral triangle grid.
+
+This function assumes that you will use the {@link stagger-pattern} for
+constructing the active pads.
+
+This constructs a pad pattern in the form of a grid where every 3 pads
+creates a equilateral triangle.
+
+@param p Side length of the equilateral triangle.
+@return A two dimensional pitch where the row pitch is the height
+of an equilateral triangle and the col span is `p / 2.0`. Every
+skipped pad in a `stagger-pattern` creates a full length side of
+the equilateral triangle.
+<DOC>
+public defn equilateral-triangle-pitch (p:Double) -> Dims :
+  val row-span = sqrt(3.0) * 0.5 * p
+  val col-span = 0.5 * p
+  Dims(row-span, col-span)

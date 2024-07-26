@@ -1,7 +1,6 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/BGA/planner:
   import core
-  import math
   import jitx
   import jitx/commands
 
@@ -10,7 +9,6 @@ defpackage jsl/landpatterns/BGA/planner:
   import jsl/landpatterns/pad-island
   import jsl/landpatterns/grid-planner
   import jsl/geometry/basics
-  import jsl/errors
   import jsl/ensure
 
 val DEF-PAD-CONFIG = PadConfig-R()
@@ -129,8 +127,7 @@ with:
 
 
 public defmethod active? (x:Staggered-Matrix-Planner, row:Int, column:Int) -> True|False:
-  val row-offset = 1 when phase(x) == Even-Phase else 0
-  ((row + row-offset) % 2) == (column % 2)
+  stagger-pattern(phase(x), row, column)
 
 doc: \<DOC>
 Equilateral Triangle Matrix - Similar to Staggered but all pads are equidistant.
@@ -175,9 +172,7 @@ with:
 
 defmethod pitch (g:EquilateralTriangle-Matrix-Planner) -> Double|Dims :
   val p = tri-pitch(g)
-  val row-span = sqrt(3.0) * 0.5 * p
-  val col-span = 0.5 * p
-  Dims(row-span, col-span)
+  equilateral-triangle-pitch(p)
 
 doc: \<DOC>
 Perimeter Matrix - Full matrix with an island of pads in-active.
