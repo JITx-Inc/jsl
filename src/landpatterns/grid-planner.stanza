@@ -35,34 +35,54 @@ reusable way so that we don't have to copy and paste the same implementations
 over and over.
 
 <DOC>
-public deftype GridPlanner
+public defstruct GridPlanner:
+  doc: \<DOC>
+  Compute the Pitch (inter-pad distance) for the grid.
 
-doc: \<DOC>
-Compute the Pitch (inter-pad distance) for the grid.
+  The interpretation of the `pitch` is up to the `GridPlanner` implementation.
+  For example a `Equilateral Triangle` grid generator may interpret the
+  pitch as being non-orthonormal and instead be the equidistant distance between
+  pads.
 
-The interpretation of the `pitch` is up to the `GridPlanner` implementation.
-For example a `Equilateral Triangle` grid generator may interpret the
-pitch as being non-orthonormal and instead be the equidistant distance between
-pads.
+  By default this is a field but could be implemented as a defmethod
+  if needed.
 
-@return The value return can be either:
-1.  A `Double` where the X and Y pitches are the same creating a regular grid
-2.  A `Dims` where the X and Y pitches are different creating an irregular grid.
+  @return The value return can be either:
+  1.  A `Double` where the X and Y pitches are the same creating a regular grid
+  2.  A `Dims` where the X and Y pitches are different creating an irregular grid.
 
-The values of this grid are expected to be positive values only.
-<DOC>
-public defmulti pitch (g:GridPlanner) -> Double|Dims
+  The values of this grid are expected to be positive values only.
+  <DOC>
+  pitch:Double|Dims
+  doc: \<DOC>
+  Number of Columns in the Grid
 
+  This value is expected to be a positive integer
+  The columns traverse the X dimension.
+  <DOC>
+  columns:Int
+  doc: \<DOC>
+  Number of Rows in the Grid
 
-doc: \<DOC>
-Number of Columns in the Grid
+  This value is expected to be a positive integer
+  The rows traverse the Y dimension.
 
-This value is expected to be a positive integer
-The rows traverse the X dimension.
-<DOC>
-public defmulti columns (g:GridPlanner) -> Int
+  This value should be used when there is no uneven-ness
+  in the grid.
+  <DOC>
+  rows:Int
 
-public defmulti rows (g:GridPlanner) -> Int
+  doc: \<DOC>
+  Optional Pose Rotation for the Grid
+
+  This can be useful when we want to orientate the
+  grid differently from how we construct it.
+  <DOC>
+  pose:Pose with:
+    default => loc(0.0, 0.0)
+with:
+  keyword-constructor => true
+  printer => true
 
 doc: \<DOC>
 Number of Rows in the Grid
@@ -115,7 +135,7 @@ public defmethod grid (g:GridPlanner) -> Seq<GridPosition> :
   for r in 0 to rs seq-cat:
     for c in 0 to cs seq:
       val raw-pos = next(raw-grid)
-      GridPosition(r, c, raw-pos)
+      GridPosition(r, c, pose(g) * raw-pos)
 
 doc: \<DOC>
 Stagger Phase Definition

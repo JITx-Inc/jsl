@@ -35,6 +35,11 @@ public defstruct BGA-PadPlanner <: PadPlanner & GridPlanner:
   pad-config:PadConfig with:
     default => DEF-PAD-CONFIG
 
+  ; GridPlanner Base
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
 doc: \<DOC>
 Default Pad Shaper for BGA packages.
 This accepts a `Dims` object and will convert
@@ -76,6 +81,9 @@ public defstruct Full-Matrix-Planner <: BGA-PadPlanner :
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
@@ -119,10 +127,13 @@ public defstruct Staggered-Matrix-Planner <: BGA-PadPlanner :
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
-
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
 with:
   keyword-constructor => true
   printer => true
@@ -160,7 +171,9 @@ public defstruct EquilateralTriangle-Matrix-Planner <: Staggered-Matrix-Planner 
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
-
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
   doc: \<DOC>
   Equilateral Distance between triangle points
   All pads in this planner are equidistant apart and
@@ -210,6 +223,9 @@ public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
 
 with:
   keyword-constructor => true
@@ -273,6 +289,9 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
 
 with:
   keyword-constructor => true
@@ -330,6 +349,9 @@ public defstruct Corner-Cut-Matrix-Planner <: BGA-PadPlanner :
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
 
 with:
   keyword-constructor => true
