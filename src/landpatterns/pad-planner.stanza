@@ -56,6 +56,8 @@ defpackage jsl/landpatterns/pad-planner:
   import jsl/geometry/basics
   import jsl/errors
 
+  import jsl/landpatterns/grid-planner
+
 doc: \<DOC>
 Pad Planner Base Type
 
@@ -354,7 +356,9 @@ public defstruct PthPadPlanner <: ShapePadPlanner:
   Both top and bottom copper for the PTH will
   have the same shape.
   <DOC>
-  shaper:(Dims -> Shape) with: (as-method => true)
+  shaper:(Dims -> Shape) with:
+    as-method => true
+    default => to-CircleOrCapsule
 
 doc: \<DOC>
 Shape generator for Circle/Capsule
@@ -374,8 +378,30 @@ public defn to-CircleOrCapsule (d:Dims) -> Shape :
 public defmethod hole-generator (x:PthPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
   to-CircleOrCapsule
 
-public defn PthPadPlanner () -> PthPadPlanner :
-  PthPadPlanner(to-CircleOrCapsule)
+
+public defstruct StaggerPthPlanner <: PthPadPlanner :
+  doc: \<DOC>
+  Copper pad shape
+  Both top and bottom copper for the PTH will
+  have the same shape.
+  <DOC>
+  shaper:(Dims -> Shape) with:
+    as-method => true
+    default => to-CircleOrCapsule
+
+  doc: \<DOC>
+  Set the stagger phase for the planner
+  <DOC>
+  phase:StaggerPhase with:
+    default => Even-Phase
+with:
+  keyword-constructor => true
+  printer => true
+
+public defmethod active? (x:StaggerPthPlanner, row:Int, column:Int) -> True|False:
+  stagger-pattern(phase(x), row, column)
+
+
 
 doc: \<DOC>
 Error for MisMatched Active & Generators
