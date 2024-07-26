@@ -44,14 +44,16 @@ public defn BGA-Pad-Shaper (s:Dims) -> Shape :
   Circle(to-radius $ x(s))
 
 public defmethod shape-generator (bga:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False :
-  if not active?(bga, row, column): false
-  else: BGA-Pad-Shaper
+  BGA-Pad-Shaper
 
 public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Pad)|False :
   val func? = shape-generator(x, row, column)
-  match(func?):
-    (x:False): false
-    (f): build-bga-pad{f(_0), pad-config(x)}
+  match(active?(x, row, column), func?):
+    (active:False, x): false
+    (active:True, f:(Dims -> Shape)):
+      build-bga-pad{f(_0), pad-config(x)}
+    (active:True, f:False):
+      throw $ NoGeneratorForActivePadError(row, column, "shape-generator")
 
 
 doc: \<DOC>

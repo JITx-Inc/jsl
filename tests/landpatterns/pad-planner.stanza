@@ -187,9 +187,6 @@ deftest(pad-planner) test-funky-planner :
   val f10 = shape-generator(o, 1, 0)
   check-non-rect(f10)
 
-  val f11 = shape-generator(o, 1, 1)
-  #EXPECT(f11 is False)
-
 deftest(pad-planner) test-pth-planner :
 
   val o = PthPadPlanner()

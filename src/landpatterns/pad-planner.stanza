@@ -101,6 +101,10 @@ public defmethod is-through-hole? (x:PadPlanner) -> True|False :
 doc: \<DOC>
 Retrieve the Shape Generator for this grid position
 
+In general, this function should not query `active?` unless
+it needs to. The `active?` flag will be queried in the `pad-generator`
+functions when selecting whether to generate pad shapes.
+
 @param x Pad Planner (self)
 @param row Zero-based Index into the grid of a package's pad positions.
 @param column Zero-based Index into the grid of a package's pad positions.
@@ -139,11 +143,13 @@ for creating the pad definition. The default soldermask and
 pastemask settings will be used.
 <DOC>
 public defmethod pad-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> Pad)|False:
-  val func = shape-generator(x, row, column)
-  match(func):
-    (x:False): false
-    (f): smd-pad{f(_0)}
-
+  val func? = shape-generator(x, row, column)
+  match(active?(x, row, column), func?):
+    (active:False, x): false
+    (active:True, f:(Dims -> Shape)):
+      smd-pad{f(_0)}
+    (active:True, x:False):
+      throw $ NoGeneratorForActivePadError(row, column, "shape-generator")
 
 doc: \<DOC>
 Through-hole Pad Generator
@@ -172,13 +178,16 @@ depending on whether the `shape-generator` returns true or false.
 For non-plated holes - the `copper:Dims` argument will be ignored.
 
 If the user tries to use `th-pad-generator` when `hole-generator`
-returns false - then no pad is created.
+returns false - then this function will raise an error.
+
+@throws NoGeneratorForActivePadError When an improper configuration
+of hole and shape generator functions are provided to an active grid location.
 <DOC>
 public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims, Dims) -> Pad )|False :
-  val shape-gen = shape-generator(x, row, column)
-  val hole-gen = hole-generator(x, row, column)
+  val shape-gen? = shape-generator(x, row, column)
+  val hole-gen? = hole-generator(x, row, column)
 
-  match(active?(x, row, column), shape-gen, hole-gen):
+  match(active?(x, row, column), shape-gen?, hole-gen?):
     (a:False, f, h): false
     (a:True, f:(Dims -> Shape), h:(Dims -> Shape)):
       pth-pad{h(_0), f(_1)}
@@ -187,12 +196,16 @@ public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims
         npth-pad(h(hole))
       npth-gen
     (a:True, f, h):
-      throw $ ValueError("Grid Location [row=%_, col=%_] Marked Active - But no shaper functions provided" % [row, column])
+      throw $ NoGeneratorForActivePadError(row, column, "shape- or hole-")
 
 doc: \<DOC>
 Hole Shape for Pad
 This function provides the user with the ability to create a
 plated through-hole pad instead of an SMT pad.
+
+In general, this function should not query `active?` unless
+it needs to. The `active?` flag will be queried in the `pad-generator`
+functions when selecting whether to generate pad shapes.
 
 The typical use case is to only return `False` if the land pattern
 contains zero through-hole pads. If you need to create a land pattern
@@ -206,10 +219,18 @@ version of {@link is-through-hole?} in your derived implementation.
 @param row Zero-based Index into the grid of a package's pad positions.
 @param column Zero-based Index into the grid of a package's pad positions.
 
-@return If this function returns `false` then no hole is created.
-Otherwise, if a the function returns a shape, then holes of that
-shape will be created. Note - that you can pass any shape here but
-your fabricator may have limitations on what shapes it can create.
+@return This function should return a function that will convert
+a `Dims` object into a `Shape`. That function will need to have the
+following signature:
+
+```stanza
+Dims -> Shape
+```
+
+This function can return `false` for location in the grid where no
+hole should be created. If this function returns `false` at an
+`active? = true` grid location - then the related pad generation
+functions will raise an exception.
 
 <DOC>
 
@@ -245,8 +266,7 @@ public defmethod active? (x:ShapePadPlanner, row:Int, column:Int) -> True|False 
   true
 
 public defmethod shape-generator (x:ShapePadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
-  if active?(x, row, column): shaper(x)
-  else: false
+  shaper(x)
 
 public val rect-shaper:(Dims -> Shape) = Rectangle ;  {Rectangle(_0)}
 public val RectanglePadPlanner = ShapePadPlanner(rect-shaper)
@@ -274,10 +294,8 @@ public defmethod active? (x:Pin1-PadPlanner, row:Int, column:Int) -> True|False 
   true
 
 public defmethod shape-generator (x:Pin1-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
-  if active?(x, row, column):
-    if column == 0 and row == 0: pin1-shaper(x)
-    else: shaper(x)
-  else: false
+  if column == 0 and row == 0: pin1-shaper(x)
+  else: shaper(x)
 
 doc: \<DOC>
 Chamfered Corner Shaper
@@ -312,20 +330,17 @@ public defmethod active? (x:Corner-PadPlanner, row:Int, column:Int) -> True|Fals
     (_): true
 
 public defmethod shape-generator (x:Corner-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
-  if active?(x, row, column):
+  val rows = match(rows(x)):
+    (r-set:Tuple<Int>): r-set[column]
+    (row-max:Int): row-max
 
-    val rows = match(rows(x)):
-      (r-set:Tuple<Int>): r-set[column]
-      (row-max:Int): row-max
-
-    if row == 0:
-      corner-shaper(x)
-    else if row == (rows - 1):
-      val flip-Y = loc(Point(0.0, 0.0), FlipY)
-      {flip-Y * corner-shaper(x)(_0)}
-    else:
-      shaper(x)
-  else: false
+  if row == 0:
+    corner-shaper(x)
+  else if row == (rows - 1):
+    val flip-Y = loc(Point(0.0, 0.0), FlipY)
+    {flip-Y * corner-shaper(x)(_0)}
+  else:
+    shaper(x)
 
 doc: \<DOC>
 Plated Through-Hole Pad Planner
@@ -361,3 +376,17 @@ public defmethod hole-generator (x:PthPadPlanner, row:Int, column:Int) -> (Dims 
 
 public defn PthPadPlanner () -> PthPadPlanner :
   PthPadPlanner(to-CircleOrCapsule)
+
+doc: \<DOC>
+Error for MisMatched Active & Generators
+
+If the generator functions return `False` for an active
+pad grid location - then this exception will be thrown.
+<DOC>
+public defstruct NoGeneratorForActivePadError <: Exception:
+  row:Int
+  column:Int
+  gen-func:String
+
+defmethod print (o:OutputStream, e:NoGeneratorForActivePadError):
+  print(o, "No '%_' generator for Active Pad [r=%_, c=%_]" % [gen-func(e), row(e), column(e)])
