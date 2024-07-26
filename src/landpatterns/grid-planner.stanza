@@ -164,7 +164,7 @@ public defmethod grid (g:GridPlanner) -> Seq<GridPosition> :
     (p:Double):
       grid-locs(rs, cs, p, p)
     (pa:Dims):
-      grid-locs(rs, cs, y(pa), x(pa))
+      grid-locs(rs, cs, x(pa), y(pa))
 
   for r in 0 to rs seq-cat:
     for c in 0 to cs seq:
@@ -234,4 +234,4 @@ the equilateral triangle.
 public defn equilateral-triangle-pitch (p:Double) -> Dims :
   val row-span = sqrt(3.0) * 0.5 * p
   val col-span = 0.5 * p
-  Dims(row-span, col-span)
+  Dims(col-span, row-span)
