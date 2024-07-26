@@ -62,8 +62,7 @@ public defn compute-courtyard-boundary (
   val pkg-outline = bounds(envelope(pkg-body, density-level = density-level))
   val outline = union(pad-outline, pkg-outline)
   val outline* = fatten(excess, outline)
-  pos * LineRectangle(outline*, line-width = DEF_COURTYARD_WIDTH)
-
+  pos * to-Rectangle(outline*)
 
 doc: \<DOC>
 Generator for Courtyard Boundary
