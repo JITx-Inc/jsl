@@ -31,13 +31,13 @@ public defn pad-grid-smt (
 
   for pos in grid(lead-grid) seq?:
     val [r, c] = [row(pos), column(pos)]
-      val pad-id = to-pad-id(num-scheme, r, c)
-      val pad-gen? = pad-generator(planner, r, c)
-      match(pad-gen?):
-        (_:False): None()
-        (pad-gen):
-          val cls = build-vpad-classes(r, c)
-          One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
+    val pad-id = to-pad-id(num-scheme, r, c)
+    val pad-gen? = pad-generator(planner, r, c)
+    match(pad-gen?):
+      (_:False): None()
+      (pad-gen):
+        val cls = build-vpad-classes(r, c)
+        One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
 
 doc: \<DOC>
 Construct a Through-Hole Pad Grid using a `GridPlanner`
@@ -73,7 +73,6 @@ public defn pad-grid-th (
   for pos in grid(lead-grid) seq?:
     val [r, c] = [row(pos), column(pos)]
     val pad-id = to-pad-id(num-scheme, r, c)
-
     val pad-gen? = th-pad-generator(planner, r, c)
     match(pad-gen?):
       (_:False): None()
