@@ -54,6 +54,7 @@ defpackage jsl/landpatterns/pad-planner:
     prefix(Rectangle) => jitx-
   import jsl/landpatterns/pads
   import jsl/geometry/basics
+  import jsl/errors
 
 doc: \<DOC>
 Pad Planner Base Type
@@ -77,6 +78,25 @@ placed at this location.
 @return Pad Grid location is Active.
 <DOC>
 public defmulti active? (x:PadPlanner, row:Int, column:Int) -> True|False
+
+doc: \<DOC>
+Is this PadPlanner configured to generate through-hole pads ?
+
+This is a flag that indicates whether this planner is intended
+for through-hole or surface mount pad generation. This is a
+helper function to make it easier to determine whether the
+`pad-generator` or `th-pad-generator` functions should be
+called in a particular application
+<DOC>
+public defmulti is-through-hole? (x:PadPlanner) -> True|False
+
+doc: \<DOC>
+Default Implementation
+
+This just checks if `hole-generator` returns False or not.
+<DOC>
+public defmethod is-through-hole? (x:PadPlanner) -> True|False :
+  hole-generator(x, 0, 0) is-not False
 
 doc: \<DOC>
 Retrieve the Shape Generator for this grid position
@@ -158,7 +178,6 @@ public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims
   val shape-gen = shape-generator(x, row, column)
   val hole-gen = hole-generator(x, row, column)
 
-
   match(active?(x, row, column), shape-gen, hole-gen):
     (a:False, f, h): false
     (a:True, f:(Dims -> Shape), h:(Dims -> Shape)):
@@ -168,14 +187,20 @@ public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims
         npth-pad(h(hole))
       npth-gen
     (a:True, f, h):
-      ; TODO - Log Warning Here ?
-      ; this is a exceptional case but I'm not sure it is an error
-      false
+      throw $ ValueError("Grid Location [row=%_, col=%_] Marked Active - But no shaper functions provided" % [row, column])
 
 doc: \<DOC>
 Hole Shape for Pad
 This function provides the user with the ability to create a
 plated through-hole pad instead of an SMT pad.
+
+The typical use case is to only return `False` if the land pattern
+contains zero through-hole pads. If you need to create a land pattern
+with a mix of through-hole and surface mount pads - it is better to construct
+this land pattern through composition.
+
+If you intend to violate this convention - you must provide a reformed
+version of {@link is-through-hole?} in your derived implementation.
 
 @param x Pad Planner (self)
 @param row Zero-based Index into the grid of a package's pad positions.
@@ -186,12 +211,14 @@ Otherwise, if a the function returns a shape, then holes of that
 shape will be created. Note - that you can pass any shape here but
 your fabricator may have limitations on what shapes it can create.
 
-TODO - Should we make this return `Circle|Capsule` instead of `Shape` ?
-  Holes in the board generally speaking are very expensive to make in
-  other shapes but I don't necessarily want to limit things here.
-  Perhaps with make non-Circle/Capsule shaped holes a check that is
-  disable-able so that the user can override.
 <DOC>
+
+; TODO - Should we make this return `Circle|Capsule` instead of `Shape` ?
+;   Holes in the board generally speaking are very expensive to make in
+;   other shapes but I don't necessarily want to limit things here.
+;   Perhaps with make non-Circle/Capsule shaped holes a check that is
+;   disable-able so that the user can override.
+
 public defmulti hole-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False
 
 doc: \<DOC>
