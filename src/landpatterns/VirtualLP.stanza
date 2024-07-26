@@ -60,6 +60,23 @@ public defn VirtualPad (
 
   #VirtualPad(pad-id, pad-def, loc, side, name, to-class-vector(class))
 
+doc: \<DOC>
+Construct a set of `class` strings for VirtualPad creation.
+
+This will construct the following class strings:
+
+1.  "pad"
+2.  "col-N" where `N` will be the column number
+3.  "row-M" where `M` will be the row number
+<DOC>
+public defn build-vpad-classes (r:Int, c:Int) -> Tuple<String> :
+  [
+    "pad",
+    to-string("col-%_" % [c]),
+    to-string("row-%_" % [r])
+  ]
+
+
 public defn print-pads (o:OutputStream, pds:Seqable<VirtualPad> ) :
   val pds* = to-vector<VirtualPad>(pds)
   qsort!(pad-id, pds*)
