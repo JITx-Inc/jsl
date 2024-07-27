@@ -10,15 +10,11 @@ defpackage jsl/examples/protocols/displayport/main:
   import jsl/symbols/SymbolDefn
 
   import jsl/protocols/displayport
-  import jsl/si/helpers
   import jsl/bundles
-  import jsl/si/constraints
-  import jsl/si/pairs
-  import jsl/si/couplers
+  import jsl/si
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
-  import jsl/examples/protocols/displayport/displayport-src
 
 pcb-module displayport-example :
   pin VDD
@@ -39,7 +35,9 @@ pcb-module displayport-example :
       topo-pair(src.lane[i] => cap[i] => dst.lane[i])
 
     inst shunt-r : symmetric-shunt(pu-res(50.0e3))
-    topo-pair(src.aux => shunt-r.A => shunt-r.B => dst.aux)
+    topo-pair(src.aux => shunt-r.A)
+    topo-pair(shunt-r.B => dst.aux)
+
     net (shunt-r.COMMON, VDD)
 
     net (src.hpd, dst.hpd)

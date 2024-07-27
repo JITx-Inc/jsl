@@ -1,4 +1,22 @@
 #use-added-syntax(jitx)
+doc: \<DOC>
+@brief DisplayPort Protocol
+
+DisplayPort is a serial protocol supporting high speed links for video+audio
+@see https://en.wikipedia.org/wiki/DisplayPort
+
+The functions and definitions in this file support defining DisplayPort
+connections between sources and receivers on a printed circuit board.
+
+## DisplayPort Blocking Capacitors
+
+The DisplayPort specification calls for AC coupling for the data lanes. This is typically
+achieved using a blocking capacitor.
+
+The best way to achieve this is to use the {@link /jsl/si/constraints/constrain-topology}
+mechanism.
+
+<DOC>
 defpackage jsl/protocols/displayport:
   import core
   import jitx
