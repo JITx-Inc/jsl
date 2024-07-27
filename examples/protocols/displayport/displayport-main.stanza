@@ -27,20 +27,22 @@ pcb-module displayport-example :
   inst dut1 : jsl/examples/protocols/displayport/displayport-src/module(source = true)
   inst dut2 : jsl/examples/protocols/displayport/displayport-src/module(source = false)
 
-  require src : displayport from dut1
-  require dst : displayport from dut2
+  require MCU-src : displayport from dut1
+  require CONN-dst : displayport from dut2
 
   val ti = displayport-get-trace-impedance()
-  val dp-constraint = DisplayPort-Constraint(gen = DP2p1, route-struct = diff(ti))
-  constrain(dp-constraint, src, dst)
+  val DP-limits = DisplayPort-Constraint(gen = DP2p1, route-struct = diff(ti))
 
-  for i in 0 to 4 do:
-    inst cap : dp-coupler(block-cap(100.0e-9))
-    topo-pair(src.lane[i] => cap => dst.lane[i])
+  within [src, dst] = constrain-topology(MCU-src => CONN-dst, DP-limits):
+    inst cap : dp-coupler(block-cap(100.0e-9))[length(src.lane)]
+    for i in 0 to length(src.lane) do:
+      topo-pair(src.lane[i] => cap[i] => dst.lane[i])
 
-  inst shunt-r : symmetric-shunt(pu-res(50.0e3))
-  topo-pair(src.aux => shunt-r.A => dst.aux)
-  net (shunt-r.COMMON, VDD)
+    inst shunt-r : symmetric-shunt(pu-res(50.0e3))
+    topo-pair(src.aux => shunt-r.A => shunt-r.B => dst.aux)
+    net (shunt-r.COMMON, VDD)
+
+    net (src.hpd, dst.hpd)
 
   net (VDD dut1.VDD dut2.VDD)
   net (GND dut1.GND dut2.GND)
