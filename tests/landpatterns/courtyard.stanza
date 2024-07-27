@@ -35,8 +35,8 @@ deftest(courtyard) test-courtyard-origin :
   #EXPECT(length(cy) == 1)
 
   val outline = dims(cy[0])
-  #EXPECT(almost-equal?(x(outline), 1.0 + DEF_COURTYARD_WIDTH))
-  #EXPECT(almost-equal?(y(outline), 1.0 + DEF_COURTYARD_WIDTH))
+  #EXPECT(almost-equal?(x(outline), 1.0 + DEF_COURTYARD_LINE_WIDTH))
+  #EXPECT(almost-equal?(y(outline), 1.0 + DEF_COURTYARD_LINE_WIDTH))
 
   val shapes = shapes(cy[0] as Union)
   #EXPECT(length(shapes) == 2)
@@ -71,7 +71,7 @@ deftest(courtyard) test-courtyard-boundary:
   val pad-diam = 1.0
   val line-width = 0.2
   val mask-clear = clearance(current-rules(), MinSilkSolderMaskSpace)
-  val expWidth = position-span + pad-diam + (2.0 * excess) + (2.0 * mask-clear) + DEF_COURTYARD_WIDTH
+  val expWidth = position-span + pad-diam + (2.0 * excess) + (2.0 * mask-clear)
   val expHeight = expWidth
   #EXPECT(almost-equal?(x(outline), expWidth))
   #EXPECT(almost-equal?(y(outline), expHeight))
