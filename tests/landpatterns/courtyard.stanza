@@ -11,6 +11,8 @@ defpackage jsl/tests/landpatterns/courtyard:
   import jsl/landpatterns/pads
   import jsl/landpatterns/packages
   import jsl/landpatterns/courtyard
+  import jsl/landpatterns/VirtualLP
+  import jsl/geometry/box
 
 
 deftest(courtyard) test-courtyard-origin :
@@ -75,3 +77,43 @@ deftest(courtyard) test-courtyard-boundary:
   val expHeight = expWidth
   #EXPECT(almost-equal?(x(outline), expWidth))
   #EXPECT(almost-equal?(y(outline), expHeight))
+
+deftest(courtyard) test-courtyard-build-boundary:
+  val root = VirtualLP()
+
+  ; I'm override the soldermask to make the calculations
+  ;  a bit easier.
+  val pad-obj = smd-pad(Circle(0.5), Circle(0.5))
+  append(root, VirtualPad(1, pad-obj, loc(-1.0, 0.0), name = "first"))
+  append(root, VirtualPad(2, pad-obj, loc(1.0, 0.0), name = "number-2"))
+
+  val body = PackageBody(
+    width = 0.75 +/- 0.1,
+    length = 0.3 +/- 0.1,
+    height = 0.25 +/- [0.06, 0.0]
+  )
+
+  val outline = build-courtyard-boundary(root, body, DensityLevelA, excess = 0.1)
+
+  #EXPECT(width(outline) == 3.2)
+  val exp-height = 1.2
+  #EXPECT(height(outline) == 1.2)
+
+  ; Building the origin marker should result in a fore-shortened
+  ;  marker.
+
+  val marker = build-courtyard-origin(root, outline)
+
+  ; Current marker is a union of two lines. To make the math robust
+  ;  I'm going to take the bounds of the shape as a `box` and
+  ;  then measure its dimensions.
+
+  val b = bounds(marker)
+
+  val b-rect = to-Rectangle(b)
+  val exp-marker-len = (exp-height * DEF_COURTYARD_LEN_RATIO) + DEF_COURTYARD_LINE_WIDTH
+  val EPS = 1.0e-6
+  #EXPECT(almost-equal?(width(b-rect), exp-marker-len, EPS))
+  #EXPECT(almost-equal?(height(b-rect), exp-marker-len, EPS))
+
+
