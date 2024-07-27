@@ -82,16 +82,16 @@ tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
 
 public defn displayport-get-skew-loss-vals (gen:jsl/protocols/displayport/DPVersion) -> [Toleranced, Double]:
   switch(gen) :
-    DP1p0  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p1  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p2  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p2a : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p3  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p4  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP1p4a : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP2p0  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP2p1  : [0.0 +/- 20.0e-12, 15.0] ; 
-    DP2p1a : [0.0 +/- 20.0e-12, 15.0] ; 
+    DP1p0  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p1  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p2  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p2a : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p3  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p4  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP1p4a : [0.0 +/- 20.0e-12, 15.0] ;
+    DP2p0  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP2p1  : [0.0 +/- 20.0e-12, 15.0] ;
+    DP2p1a : [0.0 +/- 20.0e-12, 15.0] ;
 
 doc: \<DOC>
 @brief Get inter-pair skew values for DisplayPort Channel
@@ -131,39 +131,50 @@ trace impedance for the specified generation of the DisplayPort standard.
 public defn displayport-get-trace-impedance () -> Toleranced :
   100.0 +/- (10 %)
 
-public defstruct DisplayPort-Constraint <: DP-Constraint :
-  skew:Toleranced  with: (as-method => true)
-  loss:Double with: (
-    ensure => ensure-positive!,
-    as-method => true
-    )
-  route-struct:DifferentialRoutingStructure with: (as-method => true)
-  inter-skew:Toleranced
-with:
-  constructor => #DisplayPort-Constraint
-
 doc: \<DOC>
 SI Constraint For DisplayPort
 
-This constraint assumes the endpoints are {@link displayport} bundles. 
-The code will construct the necessary skew and loss constraints for 
+This constraint assumes the endpoints are {@link displayport} bundles.
+The code will construct the necessary skew and loss constraints for
 this bundle according to the DisplayPort specifications.
 
-@param skew Intra-pair skew for the P/N of each differential pair (lanes and AUX)
-@param loss Max Loss for any of the differential pairs
-@param route-struct User provided routing structure for each of the
-differential pair bundles of the DisplayPort interface
-@param inter-skew Inter-pair skew between data lanes
+When used with `constrain-topology`, the `src` and `dst` must be bundles
+of type {@link displayport}.
 <DOC>
-public defn DisplayPort-Constraint (
-  --
-  skew:Toleranced
-  loss:Double
-  route-struct:DifferentialRoutingStructure
+public defstruct DisplayPort-Constraint <: DP-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew:Toleranced  with:
+    as-method => true
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    as-method => true
+  doc: \<DOC>
+  Differential Routing Structure for each Diff-Pair
+  <DOC>
+  route-struct:DifferentialRoutingStructure with:
+    as-method => true
+  doc: \<DOC>
+  Inter-pair Timing Skew Constraint in Seconds.
+  <DOC>
   inter-skew:Toleranced
-  ) -> DisplayPort-Constraint:
-  #DisplayPort-Constraint(skew, loss, route-struct, inter-skew)
+with:
+  keyword-constructor => true
+  constructor => #DisplayPort-Constraint
 
+
+doc: \<DOC>
+Constructor for DisplayPort Constraint
+
+@param route-struct Differential Pair routing structure to be applied
+to each of the data lanes.
+@param gen Version Identifier. This value will be used to consult
+what specific skew, timing, etc tolerances to use for this topology.
+<DOC>
 public defn DisplayPort-Constraint (
   --
   route-struct:DifferentialRoutingStructure
@@ -176,7 +187,7 @@ public defn DisplayPort-Constraint (
 public defmethod constrain (cst:DisplayPort-Constraint, src:JITXObject, dst:JITXObject) -> False :
   for i in 0 to DISPLAYPORT_NUM_LANES do:
     dp-constrain(cst, src.lane[i], dst.lane[i])
-  
+
   dp-constrain(cst, src.aux, dst.aux)
 
   ; Apply inter-pair skew constraint
