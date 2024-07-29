@@ -1,0 +1,246 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/ethernet/RMII_100BaseT:
+  import core
+  import jitx
+  import jitx/commands
+  import jitx/parts/query-api
+
+  import jsl/design/settings
+  import jsl/symbols
+  import jsl/landpatterns
+
+  import jsl/si
+  import jsl/bundles
+  import jsl/pin-assignment
+  import jsl/protocols/ethernet/MDI/MDI-100Base-TX
+  import jsl/protocols/ethernet/MII/RMII
+
+  import jsl/examples/protocols/common/example-board
+
+
+pcb-component MAC :
+
+  port mii : rmii()
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | group:String]
+    [mii.txd[0] | 1 | Right | "TX"]
+    [mii.txd[1] | 2 | Right | "TX"]
+    [mii.tx-en  | 5 | Right | "TX"]
+
+    [mii.rxd[0] | 16 | Right | "RX"]
+    [mii.rxd[1] | 17 | Right | "RX"]
+    [mii.crs-dv | 20 | Right | "RX"]
+    [mii.rx-er  | 21 | Right | "RX"]
+    [mii.ref-clk  | 22 | Right | "RX"]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+
+pcb-component PHY :
+
+  port mii : rmii()
+  port mdi : MDI-100Base-TX
+
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir | group:String]
+
+    [mii.rxd[0] | 17 | Left | "RX"]
+    [mii.rxd[1] | 16 | Left | "RX"]
+    [mii.crs-dv    | 13 | Left | "RX"]
+    [mii.rx-er     | 12 | Left | "RX"]
+
+    [mii.txd[0] | 6 | Left | "TX"]
+    [mii.txd[1] | 5 | Left | "TX"]
+    [mii.tx-en     | 2 | Left | "TX"]
+    [mii.ref-clk     | 1 | Left | "TX"]
+
+    [mdi.TX.P | 22 | Right | "MDI"]
+    [mdi.TX.N | 23 | Right | "MDI"]
+    [mdi.RX.P | 24 | Right | "MDI"]
+    [mdi.RX.N | 25 | Right | "MDI"]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val QFN-pkg = QFN(
+    num-leads = 32,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(4.4, 4.6),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = Rectangle(3.2, 3.2),
+    package-body = PackageBody(
+      width = min-max(4.4, 4.6),
+      length = min-max(4.4, 4.6),
+      height = min-max(0.5, 0.8)
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.1),
+      rect-shaper,
+      8
+    )
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+
+  supports MDI-100Base-TX:
+    MDI-100Base-TX.TX.P => mdi.TX.P
+    MDI-100Base-TX.TX.N => mdi.TX.N
+    MDI-100Base-TX.RX.P => mdi.RX.P
+    MDI-100Base-TX.RX.N => mdi.RX.N
+
+pcb-component RJ45 :
+  pin-properties:
+    [pin:Ref | pads:Int ... | side:Dir]
+    [p[1] | 1 | Left]
+    [p[2] | 2 | Left]
+    [p[3] | 3 | Left]
+    [p[4] | 4 | Left]
+    [p[5] | 5 | Left]
+    [p[6] | 6 | Left]
+    [p[7] | 7 | Left]
+    [p[8] | 8 | Left]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = SOIC-N(
+    num-leads = 16,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 9.0 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  supports MDI-100Base-TX:
+    MDI-100Base-TX.TX.P => self.p[1]
+    MDI-100Base-TX.TX.N => self.p[2]
+    MDI-100Base-TX.RX.P => self.p[3]
+    MDI-100Base-TX.RX.N => self.p[6]
+
+
+
+pcb-module rgmii-1000BaseT-uut:
+  inst m : MAC
+  inst p : PHY
+  inst c : RJ45
+
+  val rmii-constraints = RMII-Constraint(se-50)
+
+  ; Series resistor for transmitter side of the RMII link.
+  val series-R = create-resistor(resistance = 51.0, precision = (1 %))
+  ; Notice the use of `reverse-rmii-bus` here
+  ;  By default `constrain-topology` will do a
+  ;  point-to-point connection matching `src.txd -> dst.txd`.
+  ;  This is not we want in all cases. In the case of connecting
+  ;  the MAC to the PHY, we need to reverse the connections in a
+  ;  null-modem style.
+  within [src, dst] = constrain-topology(m.mii => reverse-rmii-bus(p.mii), rmii-constraints):
+    ; Within this section - we define the topology.
+    ;  The `constrain-topology` function will handle
+    ;  applying the appropriate constraints once we have a
+    ;  valid topology defined.
+
+    inst txd-R : series-R[length(src.txd)]
+    for i in 0 to length(src.txd) do:
+      topo-net(src.txd[i] => txd-R[i].p[1])
+      topo-net(txd-R[i].p[2] => dst.txd[i])
+      ; RMII busses typically specify a series resistor for dampening.
+      ;  We use a `short-trace` to give a hint during layout where we
+      ;  want this resistor placed (ie close to the transmitter)
+      short-trace(txd-R[i].p[1], src.txd[i])
+
+      ; Resistors from the Query API don't come with a pin model by default.
+      ;  in order to provide operable timing constraints - we must provide
+      ;  a pin-model for this application.
+      pin-model(txd-R[i].p[1], txd-R[i].p[2]) = PinModel(typ(0.0), typ(0.0))
+
+    inst rxd-R : series-R[length(src.rxd)]
+    for i in 0 to length(src.rxd) do:
+      topo-net(dst.rxd[i] => rxd-R[i].p[1])
+      topo-net(rxd-R[i].p[2] => src.rxd[i])
+      short-trace(rxd-R[i].p[1], dst.rxd[i])
+      pin-model(rxd-R[i].p[1], rxd-R[i].p[2]) = PinModel(typ(0.0), typ(0.0))
+
+    inst txen-R : series-R[2]
+    for i in 0 to length(txen-R) do:
+      pin-model(txen-R[i].p[1], txen-R[i].p[2]) = PinModel(typ(0.0), typ(0.0))
+
+    topo-net(src.tx-en => txen-R[0].p[1])
+    topo-net(txen-R[0].p[2] => dst.tx-en)
+    short-trace(txen-R[0].p[1], src.tx-en)
+
+    topo-net(dst.crs-dv => txen-R[1].p[1])
+    topo-net(txen-R[1].p[2] => src.crs-dv)
+    short-trace(txen-R[1].p[1], dst.crs-dv)
+
+    inst refclk-R : series-R
+    topo-net(dst.ref-clk => refclk-R.p[1])
+    topo-net(refclk-R.p[2] => src.ref-clk )
+    short-trace(refclk-R.p[1], dst.ref-clk)
+    pin-model(refclk-R.p[1], refclk-R.p[2]) = PinModel(typ(0.0), typ(0.0))
+
+
+    if has-rxer(src) and has-rxer(dst):
+      inst rxer-R : series-R
+      topo-net(src.rx-er => rxer-R.p[1])
+      topo-net(rxer-R.p[2] => dst.rx-er)
+      short-trace(rxer-R.p[2], dst.rx-er)
+      pin-model(rxer-R.p[1], rxer-R.p[2]) = PinModel(typ(0.0), typ(0.0))
+
+  require phy-mdi:MDI-100Base-TX from p
+  require conn-mdi:MDI-100Base-TX from c
+
+  val diff-ti = MDI-100Base-TX-get-trace-impedance()
+  val mdi-constraint = MDI-100Base-TX-Constraint(diff(typ(diff-ti)))
+  constrain-topology(phy-mdi => conn-mdi, mdi-constraint)
+
+
+set-global-query-defaults!(min-stock = 1, mounting = "smd", case = ["0201"])
+set-current-design("rmii-100BaseTX-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(rgmii-1000BaseT-uut)
+
+; View the results
+view-board()
+view-schematic()
