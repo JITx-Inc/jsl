@@ -23,12 +23,8 @@ jobs:
         id: login-jitx-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Evaluate public pcb-* macros + run unit-tests + run integration tests
+      - name: jsl: make tests
         run: |
-          # Excludes modules and only supports pcb-* macros that take 0 or 1 argument of primitive type
           cd .github/
-          # Expires April 6th 2022 (same as JITX CI)
-          echo "${{ secrets.JITX_LICENSE }}" > jitx-client/license
-          # Remove automatic end line (truncate last byte) at the end of the license file
-          truncate -s -1 jitx-client/license
+          echo -n "${{ secrets.JITX_LICENSE }}" > jitx-client/license
           docker-compose up --exit-code-from jitx-client
