@@ -18,17 +18,28 @@ public defstruct TH-Lead-WeldBead <: TH-Lead :
   metal contact. This is not describing the pad placement
   in anyway.
   <DOC>
-  length:Toleranced with: (as-method => true)
+  length:Toleranced with:
+    as-method => true
   doc: \<DOC>
   The width of the lead is typically describing the diameter
   of a cylindrical lead.
   <DOC>
-  width:Toleranced with: (as-method => true)
+  width:Toleranced with:
+    as-method => true
+
+  doc: \<DOC>
+  Manual Override the Pad Definition
+  <DOC>
+  override:Maybe<Pad> with:
+    as-method => true
+    default => None()
+
   doc: \<DOC>
   Distance from the component body to the weld-bead on the electrical lead.
   By default, this value is 0.0 and assumes that the component does not have a weld-bead.
   <DOC>
-  weld-offset:Toleranced with: (default => typ(0.0))
+  weld-offset:Toleranced with:
+    default => typ(0.0)
 with:
   equalable => true
   hashable => true
@@ -39,9 +50,10 @@ public defn TH-Lead-WeldBead (
   --
   length:Toleranced,
   width:Toleranced,
+  override:Pad = ?,
   weld-offset:Toleranced = typ(0.0)
   ):
-  #TH-Lead-WeldBead(length, width, weld-offset)
+  #TH-Lead-WeldBead(length, width, override, weld-offset)
 
 doc: \<DOC>
 Default Bend Starting Offset
@@ -173,14 +185,6 @@ public defmethod build-pads (
   pkg:Axial-2pin,
   vp:VirtualLP,
   ) :
-
-  val lead-diam = width $ lead $ pkg
-  val hole-diam = compute-hole-diam(lead-diam, density-level(pkg))
-  val pad-diam = compute-pad-diam(hole-diam, density-level(pkg))
-
-  val hole-sz = Dims(hole-diam, hole-diam)
-  val pad-sz = Dims(pad-diam, pad-diam)
-
   val planner = pad-planner(pkg)
   val num-scheme = lead-numbering(pkg)
 
@@ -214,7 +218,8 @@ public defmethod build-pads (
       val th-pad-gen? = th-pad-generator(planner, r, 0)
       match(th-pad-gen?):
         (_:False): None()
-        (th-pad-gen):
-          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos)
+        (th-pad-gen:((Dims, Dims) -> Pad)):
+          val pad-def = make-pad-def(lead(pkg), th-pad-gen, density-level(pkg))
+          One $ VirtualPad(pad-id, pad-def, pos)
 
   append-all(vp, gen-pad-info())
