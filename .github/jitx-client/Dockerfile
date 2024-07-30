@@ -6,5 +6,5 @@ WORKDIR /app
 COPY ./user.params /root/.jitx/user.params
 COPY ./license /root/.jitx/license
 
-CMD ["/bin/bash", "-c", "apt update ; apt install make -y ; cd jsl ; make tests"]
+CMD ["/bin/bash", "-c", "apt update ; apt install make build-essential -y ; export STANZA_CONFIG=/root/.jitx/current ; cd jsl ; make tests"]
  
