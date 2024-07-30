@@ -64,6 +64,7 @@ public defn pad-grid-th (
   if not is-through-hole?(planner):
     throw $ ValueError("Mismatch Lead Type and Planner - Planner doesn't support Through-Holes")
 
+
   val lead-diam = width(lead-type)
   val hole-diam = compute-hole-diam(lead-diam, density-level)
   val pad-diam = compute-pad-diam(hole-diam, density-level)
@@ -77,7 +78,9 @@ public defn pad-grid-th (
     match(pad-gen?):
       (_:False): None()
       (func):
-        val pad-gen = {func(hole-size, pad-size)}
+        val pad-gen = match(override(lead-type)):
+          (_:None): {func(hole-size, pad-size)}
+          (given:One<Pad>): {value(given)}
         val cls = build-vpad-classes(r, c)
         One $ VirtualPad(pad-id, pad-gen(), pose(pos), class = cls)
 
