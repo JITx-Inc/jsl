@@ -1,19 +1,19 @@
 on: 
   pull_request:
   workflow_dispatch:
-name: Check that esir definitions are valid
+name: Test JSL
 
 jobs:
-  evaluate-macros:
-    name: Test macro validity
+  jsl-make-tests:
+    name: JSL: make tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout JSL
+        uses: actions/checkout@v4
 
       - name: Configure JITX's AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -21,9 +21,9 @@ jobs:
 
       - name: Login to JITX's Amazon ECR
         id: login-jitx-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: jsl: make tests
+      - name: make tests
         run: |
           cd .github/
           echo -n "${{ secrets.JITX_LICENSE }}" > jitx-client/license
