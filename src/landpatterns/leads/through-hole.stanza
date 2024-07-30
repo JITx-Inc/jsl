@@ -37,7 +37,12 @@ public defn compute-hole-diam (
 
   hole-diameter
 
-; Helper function to compute the pad and hole size of through hoel components
+doc: \<DOC>
+Compute the copper pad diameter based on IPC2222 rules
+
+@param hole-diam Hole Diameter in mm of the through-hole
+@return Pad overall diameter in mm assuming that hole is centered in the pad.
+<DOC>
 public defn compute-pad-diam (hole-diam:Double, density-level:DensityLevel) -> Double :
   val min-outer-layer-pad-size = MIN-OUTER-LAYER-PAD-SIZE
   val max-hole-size-tolerance  = MAX-HOLE-SIZE-TOLERANCE
