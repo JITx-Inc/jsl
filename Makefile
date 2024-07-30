@@ -26,7 +26,9 @@ $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
 build-tests: $(TWO_PIN_STZ) $(FILLETS)
-	$(STANZA) build tests -verbose
+	pwd
+	$(STANZA) build tests
+	ls -la
 
 tests: build-tests
 	pwd
