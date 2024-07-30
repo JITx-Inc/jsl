@@ -6,12 +6,8 @@ defpackage jsl/landpatterns/two-pin/axial:
   import jsl/ensure
   import jsl/design/settings
   import jsl/geometry/basics
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/framework
   import jsl/landpatterns/two-pin/utils
-  import jsl/landpatterns/VirtualLP
 
 doc: \<DOC>
 Through-hole Lead with Optional Weld-Bead
