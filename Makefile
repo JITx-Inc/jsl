@@ -10,6 +10,9 @@ TABGEN=./tabgen/tabgen
 $(TABGEN):
 	(cd tabgen && make)
 
+.PHONY: tabgen
+tabgen: $(TABGEN)
+
 TWO_PIN_STZ=src/landpatterns/two-pin/SMT-table.stanza
 TWO_PIN_CSV=$(TWO_PIN_STZ:stanza=csv)
 TWO_PIN_NAME="jsl/landpatterns/two-pin/SMT-table"
