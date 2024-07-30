@@ -106,13 +106,6 @@ public defmethod build-pads (
   vp:VirtualLP
   ) :
 
-  val lead-diam = width $ lead $ pkg
-  val hole-diam = compute-hole-diam(lead-diam, density-level(pkg))
-  val pad-diam = compute-pad-diam(hole-diam, density-level(pkg))
-
-  val hole-sz = Dims(hole-diam, hole-diam)
-  val pad-sz = Dims(pad-diam, pad-diam)
-
   val lead-spacing = typ $ lead-spacing(pkg)
 
   val planner = pad-planner(pkg)
@@ -131,11 +124,12 @@ public defmethod build-pads (
       val th-pad-gen? = th-pad-generator(planner, r, 0)
       match(th-pad-gen?):
         (_:False): None()
-        (th-pad-gen):
+        (th-pad-gen:((Dims, Dims) -> Pad)):
           val cls = [
             "pad",
           ]
-          One $ VirtualPad(pad-id, th-pad-gen(hole-sz, pad-sz), pos, class = cls)
+          val pad-def = make-pad-def(lead(pkg), th-pad-gen, density-level(pkg))
+          One $ VirtualPad(pad-id, pad-def, pos, class = cls)
 
   append-all(vp, gen-pad-info())
 
