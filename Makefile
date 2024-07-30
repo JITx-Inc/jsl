@@ -29,6 +29,8 @@ build-tests: $(TWO_PIN_STZ) $(FILLETS)
 	$(STANZA) build tests -verbose
 
 tests: build-tests
+	pwd
+	ls -la
 	./jsl-tests
 
 test-%: build-tests
