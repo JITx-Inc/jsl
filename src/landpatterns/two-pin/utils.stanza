@@ -1,11 +1,8 @@
 defpackage jsl/landpatterns/two-pin/utils:
   import core
   import jitx
-  import jsl/design/settings
   import jsl/design/Classable
   import jsl/landpatterns/numbering
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/leads
   import jsl/landpatterns/VirtualLP
 
 public val STD-SMT-CHIP-NUMBERING = Column-Major-Numbering(2,1)
@@ -14,51 +11,6 @@ public defn select-numbering (polarized?:True|False) -> Numbering :
   if polarized? : C-A-Numbering()
   else: STD-SMT-CHIP-NUMBERING
 
-; More Info Here:
-; https://www.pcblibraries.com/forum/ipc2221-2222-and-throughhole-pad-stacks_topic2586.html#:~:text=The%20typical%20hole%20size%20tolerance,are%20%2B%200%2F%2D%20Hole%20Size.
-
-doc: \<DOC>
-Compute the hole size for a through-hole pad.
-@param lead-diameter Size of the lead for this hole. This should be the
-overall diameter of the lead, ie, for a square lead this diameter is the
-diagnol measurement of the square.
-<DOC>
-public defn compute-hole-diam (
-  lead-diameter:Toleranced,
-  density-level:DensityLevel
-  ) -> Double :
-  val max-hole-size-tolerance  = MAX-HOLE-SIZE-TOLERANCE
-  val min-hole-size-tolerance  = MIN-HOLE-SIZE-TOLERANCE
-
-  ; Lookup the max/min hole to lead diameter
-  ; These come from IPC 2222 - Table 9-3
-  val [max-h2l, min-h2l] = switch(density-level) :
-    DensityLevelA: [0.70, 0.25]
-    DensityLevelB: [0.70, 0.20]
-    DensityLevelC: [0.60, 0.15]
-
-  ; Compute the hole size. This will be the average of the maximum
-  ; and minimum possible hole sizes given the design rules.
-  val max-hole-diam = min-value(lead-diameter) - max-hole-size-tolerance + max-h2l
-  val min-hole-diam = max-value(lead-diameter) + min-hole-size-tolerance + min-h2l
-  val hole-diameter = 0.5 * (max-hole-diam + min-hole-diam)
-
-  hole-diameter
-
-; Helper function to compute the pad and hole size of through hoel components
-public defn compute-pad-diam (hole-diam:Double, density-level:DensityLevel) -> Double :
-  val min-outer-layer-pad-size = MIN-OUTER-LAYER-PAD-SIZE
-  val max-hole-size-tolerance  = MAX-HOLE-SIZE-TOLERANCE
-  val min-hole-size-tolerance  = MIN-HOLE-SIZE-TOLERANCE
-  val hole-position-tolerance  = HOLE-POSITION-TOLERANCE
-
-  ; Compute the pad diameter
-  val pad-diameter = hole-diam + maximum([
-      max-hole-size-tolerance + 0.5,
-      max-hole-size-tolerance + hole-position-tolerance + 50.0e-6
-      min-outer-layer-pad-size,
-  ])
-  pad-diameter
 
 public defn get-two-pin-pads (vp:VirtualLP) -> [VirtualPad, VirtualPad] :
   val [r1, r2] = if contains?(class(vp), "polarized"):
