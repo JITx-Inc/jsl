@@ -115,7 +115,8 @@ public pcb-component component :
   for i in 0 to 4 do :
     diff-pin-model(self.DP-TX-P[i], self.DP-TX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
     diff-pin-model(self.DP-RX-P[i], self.DP-RX-N[i],       delay = typ(10.0e-15) loss = typ(0.1))
-    diff-pin-model(self.AUX-P, self.AUX-N, delay = typ(10.0e-15) loss = typ(0.1))
+
+  diff-pin-model(self.AUX-P, self.AUX-N, delay = typ(10.0e-15) loss = typ(0.1))
 
 
 public pcb-module module (-- source:True|False = true) :

@@ -5,6 +5,8 @@ defpackage jsl/landpatterns/leads/lead-types:
 
   import jsl/design/settings
   import jsl/landpatterns/leads/protrusions
+  import jsl/landpatterns/leads/through-hole
+
   import jsl/landpatterns/IPC
 
 doc: \<DOC>
@@ -19,7 +21,7 @@ These come in a variety of styles:
 -  For surface mount components, the leads are typically embedded into
    the body of the package.
 <DOC>
-public defstruct Lead <: Hashable & Equalable :
+public defstruct Lead <: Equalable & Hashable:
   doc: \<DOC>
   Dimension of the lead that is normal to the edge of the package body
 
@@ -133,12 +135,25 @@ public defstruct TH-Lead <: Lead :
   with electrolytic capacitors), this length describes the minimum
   common length.
   <DOC>
-  length:Toleranced with: (as-method => true)
+  length:Toleranced with:
+    as-method => true
   doc: \<DOC>
   The width of the lead is typically describing the diameter
   of a cylindrical lead.
   <DOC>
-  width:Toleranced with: (as-method => true)
+  width:Toleranced with:
+    as-method => true
+
+  doc: \<DOC>
+  Override Pad Definition
+
+  This allows the user to define a specific pad definition
+  that will override the computed pad dimensions based on
+  IPC rules.
+  <DOC>
+  override:Maybe<Pad> with:
+    default => None()
+
 with:
   equalable => true
   hashable => true
@@ -147,10 +162,82 @@ with:
 
 doc: \<DOC>
 Through-Hole Lead Constructor
+
+@param length Length of the wire lead of a through-hole
+component in mm.
+@param width Cross-section width of the wire lead in mm. This
+is typically the diameter (or for square/rectangular pins the diagonal)
+@param override Optional Pad definition to override computed values.
+Often a datasheet provides explicit hole sizes. This argument can
+allow the user to use those definitions explicitly.
 <DOC>
 public defn TH-Lead (
   --
   length:Toleranced,
   width:Toleranced,
+  override:Pad = ?
   ):
-  #TH-Lead(length, width)
+  #TH-Lead(length, width, override)
+
+
+doc: \<DOC>
+Compute the Hole and Pad Dimensions
+
+This function is primarily intended to be a tool
+for converting the lead dimensions into a hole for
+a landpattern.
+
+@param lead The parameters of this through-hole lead
+@param dl Density Level specification for this package.
+@return Tuple of [hole-size, pad-size] as `Dims` objects. These
+objects then get converted to a pad by the `PadPlanner`
+generator functions.
+<DOC>
+public defmulti compute-hole-pad-diam (lead:TH-Lead, dl:DensityLevel) -> [Dims, Dims]
+
+
+doc: \<DOC>
+Default Implementation for hole and pad size computation
+
+This function generates sizes according IPC2222 specs.
+@return This function only returns symmetric definitions
+resulting in circular holes.
+<DOC>
+public defmethod compute-hole-pad-diam (lead:TH-Lead, dl:DensityLevel) -> [Dims, Dims] :
+  val lead-diam = width(lead)
+  val hole-diam = compute-hole-diam(lead-diam, dl)
+  val pad-diam = compute-pad-diam(hole-diam, dl)
+
+  val hole-sz = Dims(hole-diam, hole-diam)
+  val pad-sz = Dims(pad-diam, pad-diam)
+  [hole-sz, pad-sz]
+
+
+doc: \<DOC>
+Construct the Pad Definition for this Through-Hole Lead
+
+This is primarily a helper function to make construction
+of the through-hole pad easier. This function will
+decide between:
+
+1.  Computing the hole and pad sizes and constructing the
+pads using the `PadPlanner` generator
+2.  Leveraging the `override` pad provided by the user.
+
+@param lead This lead
+@param pad-gen Function that converts the hole and pad size
+to a `Pad` definition. This function typically comes from
+the PadPlanner.
+@param dl Density Level specification for the package this
+pad is supporting.
+
+@return A pad definition that will be used to construct
+the land pattern definition.
+<DOC>
+public defn make-pad-def (lead:TH-Lead, pad-gen:((Dims, Dims) -> Pad), dl:DensityLevel) -> Pad:
+  match(override(lead)):
+    (_:None):
+      val [hole-size, pad-size] = compute-hole-pad-diam(lead, dl)
+      pad-gen(hole-size, pad-size)
+    (given:One<Pad>):
+      value(given)

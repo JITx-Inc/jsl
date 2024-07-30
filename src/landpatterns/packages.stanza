@@ -238,9 +238,10 @@ public defmethod build-courtyard (
   pkg:Package,
   vp:VirtualLP,
   ) -> False:
-  build-courtyard-origin(vp)
   val excess = courtyard-excess(pkg)
-  build-courtyard-boundary(vp, package-body(pkg), density-level(pkg), excess = excess)
+  val outline = build-courtyard-boundary(vp, package-body(pkg), density-level(pkg), excess = excess)
+  build-courtyard-origin(vp, outline)
+  false
 
 
 doc: \<DOC>

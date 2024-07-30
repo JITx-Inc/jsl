@@ -7,9 +7,7 @@ defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
   import jsl/design/settings
   import jsl/symbols
 
-  import jsl/si/constraints
-  import jsl/si/pairs
-  import jsl/si/helpers
+  import jsl/si
   import jsl/bundles
   import jsl/pin-assignment
   import jsl/protocols/ethernet/MDI/MDI-1000Base-T
@@ -146,7 +144,6 @@ pcb-component PHY :
     pin-model(self.mii.TX.data[i]) = PinModel(typ(0.0), typ(0.0))
     pin-model(self.mii.RX.data[i]) = PinModel(typ(0.0), typ(0.0))
 
-  ; This constructs a 
   for i in 0 to length(self.mdi.TP) do:
     diff-pin-model(self.mdi.TP[i], delay = typ(0.0))
     swappable-diff-pair(self.mdi.TP[i])
