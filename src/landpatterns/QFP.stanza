@@ -9,13 +9,7 @@ defpackage jsl/landpatterns/QFP:
   import jsl/ensure
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/quad
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/framework
 
 doc: \<DOC>
 QFP Lead Type
@@ -62,16 +56,47 @@ public defn QFP-Lead (
   #QFP-Lead(lead-type, length, width)
 
 doc: \<DOC>
-Helper for Creating QFP Lead Profiles
+Select the QFP protrusion type depending on pitch
+
+@param pitch Distance between adjacent leads on a
+side of a QFP. This value is in mm.
+@return {@link SmallGullWingLeads} or {@link BigGullWingLeads}
+depending on whether pitch is less than 0.625mm or greater,
+respectively.
+<DOC>
+public defn select-QFP-protrusion (pitch:Double) -> LeadProtrusion:
+  if pitch < 0.625:
+    SmallGullWingLeads()
+  else:
+    BigGullWingLeads()
+
+doc: \<DOC>
+Construct the Lead Profile for a Quad Flat Package
+
+This function constructs a `Quad-Lead-Profile` for
+a square package. The protrusion type will be selected
+based on the `pitch` using {@link select-QFP-protrusion}
+
+@param span Lead span for both horizontal and vertical
+edges of the quad package. This value is in mm. This value
+is often labeled as dimension `E` or `D` in a mechanical
+drawing.
+@param pitch Distance between adjacent leads on the side
+of the package. This value is in mm. This value is
+often labeled as dimension `e` in a mechanical drawing.
+@param lead-length Lead foot length of the QFP lead. This
+is often labeled as dimension `L` in mechanical drawings.
+@param lead-width Width of the lead foot. This is often
+labeled as dimension `b` in mechanical drawings.
 <DOC>
 public defn QFP-Lead-Profile (
   --
-  lead-type : LeadProtrusion
   span : Toleranced,
   pitch : Double,
   lead-length : Toleranced,
   lead-width : Toleranced,
   ) -> Quad-Lead-Profile:
+  val lead-type = select-QFP-protrusion(pitch)
   val lead = QFP-Lead(lead-type = lead-type, length = lead-length, width = lead-width)
   val profile = Lead-Profile(span = span, pitch = pitch, lead = lead)
   #Quad-Lead-Profile(profile, None(), profile, None())
@@ -80,24 +105,29 @@ public defstruct QFP <: Quad-Package :
   doc: \<DOC>
   Number of leads ignoring any depopulated leads and thermal leads
   <DOC>
-  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
 
   doc: \<DOC>
   Lead Profiles for all of the QFP's edges
-
-  By default the QFP uses the {@link SmallGullWingLeads} protrusion
-  type by default.
+  The `Quad-Lead-Profile` type can be used to construct
+  square or rectangular QFP packages by providing different
+  lead-profiles for the horizontal and vertical edges.
   <DOC>
-  lead-profile:Quad-Lead-Profile with: (as-method => true)
+  lead-profile:Quad-Lead-Profile with:
+    as-method => true
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape with: (as-method => true)
+  thermal-lead?:False|Shape with:
+    as-method => true
 
   doc: \<DOC>
   Package Body for the Quad-based Package.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Quad package
@@ -107,25 +137,34 @@ public defstruct QFP <: Quad-Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Quad Package
 
   This provides a numbering scheme for the leads of the Quad
-  package. By default, it uses {@link Column-Major-Numbering}.
+  package. See {@link select-quad-numbering} for more information
+  about default numbering schemes.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   printer => true
   constructor => #QFP
 
+doc: \<DOC>
+Constructor for the QFP package generator
+
+@param pad-planner Default value is {@link RectanglePadPlanner}
+<DOC>
 public defn QFP (
   --
   num-leads:Int,
@@ -157,7 +196,7 @@ public defmethod name (pkg:QFP) -> String :
   val prefixes = seq?({_}, [
     if h-mm <= 0.50 : One("T") else : None(), ; Thin   : height <= 1.60mm
     if p-mm <= 0.50 : One("S") else : None(), ; Shrink : pitch <= 0.50mm
-  ]) 
+  ])
   to-string("%_QFP%_P%_X%_X%_-%_N" % [append-all(prefixes), to-deci(p-mm), ls1, ls2, to-deci(h-mm), n])
 
 public defmethod courtyard-excess (pkg:QFP) -> Double :
@@ -226,7 +265,7 @@ public defn QFP-pin-1-marker (
   add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
 
   val outline = get-silkscreen-outline!(vp)
-  val o-box = bounds(outline)
+  val o-box = bounds $ shape(outline)
 
   val marker = compute-triangle-marker(pad-center, o-box, line-width)
   add-artwork(

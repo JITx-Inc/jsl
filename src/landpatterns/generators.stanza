@@ -11,6 +11,7 @@ defpackage jsl/landpatterns/generators:
 
   forward jsl/landpatterns/BGA
   forward jsl/landpatterns/QFN
+  forward jsl/landpatterns/QFP
   forward jsl/landpatterns/SOIC
   forward jsl/landpatterns/SON
   forward jsl/landpatterns/two-pin/generators
