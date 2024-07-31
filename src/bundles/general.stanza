@@ -177,6 +177,6 @@ for arrays of equivalent devices.
 @member c Cathode (negative) port
 @member a Anode (positive) port
 <DOC>
-public pcb-bundle polarized-dev :
+public pcb-bundle polarized-ca :
   port c : pin
   port a : pin
