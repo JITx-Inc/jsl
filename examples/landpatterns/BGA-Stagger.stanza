@@ -1,13 +1,12 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/landpatterns/BGA-simple:
+defpackage jsl/examples/landpatterns/BGA-stagger:
   import core
   import jitx
   import jitx/commands
 
   import jsl/design/settings
-  import jsl/symbols
   import jsl/landpatterns
-
+  import jsl/symbols
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
@@ -16,49 +15,32 @@ pcb-component test-BGA:
 
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir]
-    [VO- | A[1] | Right ]
-    [VDD | A[3] | Up ]
-    [SHUTDOWN | B[1] | Left ]
-    [GND | B[2] | Down]
-    [VO+ | B[3] | Right ]
-    [BYPASS | C[1] | Left ]
-    [IN+ | C[2] | Left ]
-    [IN- | C[3] | Left ]
-
+    [VO- | A[2] | Right ]
+    [ASDF | A[4] | Right ]
+    [VDD | A[6] | Up ]
+    [SHUTDOWN | B[1] | Left]
+    [GND | B[3] | Down]
+    [VO+ | B[5] | Right ]
+    [BYPASS | C[2] | Left]
+    [IN+ | C[4] | Left]
+    [IN- | C[6] | Left]
 
   val box = BoxSymbol(self)
   assign-symbol $ create-symbol(box)
 
- ; This test is based on the TI, TPA6203A1GQVR
-  ; Datasheet:
-  ;  https://www.ti.com/lit/ds/symlink/tpa6203a1.pdf
-  ;
-  ; Drawing:
-  ;  https://www.ti.com/lit/ml/mpbg144c/mpbg144c.pdf
-  ;
-  ; NSMD
   val rows = 3
   val cols = 3
-  val grid = Grid-Numbering(rows, cols)
+  val grid = Grid-Numbering(rows, 2 * cols)
   val pitch = 0.5
 
-  val planner = Perimeter-Matrix-Planner(
-    ; Pad A2 is not present
-    inactive = to-pad-island(grid, "A[2]"),
-    pad-config = PadConfig-D(
-      copper-D-adj = ipc-bga-copper(
-        NonSolderMaskDefined,
-        density-level = DensityLevelC
-        ),
-      mask-D-adj = 0.0,
-    ),
+  val planner = Staggered-Matrix-Planner(
     rows = rows
-    columns = cols
-    pitch = pitch
+    columns = cols * 2
+    pitch = Dims(pitch / 2.0, pitch)
   )
 
   val body = PackageBody(
-    width = 2.0 +/- 0.1,
+    width = 2.5 +/- 0.1,
     length = 2.0 +/- 0.1,
     height = 0.71 +/- [0.06, 0.0]
   )
@@ -81,7 +63,7 @@ pcb-module test-design:
 
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
-set-current-design("BGA-TEST")
+set-current-design("BGA-STAGGER-TEST")
 set-rules(default-rules)
 set-board(default-board(board-shape))
 

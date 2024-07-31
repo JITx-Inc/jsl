@@ -21,6 +21,8 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/leads
   import jsl/landpatterns/IPC
   import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/pad-grid
 
 public val DUAL-ROW-COLS = 2
 
@@ -86,40 +88,20 @@ public defmethod build-pads (
   ) -> False :
 
   val profile = lead-profile(pkg)
-  val num-scheme = lead-numbering(pkg)
-  val pad-planner = pad-planner(pkg)
-
   val rows = num-leads(pkg) / DUAL-ROW-COLS
   val params = compute-params(profile)
 
-  defn gen-pad-info () -> Seq<VirtualPad> :
-    for c in 0 to DUAL-ROW-COLS seq-cat :
-      ; Each Column consists of  N / 2 rows.
-      ; Each column is constructed as a 1-D grid that
-      ;   is translated and then rotated into place.
-      ; This allows:
-      ;  1. All of the pads have the -X axis pointing out
-      ;     from the package body.
-      ;  2. The numbering via Column-Major can satisfy the
-      ;     standard IC numbering strategy (ie, U shaped pattern)
-      val [pad-size, delta, pitch] = to-tuple(params)
-      val rot = to-double(180 * c)
-      val offset = loc(0.0, 0.0, rot) * loc((- delta) / 2.0, 0.0)
-      val grid = grid-locs(rows, 1, 1.0, pitch)
-      for (r in 0 to rows, pos in grid) seq? :
-        val pad-id = to-pad-id(num-scheme, r, c)
-        val pad-gen? = pad-generator(pad-planner, r, c)
-        match(pad-gen?):
-          (_:False): None()
-          (pad-gen):
-            val cls = [
-              "pad",
-              to-string("col-%_" % [c]),
-              to-string("row-%_" % [r])
-            ]
-            One $ VirtualPad(pad-id, pad-gen(pad-size), offset * pos, class = cls)
+  val pad-seq = pad-grid-smt(
+    pad-size = pad-size(params),
+    planner = pad-planner(pkg),
+    lead-grid = DualGridPlanner(
+      lead-params = params
+      rows = rows,
+    ),
+    num-scheme = lead-numbering(pkg) ;  num-scheme,
+  )
 
-  append-all(vp, gen-pad-info())
+  append-all(vp, pad-seq)
 
   match(thermal-lead?(pkg)):
     (lead-shape:Shape):
@@ -291,3 +273,95 @@ public defn build-smd-pin-1 (
   add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin1-marker")
 
 
+doc: \<DOC>
+Dual-Row Grid Planner
+
+This grid planner supports Dual Row components like SOIC,
+SON, SOT, etc.
+
+The idea is that this constructs a 2-Column grid where:
+1.  Column 0 is in `-X` half plane and orders ascending for +Y to -Y
+2.  Column 1 is in the `+X` half-plane and is rotated 180 degrees such
+that the locations are ordered ascending from -Y to +Y.
+
+This creates the typical numbering scheme for ICs:
+
+```
+Left-Row    Col 0   Col 1   Right-Row
+   0          1       8         3
+   1          2       7         2
+   2          3       6         1
+   3          4       5         0
+
+```
+
+Notice that the row indices are flipped on the left and right side.
+<DOC>
+public defstruct DualGridPlanner <: GridPlanner :
+  doc: \<DOC>
+  Lead Profile Parameters
+  This object defines aspects of the lead profile such
+  as the row center-to-center span and the pitch between
+  pads in a column.
+
+  In this implementation, the pitch is assumed constant in
+  both columns.
+  <DOC>
+  lead-params:Lead-Profile-Params
+
+  doc: \<DOC>
+  Number of Rows in each Column of the grid.
+  <DOC>
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+  doc: \<DOC>
+  Number of Columns in the Grid
+  By default the dual row is pegged to 2 columns.
+  <DOC>
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+    default => DEF_DUAL_GRID_COLS
+
+with:
+  constructor => #DualGridPlanner
+  printer => true
+
+val DEF_DUAL_GRID_COLS = 2
+
+doc: \<DOC>
+Constructor for the DualGridPlanner
+
+This grid planner has a fixed 2 column grid.
+
+@param lead-params Sets the lead span information including pitch and
+pad center to center distance
+@param rows Number of rows in the grid.
+<DOC>
+public defn DualGridPlanner (
+  --
+  lead-params:Lead-Profile-Params
+  rows:Int,
+  ) -> DualGridPlanner :
+  #DualGridPlanner(lead-params, rows, DEF_DUAL_GRID_COLS)
+
+defmethod pitch (g:DualGridPlanner) -> Double|Dims :
+  pitch $ lead-params(g)
+
+defmethod grid (g:DualGridPlanner) -> Seq<GridPosition> :
+  if columns(g) != DEF_DUAL_GRID_COLS:
+    throw $ ValueError("Unexpected 'columns=%_' - Expected '%_'" % [columns(g), DEF_DUAL_GRID_COLS])
+
+  val [_, row-C-to-C, row-pitch] = to-tuple $ lead-params(g)
+
+  for c in 0 to columns(g) seq-cat:
+    val rot = to-double(180 * c)
+    val offset = loc(0.0, 0.0, rot) * loc((- row-C-to-C) / 2.0, 0.0)
+
+    val row-set = grid-locs(rows(g), 1, 1.0, row-pitch)
+    val raw-grid-locs = for row-loc in row-set seq:
+      offset * row-loc
+
+    for (raw-grid-loc in raw-grid-locs, r in 0 to false) seq:
+      GridPosition(r, c, raw-grid-loc)

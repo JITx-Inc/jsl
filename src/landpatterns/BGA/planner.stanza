@@ -1,16 +1,15 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/BGA/planner:
   import core
-  import math
   import jitx
   import jitx/commands
 
   import jsl/landpatterns/BGA/pads
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/pad-island
+  import jsl/landpatterns/grid-planner
   import jsl/geometry/basics
-  import jsl/errors
-
+  import jsl/ensure
 
 val DEF-PAD-CONFIG = PadConfig-R()
 
@@ -20,35 +19,26 @@ This pad planner will create circular pads for each BGA
 ball location. The user can use the `pad-config` to
 modify the construction of each pad including the soldermask
 and pastemask openings.
+
+This type is derived from two parent implementations:
+1.  {@link PadPlanner} which manages selection of which pads to populate
+and how they should be constructed
+2.  {@link GridPlanner} which manages the placement of the created pads
+at particular grid locations.
 <DOC>
-public defstruct BGA-PadPlanner <: PadPlanner :
-  pad-config:PadConfig with: (default => DEF-PAD-CONFIG)
+public defstruct BGA-PadPlanner <: PadPlanner & GridPlanner:
+  doc: \<DOC>
+  Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, paste application, etc.
+  <DOC>
+  pad-config:PadConfig with:
+    default => DEF-PAD-CONFIG
 
-doc: \<DOC>
-Generate the grid sequence for the BGA Pad Planner
-For the BGA pad planners, there is often a particular
-grid geometry required to generate the pads in question.
-This function can be overriden to create a pad grid that
-is customized to the planner.
-
-Grid is assumed to be in `row-major` order.
-
-@param pitch Spacing between pads. If this value is a `Double` then
-the same pitch is used for rows and columns.
-If this is a `Dims` type, then the `width` is the column pitch and
-the `height` is the row pitch.
-<DOC>
-public defmulti grid (x:BGA-PadPlanner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose>
-
-doc: \<DOC>
-Default grid sequence is a standard square cell grid in row-major form
-<DOC>
-public defmethod grid (bga:BGA-PadPlanner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose> :
-  to-seq $ match(pitch):
-    (p:Double):
-      grid-locs(rows, columns, p, p)
-    (pa:Dims):
-      grid-locs(rows, columns, y(pa), x(pa))
+  ; GridPlanner Base
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
 
 doc: \<DOC>
 Default Pad Shaper for BGA packages.
@@ -59,31 +49,47 @@ public defn BGA-Pad-Shaper (s:Dims) -> Shape :
   Circle(to-radius $ x(s))
 
 public defmethod shape-generator (bga:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False :
-  if not active?(bga, row, column): false
-  else: BGA-Pad-Shaper
+  BGA-Pad-Shaper
 
 public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Pad)|False :
   val func? = shape-generator(x, row, column)
-  match(func?):
-    (x:False): false
-    (f): build-bga-pad{f(_0), pad-config(x)}
+  match(active?(x, row, column), func?):
+    (active:False, x): false
+    (active:True, f:(Dims -> Shape)):
+      build-bga-pad{f(_0), pad-config(x)}
+    (active:True, f:False):
+      throw $ NoGeneratorForActivePadError(row, column, "shape-generator")
 
 
 doc: \<DOC>
 Full Matrix - All Pads in the grid are active
 <DOC>
 public defstruct Full-Matrix-Planner <: BGA-PadPlanner :
-  pad-config:PadConfig with: (
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+with:
+  keyword-constructor => true
+  printer => true
 
 public defmethod active? (x:Full-Matrix-Planner, row:Int, column:Int) -> True|False:
   true
-
-public defenum StaggerPhase :
-  Even-Phase
-  Odd-Phase
 
 doc: \<DOC>
 Staggered Matrix - Every other pad is in-active.
@@ -97,35 +103,44 @@ as
 public defstruct Staggered-Matrix-Planner <: BGA-PadPlanner :
   doc: \<DOC>
   Phase indicates whether the first row pad 0 is empty or populated.
-  This is used to differentiate between the two pattern cases:
-
-  Pattern #1 - `Odd-Phase` :
-
-  ```
-    X | O | X  ...
-    O | X | O  ...
-    ...
-  ```
-
-  Pattern #2 - `Even-Phase` :
-
-  ```
-    O | X | O  ...
-    X | O | X  ...
-    ...
-  ```
-
   By default this function uses `Even-Phase`
   <DOC>
-  phase:StaggerPhase with: (default => Even-Phase)
-  pad-config:PadConfig with: (
+  phase:StaggerPhase with:
+    default => Even-Phase
+
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  doc: \<DOC>
+  Columns in the Staggered Matrix Grid.
+  Note that there are typically 2x as many columns in
+  the grid as pads that will get populated.
+  <DOC>
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
+with:
+  keyword-constructor => true
+  printer => true
+
 
 public defmethod active? (x:Staggered-Matrix-Planner, row:Int, column:Int) -> True|False:
-  val row-offset = 1 when phase(x) == Even-Phase else 0
-  ((row + row-offset) % 2) == (column % 2)
+  stagger-pattern(phase(x), row, column)
 
 doc: \<DOC>
 Equilateral Triangle Matrix - Similar to Staggered but all pads are equidistant.
@@ -137,23 +152,42 @@ public defstruct EquilateralTriangle-Matrix-Planner <: Staggered-Matrix-Planner 
   doc: \<DOC>
   See Staggered Matrix
   <DOC>
-  phase:StaggerPhase with: (
+  phase:StaggerPhase with:
     as-method => true,
     default => Even-Phase
-  )
-  pad-config:PadConfig with: (
+
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
 
-public defmethod grid (x:EquilateralTriangle-Matrix-Planner, rows:Int, columns:Int, pitch:Double|Dims) -> Seq<Pose> :
-  to-seq $ match(pitch):
-    (p:Double):
-      val vertical   = sqrt(3.0) * 0.5 * p
-      val horizontal = 0.5 * p
-      grid-locs(rows, columns, horizontal, vertical)
-    (pa:Dims):
-      throw $ ValueError("Asymmetric Grid Pitch Not-Allowed for Equilateral Triangle Matrix - Try Staggered-Matrix-Planner Instead")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  ; Same as Stagger - must be 2x the number of pads
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+  doc: \<DOC>
+  Equilateral Distance between triangle points
+  All pads in this planner are equidistant apart and
+  this parameter sets that distance.
+  <DOC>
+  tri-pitch:Double with:
+    ensure => ensure-positive!
+with:
+  keyword-constructor => true
+  printer => true
+
+defmethod pitch (g:EquilateralTriangle-Matrix-Planner) -> Double|Dims :
+  val p = tri-pitch(g)
+  equilateral-triangle-pitch(p)
 
 doc: \<DOC>
 Perimeter Matrix - Full matrix with an island of pads in-active.
@@ -170,19 +204,32 @@ public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
   all `PadIsland`s in the tuple forms the inactive region.
   <DOC>
   inactive:PadIsland|Tuple<PadIsland>
-  pad-config:PadConfig with: (
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
-with:
-  constructor => #Perimeter-Matrix-Planner
 
-public defn Perimeter-Matrix-Planner (
-  --
-  inactive:PadIsland|Tuple<PadIsland>,
-  pad-config:PadConfig = DEF-PAD-CONFIG
-  ) -> Perimeter-Matrix-Planner :
-  #Perimeter-Matrix-Planner(inactive, pad-config)
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
+with:
+  keyword-constructor => true
+  printer => true
 
 defn not-inactive? (inactive:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
   match(inactive):
@@ -210,7 +257,8 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   `Tuple<PadIsland>`. In the `Tuple` case, the union of
   all `PadIsland`s in the tuple forms the inactive region.
   <DOC>
-  inactive:PadIsland|Tuple<PadIsland> with: (as-method => true)
+  inactive:PadIsland|Tuple<PadIsland> with:
+    as-method => true
   doc: \<DOC>
   Island of Pads that will be marked active.
   This island will override the `inactive` island.
@@ -222,20 +270,32 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   all `PadIsland`s in the tuple forms the active center region.
   <DOC>
   active:PadIsland|Tuple<PadIsland>
-  pad-config:PadConfig with: (
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
-with:
-  constructor => #ThermallyEnhanced-Matrix-Planner
 
-public defn ThermallyEnhanced-Matrix-Planner (
-  --
-  inactive:PadIsland|Tuple<PadIsland>,
-  active:PadIsland|Tuple<PadIsland>,
-  pad-config:PadConfig = DEF-PAD-CONFIG
-  ) -> ThermallyEnhanced-Matrix-Planner :
-  #ThermallyEnhanced-Matrix-Planner(inactive, active, pad-config)
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
+with:
+  keyword-constructor => true
+  printer => true
 
 
 defn is-active? (active:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
@@ -266,14 +326,6 @@ Example: corner-cut = 2
 <DOC>
 public defstruct Corner-Cut-Matrix-Planner <: BGA-PadPlanner :
   doc: \<DOC>
-  Number of rows in the Grid
-  <DOC>
-  rows:Int
-  doc: \<DOC>
-  Number of columns in the Grid
-  <DOC>
-  columns:Int
-  doc: \<DOC>
   Width of the triangular region in each corner that will be inactive
   <DOC>
   corner-cut:Int
@@ -281,17 +333,29 @@ public defstruct Corner-Cut-Matrix-Planner <: BGA-PadPlanner :
     as-method => true
     default => DEF-PAD-CONFIG
     )
-with:
-  constructor => #Corner-Cut-Matrix-Planner
 
-public defn Corner-Cut-Matrix-Planner (
-  --
-  rows:Int
-  columns:Int
-  corner-cut:Int
-  pad-config:PadConfig = DEF-PAD-CONFIG
-  ) -> Corner-Cut-Matrix-Planner :
-  #Corner-Cut-Matrix-Planner(rows, columns, corner-cut, pad-config)
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ; GridPlanner
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  rows:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+  pose:Pose with:
+    as-method => true
+    default => loc(0.0, 0.0)
+
+with:
+  keyword-constructor => true
+  printer => true
 
 public defmethod active? (x:Corner-Cut-Matrix-Planner, row:Int, column:Int) -> True|False:
   val r-inv = rows(x) - row - 1
