@@ -68,6 +68,12 @@ with:
 
 doc: \<DOC>
 BGA Package Constructor
+
+The function constructs a Full Matrix BGA by default
+using the passed arguments. For more control over
+the pads and numbering, use the other constructor
+variant.
+
 @param num-leads Total number of lead placements assuming
 all leads are present.
 @param rows Number of rows of ball leads (Y dimension)
@@ -75,14 +81,6 @@ all leads are present.
 @param lead-diam Size of the BGA ball lead.
 @param pitch Ball Spacing
 @param package-body Component body physical representation.
-@param pad-planner Pad Planner that decides which pads will
-be populated in the resultant footprints. The default is
-a {@link Full-Matrix-Planner} which populates all lead
-locations with a circular pad based on its default configs.
-@param lead-numbering Lead numbering generator that determines
-what `Ref`s are applied to each pad. By default, this function
-uses a {@link Grid-Numbering} which creates `A1`, `B7`, etc
-style references using `1-based` indexing (ie, no `C0`).
 <DOC>
 public defn BGA (
   --
@@ -92,14 +90,14 @@ public defn BGA (
   lead-diam:Double,
   pitch:Double|Dims,
   package-body:PackageBody,
-  pad-planner:BGA-PadPlanner = Full-Matrix-Planner(
+  density-level:DensityLevel = DENSITY-LEVEL
+) -> BGA :
+  val pad-planner:BGA-PadPlanner = Full-Matrix-Planner(
     rows = rows,
     columns = columns,
     pitch = pitch
     ),
-  lead-numbering:Numbering = Grid-Numbering(rows, columns)
-  density-level:DensityLevel = DENSITY-LEVEL
-) -> BGA :
+  val lead-numbering:Numbering = Grid-Numbering(rows, columns)
   #BGA(
     num-leads, lead-diam,
     package-body,

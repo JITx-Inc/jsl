@@ -21,7 +21,7 @@ row and column setup.
 -  For Quad style components (QFP, QFN, etc), there are typically
   4 columns and `N / 4` rows (where `N` is the number of pins).
 -  For BGA style components, there are typically N pins and X columns by Y rows
-  where X * Y = N (for a Full Matrix). This is only example to demonstrate the
+  where X * Y = N (for a Full Matrix). This is only an example to demonstrate the
   typical row and column configurations. More complex arrangements are possible.
 
 Note that this numbering scheme does not consider the exposed thermal lead/pad
@@ -186,7 +186,23 @@ numbering scheme. For example - a `col-offset = 1` would construct:
 @param col-skip Value to divide the raw column value by. This parameter
 is useful when working with staggered grids where a pad is active every
 other column. When this value is greater than 1 - then the numbering scheme
-will accept twice as many columns as normal.
+will accept twice as many columns as normal. The default value for this
+parameter is 1.
+
+Consider the following example where `X` is the pad location and
+`O` is a skipped location and `col-skip = 2`
+
+```
+   0     1     2     3     4   ...    Raw Columns
+   0     0     1     1     2   ...    Assigned Column
+   X  |  O  |  X  |  O  |  X          Pad Row 0
+   O  |  X  |  O  |  X  |  O          Pad Row 1
+   ...
+```
+
+In this case, the stagger pattern results in 5 columns, but for
+many numbering conditions, that isn't what we want. This `skip`
+parameter allows us to reduce the total number of columns.
 
 @param row-skip Value to divide the raw row value by. This parameter
 is useful when working with a staggered grid where a pad is active every

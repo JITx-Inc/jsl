@@ -235,13 +235,6 @@ hole should be created. If this function returns `false` at an
 functions will raise an exception.
 
 <DOC>
-
-; TODO - Should we make this return `Circle|Capsule` instead of `Shape` ?
-;   Holes in the board generally speaking are very expensive to make in
-;   other shapes but I don't necessarily want to limit things here.
-;   Perhaps with make non-Circle/Capsule shaped holes a check that is
-;   disable-able so that the user can override.
-
 public defmulti hole-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False
 
 doc: \<DOC>
