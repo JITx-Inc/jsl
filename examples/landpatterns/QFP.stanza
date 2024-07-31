@@ -1,0 +1,67 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/QFP:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns
+  import jsl/symbols
+
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-QFP:
+  val num-leads = 44
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    for i in 1 through num-leads do:
+      [p[i] | p[i] | Left]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = QFP(
+    num-leads = num-leads,
+    lead-profile = QFP-Lead-Profile(
+      span = 12.0 +/- 0.05,
+      pitch = 0.8,
+      lead-length = min-max(0.45, 0.75),
+      lead-width = min-max(0.3, 0.45)
+    ),
+    package-body = PackageBody(
+      width = 10.0 +/- 0.05,
+      length = 10.0 +/- 0.05,
+      height = 1.2 +/- 0.05
+    ),
+    pad-planner = Corner-PadPlanner(
+      chamfered-corner-shaper(0.15),
+      rect-shaper,
+      11
+    )
+    thermal-lead? = false,
+    density-level = DensityLevelA
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-QFP
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("QFP-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
