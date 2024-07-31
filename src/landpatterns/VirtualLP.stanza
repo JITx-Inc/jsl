@@ -36,7 +36,8 @@ Helper Struct for Constructing Virtual Landpattern definitions
 public defstruct VirtualPad <: VirtualElement :
   pad-id:Int|Ref
   pad-def:Pad
-  loc:Pose
+  loc:Pose with:
+    updater => update-loc
   side:Side
 
   ; Virtual Element
@@ -58,6 +59,23 @@ public defn VirtualPad (
   ) -> VirtualPad :
 
   #VirtualPad(pad-id, pad-def, loc, side, name, to-class-vector(class))
+
+doc: \<DOC>
+Construct a set of `class` strings for VirtualPad creation.
+
+This will construct the following class strings:
+
+1.  "pad"
+2.  "col-N" where `N` will be the column number
+3.  "row-M" where `M` will be the row number
+<DOC>
+public defn build-vpad-classes (r:Int, c:Int) -> Tuple<String> :
+  [
+    "pad",
+    to-string("col-%_" % [c]),
+    to-string("row-%_" % [r])
+  ]
+
 
 public defn print-pads (o:OutputStream, pds:Seqable<VirtualPad> ) :
   val pds* = to-vector<VirtualPad>(pds)
@@ -128,31 +146,10 @@ public defmethod make-landpattern (cu:VirtualCopper, pose:Pose = DEF_VLP_LOC) :
   inside pcb-landpattern:
     copper(layer-index(cu)) = pose * shape(cu)
 
-public defstruct VirtualCutout <: VirtualElement :
-  shape:Shape
-
-  ; Virtual Element
-  name?:Maybe<String> with: (as-method => true)
-  class:Vector<String> with: (as-method => true)
-with:
-  constructor => #VirtualCutout
-  printer => true
-
-public defn VirtualCutout (
-  shape:Shape
-  --
-  name?:Maybe<String> = None(),
-  class:Seqable<String>|String = []
-  ) -> VirtualCutout :
-  #VirtualCutout(shape, name?, to-class-vector(class))
-
-public defmethod make-landpattern (p:VirtualCutout, pose:Pose = DEF_VLP_LOC) :
-  inside pcb-landpattern:
-    layer(Cutout()) = pose * shape(p)
-
 public defstruct VirtualArtwork <: VirtualElement :
   layer-spec:LayerSpecifier
-  shape:Shape
+  shape:Shape with:
+    updater => update-shape
 
   ; Virtual Element
   name?:Maybe<String> with: (as-method => true)
@@ -170,8 +167,8 @@ public defn VirtualArtwork (
   ) -> VirtualArtwork :
   #VirtualArtwork(layer-spec, shape, name?, to-class-vector(class))
 
-public defn to-layer-shape (art:VirtualArtwork) -> LayerShape :
-  LayerShape(layer-spec(art), shape(art))
+public defn to-layer-shape (art:VirtualArtwork, pose:Pose = loc(0.0, 0.0)) -> LayerShape :
+  LayerShape(layer-spec(art), pose * shape(art))
 
 public defmethod make-landpattern (art:VirtualArtwork, pose:Pose = DEF_VLP_LOC) :
   inside pcb-landpattern:
@@ -217,12 +214,6 @@ public defstruct VirtualLP <: VirtualElement :
   metal:Vector<VirtualCopper>
 
   doc: \<DOC>
-  Virtual `cutout` statements as placed in the virtual landpattern
-  frame of reference.
-  <DOC>
-  cutouts:Vector<VirtualCutout>
-
-  doc: \<DOC>
   Kinematic transform of this node of the virtual landpattern tree.
 
   This pose will be applied to the reference frame of this node.
@@ -262,7 +253,6 @@ defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
-    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -283,7 +273,6 @@ public defn VirtualLP (
     Vector<VirtualPad>(),
     Vector<VirtualArtwork>(),
     Vector<VirtualCopper>(),
-    Vector<VirtualCutout>(),
     pose,
     name?,
     to-class-vector(class)
@@ -318,7 +307,9 @@ public defn get-layer (vp:VirtualLP, ls:LayerSpecifier) -> Tuple<Shape> :
       None()
 
   val kid-shapes = for child in children(vp) seq-cat:
-    get-layer(child, ls)
+    val shs = get-layer(child, ls)
+    for sh in shs seq:
+      pose(child) * sh
   to-tuple $ cat(local-shapes, kid-shapes)
 
 doc: \<DOC>
@@ -330,30 +321,55 @@ public defn get-layer-all (vp:VirtualLP, ls:LayerSpecifier) -> Tuple<Shape> :
   val land-shapes = for land in lands(vp) seq-cat:
     get-layer(land, ls)
   val kid-shapes = for child in children(vp) seq-cat:
-    get-layer-all(child, ls)
+    val shs = get-layer-all(child, ls)
+    for sh in shs seq:
+      pose(child) * sh
   to-tuple $ for shList in [local-shapes, land-shapes, kid-shapes] seq-cat:
     shList
 
 doc: \<DOC>
 Attempts to mimic the `pads` function from jitx/commands
+
+This function is recursive over all of the nodes of the virtual
+land pattern scene graph.
+
+@return A Tuple of VirtualPad, 1 for each of the virtual pads in `vp`.
+For any children - the `loc:Pose` of the `VirtualPad` will be updated
+so that returned VirtualPad is correctly situated in the parent frame
+of reference. That means that the VirtualPad objects returned by this function
+are not necessarily the same as the parent definition.
 <DOC>
 public defn get-pads (vp:VirtualLP) -> Tuple<VirtualPad> :
   val kid-pads = for child in children(vp) seq-cat:
-    get-pads(child)
+    ; Here I transform the pads into the parent coordinate frame - otherwise,
+    ;   I will get unexpected results when attempting to compute total bounds
+    ;   etc.
+    for c-pad in get-pads(child) seq:
+      update-loc(c-pad, pose(child) * loc(c-pad))
+
   val lp-pads = lands(vp)
   to-tuple $ cat(lp-pads, kid-pads)
 
 doc: \<DOC>
 Attempts to mimic the `layers` function from jitx/commands
+
+This function is recursive over all of the nodes of the
+virtual landpattern scene graph.
+
+@param vp Virtual LP scene graph
+@param pose Offset position to apply to the created LayerShape objects.
+This will cause all created objects to be in the same root frame of reference
+for the VirtualLP `vp`.
+@return A Tuple of LayerShape object
 <DOC>
-public defn get-layers (vp:VirtualLP) -> Tuple<LayerShape> :
+public defn get-layers (vp:VirtualLP, offset:Pose = loc(0.0, 0.0)) -> Tuple<LayerShape> :
   ; @NOTE - to match the behavior of `layer` which doesn't seem
   ;  to act recursively on a landpattern definition - we are not
   ;  inspecting the pads in this function.
   val local-art = for va in artwork(vp) seq:
-    to-layer-shape(va)
+    to-layer-shape(va, offset)
   val kid-art = for child in children(vp) seq-cat:
-    get-layers(child)
+    get-layers(child, offset * pose(child))
   to-tuple $ cat(local-art, kid-art)
 
 public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
@@ -363,13 +379,22 @@ public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
 public defn get-coppers (vp:VirtualLP) -> Tuple<VirtualCopper> :
   to-tuple $ metal(vp)
 
-public defn get-silkscreen-outline! (vp:VirtualLP) -> Shape :
+doc: \<DOC>
+Retrieve the silkscreen outline shape as a `VirtualArtwork` object.
+
+This function looks for a `VirtualArtwork` object with class `outline`.
+If it finds a single object meeting this description - it will be
+returned. Otherwise it throws a `ValueError`
+
+This function will search recursively through the passed `vp` node
+and all child nodes for the `outline` artwork.
+<DOC>
+public defn get-silkscreen-outline! (vp:VirtualLP) -> VirtualArtwork :
   val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
   if length(outlines) != 1:
     throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
 
-  val outline = outlines[0]
-  shape(outline)
+  outlines[0]
 
 public defn add-artwork (
   vp:VirtualLP,
@@ -392,6 +417,58 @@ public defn add-artwork (
   val new-art = for sh in shapes seq:
     VirtualArtwork(ls, sh, class = class)
   append-all(vp, new-art)
+
+doc: \<DOC>
+  Add cutouts to the landpattern based on specified shapes.
+<DOC>
+public defn add-cutout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualArtwork(Cutout(), shape, name? = name, class = class))
+
+public defn add-cutout (
+  vp:VirtualLP,
+  shapes:Seqable<Shape>
+  --
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  val new-cos =
+    for s in shapes seq :
+      VirtualArtwork(Cutout(), s, name? = name, class = class)
+  append-all(vp, new-cos)
+
+doc: \<DOC>
+  Add keepout regions to the landpattern based on specified shapes.
+<DOC>
+public defn add-keepout (
+  vp:VirtualLP,
+  shape:Shape
+  --
+  start:LayerIndex = LayerIndex(0)
+  end:LayerIndex = LayerIndex(0)
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  append(vp, VirtualArtwork(ForbidCopper(start, end), shape, name? = name, class = class))
+
+public defn add-keepout (
+  vp:VirtualLP,
+  shapes:Seqable<Shape>
+  --
+  start:LayerIndex = LayerIndex(0)
+  end:LayerIndex = LayerIndex(0)
+  name:String = ?,
+  class:Seqable<String>|String = []
+  ) -> False:
+  val new-kos =
+    for s in shapes seq :
+      VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class)
+  append-all(vp, new-kos)
 
 doc: \<DOC>
 Create a reference designator in the current virtual landpattern
@@ -495,27 +572,6 @@ public defn add-copper (
     VirtualCopper(li, sh, class = class)
   append-all(vp, new-cu)
 
-public defn add-cutout (
-  vp:VirtualLP,
-  shape:Shape
-  --
-  name:String = ?,
-  class:Seqable<String>|String = []
-  ) -> False:
-  append(vp, VirtualCutout(shape, name? = name, class = class))
-
-doc: \<DOC>
-Add a virtual `cutout` statement to virtual landpattern
-<DOC>
-public defn append (vp:VirtualLP, cu:VirtualCutout) -> False:
-  add{_, cu} $ cutouts(vp)
-
-doc: \<DOC>
-Add multiple virtual `cutout` statements to virtual landpattern
-<DOC>
-public defn append-all (vp:VirtualLP, cus:Seqable<VirtualCutout>) -> False:
-  add-all{_, cus} $ cutouts(vp)
-
 doc: \<DOC>
 Add a new child virtual landpattern node
 @param vp Self
@@ -554,13 +610,39 @@ public defn create-child (
   ret
 
 doc: \<DOC>
+Retrieve a child node by name from the parent virtual land pattern
+
+This function is recursive. It will attempt to match to a child
+node in the `vp` scene graph by name.
+
+@param vp The parent scope to search
+@param name Child name that we will match on. Unnamed children will
+be ignored.
+@return One<VirtualLP> if we find a child with `name? = name` else `None()`
+<DOC>
+public defn get-child (vp:VirtualLP, name:String) -> Maybe<VirtualLP> :
+  val elems = to-tuple $ for elem in find-by-name(vp, name) filter:
+    elem is VirtualLP
+  if length(elems) > 1:
+    println("Found Multiple Nodes with name='%_'")
+
+  if length(elems) > 0:
+    One(elems[0] as VirtualLP)
+  else:
+    None()
+
+public defn get-child! (vp:VirtualLP, name:String) -> VirtualLP :
+  val child? = get-child(vp, name)
+  value!(child?)
+
+doc: \<DOC>
 Local Elements for this Virtual Landpattern
 
 This does not search recursively into the children, it just
 reports the elements of this node.
 <DOC>
 public defn elements (vp:VirtualLP) -> Seqable<VirtualElement> :
-  for grp in [lands(vp), artwork(vp), metal(vp), cutouts(vp)] seq-cat:
+  for grp in [lands(vp), artwork(vp), metal(vp)] seq-cat:
     for elem in grp seq:
       elem as VirtualElement
 
@@ -637,8 +719,8 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
   reduce(earlier-pad, pads)
 
 ; Converters
-#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualCutout, VirtualLP]
-  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper, as-VirtualCutout ,as-VirtualLP]) :
+#for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
+  funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper ,as-VirtualLP]) :
   public defn funcName (e:VirtualElement) -> vType :
     e as vType
 

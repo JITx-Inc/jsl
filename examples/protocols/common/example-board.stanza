@@ -177,7 +177,7 @@ in the project code because they are dependant on the stack-up and other factors
 public pcb-routing-structure se-50 :
   name = "50 Ohm single-ended"
   layer(Top) :
-    trace-width = 0.10    ; mm
+    trace-width = 0.15    ; mm
     clearance = 0.15     ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
@@ -187,7 +187,7 @@ public pcb-routing-structure se-50 :
     )
 
   layer(Bottom) :
-    trace-width = 0.10    ; mm
+    trace-width = 0.15    ; mm
     clearance = 0.15         ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz

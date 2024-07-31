@@ -1,0 +1,86 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/pad-grid:
+  import core
+  import jitx
+
+  import jsl/design/settings
+  import jsl/errors
+  import jsl/landpatterns/framework
+  import jsl/landpatterns/two-pin/utils
+
+
+doc: \<DOC>
+Construct an SMT Pad Grid using a `GridPlanner`
+
+This is a common helper routine for constructing a grid
+of pads.
+
+@param pad-size Dimensions of the pad to construct
+@param planner Pad Planner that determines shaping and population
+@param lead-grid Grid construction in the form of pad positions
+@param num-scheme Pad numbering scheme depending on location.
+@return Sequence of pads for applying to a `VirtualLP` node.
+<DOC>
+public defn pad-grid-smt (
+  --
+  pad-size:Dims,
+  planner:PadPlanner,
+  lead-grid:GridPlanner,
+  num-scheme:Numbering,
+  ) -> Seq<VirtualPad>:
+
+  for pos in grid(lead-grid) seq?:
+    val [r, c] = [row(pos), column(pos)]
+    val pad-id = to-pad-id(num-scheme, r, c)
+    val pad-gen? = pad-generator(planner, r, c)
+    match(pad-gen?):
+      (_:False): None()
+      (pad-gen):
+        val cls = build-vpad-classes(r, c)
+        One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
+
+doc: \<DOC>
+Construct a Through-Hole Pad Grid using a `GridPlanner`
+@param lead-type Through-Hole Lead parameterization
+@param planner Pad Planner providing shapes and population
+@param lead-grid Construct a grid of positions for the pads
+@param num-scheme Lead numbering of the grid.
+@param density-level IPC density level. The default value
+is based on {@link DENSITY-LEVEL} from `jsl/design/settings`
+@return Sequence of pads for applying to a `VirtualLP` node.
+@throws ValueError If the `planner` doesn't support through-hole generators.
+To support through-hole, the `planner` needs to implement the `hole-generator`
+defmethod and have it return a function instead of `false`.
+<DOC>
+public defn pad-grid-th (
+  --
+  lead-type:TH-Lead
+  planner:PadPlanner,
+  lead-grid:GridPlanner,
+  num-scheme:Numbering,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Seq<VirtualPad>:
+
+  if not is-through-hole?(planner):
+    throw $ ValueError("Mismatch Lead Type and Planner - Planner doesn't support Through-Holes")
+
+
+  val lead-diam = width(lead-type)
+  val hole-diam = compute-hole-diam(lead-diam, density-level)
+  val pad-diam = compute-pad-diam(hole-diam, density-level)
+  val pad-size = Dims(pad-diam, pad-diam)
+  val hole-size = Dims(hole-diam, hole-diam)
+
+  for pos in grid(lead-grid) seq?:
+    val [r, c] = [row(pos), column(pos)]
+    val pad-id = to-pad-id(num-scheme, r, c)
+    val pad-gen? = th-pad-generator(planner, r, c)
+    match(pad-gen?):
+      (_:False): None()
+      (func):
+        val pad-gen = match(override(lead-type)):
+          (_:None): {func(hole-size, pad-size)}
+          (given:One<Pad>): {value(given)}
+        val cls = build-vpad-classes(r, c)
+        One $ VirtualPad(pad-id, pad-gen(), pose(pos), class = cls)
+

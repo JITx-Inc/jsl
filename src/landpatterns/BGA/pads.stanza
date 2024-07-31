@@ -233,7 +233,7 @@ defn compute-adj (adj:Double|Percentage, copper:Shape) -> Double :
     (rel-adj:Percentage):
       val bbox = bounds(copper)
       val min-edge = min-width(bbox)
-      min-edge * rel-adj
+      (min-edge * rel-adj) / 2.0
 
 
 doc: \<DOC>

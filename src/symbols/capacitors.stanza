@@ -7,9 +7,7 @@ defpackage jsl/symbols/capacitors:
 
   import jsl/ensure
   import jsl/design/Classable
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/TwoPinSymbol
-  import jsl/symbols/SymbolNode
+  import jsl/symbols/framework
 
 val DEF_PORCH_WIDTH = (80 %)
 val DEF_WIDTH = 1.5

@@ -1,5 +1,6 @@
 
-STANZA=jstanza
+SLM_STANZA ?= jstanza
+STANZA=$(SLM_STANZA)
 CWD=$(shell pwd)
 
 TEST_DIR=$(CWD)/tests
@@ -8,6 +9,9 @@ TABGEN=./tabgen/tabgen
 
 $(TABGEN):
 	(cd tabgen && make)
+
+.PHONY: tabgen
+tabgen: $(TABGEN)
 
 TWO_PIN_STZ=src/landpatterns/two-pin/SMT-table.stanza
 TWO_PIN_CSV=$(TWO_PIN_STZ:stanza=csv)
@@ -22,9 +26,13 @@ $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
 build-tests: $(TWO_PIN_STZ) $(FILLETS)
+	pwd
 	$(STANZA) build tests
+	ls -la
 
 tests: build-tests
+	pwd
+	ls -la
 	./jsl-tests
 
 test-%: build-tests

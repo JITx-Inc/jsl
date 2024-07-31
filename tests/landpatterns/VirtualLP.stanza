@@ -116,6 +116,9 @@ deftest(virtual-lp) test-lp-tree:
   ;   has a parent - this should be a fault.
   expect-throw({append(root, c1)})
 
+  val expNone = get-child(root, "SomeName")
+  #EXPECT(expNone is None)
+
   ; Null Pattern
 
   pcb-landpattern null-pattern :
@@ -219,6 +222,13 @@ deftest(virtual-lp) test-find-by-name:
   val no-elems = to-tuple $ find-by-name(root, "Garbage")
   #EXPECT(length(no-elems) == 0)
 
+  val expNone = get-child(root, "SomeName2")
+  #EXPECT(expNone is None)
+
+  val expCh1 = get-child(root, "Uno")
+  #EXPECT(expCh1 is-not None)
+
+
 deftest(virtual-lp) test-find-by-class:
   val root = VirtualLP()
 
@@ -243,16 +253,23 @@ deftest(virtual-lp) test-find-by-class:
   val no-elems = to-tuple $ find-by-class(root, "asdfasdf")
   #EXPECT(length(no-elems) == 0)
 
-deftest(virtual-lp) test-cutout-layer :
+deftest(virtual-lp) test-artwork-layer :
   val root = VirtualLP()
 
   ; Simple single cutout layer Landpattern test
-  append(root, VirtualCutout(Circle(0.5)))
-
+  add-cutout(root, Circle(0.5))
+  add-cutout(root, [Circle(0.25), Circle(0.25)])
+  add-keepout(root, [Circle(1.0), Circle(2.0)])
+  add-keepout(root, Circle(3.0), start = LayerIndex(1), end = LayerIndex(2))
   ; Generate the landpattern
   pcb-landpattern simple:
     make-landpattern(root)
 
   val layers = layers(simple)
-  #EXPECT(length(layers) == 1)
+  #EXPECT(length(layers) == 6)
   #EXPECT(specifier(layers[0]) == Cutout())
+  #EXPECT(specifier(layers[1]) == Cutout())
+  #EXPECT(specifier(layers[2]) == Cutout())
+  #EXPECT(specifier(layers[3]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[4]) == ForbidCopper(LayerIndex(0), LayerIndex(0)))
+  #EXPECT(specifier(layers[5]) == ForbidCopper(LayerIndex(1), LayerIndex(2)))

@@ -30,6 +30,7 @@ defpackage jsl/landpatterns/quad:
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/grid-planner
 
 public val QUAD-NUM-COLUMNS = 4
 
@@ -288,29 +289,29 @@ public defmethod build-pads (
   val y-params = compute-params(y-leads(profile))
 
   defn gen-pad-info () -> Seq<VirtualPad> :
-    for c in 0 to QUAD-NUM-COLUMNS seq-cat :
-      ; Get the number of rows in this column
-      val rows = row-sets[c]
-      ; Each column of the grid is structured as a sequence of
-      ;  N or M pads. We then translate and then rotate that grid
-      ;  to place it in the 4 edge locations.
-      val params = x-params when c % 2 == 0 else y-params
-      val [pad-size, delta, pitch] = to-tuple(params)
-      val rot = to-double(90 * c)
-      val offset = loc(0.0, 0.0, rot) * loc((- delta) / 2.0, 0.0)
-      val grid = grid-locs(rows, 1, 1.0, pitch)
-      for (r in 0 to rows, pos in grid) seq? :
-        val pad-id = to-pad-id(num-scheme, r, c)
-        val pad-gen? = pad-generator(pad-planner, r, c)
-        match(pad-gen?):
-          (_:False): None()
-          (pad-gen):
-            val cls = [
-              "pad",
-              to-string("col-%_" % [c]),
-              to-string("row-%_" % [r])
-            ]
-            One $ VirtualPad(pad-id, pad-gen(pad-size), offset * pos, class = cls)
+
+    val grid-gen = QuadGridPlanner(
+      param-sets = [x-params, y-params],
+      row-sets = row-sets
+    )
+
+    for pos in grid(grid-gen) seq? :
+      val [r, c] = [row(pos), column(pos)]
+
+      val params = get-params(grid-gen, c)
+      val pad-size = pad-size(params)
+
+      val pad-id = to-pad-id(num-scheme, r, c)
+      val pad-gen? = pad-generator(pad-planner, r, c)
+      match(pad-gen?):
+        (_:False): None()
+        (pad-gen):
+          val cls = [
+            "pad",
+            to-string("col-%_" % [c]),
+            to-string("row-%_" % [r])
+          ]
+          One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
 
   append-all(vp, gen-pad-info())
 
@@ -321,3 +322,121 @@ public defmethod build-pads (
     (x:False): false
 
 
+doc: \<DOC>
+Quad Grid Planner
+
+This grid planner supports Quad Package components like QFN,
+QFP, etc
+
+The idea is that this constructs a 4-Column grid where:
+1.  Column 0 is in `-X` half plane and orders ascending for +Y to -Y
+2.  Column 1 is in the `-Y` half-plane and is rotated 90 degrees
+3.  Column 2 is in the `+X` half plane and is rotated 180 degrees
+4.  Column 3 is in the `+Y` half-plane and is rotated 270 degrees
+
+This creates the typical numbering scheme for ICs:
+
+```
+Left-Row  Col 0               Col 2    Right-Row
+       Col 3 ->  16 15 14 13
+   0          1               12         3
+   1          2               11         2
+   2          3               10         1
+   3          4               9          0
+       Col 1 ->  5  6  7  8
+```
+
+Notice that the row indices are directed down the edge of the package
+and result in the same flipped on the left and right side pattern as
+in a dual-package.
+<DOC>
+public defstruct QuadGridPlanner <: GridPlanner :
+  doc: \<DOC>
+  Lead Profile Parameter Sets
+  The quad package is assumed to support different Lead-Profiles
+  on the Y-span (-X and +X column) and X-span (-Y and +Y columns).
+  This value is expected to consist of the lead params in the following
+  order:
+  [Y-span, X-span]
+  <DOC>
+  param-sets:[Lead-Profile-Params, Lead-Profile-Params]
+
+  doc: \<DOC>
+  Row Sets for the columns of the grid.
+  This value can optionally be a single number of rows which is
+  applied to all columns. This is the most common for regular
+  square quad packages.
+  This value can also be a `Tuple` of integers identifying unique
+  numbers of rows per column. This is most useful for rectangular
+  quad packages with uneven numbers of pads on each lead span.
+  <DOC>
+  row-sets:Int|Tuple<Int>
+
+  doc: \<DOC>
+  Number of Columns in the Grid
+  By default the quad package is pegged to 4 columns.
+  <DOC>
+  columns:Int with:
+    ensure => ensure-positive!
+    as-method => true
+    default => DEF_QUAD_GRID_COLS
+
+with:
+  constructor => #QuadGridPlanner
+  printer => true
+
+val DEF_QUAD_GRID_COLS = 4
+
+doc: \<DOC>
+Constructor for the Quad Grid Planner
+<DOC>
+public defn QuadGridPlanner (
+  --
+  param-sets:[Lead-Profile-Params, Lead-Profile-Params]
+  row-sets:Int|Tuple<Int>
+  ) -> QuadGridPlanner :
+  #QuadGridPlanner(param-sets, row-sets, DEF_QUAD_GRID_COLS)
+
+defmethod rows (g:QuadGridPlanner) -> Int :
+  match(row-sets(g)):
+    (uneven-row:Tuple<Int>):
+      throw $ ValueError("Unexpected Combination - Uneven Rows but no Column Indicated")
+    (static-row:Int):
+      static-row
+
+defmethod rows (g:QuadGridPlanner, c:Int) -> Int :
+  match(row-sets(g)):
+    (uneven-row:Tuple<Int>):
+      uneven-row[c]
+    (static-row:Int): static-row
+
+defmethod pitch (g:QuadGridPlanner) -> Double|Dims :
+  val given = param-sets(g)
+  Dims(pitch(given[0]), pitch(given[1]))
+
+doc: \<DOC>
+Retrieve the appropriate lead profile parameters depending on column
+@param c Column index as a zero-indexed value.
+<DOC>
+public defn get-params (g:QuadGridPlanner, c:Int) -> Lead-Profile-Params :
+  param-sets(g)[c % 2]
+
+defmethod grid (g:QuadGridPlanner) -> Seq<GridPosition> :
+  if columns(g) != DEF_QUAD_GRID_COLS:
+    throw $ ValueError("Unexpected 'columns=%_' - Expected '%_'" % [columns(g), DEF_QUAD_GRID_COLS])
+
+  for c in 0 to columns(g) seq-cat:
+
+    val params = get-params(g, c)
+
+    val [pad-size, row-C-to-C, row-pitch] = to-tuple(params)
+
+    val rot = to-double(90 * c)
+    val offset = loc(0.0, 0.0, rot) * loc((- row-C-to-C) / 2.0, 0.0)
+
+    val row-set = grid-locs(rows(g, c), 1, 1.0, row-pitch)
+    val raw-grid-locs = for row-loc in row-set seq:
+      offset * row-loc
+
+    for (raw-grid-loc in raw-grid-locs, r in 0 to false) seq:
+      GridPosition(r, c, raw-grid-loc)

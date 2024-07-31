@@ -8,10 +8,7 @@ defpackage jsl/symbols/transistors/JFET:
   import jsl/ensure
   import jsl/geometry/box
   import jsl/geometry/basics
-  import jsl/symbols/ThreePinSymbol
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/arrows
+  import jsl/symbols/framework
   import jsl/symbols/transistors/FET
 
 val DEF_JFET_PORCH_WIDTH = 0.5

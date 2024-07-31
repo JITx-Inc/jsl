@@ -1,0 +1,70 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/headers:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns
+  import jsl/symbols
+
+  import jsl/examples/landpatterns/board
+
+pcb-bundle header (w:Int):
+  port D : pin[1 through w]
+
+pcb-symbol header-sym (w:Int):
+  name = "Crappy Header Symbol"
+  val scale = 2.54
+  for i in 1 through w do:
+    pin p.D[i] at Point(0.0, scale * to-double(i))
+
+
+pcb-component header-test (num-leads:Int, num-rows:Int) :
+  port p : header(num-leads)
+
+  pin-properties:
+    [pin:Ref| pads:Ref ...]
+    for i in 1 through num-leads do:
+      [p.D[i] | p[i] ]
+
+  assign-symbol(header-sym(num-leads))
+
+  val pitch = 2.54
+  val num-cols = num-leads / num-rows
+  val body-len = to-double(num-cols) * pitch
+  val body-width = to-double(num-rows) * pitch
+
+  val pkg = Header(
+    num-leads = num-leads,
+    lead-type = TH-Lead(length = typ(2.0), width = typ(0.9)),
+    pad-diam = 1.5,
+    rows = num-rows,
+    pitch = pitch
+    package-body = PackageBody(
+      width = typ(body-width),
+      length = typ(body-len),
+      height = typ(5.0) )
+    )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+
+pcb-module test-design:
+  inst J1 : header-test(10, 2)
+  inst J2 : header-test(10, 1)
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Header-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

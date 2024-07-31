@@ -5,35 +5,29 @@ defpackage jsl/examples/landpatterns/BGA-simple:
   import jitx/commands
 
   import jsl/design/settings
+  import jsl/symbols
   import jsl/landpatterns
 
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 
-pcb-symbol test-sym:
-  val pin-names = ["VDD", "VO-", "VO+", "BYPASS", "SHUTDOWN", "GND", "IN+", "IN-"]
-  for i in 0 to length(pin-names) do :
-    pin (Ref(pin-names[i])) at Point(-2.54, (2.54 - (to-double(i) * 2.54))) with :
-      direction = Left
-      length = 2.54
-      number-size = 0.762
-      name-size = 0.762
-
 pcb-component test-BGA:
 
   pin-properties :
-    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
-    [VO- | A[1] | Right |  0]
-    [VDD | A[3] | Up |  0]
-    [SHUTDOWN | B[1] | Left | 0]
-    [GND | B[2] | Down | 0]
-    [VO+ | B[3] | Right | 0]
-    [BYPASS | C[1] | Left | 0]
-    [IN+ | C[2] | Left | 0]
-    [IN- | C[3] | Left | 0]
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [VO- | A[1] | Right ]
+    [VDD | A[3] | Up ]
+    [SHUTDOWN | B[1] | Left ]
+    [GND | B[2] | Down]
+    [VO+ | B[3] | Right ]
+    [BYPASS | C[1] | Left ]
+    [IN+ | C[2] | Left ]
+    [IN- | C[3] | Left ]
 
-  assign-symbol(test-sym)
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
 
  ; This test is based on the TI, TPA6203A1GQVR
   ; Datasheet:
@@ -46,6 +40,7 @@ pcb-component test-BGA:
   val rows = 3
   val cols = 3
   val grid = Grid-Numbering(rows, cols)
+  val pitch = 0.5
 
   val planner = Perimeter-Matrix-Planner(
     ; Pad A2 is not present
@@ -56,7 +51,10 @@ pcb-component test-BGA:
         density-level = DensityLevelC
         ),
       mask-D-adj = 0.0,
-    )
+    ),
+    rows = rows
+    columns = cols
+    pitch = pitch
   )
 
   val body = PackageBody(
@@ -67,10 +65,7 @@ pcb-component test-BGA:
 
   val pkg = BGA(
     num-leads = 9,
-    rows = rows,
-    columns = cols,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     lead-numbering = grid,
     pad-planner = planner,

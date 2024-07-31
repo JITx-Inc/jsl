@@ -1,8 +1,23 @@
 #use-added-syntax(jitx)
+doc: \<DOC>
+@title Reduced Media Independent Interface
+
+@description
+The RMII bus is a variant of MII introduced to reduce the total number of
+pins required for the interface. The RMII bus runs from a 50MHz clock in
+contrast to the 25MHz clock typical in an MII interface. It retains the
+same MDC/MDIO management interface as of RMII v1.2.
+
+<DOC>
 defpackage jsl/protocols/ethernet/MII/RMII:
   import core
+  import collections
   import jitx
   import jitx/commands
+
+  import jsl/si
+  import jsl/errors
+  import jsl/ensure
 
 public val RMII_BUS_WIDTH = 2
 
@@ -31,5 +46,172 @@ Reduced Medium Independent Interface (RMII) Bundle Generator
 @member crs-dv Multiplexed Carrier Sense and Data Valid Line
 @member rx-er Receive Error Line
 <DOC>
-public defn rmii (add-rx-error:True|False = true ):
+public defn rmii ( -- add-rx-error:True|False = true ):
   rmii-b(add-rx-error)
+
+doc: \<DOC>
+Check for the `rx-er` pin on a passed port, bundle, etc
+<DOC>
+public defn has-rxer (b:JITXObject) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "rx-er")
+
+doc: \<DOC>
+Reverse the RMII bus
+
+This is a helper routine when working with RMII bundles
+using the {@link constrain-topology} methodology:
+
+```stanza
+within [src, dst] = constrain-topology(MCU.rmii => reverse-rmii-bus(PHY.rmii)):
+   ...
+```
+
+The idea is that it can be used to cross connect the
+TXD => RXD and vice versa. The following connections
+are crossed:
+
+1.  `rmii.txd` => `rmii.rxd`
+2.  `rmii.rxd` => `rmii.txd`
+3.  `rmii.tx-en` => `rmii.crs-dv`
+3.  `rmii.crs-dv` => `rmii.tx-en`
+
+The rest of the signals are straight through.
+
+<DOC>
+public defn reverse-rmii-bus (p:JITXObject) :
+  inside pcb-module :
+    match(port-type(p)):
+      (b:Bundle):
+        node temp:b
+        topo-net(p.txd => temp.rxd)
+        topo-net(p.rxd => temp.txd)
+        topo-net(p.tx-en => temp.crs-dv)
+        topo-net(p.crs-dv => temp.tx-en)
+        topo-net(p.ref-clk => temp.ref-clk)
+        if has-rxer(p):
+          topo-net(p.rx-er => temp.rx-er)
+        temp
+      (x):
+        throw $ ValueError("Invalid Port - Expected Bundle - Received: %_" % [x])
+doc: \<DOC>
+RMII Databus Skew Specification
+
+This is a guideline specification. RMII v1.2 does not
+specify guidance because the 50MHz clock rate
+and TTL levels don't typically have issues meeting clock
+setup and hold times (See section 7.2).
+
+The default value provided by this function is 2nS
+which should be well within in the setup (4ns) and
+hold (2ns) expectation for a 20nS (50MHz) period.
+See section 7.4.
+
+@return Bus Skew range in seconds
+<DOC>
+public defn rmii-bus-skew () -> Toleranced:
+  0.0 +/- 2.0e-9
+
+
+doc: \<DOC>
+RMII Databus Max Loss Specification
+
+This a guideline specification. The RMII v1.2 does
+not specify any guidance for the max loss of the
+signals in the bus.
+
+@return Max Signal Loss in dB
+<DOC>
+public defn rmii-max-loss () -> Double:
+  16.0
+
+public defn rmii-get-trace-impedance () -> Toleranced :
+  50.0 +/- (5 %)
+
+doc: \<DOC>
+RMII SI Constraint
+
+This type can be used with the {@link constrain-topology} interface
+to provide default bus constraints for this interface while
+allowing the user to tailor the specific topology.
+
+Note: By default - this constraint assumes that the
+clock is delivered from Source -> Destination. In other words,
+it assumes there is no external 50MHz clock that is driving both
+the source and destination.
+<DOC>
+public defstruct RMII-Constraint <: SI-Constraint:
+  doc: \<DOC>
+  Timing Skew Range for all data bus lines to the clock.
+  <DOC>
+  bus-skew:Toleranced
+  doc: \<DOC>
+  Max Loss Limit in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!
+  doc: \<DOC>
+  Single-ended routing structure for all signals.
+  <DOC>
+  route-struct:RoutingStructure
+with:
+  keyword-constructor => true
+  printer => true
+
+
+doc: \<DOC>
+Construct RMII constraint with default skew/loss
+
+@param route-struct Describes the geometric constraints for the bus signals.
+<DOC>
+public defn RMII-Constraint (route-struct:RoutingStructure) -> RMII-Constraint :
+  RMII-Constraint(
+    bus-skew = rmii-bus-skew(),
+    loss = rmii-max-loss(),
+    route-struct = route-struct
+  )
+
+
+doc: \<DOC>
+Constrain the RMII bus
+
+This function implements the SI-Constraints interface for
+the RMII bus.
+
+This provides the following constraints:
+1.  A clock -> data/ctl timing skew const
+2.  Max Loss Limits on all signals
+3.  Single-ended Routing Structure on all signals.
+<DOC>
+public defmethod constrain (cst:RMII-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+    val src-ep = find-signal-end(src)
+    val dst-ep = find-signal-end(dst)
+
+    val clk-route = src-ep.ref-clk => dst-ep.ref-clk
+
+    val bus-routes = to-vector<KeyValue<JITXObject, JITXObject>> $ [
+      src-ep.txd => dst-ep.txd
+      src-ep.rxd => dst-ep.rxd
+      src-ep.tx-en => dst-ep.tx-en
+      src-ep.crs-dv => dst-ep.crs-dv
+    ]
+
+    if has-rxer(src) and has-rxer(dst):
+      add(bus-routes, src-ep.rx-er => dst-ep.rx-er)
+
+    timing-window(
+      bus-skew(cst),
+      clk-route,
+      topos = to-tuple $ bus-routes
+    )
+
+    max-loss(loss(cst), src-ep => dst-ep)
+
+    val se = route-struct(cst)
+    structure(clk-route) = se
+    for bus-route in bus-routes do:
+      structure(bus-route) = se
+
+
