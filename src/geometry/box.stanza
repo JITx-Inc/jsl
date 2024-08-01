@@ -51,7 +51,7 @@ public defn shrink (dims:Point, b:Box) -> Box :
   Box(lo(b) + dims, hi(b) - dims)
 
 public defn shrink (dims:Double, b:Box) -> Box :
-  fatten(Point(dims, dims), b)
+  shrink(Point(dims, dims), b)
 
 public defn corners (b:Box) -> Tuple<Point> :
   val [l, h] = [lo(b), hi(b)]
