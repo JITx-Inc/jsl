@@ -208,12 +208,12 @@ public defmethod courtyard-excess (pkg:QFP) -> Double :
 ; Compute the Box bounding the _interior_ of the pads
 ; Only works on rectangular landpatterns
 ; Is there a less ugly way to do this?
-defn pad-interior-bounds (vp:VirtualLP) :
+defn pad-interior-bounds (vp:VirtualLP, side:Side) :
   val xset = HashSet<Double>()
   val yset = HashSet<Double>()
   ; Collect all x- and y-coordinates from pads
   for p in get-pads(vp) :
-    val bx = bounds(pose(p) * pad-shape(pad(p)))
+    val bx = bounds([p], layer-spec = SolderMask(side))
     add(xset, x(lo(bx)))
     add(xset, x(hi(bx)))
     add(yset, y(lo(bx)))
@@ -236,7 +236,7 @@ public defn QFP-pkg-outline (
   ; Package bounding box
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
   ; Interior outline of pads; shrunk by soldermask-clearance
-  val pad-interior = shrink(mask-clearance + line-width / 2.0, pad-interior-bounds(vp))
+  val pad-interior = shrink(mask-clearance + line-width / 2.0, pad-interior-bounds(vp, side))
   ; Select smaller box
   val pkg-outline* =
     if area(pkg-outline) < area(pad-interior) : pkg-outline
