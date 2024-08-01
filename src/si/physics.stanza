@@ -70,22 +70,23 @@ and then pass it to this function.
 @param Eps-r Relative Permittivity of the Medium. This value is usually greater than or equal to 1.0
 @param Mu-r Relative Magnetic Permeability of the Medium. This value is usually greater than or equal to 1.0.
   The default value for this parameter is 1.0 - this is a typical default for non-magnetic materials.
-@return The signal propagation velocity in m / s.
+@return The signal propagation velocity in mm / s.
 <DOC>
 public defn phase-velocity (eps-r:Double, mu-r:Double = 1.0) -> Double :
   ensure-valid-rel-permittivity!("eps-r", eps-r)
   ensure-valid-rel-permeability!("mu-r", mu-r)
-  1.0 / sqrt((M0 * mu-r) * (E0 * eps-r) )
+  1000.0 / sqrt((M0 * mu-r) * (E0 * eps-r) )
 
 doc: \<DOC>
-Speed of Light in Free Space (Vacuum)
+Speed of Light in Free Space (Vacuum) in mm / s
 <DOC>
-public val SPEED_OF_LIGHT_VAC = phase-velocity(1.0) ; m / s
+public val SPEED_OF_LIGHT_VAC = phase-velocity(1.0)
 
 doc: \<DOC>
 Compute the Guide Wavelength for a specific frequency in a medium.
 
 The guide wavelength is the wavelength of a TEM wave in a specific medium.
+@return Guide Wavelength at `f` in mm.
 <DOC>
 public defn guide-wavelength (f:Double, eps-r:Double, mu-r:Double = 1.0) -> Double :
   ensure-positive!("f:frequency", f)
