@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/QFP:
   import core
+  import collections
   import jitx
   import jitx/commands
 
@@ -204,19 +205,42 @@ public defmethod courtyard-excess (pkg:QFP) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
+; Compute the Box bounding the _interior_ of the pads
+; Only works on rectangular landpatterns
+; Is there a less ugly way to do this?
+defn pad-interior-bounds (vp:VirtualLP) :
+  val xset = HashSet<Double>()
+  val yset = HashSet<Double>()
+  ; Collect all x- and y-coordinates from pads
+  for p in get-pads(vp) :
+    val bx = bounds(pose(p) * pad-shape(pad(p)))
+    add(xset, x(lo(bx)))
+    add(xset, x(hi(bx)))
+    add(yset, y(lo(bx)))
+    add(yset, y(hi(bx)))
+  val xs = qsort $ to-tuple(xset)
+  val ys = qsort $ to-tuple(yset)
+  val lo = Point(xs[1], ys[1])
+  val hi = Point(xs[length(xs) - 2], ys[length(ys) - 2])
+  Box(lo, hi)
+
 public defn QFP-pkg-outline (
   pkg:QFP,
   vp:VirtualLP
   --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
+  line-width:Double,
+  mask-clearance:Double,
   side:Side = Top
   ):
   val pkg-body = package-body(pkg)
+  ; Package bounding box
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  ; Note: this is a very conservative outline computation
-  ; We shrink the outline by mask-clearance regardless of any existing clearance
-  val pkg-outline* = shrink(mask-clearance + line-width / 2.0, pkg-outline)
+  ; Interior outline of pads; shrunk by soldermask-clearance
+  val pad-interior = shrink(mask-clearance + line-width / 2.0, pad-interior-bounds(vp))
+  ; Select smaller box
+  val pkg-outline* =
+    if area(pkg-outline) < area(pad-interior) : pkg-outline
+    else : pad-interior
   LineRectangle(pkg-outline*, line-width = line-width)
 
 public defn QFP-outline (
