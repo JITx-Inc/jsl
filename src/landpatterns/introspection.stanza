@@ -36,3 +36,18 @@ public defn get-pad-by-name! (obj:LandPattern, name:String) -> JITXObject :
     (_:None):
       throw $ ValueError("No Pad by name '%_' found in LandPattern '%_'" % [name, obj])
     (v:One<JITXObject>): value(v)
+
+doc: \<DOC>
+Dump the Via Introspection Data
+@param v Via Definition to Dump
+@param o OutputStream to dump content to. By default it goes to standard output.
+<DOC>
+public defn dump-via-info (v:Via, o:OutputStream = current-output-stream()):
+  println(o, "Type: %_" % [via-type(v)])
+  println(o, "Start: %_" % [via-start(v)])
+  println(o, "Stop: %_" % [via-stop(v)])
+  println(o, "Diam: %_" % [via-diameter(v)])
+  println(o, "Hole: %_" % [via-hole-diameter(v)])
+  println(o, "Filled: %_" % [via-filled(v)])
+  println(o, "Tented: %_" % [via-tented(v)])
+  println(o, "VIP: %_" % [via-in-pad(v)])
