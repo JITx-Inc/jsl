@@ -1,0 +1,107 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/ferrite:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/symbols/framework
+
+val DEF_LINE_WIDTH = 0.05
+val DEF_BODY = Dims(0.9, 0.4)
+val DEF_BODY_ANGLE = -30.0
+
+
+public defstruct FerriteSymbolParams <: Equalable:
+  doc: \<DOC>
+  Line width for the shapes drawn.
+  Default value is 0.05 in symbol grid units.
+  <DOC>
+  line-width:Double with:
+    default => DEF_LINE_WIDTH
+    ensure => ensure-positive!
+    updater => sub-line-width
+
+  doc: \<DOC>
+  Set the dimensions for the ferrite body.
+  Default value is Dims(0.9, 0.4) in symbol grid units
+  <DOC>
+  body:Dims with:
+    default => DEF_BODY
+    ensure => ensure-positive!
+    updater => sub-body
+
+  doc: \<DOC>
+  Set the rotation angle for the ferrite body in degrees.
+  Default value is -30.0 degrees.
+  <DOC>
+  body-angle:Double with:
+    default => DEF_BODY_ANGLE
+    updater => sub-body-angle
+
+with:
+  keyword-constructor => true
+  printer => true
+  equalable => true
+
+
+var DEF_FERRITE_PARAMS = FerriteSymbolParams()
+public defn get-default-ferrite-symbol-params () -> FerriteSymbolParams :
+  DEF_FERRITE_PARAMS
+
+public defn set-default-ferrite-symbol-params (v:FerriteSymbolParams) -> False :
+  DEF_FERRITE_PARAMS = v
+
+doc: \<DOC>
+Build the Ferrite's glyphs in a SymbolNode
+<DOC>
+public defn build-ferrite-glyphs (
+  node:SymbolNode,
+  pitch:Double
+  params:FerriteSymbolParams
+  ):
+  val p2 = pitch / 2.0
+  line(node, [Point(0.0, p2), Point(0.0, (- p2))], width = line-width(params), name = "porch")
+
+  val b = body(params)
+  rectangle(node, x(b), y(b), pose = loc(0.0, 0.0, body-angle(params)), name = "body")
+
+
+doc: \<DOC>
+Ferrite Symbol
+
+The Ferrite symbol defines a schematic symbol as a
+tilted rectangle.
+<DOC>
+public defstruct FerriteSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Ferrite Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with:
+    ensure => ensure-positive!
+    default => TWO_PIN_DEF_PITCH
+    as-method => true
+
+  params:Maybe<FerriteSymbolParams> with:
+    default => None()
+
+with:
+  keyword-constructor => true
+
+
+public defmethod name (x:FerriteSymbol) -> String :
+  "Ferrite"
+
+defn get-params (x:FerriteSymbol) -> FerriteSymbolParams :
+  match(params(x)):
+    (_:None): get-default-ferrite-symbol-params()
+    (v:One<FerriteSymbolParams>): value(v)
+
+public defmethod build-artwork (
+  x:FerriteSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x)
+  build-ferrite-glyphs(sn, pitch(x), p)
+
+public defmethod build-orientation (x:FerriteSymbol, sn:SymbolNode):
+  set-preferred-orientation(sn, PreferRotation([1]))
