@@ -7,7 +7,6 @@ defpackage jsl/design/introspection:
 
   import jsl/errors
 
-
 doc: \<DOC>
 Retrieve the `Instantiable` that generates the instances of the passed object.
 
@@ -313,6 +312,7 @@ public defn get-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObje
       else:
         None()
 
+
 doc: \<DOC>
 Retrieve a Component Instance from a particular context by Ref
 
@@ -382,3 +382,36 @@ public defn find-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObj
 
     trail-comp?
 
+doc: \<DOC>
+Get the net associated with a module or component port
+
+@param pt Port of a component or module.
+@return If a connection is found - this function returns the Net as
+a JITXObject. If no connection is found - then None().
+<DOC>
+public defn get-connected-net (pt:JITXObject) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for n in nets(self) first :
+      if connected?([pt, n]):
+        One(n)
+      else:
+        None()
+
+doc: \<DOC>
+Get the net associated with a module or component port
+@param pt Port of a component or module.
+@return A `Net` object as a JITXObject if the port is connected.
+@throws ValueError if no net connections are found or if more than one net
+connection is found.
+<DOC>
+public defn get-connected-net! (pt:JITXObject) -> JITXObject:
+  inside pcb-module:
+    val n-set = to-tuple $ for n in nets(self) filter :
+      connected?([pt, n])
+
+    if length(n-set) == 0:
+      throw $ ValueError("Invalid Port - No net connection found")
+    else if length(n-set) > 1 :
+      throw $ ValueError("Invalid Port - Multiple Nets Associated - Expected Singular Net")
+
+    n-set[0]
