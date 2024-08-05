@@ -26,4 +26,5 @@ defpackage jsl/symbols/generators:
   forward jsl/symbols/DIAC
   forward jsl/symbols/transistors/generators
   forward jsl/symbols/logic/generators
+  forward jsl/symbols/ferrite
 
