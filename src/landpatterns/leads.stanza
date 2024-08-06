@@ -4,13 +4,13 @@ defpackage jsl/landpatterns/leads:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
   import jsl/geometry/box
   import jsl/landpatterns/VirtualLP
 
   forward jsl/landpatterns/leads/protrusions
   forward jsl/landpatterns/leads/lead-types
   forward jsl/landpatterns/leads/lead-profile
+  forward jsl/landpatterns/leads/through-hole
 
 
 doc: \<DOC>

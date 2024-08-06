@@ -5,9 +5,7 @@ defpackage jsl/symbols/logic/buffer:
 
   import jsl/ensure
   import jsl/errors
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/decorators
+  import jsl/symbols/framework
 
 val DEF_BUF_TRI_HEIGHT = 2.0
 val DEF_BUF_TRI_WIDTH = 2.0

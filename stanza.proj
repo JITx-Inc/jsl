@@ -30,5 +30,6 @@ build-test tests:
     jsl/tests/si/Microstrip
     jsl/tests/si/couplers
     jsl/tests/si/signal-ends
+    jsl/tests/design/introspection
   pkg: "test-pkgs"
   o: "jsl-tests"

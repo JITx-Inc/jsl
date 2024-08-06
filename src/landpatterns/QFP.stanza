@@ -1,57 +1,308 @@
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/QFP:
   import core
+  import collections
   import jitx
+  import jitx/commands
 
   import jsl/design/settings
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/quad
+  import jsl/errors
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+  import jsl/landpatterns/framework
 
+doc: \<DOC>
+QFP Lead Type
+<DOC>
+public defstruct QFP-Lead <: SMT-Lead:
+  doc: \<DOC>
+  Style of lead protrusion.
 
-public defn make-qfp-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
+  Default style is {@link BigGullWingLeads}. This is
+  suitable for pitches > 0.625mm. Below 0.625mm,
+  the lead-type {@link SmallGullWingLeads} should be
+  considered.
+  <DOC>
+  lead-type:LeadProtrusion with: (
+      as-method => true,
+      default => BigGullWingLeads(),
+    )
+  length:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+  width:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  constructor => #QFP-Lead
+
+doc: \<DOC>
+Constructor for `QFP-Lead` type
+
+Default lead type is {@link BigGullWingLeads}.
+If pitch < 0.625mm, consider {@link SmallGullWingLeads}.
+<DOC>
+public defn QFP-Lead (
   --
-  density-level: DensityLevel = DENSITY-LEVEL,
-  corner-pads?:False|[Pad, Pad] = false,
-  thermal-pad?: Shape|False = false
+  lead-type:LeadProtrusion = BigGullWingLeads(),
+  length:Toleranced,
+  width:Toleranced
   ):
-  val lead-type = BigGullWingLeads when pitch >= 0.0625 else SmallGullWingLeads
-  make-quad-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size, ; lead-span
-    lead-type,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?
-    thermal-pad? = thermal-pad?
+  #QFP-Lead(lead-type, length, width)
+
+doc: \<DOC>
+Select the QFP protrusion type depending on pitch
+
+@param pitch Distance between adjacent leads on a
+side of a QFP. This value is in mm.
+@return {@link SmallGullWingLeads} or {@link BigGullWingLeads}
+depending on whether pitch is less than 0.625mm or greater,
+respectively.
+<DOC>
+public defn select-QFP-protrusion (pitch:Double) -> LeadProtrusion:
+  if pitch < 0.625:
+    SmallGullWingLeads()
+  else:
+    BigGullWingLeads()
+
+doc: \<DOC>
+Construct the Lead Profile for a Quad Flat Package
+
+This function constructs a `Quad-Lead-Profile` for
+a square package. The protrusion type will be selected
+based on the `pitch` using {@link select-QFP-protrusion}
+
+@param span Lead span for both horizontal and vertical
+edges of the quad package. This value is in mm. This value
+is often labeled as dimension `E` or `D` in a mechanical
+drawing.
+@param pitch Distance between adjacent leads on the side
+of the package. This value is in mm. This value is
+often labeled as dimension `e` in a mechanical drawing.
+@param lead-length Lead foot length of the QFP lead. This
+is often labeled as dimension `L` in mechanical drawings.
+@param lead-width Width of the lead foot. This is often
+labeled as dimension `b` in mechanical drawings.
+<DOC>
+public defn QFP-Lead-Profile (
+  --
+  span : Toleranced,
+  pitch : Double,
+  lead-length : Toleranced,
+  lead-width : Toleranced,
+  ) -> Quad-Lead-Profile:
+  val lead-type = select-QFP-protrusion(pitch)
+  val lead = QFP-Lead(lead-type = lead-type, length = lead-length, width = lead-width)
+  val profile = Lead-Profile(span = span, pitch = pitch, lead = lead)
+  #Quad-Lead-Profile(profile, None(), profile, None())
+
+public defstruct QFP <: Quad-Package :
+  doc: \<DOC>
+  Number of leads ignoring any depopulated leads and thermal leads
+  <DOC>
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
+
+  doc: \<DOC>
+  Lead Profiles for all of the QFP's edges
+  The `Quad-Lead-Profile` type can be used to construct
+  square or rectangular QFP packages by providing different
+  lead-profiles for the horizontal and vertical edges.
+  <DOC>
+  lead-profile:Quad-Lead-Profile with:
+    as-method => true
+  doc: \<DOC>
+  Optional thermal lead for the package.
+  <DOC>
+  thermal-lead?:False|Shape with:
+    as-method => true
+
+  doc: \<DOC>
+  Package Body for the Quad-based Package.
+  <DOC>
+  package-body:PackageBody with:
+    as-method => true
+
+  doc: \<DOC>
+  Pad Planner for the Quad package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with:
+    as-method => true
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the Quad Package
+
+  This provides a numbering scheme for the leads of the Quad
+  package. See {@link select-quad-numbering} for more information
+  about default numbering schemes.
+  <DOC>
+  lead-numbering:Numbering with:
+    as-method => true
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with:
+    as-method => true
+
+with:
+  printer => true
+  constructor => #QFP
+
+doc: \<DOC>
+Constructor for the QFP package generator
+
+@param pad-planner Default value is {@link RectanglePadPlanner}
+<DOC>
+public defn QFP (
+  --
+  num-leads:Int,
+  lead-profile:Quad-Lead-Profile,
+  thermal-lead?:False|Shape,
+  package-body:PackageBody,
+  pad-planner:PadPlanner = RectanglePadPlanner,
+  lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
+  density-level:DensityLevel = DENSITY-LEVEL
+  ):
+  #QFP(
+    num-leads, lead-profile, thermal-lead?,
+    package-body, pad-planner, lead-numbering,
+    density-level
   )
 
-public pcb-landpattern qfp-landpattern (
-  num-pins:Int,
-  pitch:Double,
-  ; Lead Parameters
-  lead-length: Toleranced,
-  lead-width: Toleranced,
-  ; Pkg Parameters
-  package-size: Toleranced,
+public defmethod name (pkg:QFP) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+  val body = package-body(pkg)
+  val p-mm = pitch $ x-leads $ lead-profile(pkg)
+  val w = to-deci(typ $ width(body))
+  val l = to-deci(typ $ length(body))
+  val h-mm = typ $ height(body)
+  val ls1 = max(w,l)
+  val ls2 = min(w,l)
+  val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
+  val prefixes = seq?({_}, [
+    if h-mm <= 0.50 : One("T") else : None(), ; Thin   : height <= 1.60mm
+    if p-mm <= 0.50 : One("S") else : None(), ; Shrink : pitch <= 0.50mm
+  ])
+  to-string("%_QFP%_P%_X%_X%_-%_N" % [append-all(prefixes), to-deci(p-mm), ls1, ls2, to-deci(h-mm), n])
+
+public defmethod courtyard-excess (pkg:QFP) -> Double :
+  val protrusion = lead-type $ lead $ x-leads $ lead-profile $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
+  courtyard-excess(fillets)
+
+; Compute the Box bounding the _interior_ of the pads
+; Only works on rectangular landpatterns
+; Is there a less ugly way to do this?
+defn pad-interior-bounds (vp:VirtualLP, side:Side) :
+  val xset = HashSet<Double>()
+  val yset = HashSet<Double>()
+  ; Collect all x- and y-coordinates from pads
+  for p in get-pads(vp) :
+    val bx = bounds([p], layer-spec = SolderMask(side))
+    add(xset, x(lo(bx)))
+    add(xset, x(hi(bx)))
+    add(yset, y(lo(bx)))
+    add(yset, y(hi(bx)))
+  val xs = qsort $ to-tuple(xset)
+  val ys = qsort $ to-tuple(yset)
+  val lo = Point(xs[1], ys[1])
+  val hi = Point(xs[length(xs) - 2], ys[length(ys) - 2])
+  Box(lo, hi)
+
+public defn QFP-pkg-outline (
+  pkg:QFP,
+  vp:VirtualLP
   --
-  density-level: DensityLevel = DENSITY-LEVEL,     ; the density level of the design
-  corner-pads?:False|[Pad, Pad] = false, ; corner pads
-  thermal-pad?: Shape|False = false
+  line-width:Double,
+  mask-clearance:Double,
+  side:Side = Top
   ):
-  name = to-string("QFP%_X%_" % [package-size, package-size])
-  make-qfp-landpattern(
-    num-pins, pitch,
-    lead-length, lead-width,
-    package-size,
-    density-level = density-level,
-    corner-pads? = corner-pads?,
-    thermal-pad? = thermal-pad?
-  )
+  val pkg-body = package-body(pkg)
+  ; Package bounding box
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
+  ; Interior outline of pads; shrunk by soldermask-clearance
+  val pad-interior = shrink(mask-clearance + line-width / 2.0, pad-interior-bounds(vp, side))
+  ; Select smaller box
+  val pkg-outline* =
+    if area(pkg-outline) < area(pad-interior) : pkg-outline
+    else : pad-interior
+  LineRectangle(pkg-outline*, line-width = line-width)
+
+public defn QFP-outline (
+  pkg:QFP,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+  val outline-geom =
+    QFP-pkg-outline(pkg, vp, line-width = line-width, mask-clearance = mask-clearance, side = side)
+
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+public defn QFP-pin-1-marker (
+  pkg:QFP,
+  vp:VirtualLP
+  --
+  pin-1-id:Int|Ref = 1,
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
+
+  val pad-loc = pose(pin-1-pad)
+  val pad-center = center(pad-loc)
+
+  val smasks = get-layer(pin-1-pad, SolderMask(side))
+  if length(smasks) == 0:
+    ; This is a very strange error - it means
+    ;  that pad 1 of this component doesn't have a soldermask
+    ;  opening.
+    ; This could happen if the user passed an erroneous `side` argument
+    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
+  val smask = smasks[0]
+
+  val width = x $ dims(smask)
+  val offset = Point((- (width / 2.0) + mask-clearance + line-width), 0.0)
+  val marker-shape = Circle(offset, line-width)
+
+  val marker-geom = pad-loc * marker-shape
+
+  add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
+
+  val outline = get-silkscreen-outline!(vp)
+  val o-box = bounds $ shape(outline)
+
+  val marker = compute-triangle-marker(pad-center, o-box, line-width)
+  add-artwork(
+    vp, Silkscreen("pin-1-marker", side),
+    marker,
+    name = "pin-1-triangle",
+    class = "pin-1-marker"
+    )
+
+public defmethod build-silkscreen (
+  pkg:QFP,
+  vp:VirtualLP
+  ) -> False:
+  QFP-outline(pkg, vp)
+  QFP-pin-1-marker(pkg, vp)
+  add-reference-designator(vp)

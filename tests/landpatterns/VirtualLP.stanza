@@ -116,6 +116,9 @@ deftest(virtual-lp) test-lp-tree:
   ;   has a parent - this should be a fault.
   expect-throw({append(root, c1)})
 
+  val expNone = get-child(root, "SomeName")
+  #EXPECT(expNone is None)
+
   ; Null Pattern
 
   pcb-landpattern null-pattern :
@@ -218,6 +221,13 @@ deftest(virtual-lp) test-find-by-name:
 
   val no-elems = to-tuple $ find-by-name(root, "Garbage")
   #EXPECT(length(no-elems) == 0)
+
+  val expNone = get-child(root, "SomeName2")
+  #EXPECT(expNone is None)
+
+  val expCh1 = get-child(root, "Uno")
+  #EXPECT(expCh1 is-not None)
+
 
 deftest(virtual-lp) test-find-by-class:
   val root = VirtualLP()

@@ -6,9 +6,7 @@ defpackage jsl/symbols/logic/OR:
 
   import jsl/ensure
   import jsl/errors
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/decorators
+  import jsl/symbols/framework
 
 ; OR Gate Symbol Geometry is a lot more complex than the
 ;  AND gate but still it boils down to a combination

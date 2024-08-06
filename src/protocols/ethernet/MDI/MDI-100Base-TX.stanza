@@ -1,0 +1,68 @@
+#use-added-syntax(jitx)
+doc: \<DOC>
+@title 100Base-TX Ethernet Medium
+
+@description
+
+100Base-TX protocol (also known as Fast Internet) is a 100Mbps media
+dependent intended for use on copper or fiber.
+
+This package provides bundles for the implementation copper-based
+implementations typically used in RJ-45 connectors.
+
+@see https://en.wikipedia.org/wiki/Fast_Ethernet
+<DOC>
+defpackage jsl/protocols/ethernet/MDI/MDI-100Base-TX:
+  import core
+  import jitx
+
+  import jsl/bundles
+  import jsl/si
+
+public val NUM_PAIRS_100Base-TX = 2
+
+doc: \<DOC>
+100Base-TX Bundle
+
+100Base-TX is a full-duplex protocol operating
+at 66MHz. It consists of two differential
+pairs for transmit and receive.
+
+This bundle follows the {@link lane-pair} pattern
+
+<DOC>
+public pcb-bundle MDI-100Base-TX:
+  name = "100Base-T"
+  port TX : diff-pair
+  port RX : diff-pair
+
+doc: \<DOC>
+Intra-pair Skew and Loss Limits
+
+@return Tuple of [Skew, Loss]
+<DOC>
+public defn MDI-100Base-TX-get-skew-loss () -> [Toleranced, Double]:
+  ; 66MHz => 15nS period
+  ; I've selected 5% as the intra-pair skew
+  ;   lacking a specific specification.
+  [0.0 +/- 750.0e-12, 12.0]
+
+doc: \<DOC>
+Differential Pair Impedance Range
+<DOC>
+public defn MDI-100Base-TX-get-trace-impedance () -> Toleranced :
+  100.0 +/- (10 %)
+
+doc: \<DOC>
+Construct a LaneConstraint for the MDI-100Base-TX medium.
+<DOC>
+public defn MDI-100Base-TX-Constraint (
+  route-struct:DifferentialRoutingStructure
+  ) -> LaneConstraint :
+  val [sk, ml] = MDI-100Base-TX-get-skew-loss()
+  val cst = DP-Constraint(
+    skew = sk,
+    loss = ml,
+    route-struct = route-struct
+  )
+  LaneConstraint(cst)

@@ -9,13 +9,7 @@ defpackage jsl/landpatterns/QFN:
   import jsl/ensure
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/quad
-  import jsl/landpatterns/leads
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-planner
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/VirtualLP
-  import jsl/landpatterns/silkscreen
+  import jsl/landpatterns/framework
 
 doc: \<DOC>
 QFN Lead Type
@@ -237,17 +231,7 @@ public defn QFN-pin-1-marker (
   add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
 
   if density-level(pkg) == DensityLevelA :
-    val outline = get-silkscreen-outline!(vp)
-    val o-box = bounds(outline)
-
-    val marker = compute-triangle-marker(pad-center, o-box, line-width)
-    add-artwork(
-      vp, Silkscreen("pin-1-marker", side),
-      marker,
-      name = "pin-1-triangle",
-      class = "pin-1-marker"
-      )
-
+    build-outline-pin-1-triangle(vp)
 
 public defmethod build-silkscreen (
   pkg:QFN,

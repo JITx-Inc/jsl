@@ -4,10 +4,8 @@ defpackage jsl/symbols/comparator:
   import jitx
 
   import jsl/ensure
-  import jsl/symbols/hysteresis
+  import jsl/symbols/framework
   import jsl/symbols/op-amps
-  import jsl/symbols/SymbolNode
-  import jsl/symbols/SymbolDefn
 
 
 var DEF_COMP_PARAMS = OpAmpSymbolParams()

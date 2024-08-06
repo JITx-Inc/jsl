@@ -1,0 +1,76 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/BGA-stagger:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns
+  import jsl/symbols
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-BGA:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [VO- | A[2] | Right ]
+    [ASDF | A[4] | Right ]
+    [VDD | A[6] | Up ]
+    [SHUTDOWN | B[1] | Left]
+    [GND | B[3] | Down]
+    [VO+ | B[5] | Right ]
+    [BYPASS | C[2] | Left]
+    [IN+ | C[4] | Left]
+    [IN- | C[6] | Left]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val rows = 3
+  val cols = 3
+  val grid = Grid-Numbering(rows, 2 * cols)
+  val pitch = 0.5
+
+  val planner = Staggered-Matrix-Planner(
+    rows = rows
+    columns = cols * 2
+    pitch = Dims(pitch / 2.0, pitch)
+  )
+
+  val body = PackageBody(
+    width = 2.5 +/- 0.1,
+    length = 2.0 +/- 0.1,
+    height = 0.71 +/- [0.06, 0.0]
+  )
+
+  val pkg = BGA(
+    num-leads = 9,
+    lead-diam = 0.3,
+    package-body = body,
+    lead-numbering = grid,
+    pad-planner = planner,
+    density-level = DensityLevelB
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-BGA
+  place(c) at loc(0.0, 0.0) on Top
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("BGA-STAGGER-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

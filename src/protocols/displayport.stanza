@@ -1,26 +1,22 @@
+#use-added-syntax(jitx)
 doc: \<DOC>
 @brief DisplayPort Protocol
 
 DisplayPort is a serial protocol supporting high speed links for video+audio
 @see https://en.wikipedia.org/wiki/DisplayPort
 
-This functions and definitions in this file support defining DisplayPort
+The functions and definitions in this file support defining DisplayPort
 connections between sources and receivers on a printed circuit board.
 
 ## DisplayPort Blocking Capacitors
 
 The DisplayPort specification calls for AC coupling for the data lanes. This is typically
-achieved using a blocking capacitor. When connecting two active components, this typically
-means blocking caps from `Tx -> Rx` on both sides of the link. When connecting an
-active component to a passive component, this typically means adding the blocking caps only on
-the `Tx -> Rx` side of the link.
+achieved using a blocking capacitor.
 
-The functions in this module allow you to pass a blocking capacitor as an `Instantiable`.
-This component will get instantiated for each leg of the diff-pair. These functions handle
-the topology configuration, but the user needs to set a `pin-model` statement on the capacitor component.
+The best way to achieve this is to use the {@link /jsl/si/constraints/constrain-topology}
+mechanism.
 
 <DOC>
-#use-added-syntax(jitx)
 defpackage jsl/protocols/displayport:
   import core
   import jitx
@@ -28,6 +24,7 @@ defpackage jsl/protocols/displayport:
 
   import jsl/bundles
   import jsl/errors
+  import jsl/ensure
   import jsl/si
   import jsl/pin-assignment
 
@@ -89,105 +86,6 @@ public pcb-bundle displayport-connector :
   port config : pin[DISPLAYPORT_NUM_CONFIGS]
 
 doc: \<DOC>
-@brief Construct a DisplayPort lane.
-
-This function will construct the lane connections of a DisplayPort connection. The `src` and `dst`
-arguments must both be of type `displayport`.
-
-@param sw The intra-pair skew time difference for the differential signals being connected.
-@param ml The maximum loss in dB for all differential signals being connected.
-@param src This is assumed to be the "Tx" side of the link. This is expected to be a port of `Bundle` type `displayport`
-@param sink This is assumed to be the "Rx" side of the link. This is expected to be a port of `Bundle` type `displayport`
-@param cap Optional DC blocking capacitor to be inserted between the TX and RX pairs. Note that
-there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
-
-<DOC>
-public defn connect-displayport-lane (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False) :
-  inside pcb-module:
-    check-bundle(displayport, src, sink)
-    for i in indices(src.lane) do :
-      match(cap) :
-        (c:Instantiable) :
-          inst bl-cap : dp-coupler(c)
-          require tx1 : dual-pair from bl-cap
-          topo-net(src.lane[i], tx1.A)
-          topo-net(tx1.B, sink.lane[i])
-        (f:False) :
-          topo-net(src.lane[i], sink.lane[i])
-      constrain-ch(sw, ml, src.lane[i], sink.lane[i])
-
-doc: \<DOC>
-@brief Construct aux connection of a DisplayPort connection.
-
-This function will construct the AUX channel of a DisplayPort connection with the
-optional blocking cap and pull-up resistors.
-The `src` and `dst` arguments must both be of type `displayport`.
-
-@param sw The intra-pair skew time difference for the differential signals being connected.
-@param ml The maximum loss in dB for all differential signals being connected.
-@param src This is assumed to be the source side of the link. This is expected to be a port of `Bundle` type `displayport`
-@param dst This is assumed to be the sink side of the link. This is expected to be a port of `Bundle` type `displayport`
-@param cap Optional DC blocking capacitor to be inserted between the AUX pair. Note that
-there are 2 blocking caps inserted, one on each of the P,N signals of the pair.
-@param term Optional pull-up resistor and common net to be added to the AUX pair before the capacitor.
-Note that there are 2 resistors added, one on each of the P,N signals of the pair. Power supply pin to be
-used for the pull-up resistors. Must be valid if the resistors are used.
-
-<DOC>
-public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
-  inside pcb-module:
-    match(term, cap) :
-      (t:[Instantiable, JITXObject], c:Instantiable) :
-        inst shunt-r : symmetric-shunt(t[0] as Instantiable)
-        inst bl-cap : dp-coupler(c)
-        require tx1 : dual-pair from bl-cap
-        topo-net(src.aux, shunt-r.A)
-        topo-net(shunt-r.B, tx1.A)
-        topo-net(tx1.B, sink.aux)
-        topo-net(shunt-r.COMMON, t[1] as JITXObject)
-      (f:False, c:Instantiable|False) :
-        connect-displayport-aux(sw, ml, src, sink, c)
-    constrain-ch(sw, ml, src.aux, sink.aux)
-
-public defn connect-displayport-aux (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False) :
-  inside pcb-module:
-    match(cap) :
-      (c:Instantiable) :
-        inst bl-cap : dp-coupler(c)
-        require d-p : dual-pair from bl-cap
-        topo-net(src.aux, d-p.A)
-        topo-net(d-p.B, sink.aux)
-      (f:False) :
-        topo-net(src.aux, sink.aux)
-    constrain-ch(sw, ml, src.aux, sink.aux)
-
-doc: \<DOC>
-@brief Construct the DisplayPort Topology and Constraints
-
-This function constructs the DisplayPort topology and applies constraints
-to the channel for intra-pair skew and channel loss.
-
-@param sw The intra-pair skew value for the differential signals being connected.
-@param ml The maximum loss for all differential signals being connected.
-@param src This is expected to be a port of `Bundle` type `displayport`
-@param sink This is expected to be a port of `Bundle` type `displayport`
-@param cap Optional DC blocking capacitor to be inserted between the src.tx and sink.rx channel. Note that
-there are 2 blocking caps inserted, one on each of the pair of P,N signals. The capacitor needs to have
-pin models applied to its pins in order for the overall skew and loss values to be respected.
-
-@param term Optional tuple of pull-up resistor and common net to be added to the AUX pair before the capacitor.
-Note that there are 2 resistors added, one on each of the P,N signals of the pair. Common net is to be used
-for the pull-up resistors and can be a power supply net.
-<DOC>
-public defn connect-displayport (sw:Toleranced, ml:Double, src:JITXObject, sink:JITXObject, cap:Instantiable|False, term:[Instantiable, JITXObject]|False) :
-  inside pcb-module :
-    connect-displayport-lane(sw, ml, src, sink, cap)
-    connect-displayport-aux(sw, ml, src, sink, cap, term)
-    ; no constraints applied to the hot plug detect
-    net (src.hpd sink.hpd)
-
-
-doc: \<DOC>
 @brief Curated values for skew and loss of DisplayPort Channel
 This is a helper function that returns the bounds on the intra-pair
 skew timing and maximum loss as expected by the particular standard targeted by
@@ -214,6 +112,33 @@ public defn displayport-get-skew-loss-vals (gen:jsl/protocols/displayport/DPVers
     DP2p1a : [0.0 +/- 20.0e-12, 15.0] ;
 
 doc: \<DOC>
+@brief Get inter-pair skew values for DisplayPort Channel
+This function returns the allowable inter-pair skew timing for DisplayPort lanes
+as expected by the particular standard targeted by the user. The returned value
+is a Toleranced value with upper/lower limits for the inter-pair skew.
+
+Inter-pair skew refers to the timing difference between different differential pairs
+in the DisplayPort interface, which is critical for maintaining signal integrity
+across multiple high-speed lanes.
+
+@param gen The DisplayPort generation (version) to get the inter-pair skew for
+@return Allowable inter-pair skew as a Toleranced value in seconds
+<DOC>
+public defn displayport-get-inter-skew (gen:jsl/protocols/displayport/DPVersion) -> Toleranced:
+  switch(gen) :
+    DP1p0  : 0.0 +/- (2.0 * 400.0e-12) ; 2 symbol lengths at 2.7 Gbps
+    DP1p1  : 0.0 +/- (2.0 * 371.0e-12) ; 2 symbol lengths at 2.7 Gbps
+    DP1p2  : 0.0 +/- (2.0 * 337.0e-12) ; 2 symbol lengths at 5.4 Gbps
+    DP1p2a : 0.0 +/- (2.0 * 337.0e-12) ; 2 symbol lengths at 5.4 Gbps
+    DP1p3  : 0.0 +/- (2.0 * 231.0e-12) ; 2 symbol lengths at 8.1 Gbps
+    DP1p4  : 0.0 +/- (2.0 * 231.0e-12) ; 2 symbol lengths at 8.1 Gbps
+    DP1p4a : 0.0 +/- (2.0 * 231.0e-12) ; 2 symbol lengths at 8.1 Gbps
+    DP2p0  : 0.0 +/- (2.0 * 100.0e-12) ; 2 symbol lengths at 20.0 Gbps
+    DP2p1  : 0.0 +/- (2.0 * 100.0e-12) ; 2 symbol lengths at 20.0 Gbps
+    DP2p1a : 0.0 +/- (2.0 * 100.0e-12) ; 2 symbol lengths at 20.0 Gbps
+
+
+doc: \<DOC>
 @brief Differential impedance specified by the DisplayPort standard
 This is a helper function that returns the expected differential
 trace impedance for the specified generation of the DisplayPort standard.
@@ -225,17 +150,67 @@ public defn displayport-get-trace-impedance () -> Toleranced :
   100.0 +/- (10 %)
 
 doc: \<DOC>
-@brief Apply the differential routing structure to a DisplayPort bundle.
-The function applies the provided DifferentialRoutingStructure
-to all of the differential pairs in the start and endpoints. Note that both start and end points
-need to be connected to physical component pins either directly or via pin assignment.
-@param rs This is the DifferentialRoutingStructure to be used to realize the differential signals.
-@param x This is expected to be a port of `Bundle` type `displayport`
-@param y This is expected to be a port of `Bundle` type `displayport`
-<DOC>
+SI Constraint For DisplayPort
 
-public defn displayport-apply-routing-structure (rs:DifferentialRoutingStructure, x:JITXObject, y:JITXObject) :
-  inside pcb-module :
-    for i in indices(x.lane) do :
-      diff-structure(rs, x.lane[i] => y.lane[i])
-    diff-structure(rs, x.aux => y.aux)
+This constraint assumes the endpoints are {@link displayport} bundles.
+The code will construct the necessary skew and loss constraints for
+this bundle according to the DisplayPort specifications.
+
+When used with `constrain-topology`, the `src` and `dst` must be bundles
+of type {@link displayport}.
+<DOC>
+public defstruct DisplayPort-Constraint <: DP-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew:Toleranced  with:
+    as-method => true
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    as-method => true
+  doc: \<DOC>
+  Differential Routing Structure for each Diff-Pair
+  <DOC>
+  route-struct:DifferentialRoutingStructure with:
+    as-method => true
+  doc: \<DOC>
+  Inter-pair Timing Skew Constraint in Seconds.
+  <DOC>
+  inter-skew:Toleranced
+with:
+  keyword-constructor => true
+  constructor => #DisplayPort-Constraint
+
+
+doc: \<DOC>
+Constructor for DisplayPort Constraint
+
+@param route-struct Differential Pair routing structure to be applied
+to each of the data lanes.
+@param gen Version Identifier. This value will be used to consult
+what specific skew, timing, etc tolerances to use for this topology.
+<DOC>
+public defn DisplayPort-Constraint (
+  --
+  route-struct:DifferentialRoutingStructure
+  gen:DPVersion = DP1p2
+  ) -> DisplayPort-Constraint :
+  val [s, ml] = displayport-get-skew-loss-vals(gen)
+  val ins = displayport-get-inter-skew(gen)
+  #DisplayPort-Constraint(s, ml, route-struct, ins)
+
+public defmethod constrain (cst:DisplayPort-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  for i in 0 to DISPLAYPORT_NUM_LANES do:
+    dp-constrain(cst, src.lane[i], dst.lane[i])
+
+  dp-constrain(cst, src.aux, dst.aux)
+
+  ; Apply inter-pair skew constraint
+  timing-window(
+    inter-skew(cst)
+    src.lane[0].P => dst.lane[0].P,
+    src.lane => dst.lane
+  )

@@ -1,0 +1,65 @@
+#use-added-syntax(jitx,tests)
+defpackage jsl/tests/design/introspection:
+  import core
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/introspection
+  import jsl/design/settings
+  import jsl/landpatterns
+  import jsl/symbols
+
+
+pcb-component two-pin-non-polar :
+  port p : pin[[1, 2]]
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+
+  val symb = CapacitorSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = get-chip-pkg("1206")
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component two-pin-polar :
+  port a : pin
+  port c : pin
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [a | p[1] | Up |  0]
+    [c | p[2] | Down | 0]
+
+
+  val symb-gen = CapacitorSymbol()
+  val symb = create-symbol(symb-gen)
+
+  symbol = symb(a => symb.p[1], c => symb.p[2])
+
+  val pkg = get-chip-pkg("1206")
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+deftest(design_introspection) test-port-introspection :
+
+  pcb-module uut:
+    inst B : two-pin-non-polar
+    inst D : two-pin-polar
+
+    val obs = get-element-ports(B)
+    #EXPECT(length(obs) == 2)
+    #EXPECT(to-string(ref(obs[0])) == "B.p[1]")
+    #EXPECT(to-string(ref(obs[1])) == "B.p[2]")
+
+    val obs2 = get-element-ports(D)
+    #EXPECT(length(obs2) == 2)
+    #EXPECT(to-string(ref(obs2[0])) == "D.c")
+    #EXPECT(to-string(ref(obs2[1])) == "D.a")
+
+  set-main-module(uut)

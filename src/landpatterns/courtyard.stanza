@@ -12,19 +12,37 @@ defpackage jsl/landpatterns/courtyard:
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/packages with:
     only => (PackageBody, envelope)
-  import jsl/geometry/LineRectangle
 
-public val DEF_COURTYARD_WIDTH = 0.1
+public val DEF_COURTYARD_LINE_WIDTH = 0.1
+public val DEF_COURTYARD_LINE_LEN = 1.0
+public val DEF_COURTYARD_LEN_RATIO = 0.5
+; NOTE -
+;   KICAD does not allow for other shapes on the courtyard layer - it
+;   only accepts the boundary shape. So we must place the origin marker
+;   on a separate layer.
+public val DEF_COURTYARD_ORIGIN_LAYER = CustomLayer("origin", Top)
+
+defn compute-origin-size (outline:Rectangle) -> Double :
+  ; We look at the outline and use this to determine the
+  ;  origin marker's size. We don't want the marker going
+  ;  outside the boundary. Otherwise, this will throw off
+  ;  other calculations we make with the boundary.
+  val max-dim = min(width(outline), height(outline))
+  val max-2 = max-dim * DEF_COURTYARD_LEN_RATIO
+  min(max-2, DEF_COURTYARD_LINE_LEN)
 
 public defn build-courtyard-origin (
   vp:VirtualLP,
+  outline:Rectangle,
   --
+  line-width:Double = DEF_COURTYARD_LINE_WIDTH
   pose:Pose = loc(0.0, 0.0)
   side:Side = Top
-  ) -> False:
-
-  val shape = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
-  add-artwork(vp, Courtyard(side), shape, class = "courtyard")
+  ) -> Shape:
+  val line-length = compute-origin-size(outline)
+  val shape = PlusSymbol(line-length = line-length, line-width = line-width, pose = pose)
+  add-artwork(vp, DEF_COURTYARD_ORIGIN_LAYER, shape, class = "courtyard")
+  shape
 
 doc: \<DOC>
 Generator for Courtyard Origin Marker
@@ -32,6 +50,8 @@ Generator for Courtyard Origin Marker
 This function generates a `plus` sign marker
 at the origin of a component landpattern.
 
+@param line-length Set the size of the origin marker. The default is 1.0 mm.
+@param line-width Set the line width for the drawn marker. The default is 0.05mm.
 @param pose Override the origin location by applying a
 `pose`. This can both rotate and translate the marker position.
 @param side Indicates which side to place the courtyard on. Default
@@ -39,11 +59,13 @@ per convention is the top.
 <DOC>
 public defn make-courtyard-origin (
   --
+  line-length:Double = DEF_COURTYARD_LINE_LEN,
+  line-width:Double = DEF_COURTYARD_LINE_WIDTH
   pose:Pose = loc(0.0, 0.0)
   side:Side = Top
   ):
   inside pcb-landpattern:
-    layer(Courtyard(side)) = PlusSymbol(line-width = DEF_COURTYARD_WIDTH, pose = pose)
+    layer(DEF_COURTYARD_ORIGIN_LAYER) = PlusSymbol(line-length = line-length, line-width = line-width, pose = pose)
 
 
 public defn compute-courtyard-boundary (
@@ -53,7 +75,7 @@ public defn compute-courtyard-boundary (
   excess:Double,
   side:Side,
   pos:Pose,
-  ):
+  ) -> Rectangle:
   ; @NOTE - Here I'm using the soldermask openings for the pads
   ;   as the controlling boundary/outline. By doing this -
   ;   I can enforce at least a sliver of soldermask between
@@ -62,8 +84,7 @@ public defn compute-courtyard-boundary (
   val pkg-outline = bounds(envelope(pkg-body, density-level = density-level))
   val outline = union(pad-outline, pkg-outline)
   val outline* = fatten(excess, outline)
-  pos * LineRectangle(outline*, line-width = DEF_COURTYARD_WIDTH)
-
+  pos * to-Rectangle(outline*)
 
 doc: \<DOC>
 Generator for Courtyard Boundary
@@ -94,10 +115,11 @@ public defn make-courtyard-boundary (
   excess:Double = 0.5
   side:Side = Top
   pos:Pose = loc(0.0, 0.0),
-  ):
+  ) -> Rectangle:
   inside pcb-landpattern:
     val outline = compute-courtyard-boundary(pads(self), pkg-body, density-level, excess, side, pos)
     layer(Courtyard(side)) = outline
+    outline
 
 doc: \<DOC>
 Create a courtyard boundary in a Virtual Landpattern
@@ -114,9 +136,10 @@ public defn build-courtyard-boundary (
   excess:Double = 0.5
   pos:Pose = loc(0.0, 0.0)
   side:Side = Top,
-  ) -> False:
+  ) -> Rectangle:
   val outline = compute-courtyard-boundary(get-pads(vp), pkg-body, density-level, excess, side, pos)
   add-artwork(vp, Courtyard(side), outline, class = "courtyard")
+  outline
 
 doc: \<DOC>
 Retrieve the Dimensions of the Courtyard Boundary

@@ -10,11 +10,11 @@ defpackage jsl/examples/protocols/displayport/main:
   import jsl/symbols/SymbolDefn
 
   import jsl/protocols/displayport
-  import jsl/si/helpers
+  import jsl/bundles
+  import jsl/si
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
-  import jsl/examples/protocols/displayport/displayport-src
 
 pcb-module displayport-example :
   port VDD
@@ -23,16 +23,24 @@ pcb-module displayport-example :
   inst dut1 : jsl/examples/protocols/displayport/displayport-src/module(source = true)
   inst dut2 : jsl/examples/protocols/displayport/displayport-src/module(source = false)
 
-  require src : displayport from dut1
-  require dst : displayport from dut2
+  require MCU-src : displayport from dut1
+  require CONN-dst : displayport from dut2
 
-  val gen = DP1p4
+  val ti = displayport-get-trace-impedance()
+  val DP-limits = DisplayPort-Constraint(gen = DP2p1, route-struct = diff(ti))
 
-  val [skew, loss] = displayport-get-skew-loss-vals(gen)
+  within [src, dst] = constrain-topology(MCU-src => CONN-dst, DP-limits):
+    inst cap : dp-coupler(block-cap(100.0e-9))[length(src.lane)]
+    for i in 0 to length(src.lane) do:
+      topo-pair(src.lane[i] => cap[i] => dst.lane[i])
 
-  connect-displayport(skew, loss, src, dst, block-cap(100.0e-9), [pu-res(50.0e3), VDD])
-  val trace-imped = displayport-get-trace-impedance()
-  displayport-apply-routing-structure(diff(trace-imped), src, dst)
+    inst shunt-r : symmetric-shunt(pu-res(50.0e3))
+    topo-pair(src.aux => shunt-r.A)
+    topo-pair(shunt-r.B => dst.aux)
+
+    net (shunt-r.COMMON, VDD)
+
+    net (src.hpd, dst.hpd)
 
   net (VDD dut1.VDD dut2.VDD)
   net (GND dut1.GND dut2.GND)
@@ -48,5 +56,5 @@ set-main-module(displayport-example)
 ; View the results
 view-board()
 ; view-schematic()
-view-design-explorer()
+;view-design-explorer()
 ; view-bom(BOM-STD)

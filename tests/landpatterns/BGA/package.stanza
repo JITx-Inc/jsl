@@ -24,10 +24,13 @@ deftest(BGA) test-full-simple :
   ; NSMD variant of the recommended land pattern
 
   val planner = Full-Matrix-Planner(
-    PadConfig-D(
+    pad-config = PadConfig-D(
       copper-D-adj = -0.05,
       mask-D-adj = 0.0,
-    )
+    ),
+    rows = 3,
+    columns = 4,
+    pitch = 0.5
   )
 
   val body = PackageBody(
@@ -38,10 +41,7 @@ deftest(BGA) test-full-simple :
 
   val pkg = BGA(
     num-leads = 12,
-    rows = 3,
-    columns = 4,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     pad-planner = planner
   )
@@ -115,10 +115,13 @@ deftest(BGA) test-full-landpattern :
   ; NSMD variant of the recommended land pattern
 
   val planner = Full-Matrix-Planner(
-    PadConfig-D(
+    pad-config = PadConfig-D(
       copper-D-adj = -0.05,
       mask-D-adj = 0.0,
     )
+    rows = 3,
+    columns = 4,
+    pitch = 0.5
   )
 
   val body = PackageBody(
@@ -129,10 +132,7 @@ deftest(BGA) test-full-landpattern :
 
   val pkg = BGA(
     num-leads = 12,
-    rows = 3,
-    columns = 4,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     pad-planner = planner
     density-level = DensityLevelC
@@ -142,7 +142,11 @@ deftest(BGA) test-full-landpattern :
 
   ; Check for courtyard
   val cy = layer(lp, Courtyard(Top))
-  #EXPECT(length(cy) == 2)
+  #EXPECT(length(cy) == 1)
+
+  ; Check for Origin
+  val oy = layer(lp, CustomLayer("origin", Top))
+  #EXPECT(length(oy) == 1)
 
   ; Check for the silkscreen
   val silk = layer(lp, Silkscreen("outline", Top))
@@ -190,7 +194,10 @@ deftest(BGA) test-perimeter-simple :
         density-level = DensityLevelC
         ),
       mask-D-adj = 0.0,
-    )
+    ),
+    rows = num-rows,
+    columns = num-cols,
+    pitch = 0.5
   )
 
   val body = PackageBody(
@@ -201,10 +208,7 @@ deftest(BGA) test-perimeter-simple :
 
   val pkg = BGA(
     num-leads = 9,
-    rows = num-rows,
-    columns = num-cols,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     pad-planner = planner,
     lead-numbering = grid-scheme
@@ -307,10 +311,13 @@ deftest(BGA) test-simple-with-pose:
   ; NSMD variant of the recommended land pattern
 
   val planner = Full-Matrix-Planner(
-    PadConfig-D(
+    pad-config = PadConfig-D(
       copper-D-adj = -0.05,
       mask-D-adj = 0.0,
-    )
+    ),
+    rows = 3,
+    columns = 4,
+    pitch = 0.5
   )
 
   val body = PackageBody(
@@ -321,10 +328,7 @@ deftest(BGA) test-simple-with-pose:
 
   val pkg = BGA(
     num-leads = 12,
-    rows = 3,
-    columns = 4,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     pad-planner = planner
   )

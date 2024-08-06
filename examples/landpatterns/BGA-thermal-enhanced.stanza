@@ -40,6 +40,7 @@ pcb-component test-therm-enhanded:
 
   val te-rows = 16
   val te-cols = 16
+  val te-pitch = 0.5
 
   val planner = ThermallyEnhanced-Matrix-Planner(
     inactive = PadIsland(
@@ -50,6 +51,9 @@ pcb-component test-therm-enhanded:
       8 through 9,
       8 through 9
       ),
+    rows = te-rows,
+    columns = te-cols,
+    pitch = te-pitch
   )
 
   val body = PackageBody(
@@ -60,10 +64,7 @@ pcb-component test-therm-enhanded:
 
   val pkg = BGA(
     num-leads = 224,
-    rows = te-rows,
-    columns = te-cols,
     lead-diam = 0.3,
-    pitch = 0.5,
     package-body = body,
     pad-planner = planner,
     density-level = DensityLevelB

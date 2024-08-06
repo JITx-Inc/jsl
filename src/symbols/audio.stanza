@@ -6,9 +6,7 @@ defpackage jsl/symbols/audio:
 
   import jsl/ensure
   import jsl/geometry/box
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/TwoPinSymbol
-  import jsl/symbols/SymbolNode
+  import jsl/symbols/framework
 
 val DEF_AUDIO_LINE_WIDTH = 0.05
 val DEF_AUDIO_PIN_LEN = 2.0

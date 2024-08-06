@@ -238,9 +238,10 @@ public defmethod build-courtyard (
   pkg:Package,
   vp:VirtualLP,
   ) -> False:
-  build-courtyard-origin(vp)
   val excess = courtyard-excess(pkg)
-  build-courtyard-boundary(vp, package-body(pkg), density-level(pkg), excess = excess)
+  val outline = build-courtyard-boundary(vp, package-body(pkg), density-level(pkg), excess = excess)
+  build-courtyard-origin(vp, outline)
+  false
 
 
 doc: \<DOC>
@@ -471,6 +472,23 @@ public defmulti build-all (
   ) -> False
 
 doc: \<DOC>
+Externally Defined Build All Order
+
+This function can be used when you want to override the
+default behavior of default `build-all` defmethod.
+<DOC>
+public defn package-build-all-order (
+  pkg:Package,
+  virt:VirtualLP
+  ) -> False:
+  build-pads(pkg, virt)
+  build-courtyard(pkg, virt)
+  build-silkscreen(pkg, virt)
+  build-keep-out(pkg, virt)
+  build-cut-out(pkg, virt)
+  build-conformal-mask(pkg, virt)
+
+doc: \<DOC>
 Default `build-all` implementation
 
 Builders are applied in the following order:
@@ -487,13 +505,7 @@ public defmethod build-all (
   pkg:Package,
   virt:VirtualLP
   ) -> False :
-  build-pads(pkg, virt)
-  build-courtyard(pkg, virt)
-  build-silkscreen(pkg, virt)
-  build-keep-out(pkg, virt)
-  build-cut-out(pkg, virt)
-  build-conformal-mask(pkg, virt)
-
+  package-build-all-order(pkg, virt)
 
 doc: \<DOC>
 Generator for applying all `Package` generators

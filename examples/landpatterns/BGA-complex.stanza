@@ -23,13 +23,13 @@ public defn VFBGA142 () -> VFBGA142 :
     copper-D-adj = -0.05,
     mask-D-adj = 0.0,
   )
+  val rows = 12
+  val cols = 12
+  val pitch = 0.45
 
   new VFBGA142:
     defmethod num-leads (this) : 144
-    defmethod rows (this) : 12
-    defmethod columns (this) : 12
     defmethod lead-diam (this) : 0.25
-    defmethod pitch (this) : 0.45
     defmethod density-level (this) : dl
     defmethod pad-planner (this) :
       ; Create a carve out in the top-right corner
@@ -43,10 +43,13 @@ public defn VFBGA142 () -> VFBGA142 :
           to-pad-island(grid, "F[10]")
           to-pad-island(grid, "G[11]")
         ],
-        pad-config = pad-conf
+        pad-config = pad-conf,
+        rows = rows,
+        columns = cols,
+        pitch = pitch
       )
     defmethod lead-numbering (this) :
-      Grid-Numbering(rows(this), columns(this))
+      Grid-Numbering(rows, cols)
     defmethod package-body (this) :
       PackageBody(
         width = min-typ-max(6.13, 6.2, 6.27)
@@ -64,7 +67,7 @@ public defn VFBGA142 () -> VFBGA142 :
 
       val ey = 0.2075
       val ex = 0.2975
-      val l = 4.0 * pitch(this) as Double
+      val l = 4.0 * pitch
       val offset = Point(l, l) + Point(ex, ey)
       val sec = create-child(root, offset = loc(offset))
 
@@ -76,12 +79,14 @@ public defn VFBGA142 () -> VFBGA142 :
 
       val sec-pkg = BGA(
         num-leads = 16,
-        rows = sec-rows,
-        columns = sec-cols,
         lead-diam = lead-diam(this),
-        pitch = pitch(this),
         package-body = package-body(this),
-        pad-planner = Full-Matrix-Planner(pad-conf)
+        pad-planner = Full-Matrix-Planner(
+          pad-config = pad-conf
+          rows = sec-rows,
+          columns = sec-cols,
+          pitch = pitch
+          )
         lead-numbering = num-scheme,
         density-level = dl
       )

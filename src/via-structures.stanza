@@ -180,18 +180,9 @@ Simple Anti-Pad Definition
 This type implements the `AntiPad` interface and provides a
 simple shape based antipad on one or more layers.
 
-Note:
-The user is required to provide `start` and `end` that
-are specified from the same side (ie, Top or Bottom).
-
-Mixing sides is not allowed. So `start` as `LayerIndex(0, Top)` and
-`end` as `LayerIndex(0, Bottom)` would be an invalid combination will
-throw an exception.
-
 The `start` and `end` layers are inclusive - so the specified shape
-will be applied on all layers `start` through `end`. This type
-doesn't really care about order because we just apply the same shape for
-all of the layers.
+will be applied on all layers `start` through `end`. The `start` and
+`end` layers follow the same behavior as `ForbidCopper`.
 <DOC>
 public defstruct SimpleAntiPad <: AntiPad :
   doc: \<DOC>
@@ -209,31 +200,21 @@ doc: \<DOC>
 Simple AntiPad Constructor
 
 @param shape Forbid Region Shape for all applicable layers
-@param start
+@param start Starting layer for the antipad
+@param end Optional end layer for the antipad. If not provide, the
+default behavior is that the antipad will only be created on the start layer.
 <DOC>
 public defn SimpleAntiPad (
   --
   shape:Shape,
   start:LayerIndex,
-  end:LayerIndex
+  end:LayerIndex = start
   ) -> SimpleAntiPad:
-  if side(start) != side(end):
-    throw $ InvalidLayerIndicesError("Start and End Sides Do Not Match: start=%_ end=%_" % [side(start), side(end)])
   #SimpleAntiPad(shape, start, end)
 
 defmethod make-anti-pad (a:SimpleAntiPad -- pose:Pose) -> False:
-  val st = start(a)
-  val ed = end(a)
-  val s = side(st)
-  ; The ordering can be kind of funny when user passes the start/end layers
-  ;  especially when we consider the `Bottom`. We use a `min/max` style
-  ;  so that we cover all the layers but don't have to be too particular
-  ;  about how the user specs the order.
-  val st-ind = min(index(st), index(ed))
-  val ed-ind = max(index(st), index(ed))
   inside pcb-module:
-    for i in st-ind through ed-ind do:
-      layer(ForbidCopper(LayerIndex(i, s))) = pose * shape(a)
+    layer(ForbidCopper(start(a), end(a))) = pose * shape(a)
 
 doc: \<DOC>
 Via Signal Identifier Enum

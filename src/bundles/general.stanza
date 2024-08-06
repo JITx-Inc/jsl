@@ -152,3 +152,31 @@ Reset Interface Bundle
 <DOC>
 public pcb-bundle reset :
   port reset
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Device Classes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+Polarized Bundle Type
+
+This bundle attempts to mimic the expected
+interface for other polarized devices like
+capacitors, diodes etc by presenting the `c/a`
+ports.
+
+This bundle is useful when defining ports on
+components like a RJ-45 connector that has
+status LEDs embedded into it. This can be
+used to define a port that can represent
+the polarized nature of the device.
+
+Also works for supports/require pin assignment
+for arrays of equivalent devices.
+
+@member c Cathode (negative) port
+@member a Anode (positive) port
+<DOC>
+public pcb-bundle polarized-ca :
+  port c
+  port a
