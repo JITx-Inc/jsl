@@ -16,6 +16,11 @@ defpackage jsl/landpatterns/courtyard:
 public val DEF_COURTYARD_LINE_WIDTH = 0.1
 public val DEF_COURTYARD_LINE_LEN = 1.0
 public val DEF_COURTYARD_LEN_RATIO = 0.5
+; NOTE -
+;   KICAD does not allow for other shapes on the courtyard layer - it
+;   only accepts the boundary shape. So we must place the origin marker
+;   on a separate layer.
+public val DEF_COURTYARD_ORIGIN_LAYER = CustomLayer("origin", Top)
 
 defn compute-origin-size (outline:Rectangle) -> Double :
   ; We look at the outline and use this to determine the
@@ -36,7 +41,7 @@ public defn build-courtyard-origin (
   ) -> Shape:
   val line-length = compute-origin-size(outline)
   val shape = PlusSymbol(line-length = line-length, line-width = line-width, pose = pose)
-  add-artwork(vp, Courtyard(side), shape, class = "courtyard")
+  add-artwork(vp, DEF_COURTYARD_ORIGIN_LAYER, shape, class = "courtyard")
   shape
 
 doc: \<DOC>
@@ -60,7 +65,7 @@ public defn make-courtyard-origin (
   side:Side = Top
   ):
   inside pcb-landpattern:
-    layer(Courtyard(side)) = PlusSymbol(line-length = line-length, line-width = line-width, pose = pose)
+    layer(DEF_COURTYARD_ORIGIN_LAYER) = PlusSymbol(line-length = line-length, line-width = line-width, pose = pose)
 
 
 public defn compute-courtyard-boundary (
