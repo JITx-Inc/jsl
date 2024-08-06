@@ -28,12 +28,13 @@ deftest(courtyard) test-courtyard-origin :
   val not-empty = to-hashset<LayerSpecifier>([
     SolderMask(Top)
     Paste(Top)
-    Courtyard(Top)
+    CustomLayer("origin", Top)
   ])
 
   expect-empty-others(test-lp, not-empty)
 
-  val cy = layer(test-lp, Courtyard(Top))
+  ; Check for Origin
+  val cy = layer(test-lp, CustomLayer("origin", Top))
   #EXPECT(length(cy) == 1)
 
   val outline = dims(cy[0])
