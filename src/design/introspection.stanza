@@ -134,20 +134,23 @@ This function will retrieve all of the
 @return Tuple of KeyValue mappings between `Pin` and a Tuple of `Pad` objects.
 <DOC>
 public defn port-to-pads (dev:JITXObject) -> Tuple<KeyValue<JITXObject, Tuple<JITXObject>>> :
-  ;Get the landpattern definition of the instance's component.
-  val lp = landpattern(instance-definition(dev))
+  inside pcb-module:
+    ;Get the landpattern definition of the instance's component.
+    val lp = landpattern(instance-definition(dev))
 
-  ;Build a table storing each landpattern pad by its ref.
-  val pad-table = to-hashtable<Ref, JITXObject>(seq({ref(_0) => _0}, pads(lp)))
-
-  ;Scroll through pin property table to map instance port to landpattern pads.
-  for pt in pins(dev) map :
-    val pads = for pad-ref in property(pt.pads) seq :
-      val key = match(pad-ref) :
-        (p:Ref) : p
-        (i:Int) : Ref(`p)[i]
-      pad-table[key]
-    pt => to-tuple(pads)
+    ;Build a table storing each landpattern pad by its ref.
+    val pad-table = to-hashtable<Ref, JITXObject>(seq({ref(_0) => _0}, pads(lp)))
+    ;Scroll through pin property table to map instance port to landpattern pads.
+    for pt in pins(dev) map :
+      val pads = if not has-property?(pt.pads):
+        []
+      else:
+        to-tuple $ for pad-ref in property(pt.pads) seq :
+          val key = match(pad-ref) :
+            (p:Ref) : p
+            (i:Int) : Ref(`p)[i]
+          pad-table[key]
+      pt => pads
 
 doc: \<DOC>
 Retrieve the pads associated with a particular port
