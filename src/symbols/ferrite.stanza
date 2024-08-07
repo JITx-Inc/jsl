@@ -7,7 +7,7 @@ defpackage jsl/symbols/ferrite:
   import jsl/symbols/framework
 
 val DEF_LINE_WIDTH = 0.05
-val DEF_BODY = Dims(0.9, 0.4)
+val DEF_SYMB_BODY = Dims(0.9, 0.4)
 val DEF_BODY_ANGLE = -30.0
 
 
@@ -25,10 +25,10 @@ public defstruct FerriteSymbolParams <: Equalable:
   Set the dimensions for the ferrite body.
   Default value is Dims(0.9, 0.4) in symbol grid units
   <DOC>
-  body:Dims with:
-    default => DEF_BODY
+  symb-body:Dims with:
+    default => DEF_SYMB_BODY
     ensure => ensure-positive!
-    updater => sub-body
+    updater => sub-symb-body
 
   doc: \<DOC>
   Set the rotation angle for the ferrite body in degrees.
@@ -62,7 +62,7 @@ public defn build-ferrite-glyphs (
   val p2 = pitch / 2.0
   line(node, [Point(0.0, p2), Point(0.0, (- p2))], width = line-width(params), name = "porch")
 
-  val b = body(params)
+  val b = symb-body(params)
   rectangle(node, x(b), y(b), pose = loc(0.0, 0.0, body-angle(params)), name = "body")
 
 
