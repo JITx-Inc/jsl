@@ -13,7 +13,7 @@ defpackage jsl/examples/protocols/pcie/pcie-src :
   import jsl/bundles
   import jsl/protocols/pcie
 
-val body = PackageBody(
+val pkg-body = PackageBody(
   width = 15.0 +/- 0.1,
   length = 15.0 +/- 0.1,
   height = 0.71 +/- [0.06, 0.0]
@@ -25,7 +25,7 @@ val BGA-pkg = BGA(
   columns = 8,
   lead-diam = 0.5,
   pitch = 2.0,
-  package-body = body,
+  package-body = pkg-body,
   density-level = DensityLevelB
 )
 
