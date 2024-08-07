@@ -80,7 +80,7 @@ public pcb-bundle usb-2-connector :
   name = "USB 2.0 Connector"
   port vbus : power
   port bus : usb-data
-  port id : pin
+  port id
 
 doc: \<DOC>
 USB SuperSpeed Lane Bundle
@@ -126,7 +126,7 @@ public pcb-bundle usb-a-SS-connector :
   name = "USB Type-A SuperSpeed Connector"
   port vbus : power
   port bus : usb-superspeed()
-  port shield : pin
+  port shield
 
 
 doc: \<DOC>
@@ -157,7 +157,7 @@ public pcb-bundle usb-c-connector :
   name = "USB Type C Connector"
   port vbus : power
   port bus : usb-c()
-  port shield : pin
+  port shield
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;

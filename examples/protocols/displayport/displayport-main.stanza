@@ -17,8 +17,8 @@ defpackage jsl/examples/protocols/displayport/main:
   import jsl/examples/protocols/common/example-components
 
 pcb-module displayport-example :
-  pin VDD
-  pin GND
+  port VDD
+  port GND
 
   inst dut1 : jsl/examples/protocols/displayport/displayport-src/module(source = true)
   inst dut2 : jsl/examples/protocols/displayport/displayport-src/module(source = false)

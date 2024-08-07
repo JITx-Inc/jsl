@@ -20,18 +20,18 @@ or microcontroller.
 <DOC>
 public pcb-bundle jtag :
   name = "JTAG"
-  pin tck
-  pin tdi
-  pin tdo
-  pin tms
+  port tck
+  port tdi
+  port tdo
+  port tms
 
 public pcb-enum jsl/bundles/debug/SWDPins :
   SWD-SWO ; Trace Output for Serial Wire Debug
 
 pcb-bundle swd-b (pins:Collection<SWDPins>):
   name = "SWD"
-  pin swdio
-  pin swdclk
+  port swdio
+  port swdclk
   for p in pins do:
     switch(p):
       SWD-SWO: make-pin(`swo)

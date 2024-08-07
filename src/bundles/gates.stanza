@@ -31,7 +31,7 @@ length of `num-inputs`
 public pcb-bundle gate (num-inputs:Int):
   name = to-string("%_-Input Gate Bundle" % [num-inputs])
   port in : pin[ to-tuple(1 through num-inputs)]
-  port out : pin
+  port out
 
 
 doc: \<DOC>
@@ -55,7 +55,7 @@ public defn make-gate-supports (out-pin:JITXObject, in-pins:JITXObject ...):
 
     ; Internal Bundle Type
     pcb-bundle gate-input:
-      pin gate-p
+      port gate-p
 
     for in-pin in in-pins do:
       supports gate-input:

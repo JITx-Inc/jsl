@@ -176,9 +176,9 @@ public defn ConfigStrap (
         name = value(n)
       (_:None): false
 
-    port hi : pin
+    port hi
     port configs : pin[num-elems]
-    port lo : pin
+    port lo
 
     ; I've set these as public because I'm theorizing
     ;  that a user could pass a custom component that isn't
@@ -196,7 +196,7 @@ public defn ConfigStrap (
     ;  the user can't mess with the pin assignment
     ;  problem from outside this module.
     pcb-bundle int-pin :
-      port p : pin
+      port p
 
     ; Create pin assignment problem where we can use any
     ;  of the config pins in any order.

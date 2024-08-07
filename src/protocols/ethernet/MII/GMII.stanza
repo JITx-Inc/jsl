@@ -13,13 +13,13 @@ pcb-bundle gmii-b (pins:Collection<jsl/protocols/ethernet/utils/MIIPins>):
   port txd : pin[GMII_BUS_WIDTH]
   port rxd : pin[GMII_BUS_WIDTH]
 
-  pin gtx-clk
-  pin tx-clk
-  pin tx-en
+  port gtx-clk
+  port tx-clk
+  port tx-en
 
-  pin rx-clk
-  pin rx-dv
-  pin rx-er
+  port rx-clk
+  port rx-dv
+  port rx-er
 
   inject-optional-mii-pins(pins)
 
