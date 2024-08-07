@@ -67,6 +67,9 @@ tests: clean-test-failures-log $(JSL_TESTS)
 	echo "===="
 	[ ! -f .test-failures.log ] || (cat .test-failures.log && false)
 
+all-tests:
+	$(STANZA) run-test $(JSL_TESTS)
+
 # Run a single test out of the list of JSL_TESTS and add any failure result to the log
 .PHONY: $(JSL_TESTS)
 $(JSL_TESTS):
