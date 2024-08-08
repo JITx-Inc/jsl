@@ -3,33 +3,3 @@ packages jsl/* defined-in "./src/"
 packages jsl/tests/* defined-in "./tests/"
 packages jsl/tests/landpatterns/* defined-in "./tests/landpatterns/"
 packages jsl/examples/* defined-in "./examples/"
-
-build-test tests:
-  inputs:
-    jsl/tests/landpatterns/numbering
-    jsl/tests/landpatterns/packages
-    jsl/tests/landpatterns/pad-planner
-    jsl/tests/landpatterns/SOIC
-    jsl/tests/landpatterns/SON
-    jsl/tests/landpatterns/IPC
-    jsl/tests/landpatterns/BGA
-    jsl/tests/landpatterns/protrusions
-    jsl/tests/landpatterns/two-pin/SMT
-    jsl/tests/landpatterns/two-pin/radial
-    jsl/tests/landpatterns/two-pin/axial
-    jsl/tests/landpatterns/courtyard
-    jsl/tests/landpatterns/VirtualLP
-    jsl/tests/geometry
-    jsl/tests/landpatterns/QFN
-    jsl/tests/symbols/SymbolNode
-    jsl/tests/bundles
-    jsl/tests/pin-assignment
-    jsl/tests/layerstack
-    jsl/tests/ensure
-    jsl/tests/via-structures
-    jsl/tests/si/Microstrip
-    jsl/tests/si/couplers
-    jsl/tests/si/signal-ends
-    jsl/tests/design/introspection
-  pkg: "test-pkgs"
-  o: "jsl-tests"
