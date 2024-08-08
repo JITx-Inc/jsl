@@ -106,7 +106,7 @@ public defn MDI-1000Base-T-get-pair-to-pair-skew () -> Toleranced :
   0.0 +/- (330.0e-12 / 2.0)
 
 
-public defstruct MDI-1000Base-T-Constraint <: DP-Constraint :
+public defstruct MDI-1000Base-T-Constraint <: DiffPair-Constraint :
   doc: \<DOC>
   Intra-pair Timing Skew Limit in Seconds
   This value is typically something like `0 +/- (10.0e-12)`
@@ -176,7 +176,7 @@ public defn MDI-1000Base-T-Constraint (
 public defmethod constrain (cst:MDI-1000Base-T-Constraint, src:JITXObject, dst:JITXObject) -> False :
 
   for i in 0 to NUM_PAIRS_1000Base-T do:
-    dp-constrain(cst, src.TP[i], dst.TP[i])
+    diffpair-constrain(cst, src.TP[i], dst.TP[i])
 
   ; For each of the pairs - we want to institute a maximum
   ; inter-pair skew limit

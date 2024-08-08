@@ -140,7 +140,7 @@ Construct a e10GBASE-KR-Constraints object
 public defn e10GBASE-KR-Constraint (
   --
   route-struct:DifferentialRoutingStructure
-  ) -> DP-Constraint :
+  ) -> DiffPair-Constraint :
   val [s, c, ml] = e10GBASE-KR-get-skew-loss-vals()
-  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
+  DiffPair-Constraint(skew = s, loss = ml, route-struct = route-struct)
 
