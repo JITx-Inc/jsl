@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/design/introspection:
   import core
+  import collections
   import jitx
   import jitx/commands
 
@@ -89,3 +90,92 @@ public defn get-element-ports (obj:JITXObject) -> [JITXObject, JITXObject] :
     (_:None):
       [obj.p[1], obj.p[2]]
 
+doc: \<DOC>
+Get the final name field for a ref
+
+This function will return the final field in a ref.
+
+@param r Ref object that we will interrogate
+@return The field field of the ref as either a VarRef or an IndexRef.
+
+@snippet Example #1
+
+```stanza
+val A = #R(some.mod.C.GND[0])
+val N = get-ref-name(A)
+println("N: %_" % [N])
+
+; Will Print:
+; N: GND[0]
+
+val B = #R(some.other.C.VDD)
+val N2 = get-ref-name(A)
+println("N2: %_" % [N2])
+
+; Will Print:
+; N2: VDD
+```
+<DOC>
+public defn get-ref-name (r:Ref) -> Ref:
+  ; IndexRef has a index value
+  ;  that we must compensate for.
+  ; Other wise, we just can take the last value.
+  val nameIndex = match(r):
+    (x:IndexRef): 2
+    (x): 1
+  tail(r, ref-length(r) - nameIndex)
+
+
+doc: \<DOC>
+Retrieve a mapping of Ports to Pads
+
+This function will retrieve all of the
+@param dev Instance of a `pcb-component`. This function odes not work for `pcb-module` instances.
+@return Tuple of KeyValue mappings between `Pin` and a Tuple of `Pad` objects.
+<DOC>
+public defn port-to-pads (dev:JITXObject) -> Tuple<KeyValue<JITXObject, Tuple<JITXObject>>> :
+  inside pcb-module:
+    ;Get the landpattern definition of the instance's component.
+    val lp = landpattern(instance-definition(dev))
+
+    ;Build a table storing each landpattern pad by its ref.
+    val pad-table = to-hashtable<Ref, JITXObject>(seq({ref(_0) => _0}, pads(lp)))
+    ;Scroll through pin property table to map instance port to landpattern pads.
+    for pt in pins(dev) map :
+      val pads = if not has-property?(pt.pads):
+        []
+      else:
+        to-tuple $ for pad-ref in property(pt.pads) seq :
+          val key = match(pad-ref) :
+            (p:Ref) : p
+            (i:Int) : Ref(`p)[i]
+          pad-table[key]
+      pt => pads
+
+doc: \<DOC>
+Retrieve the pads associated with a particular port
+
+@param p2p-map Previously computed port to pad mapping from a `pcb-component` instance
+@param pt Port of a component instance
+@return If port is found and has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
+<DOC>
+public defn get-pads-from-port (p2p-map:Tuple<KeyValue<JITXObject, Tuple<JITXObject>>>, pt:JITXObject) -> Maybe<Tuple<JITXObject>> :
+  val pt-name = get-ref-name $ ref(pt)
+
+  for p2p in p2p-map first:
+    val r = ref(key(p2p))
+    val n = get-ref-name(r)
+    if n == pt-name:
+      One(value(p2p))
+    else:
+      None()
+
+doc: \<DOC>
+Retrieve the pads associated with a particular port
+
+@param comp A `pcb-component` instance
+@param pt Port of that very same component instance `comp`
+@return If port is found and has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
+<DOC>
+public defn get-pads-from-port (comp:JITXObject, pt:JITXObject) -> Maybe<Tuple<JITXObject>> :
+  get-pads-from-port(port-to-pads(comp), pt)
