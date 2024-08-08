@@ -60,7 +60,7 @@ public defn MDI-100Base-TX-Constraint (
   route-struct:DifferentialRoutingStructure
   ) -> LaneConstraint :
   val [sk, ml] = MDI-100Base-TX-get-skew-loss()
-  val cst = DP-Constraint(
+  val cst = DiffPair-Constraint(
     skew = sk,
     loss = ml,
     route-struct = route-struct

@@ -194,9 +194,9 @@ public defn USB-Constraint (
   --
   proto:jsl/protocols/usb/USBVersion,
   route-struct:DifferentialRoutingStructure
-  ) -> DP-Constraint :
+  ) -> DiffPair-Constraint :
   val [s, ml] = usb-get-skew-loss(proto)
-  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
+  DiffPair-Constraint(skew = s, loss = ml, route-struct = route-struct)
 
 
 

@@ -121,6 +121,6 @@ public defn SATA-Constraint (
   --
   route-struct:DifferentialRoutingStructure
   gen:jsl/protocols/sata/SATAGen = SATA3p0
-  ) -> DP-Constraint :
+  ) -> DiffPair-Constraint :
   val [s, ml] = SATA-get-skew-loss-vals(gen)
-  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
+  DiffPair-Constraint(skew = s, loss = ml, route-struct = route-struct)
