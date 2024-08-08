@@ -55,24 +55,9 @@ FILLETS_NAME=jsl/landpatterns/leads/lead-fillets-table
 $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
-# remove any existing test failures log to prepare for the next run of tests
-.PHONY: clean-test-failures-log
-clean-test-failures-log:
-	@rm -f .test-failures.log
-
-# Run the tests in the list JSL_TESTS, then print the log of failures and exit with a return code
 .PHONY: tests
-tests: clean-test-failures-log $(JSL_TESTS)
-	@echo
-	echo "===="
-	[ ! -f .test-failures.log ] || (cat .test-failures.log && false)
-
-# Run a single test out of the list of JSL_TESTS and add any failure result to the log
-.PHONY: $(JSL_TESTS)
-$(JSL_TESTS):
-	@echo "===="
-	echo "Running JSL test \"$@\""
-	$(STANZA) run-test $@ || echo "FAIL: $@" >> .test-failures.log
+tests:
+	$(STANZA) run-test $(JSL_TESTS)
 
 .PHONY: test-%
 test-%:
