@@ -61,8 +61,7 @@ tests:
 
 .PHONY: test-%
 test-%:
-	echo "$@"
-	./jsl-tests -tagged $(@:test-%=%) | grep -v "SKIP" | awk NF
+	$(STANZA) run-test $(JSL_TESTS) -tagged $(@:test-%=%) | grep -v "SKIP" | awk NF
 
 .PHONY: clean
 clean:
