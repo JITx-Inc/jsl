@@ -106,6 +106,14 @@ public pcb-bundle gpio :
   port gpio
 
 doc: \<DOC>
+GPIO Differential Pair Interface Bundle
+
+@member diff-gpio GPIO Differential Pair
+<DOC>
+public pcb-bundle diff-gpio :
+  port diff-gpio : diff-pair
+
+doc: \<DOC>
 Timer Interface Bundle
 
 @member timer Timer Pin
