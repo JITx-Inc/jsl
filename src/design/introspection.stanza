@@ -5,6 +5,8 @@ defpackage jsl/design/introspection:
   import jitx
   import jitx/commands
 
+  import jsl/errors
+
 
 doc: \<DOC>
 Retrieve the `Instantiable` that generates the instances of the passed object.
@@ -109,7 +111,7 @@ println("N: %_" % [N])
 ; N: GND[0]
 
 val B = #R(some.other.C.VDD)
-val N2 = get-ref-name(A)
+val N2 = get-ref-name(B)
 println("N2: %_" % [N2])
 
 ; Will Print:
@@ -125,6 +127,41 @@ public defn get-ref-name (r:Ref) -> Ref:
     (x): 1
   tail(r, ref-length(r) - nameIndex)
 
+doc: \<DOC>
+Check if the passed object is a `pcb-module` instance
+<DOC>
+public defn is-module? (obj:JITXObject) -> True|False :
+  instance-type(obj) is SingleModule
+
+doc: \<DOC>
+Check if the passed object is a `pcb-component` instance
+<DOC>
+public defn is-component? (obj:JITXObject) -> True|False :
+  instance-type(obj) is SingleComponent
+
+doc: \<DOC>
+Get the parent ref for a particular object
+
+This is useful to get the Ref of the parent
+component when passed a Ref to a `port` of that component.
+@param r Ref to a child object of a parent - ie `some.parent.child`
+@return Ref to the parent of the child object - ie `some.parent`
+<DOC>
+public defn get-parent-ref (r:Ref) -> Maybe<Ref>:
+  val n = get-ref-name(r)
+  val n-len = ref-length(n)
+  val total-len = ref-length(r)
+  if total-len - n-len > 0:
+    One $ base(r, ref-length(r) - n-len)
+  else:
+    None()
+
+public defn get-parent-ref! (r:Ref) -> Ref:
+  match(get-parent-ref(r)):
+    (_:None): throw $ ValueError("No Parent Ref Present for Ref '%_'" % [to-string(r)])
+    (given:One<Ref>):
+      value(given)
+
 
 doc: \<DOC>
 Retrieve a mapping of Ports to Pads
@@ -137,7 +174,6 @@ public defn port-to-pads (dev:JITXObject) -> Tuple<KeyValue<JITXObject, Tuple<JI
   inside pcb-module:
     ;Get the landpattern definition of the instance's component.
     val lp = landpattern(instance-definition(dev))
-
     ;Build a table storing each landpattern pad by its ref.
     val pad-table = to-hashtable<Ref, JITXObject>(seq({ref(_0) => _0}, pads(lp)))
     ;Scroll through pin property table to map instance port to landpattern pads.
@@ -173,9 +209,176 @@ public defn get-pads-from-port (p2p-map:Tuple<KeyValue<JITXObject, Tuple<JITXObj
 doc: \<DOC>
 Retrieve the pads associated with a particular port
 
-@param comp A `pcb-component` instance
-@param pt Port of that very same component instance `comp`
-@return If port is found and has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
+@param pt Port on a component in the passed context.
+@param cxt Context to search for the component instance. The default is `self`.
+@return If compoenent associated with `pt` is found in `cxt` and that port has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
 <DOC>
-public defn get-pads-from-port (comp:JITXObject, pt:JITXObject) -> Maybe<Tuple<JITXObject>> :
-  get-pads-from-port(port-to-pads(comp), pt)
+
+public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<Tuple<JITXObject>>:
+  inside pcb-module:
+    val comp? = get-component-from-port(pt, cxt)
+    match(comp?):
+      (_:None):
+        throw $ ValueError("No Parent Component Found for Port '%_'" % [ref(pt)])
+      (given:One<JITXObject>):
+        val p2p-map = port-to-pads(value(given))
+        get-pads-from-port(p2p-map, pt)
+
+doc: \<DOC>
+Retrieve the parent instance (component or module) for a port.
+
+This function expects you to pass something like `comp.GND` which
+is a `port` on `comp` and then this function will get a reference
+to `comp` as a `JITXObject`.
+
+Be careful of child port on bundle ports - these will give a ref
+to the parent bundle port - not the component.
+
+This function expects to be called from `pcb-module` context.
+
+@param pt Port on a component or module
+@return Reference to a `pcb-module` or `pcb-component` instance.
+<DOC>
+public defn get-parent-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    val pt-R = ref(pt)
+    val parent-R? = get-parent-ref(pt-R)
+    match(parent-R?):
+      (_:None): One(self)
+      (given:One<Ref>):
+        find-instance-by-ref(value(given), cxt)
+
+
+doc: \<DOC>
+Get a component instance from a Port
+
+This function can be called from a `pcb-module` context. Calling from
+a `pcb-component` context will likely result in an exception.
+
+@param pt Port on a component instance.
+@param cxt Context to search for components in.
+@return If we
+<DOC>
+public defn get-component-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    val pt-R = ref(pt)
+    val parent-R? = get-parent-ref(pt-R)
+    match(parent-R?):
+      (_:None):
+        ; TODO - I need a way to differentiate between `pcb-module` and `pcb-component`
+        ;   here otherwise, this component might return a module instance breaking the
+        ;   abstraction.
+        throw $ ValueError("UnHandle-able Case - Did you pass a module port or from a `pcb-component` context?")
+        ; One(self)
+      (given:One<Ref>):
+        val parent-R = value(given)
+        ; We need to search because if the user were to have passed
+        ;  a SinglePin port of a bundle port - then we need to continue looking up the tree
+        ;  until we find the component instance and not just bundle port.
+        val trail-comp? = find-instance-by-ref(parent-R, cxt)
+        ; I want to make sure this is a component
+        match(trail-comp?):
+          (_:None): None()
+          (given:One<JITXObject>):
+            val c-or-m? = value(given)
+            if not is-component?(c-or-m?):
+              println("Component: %_" % [c-or-m?])
+              throw $ InstanceTypeError(expects = SingleComponent, observed = instance-type(c-or-m?))
+            given
+
+
+doc: \<DOC>
+Retrieve an Instance from a particular context by Ref
+
+This function must be called from within a `pcb-module`
+context.
+
+This function is not recursive. If you pass `r = some.obj`
+from the `cxt` context, then that object will not be found. This
+function could find `cxt.some` if passed `r = some`.
+
+@param r Ref to an object in `cxt` - Note that the path must be
+referenced from the `cxt`. If you have a prefix - then the
+instance will not be found.
+@param cxt Context from which we will query the instances. By default
+this value is `self`.
+@return An instance from the `cxt` context. Note that this could be either
+a `pcb-module` or a `pcb-component` instance.
+<DOC>
+public defn get-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for obj in instances(cxt) first:
+      if ref(obj) == r:
+        One(obj)
+      else:
+        None()
+
+doc: \<DOC>
+Retrieve a Component Instance from a particular context by Ref
+
+This function must be called from within a `pcb-module`
+context.
+
+This function is not recursive. If you pass `r = some.obj`
+from the `cxt` context, then that object will not be found. This
+function could find `cxt.some` if passed `r = some`.
+
+@param r Ref to an object in `cxt` - Note that the path must be
+referenced from the `cxt`. If you have a prefix - then the
+instance will not be found.
+@param cxt Context from which we will query the instances. By default
+this value is `self`.
+@return Instance of a `pcb-component` in the `cxt` context. Note that
+`pcb-module` instances will be filtered out.
+<DOC>
+public defn get-component-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for obj in component-instances(cxt) first:
+      if ref(obj) == r:
+        One(obj)
+      else:
+        None()
+
+doc: \<DOC>
+Find an instance by `Ref` by searching the design hierarchy.
+
+This function must be called from within a `pcb-module` context.
+
+@param r Ref of the `Instance` object we wish to find. An instance can
+be either a `pcb-module` or `pcb-component`.
+@param cxt Parent scope to search in. By default this is `self`.
+
+@return If we find an instance by the pass Ref `r` in the `cxt` context, then
+we will return a `JITXObject` for that instance. Otherwise, None().
+<DOC>
+public defn find-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject> :
+  inside pcb-module:
+
+    var search-space = cxt
+    var last-comp:Maybe<JITXObject> = None()
+    val comps = Array<Maybe<JITXObject>>(ref-length(r))
+    for i in 1 through ref-length(r) do:
+      val b = base(r, i)
+      val comp? = for obj in instances(search-space) first:
+        if ref(obj) == b:
+          One(obj)
+        else:
+          None()
+
+      comps[i - 1] = comp?
+      match(comp?:One<JITXObject>):
+        search-space = value!(comp?)
+
+    ; Now I have a list of all of the elements in my ref from start
+    ;  to finish.
+    ; I want to filter this for the last non-None value and confirm
+    ;  that it is a component
+
+    val trail-comp? = for comp in in-reverse(comps) first:
+      if comp is-not None:
+        One(value!(comp))
+      else:
+        None()
+
+    trail-comp?
+
