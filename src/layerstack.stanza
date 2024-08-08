@@ -293,7 +293,7 @@ public defn Soldermask (thickness:Double, material:DielectricMaterial = Solderma
     -- name:String = ?, description:String = ?) -> LayerSpec :
   #LayerSpec(name, description, material, thickness)
 
-public defn make-layer-statement (x:LayerSpec) :
+public defn make-stack-statement (x:LayerSpec) :
   val name? = get-name(x)
   val t = thickness(x)
   val m? = material-def $ material(x)
@@ -304,9 +304,9 @@ public defn make-layer-statement (x:LayerSpec) :
   inside pcb-stackup:
     match(name?):
       (_:None):
-        layer(t, m as Material)
+        stack(t, m as Material)
       (v:One<String>):
-        layer(t, m as Material, value(v))
+        stack(t, m as Material, value(v))
 
 public defstruct LayerStack :
   name:Maybe<String>
@@ -544,7 +544,7 @@ public defn create-pcb-stackup (ls:LayerStack) :
     make-description(ls)
 
     for l in layers(ls) do:
-      make-layer-statement(l)
+      make-stack-statement(l)
 
   custom-stackup
 

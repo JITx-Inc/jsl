@@ -418,10 +418,10 @@ is `loc(0.0, 0.0)`
 <DOC>
 defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) -> False:
   inside pcb-module:
-    port sig-in : pin
-    port sig-out : pin
+    port sig-in
+    port sig-out
 
-    port COMMON : pin
+    port COMMON
 
     net cage (COMMON)
 
@@ -545,7 +545,7 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     port sig-in : diff-pair
     port sig-out : diff-pair
 
-    port COMMON : pin
+    port COMMON
 
     net via-net-P (sig-in.P, sig-out.P)
     topology-segment(sig-in.P, sig-out.P)

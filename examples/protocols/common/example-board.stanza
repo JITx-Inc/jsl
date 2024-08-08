@@ -56,19 +56,19 @@ pcb-material prepreg :
 
 public pcb-stackup example-stackup :
   name = "Example 6-layer 0.032in"
-  layer(0.013, soldermask)
-  layer(0.030, copper    )
-  layer(0.060, prepreg   )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.015, copper    )
-  layer(0.070, core      )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.025, copper    )
-  layer(0.060, prepreg   )
-  layer(0.030, copper    )
-  layer(0.013, soldermask)
+  stack(0.013, soldermask)
+  stack(0.030, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.015, copper    )
+  stack(0.070, core      )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.030, copper    )
+  stack(0.013, soldermask)
 
 doc: \<DOC>
 @brief Parametric via generator for laser-drilled vias
@@ -138,28 +138,28 @@ public pcb-differential-routing-structure diff (trace-impedance:Toleranced|Doubl
     90.0 : 0.1475
     100.0 : 0.1510
   ; whatever layers are to be used for routing the differential pairs (defined by the user)
-  layer(Top) :
+  layer-constraints(Top) :
     trace-width  = tw       ; mm
     pair-spacing = tw / 1.2 ; mm
     clearance    = 0.150    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(LayerIndex(1, Top)) :
+  layer-constraints(LayerIndex(1, Top)) :
     trace-width  = tw       ; mm
     pair-spacing = 2.0 * tw ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(LayerIndex(1, Bottom)) :
+  layer-constraints(LayerIndex(1, Bottom)) :
     trace-width  = tw       ; mm
     pair-spacing = 2.0 * tw ; mm
     clearance    = 0.300    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
 
-  layer(Bottom) :
+  layer-constraints(Bottom) :
     trace-width  = tw       ; mm
     pair-spacing = tw / 1.2 ; mm
     clearance    = 0.150    ; mm

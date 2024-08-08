@@ -1,9 +1,39 @@
 
 SLM_STANZA ?= jstanza
-STANZA=$(SLM_STANZA)
-CWD=$(shell pwd)
+STANZA := $(SLM_STANZA)
+CWD := $(shell pwd)
 
-TEST_DIR=$(CWD)/tests
+# execute all lines of a target in one shell
+.ONESHELL:
+
+TEST_DIR := $(CWD)/tests
+
+JSL_TESTS :=                              \
+    jsl/tests/landpatterns/numbering      \
+    jsl/tests/landpatterns/packages       \
+    jsl/tests/landpatterns/pad-planner    \
+    jsl/tests/landpatterns/SOIC           \
+    jsl/tests/landpatterns/SON            \
+    jsl/tests/landpatterns/IPC            \
+    jsl/tests/landpatterns/BGA            \
+    jsl/tests/landpatterns/protrusions    \
+    jsl/tests/landpatterns/two-pin/SMT    \
+    jsl/tests/landpatterns/two-pin/radial \
+    jsl/tests/landpatterns/two-pin/axial  \
+    jsl/tests/landpatterns/courtyard      \
+    jsl/tests/landpatterns/VirtualLP      \
+    jsl/tests/geometry                    \
+    jsl/tests/landpatterns/QFN            \
+    jsl/tests/symbols/SymbolNode          \
+    jsl/tests/bundles                     \
+    jsl/tests/pin-assignment              \
+    jsl/tests/layerstack                  \
+    jsl/tests/ensure                      \
+    jsl/tests/via-structures              \
+    jsl/tests/si/Microstrip               \
+    jsl/tests/si/couplers                 \
+    jsl/tests/si/signal-ends              \
+    jsl/tests/design/introspection
 
 TABGEN=./tabgen/tabgen
 
@@ -25,22 +55,33 @@ FILLETS_NAME=jsl/landpatterns/leads/lead-fillets-table
 $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
-build-tests: $(TWO_PIN_STZ) $(FILLETS)
-	pwd
-	$(STANZA) build tests
-	ls -la
+# remove any existing test failures log to prepare for the next run of tests
+.PHONY: clean-test-failures-log
+clean-test-failures-log:
+	@rm -f .test-failures.log
 
-tests: build-tests
-	pwd
-	ls -la
-	./jsl-tests
+# Run the tests in the list JSL_TESTS, then print the log of failures and exit with a return code
+.PHONY: tests
+tests: clean-test-failures-log $(JSL_TESTS)
+	@echo
+	echo "===="
+	[ ! -f .test-failures.log ] || (cat .test-failures.log && false)
 
-test-%: build-tests
+# Run a single test out of the list of JSL_TESTS and add any failure result to the log
+.PHONY: $(JSL_TESTS)
+$(JSL_TESTS):
+	@echo "===="
+	echo "Running JSL test \"$@\""
+	$(STANZA) run-test $@ || echo "FAIL: $@" >> .test-failures.log
+
+.PHONY: test-%
+test-%:
+	echo "$@"
 	./jsl-tests -tagged $(@:test-%=%) | grep -v "SKIP" | awk NF
 
+.PHONY: clean
 clean:
 	$(STANZA) clean
 	rm -f $(CWD)/pkgs/*
 	rm -f $(CWD)/test-pkgs/*
 
-.PHONY: clean tests

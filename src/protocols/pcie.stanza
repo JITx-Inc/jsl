@@ -115,9 +115,9 @@ public pcb-bundle pcie-data (lanes:Int) :
 pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   name = "PCI-e Control"
   description = "PCI-e Serial Communications Link Control"
-  pin PEWAKE#
-  pin PERST#          ; PCI-E Reset signal
-  pin CLKREQ#         ; clock request
+  port PEWAKE#
+  port PERST#          ; PCI-E Reset signal
+  port CLKREQ#         ; clock request
   for p in pins do :
     switch(p) :
       PCIe-PRSNT# : make-pin(`PRSNT#) ; hot plug detection

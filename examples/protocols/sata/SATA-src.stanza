@@ -107,7 +107,7 @@ pcb-landpattern sata-lp :
 
 public pcb-component sata-connector :
   port sata : SATA
-  port GND : pin
+  port GND
 
   pin-properties :
     [ pin : Ref | pads : Int ... ]

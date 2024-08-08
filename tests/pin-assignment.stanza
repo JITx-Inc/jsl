@@ -65,7 +65,7 @@ pcb-symbol DummyMCU-Symb:
 
   val l = max(right-len, left-len)
   val y-offset = (- l / 2.0) + def-scale
-  layer("body") = loc(0.0, y-offset) * Rectangle(w, l)
+  draw("body") = loc(0.0, y-offset) * Rectangle(w, l)
   preferred-orientation = PreferRotation([0])
 
 pcb-component DummyMCU :
