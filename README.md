@@ -12,11 +12,19 @@ JITX environment. The goals for this project are:
 
 # Setup
 
-1.  Check that `jstanza` is on your path
-    1.  In Linux/Mac: `whereis jstanza`
-    2.  In Windows: `get-command jstanza`
-    3.  `jstanza version` should report the current version.
-    4.  If there is no `jstanza` on your path - then you will need to add it to your `$PATH` (or in Windows `$env:PATH`).
+1.  If you are in the JITX VSCode environment:
+    1.  In Linux/Mac:
+        1.  `which $SLM_STANZA`
+        2.  `$SLM_STANZA version`
+    2.  In Windows Powershell:
+        1.  `get-command $env:SLM_STANZA`
+        2.  `&$env:SLM_STANZA version`
+2.  Outside the VSCode
+    1.  You need to have `jstanza` on the `PATH`.
+    2.  In Linux/Mac: `which jstanza`
+    3.  In Windows: `get-command jstanza`
+    4.  `jstanza version` should report the current version.
+    5.  If there is no `jstanza` on your path - then you will need to add it to your `$PATH` (or in Windows `$env:PATH`).
 
 
 # Running the Tests
@@ -30,33 +38,41 @@ Example:
 
 ```
 $> make test-SOIC
-jstanza build tests
-Build target tests is already up-to-date.
-./jsl-tests -tagged SOIC | grep -v "SKIP" | awk NF
-[Test 10] test-lead
+/Users/callendorph/.jitx/current/jstanza run-test jsl/tests/landpatterns/numbering ...  -tagged SOIC | grep -v "SKIP" | awk NF
+[Test 21] test-lead
 [PASS]
-[Test 11] test-body
+[Test 22] test-body
 [PASS]
-[Test 12] test-SOIC-N
+[Test 23] test-SOIC-N
 [PASS]
-[Test 13] test-SOIC-W
+[Test 24] test-SOIC-W
 [PASS]
-[Test 14] test-fine-pitch
+[Test 25] test-fine-pitch
 [PASS]
-[Test 15] test-thermal-lead
+[Test 26] test-thermal-lead
 [PASS]
-[Test 16] test-pad-numbering
+[Test 27] test-pad-numbering
 [PASS]
-[Test 17] test-error-handling
+[Test 28] test-error-handling
 [PASS]
-Tests Finished: 8/18 tests passed. 10 tests skipped. 0 tests failed.
+[Test 29] test-SOIC-with-pose
+[PASS]
+[Test 30] test-SOIC-with-rotation
+[PASS]
+[Test 31] test-thermal-lead-with-pose
+[PASS]
+Tests Finished: 11/111 tests passed. 100 tests skipped. 0 tests failed.
 Longest Running Tests:
-[PASS] test-SOIC-N (13 ms)
-[PASS] test-SOIC-W (4935 us)
-[PASS] test-fine-pitch (3417 us)
-[PASS] test-thermal-lead (2478 us)
-[PASS] test-pad-numbering (1439 us)
-[PASS] test-error-handling (552 us)
-[PASS] test-lead (492 us)
-[PASS] test-body (10 us)
+[PASS] test-SOIC-N (36 ms)
+[PASS] test-fine-pitch (26 ms)
+[PASS] test-SOIC-W (10 ms)
+[PASS] test-thermal-lead (6181 us)
+[PASS] test-thermal-lead-with-pose (5226 us)
+[PASS] test-SOIC-with-pose (4847 us)
+[PASS] test-pad-numbering (4547 us)
+[PASS] test-error-handling (3561 us)
+[PASS] test-SOIC-with-rotation (3531 us)
+[PASS] test-lead (3124 us)
+[PASS] test-body (561 us)
+
 ```
