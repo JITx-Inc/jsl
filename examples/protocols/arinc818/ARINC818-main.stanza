@@ -1,0 +1,53 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/arinc818/ARINC818-main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+
+  import jsl/protocols/arinc818
+  import jsl/si/helpers
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+  import jsl/examples/protocols/arinc818/ARINC818-src
+
+
+pcb-module ARINC818-example :
+  pin GND
+  
+  inst dut1  : jsl/examples/protocols/arinc818/ARINC818-src/module(invert = false)
+  inst dut2  : jsl/examples/protocols/arinc818/ARINC818-src/module(invert = true)
+  inst conn1 : jsl/examples/protocols/arinc818/ARINC818-src/arinc-connector
+  require src1t : ARINC818(TX) from dut1
+  require src1r : ARINC818(RX) from dut1
+  require src2r : ARINC818(RX) from dut2
+  require src2t : ARINC818(TX) from dut2
+  require src1tc : ARINC818(TX) from dut1
+  require src1rc : ARINC818(RX) from dut1
+
+  val ti-arinc = ARINC818-get-trace-impedance()
+  val ARINC818-constraints = ARINC818-Constraint(version = ARINC818-FC12x route-struct = diff(ti-arinc))
+
+  connect-ARINC818(ARINC818-constraints, src1t, src2r)
+  connect-ARINC818(ARINC818-constraints, src2t, src1r)
+  connect-ARINC818(ARINC818-constraints, src1tc, conn1.arinc818-rx)
+  connect-ARINC818(ARINC818-constraints, conn1.arinc818-tx, src1rc)
+
+  net (GND conn1.GND)
+
+set-current-design("ARINC818-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-B)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(ARINC818-example)
+
+; View the results
+view-design-explorer()
+view-schematic()
+view-board()
