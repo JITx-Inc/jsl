@@ -106,14 +106,6 @@ public pcb-bundle gpio :
   port gpio
 
 doc: \<DOC>
-GPIO Differential Pair Interface Bundle
-
-@member diff-gpio GPIO Differential Pair
-<DOC>
-public pcb-bundle diff-gpio :
-  port diff-gpio : diff-pair
-
-doc: \<DOC>
 Timer Interface Bundle
 
 @member timer Timer Pin
@@ -132,10 +124,13 @@ public pcb-bundle adc :
 doc: \<DOC>
 Differential Pair ADC Interface Bundle
 
-@member adc-pair ADC Differential Pair
+@member P Positive side of the ADC differential pair
+@member N Negative side of the ADC differential pair
 <DOC>
-public pcb-bundle adc-pair :
-  port adc-pair : diff-pair
+public pcb-bundle adc-diff-pair :
+  name = "ADC Differential Signal Pair"
+  port P
+  port N
 
 doc: \<DOC>
 Single-Ended DAC Interface Bundle
@@ -148,10 +143,13 @@ public pcb-bundle dac :
 doc: \<DOC>
 Differential Pair DAC Interface Bundle
 
-@member dac-pair DAC Differential Pair
+@member P Positive side of the DAC differential pair
+@member N Negative side of the DAC differential pair
 <DOC>
-public pcb-bundle dac-pair :
-  port dac-pair : diff-pair
+public pcb-bundle dac-diff-pair :
+  name = "DAC Differential Signal Pair"
+  port P
+  port N
 
 doc: \<DOC>
 Reset Interface Bundle
@@ -160,6 +158,28 @@ Reset Interface Bundle
 <DOC>
 public pcb-bundle reset :
   port reset
+
+doc: \<DOC>
+Clock Differential Pair
+
+@member P Positive side of the clock differential pair
+@member N Negative side of the clock differential pair
+<DOC>
+public pcb-bundle clk-diff-pair :
+  name = "Clock Differential Signal Pair"
+  port P
+  port N
+
+doc: \<DOC>
+High-Speed Differential Pair
+
+@member P Positive side of the high-speed differential pair
+@member N Negative side of the high-speed differential pair
+<DOC>
+public pcb-bundle hs-diff-pair :
+  name = "High-Speed Differential Signal Pair"
+  port P
+  port N
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Device Classes
