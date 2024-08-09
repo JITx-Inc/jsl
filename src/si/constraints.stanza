@@ -47,7 +47,7 @@ is typical in diff-pairs to need to define only the
 skew and the loss. There are typically no inter-pair timing
 constraints for things like USB3 or DisplayPort.
 <DOC>
-public defstruct DP-Constraint <: SI-Constraint :
+public defstruct DiffPair-Constraint <: SI-Constraint :
   doc: \<DOC>
   Intra-pair Timing Skew Limit in Seconds
   This value is typically something like `0 +/- (10.0e-12)`
@@ -66,28 +66,28 @@ public defstruct DP-Constraint <: SI-Constraint :
   <DOC>
   route-struct:DifferentialRoutingStructure
 with:
-  constructor => #DP-Constraint
+  constructor => #DiffPair-Constraint
 
 doc: \<DOC>
 Constructor for a Differential Pair Constraint object
 <DOC>
-public defn DP-Constraint (
+public defn DiffPair-Constraint (
   --
   skew:Toleranced
   loss:Double
   route-struct:DifferentialRoutingStructure
-  ) -> DP-Constraint:
-  #DP-Constraint(skew, loss, route-struct)
+  ) -> DiffPair-Constraint:
+  #DiffPair-Constraint(skew, loss, route-struct)
 
 doc: \<DOC>
-Constrain Interface for DP-Constraint
+Constrain Interface for DiffPair-Constraint
 
 Making this function public makes it easier to derive
-from DP-Constraint and override it's constrain method.
+from DiffPair-Constraint and override it's constrain method.
 
 @see {@link SI-Constraint}
 <DOC>
-public defn dp-constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+public defn diffpair-constrain (cst:DiffPair-Constraint, src:JITXObject, dst:JITXObject) -> False :
   ; We're not necessarily guaranteed that the src and dst will be the
   ; true end points. We use the signal-end concept to make sure we are applying
   ; constraints over the entire topology.
@@ -99,8 +99,8 @@ public defn dp-constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> 
   max-loss(loss(cst), route)
   diff-structure(route-struct(cst), route)
 
-public defmethod constrain (cst:DP-Constraint, src:JITXObject, dst:JITXObject) -> False :
-  dp-constrain(cst, src, dst)
+public defmethod constrain (cst:DiffPair-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  diffpair-constrain(cst, src, dst)
 
 doc: \<DOC>
 Construct and Constrain a Signal Topology

@@ -159,7 +159,7 @@ this bundle according to the DisplayPort specifications.
 When used with `constrain-topology`, the `src` and `dst` must be bundles
 of type {@link displayport}.
 <DOC>
-public defstruct DisplayPort-Constraint <: DP-Constraint :
+public defstruct DisplayPort-Constraint <: DiffPair-Constraint :
   doc: \<DOC>
   Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -204,9 +204,9 @@ public defn DisplayPort-Constraint (
 
 public defmethod constrain (cst:DisplayPort-Constraint, src:JITXObject, dst:JITXObject) -> False :
   for i in 0 to DISPLAYPORT_NUM_LANES do:
-    dp-constrain(cst, src.lane[i], dst.lane[i])
+    diffpair-constrain(cst, src.lane[i], dst.lane[i])
 
-  dp-constrain(cst, src.aux, dst.aux)
+  diffpair-constrain(cst, src.aux, dst.aux)
 
   ; Apply inter-pair skew constraint
   timing-window(

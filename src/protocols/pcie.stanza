@@ -198,7 +198,7 @@ will be applied to all of the pairs.
 The `constrain` function for this type expects
 two compatible `pcie-b` types.
 <DOC>
-public defstruct PCIe-Constraint <: DP-Constraint :
+public defstruct PCIe-Constraint <: DiffPair-Constraint :
   doc: \<DOC>
   Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -254,10 +254,10 @@ public defmethod constrain (cst:PCIe-Constraint, src:JITXObject, dst:JITXObject)
       throw $ ValueError("MisMatched Lane Counted Between Src and Dst: src=%_ dst=%_" % [src-cnt, dst-cnt])
 
     for i in indices(src-ep.data.lane) do:
-      dp-constrain(cst, src-ep.data.lane[i].TX, dst-ep.data.lane[i].TX)
-      dp-constrain(cst, src-ep.data.lane[i].RX, dst-ep.data.lane[i].RX)
+      diffpair-constrain(cst, src-ep.data.lane[i].TX, dst-ep.data.lane[i].TX)
+      diffpair-constrain(cst, src-ep.data.lane[i].RX, dst-ep.data.lane[i].RX)
 
-    dp-constrain(cst, src-ep.data.refclk, dst-ep.data.refclk)
+    diffpair-constrain(cst, src-ep.data.refclk, dst-ep.data.refclk)
 
 
 doc: \<DOC>
