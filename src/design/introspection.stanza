@@ -385,13 +385,46 @@ public defn find-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObj
 doc: \<DOC>
 Get the net associated with a module or component port
 
-@param pt Port of a component or module.
+This function must be called from within a `pcb-module` context.
+
+Note that this function will fail to find a net if the passed `pt`
+port is not part of a component or module in the local context.
+For example, If you have: 
+
+```stanza
+pcb-module wrapper:
+  port GND
+  inst C : some-component
+
+  ; `INT` is defined only in the `wrapper`
+  ;   context.
+  net INT (C.internal-port, ...)
+
+pcb-module top-level:
+
+  inst W : wrapper 
+  net GND (W.GND)
+
+  ; This will work
+  val n1 = get-connected-net!(W.GND)
+
+  ; This will not work
+  val n2 = get-connected-net!(W.C.internal-port)
+```
+The value for `n1` will be successfully found as the `GND`
+net because it is defined within the `pcb-module` context.
+
+The `n2` invocation will throw an exception and not be able to find `INT`
+as the net for `W.C.internal-port`.
+
+@param pt Port of a component or module in this module context.
+@param cxt Optional context to search. The default value is `self`.
 @return If a connection is found - this function returns the Net as
 a JITXObject. If no connection is found - then None().
 <DOC>
-public defn get-connected-net (pt:JITXObject) -> Maybe<JITXObject>:
+public defn get-connected-net (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
   inside pcb-module:
-    for n in nets(self) first :
+    for n in nets(cxt) first :
       if connected?([pt, n]):
         One(n)
       else:
@@ -399,14 +432,20 @@ public defn get-connected-net (pt:JITXObject) -> Maybe<JITXObject>:
 
 doc: \<DOC>
 Get the net associated with a module or component port
-@param pt Port of a component or module.
+
+This function must be called from within a `pcb-module` context.
+
+This function has similar constraints to @{link get-connected-net}.
+
+@param pt Port of a component or module in this module context.
+@param cxt Optional context to search. The default value is `self`.
 @return A `Net` object as a JITXObject if the port is connected.
 @throws ValueError if no net connections are found or if more than one net
 connection is found.
 <DOC>
-public defn get-connected-net! (pt:JITXObject) -> JITXObject:
+public defn get-connected-net! (pt:JITXObject, cxt:JITXObject = self) -> JITXObject:
   inside pcb-module:
-    val n-set = to-tuple $ for n in nets(self) filter :
+    val n-set = to-tuple $ for n in nets(cxt) filter :
       connected?([pt, n])
 
     if length(n-set) == 0:
