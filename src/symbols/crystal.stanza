@@ -1,0 +1,220 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/crystal:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols/framework
+  import jsl/ensure
+  import jsl/errors
+
+val DEF_LINE_WIDTH = 0.05
+val DEF_CRYSTAL_BODY = Dims(0.9, 0.3)
+val DEF_RES_LINE_PERC = (100 %)
+val DEF_RES_LINE_PAD = 0.1
+
+doc: \<DOC>
+Crystal Symbol Parameters Object
+<DOC>
+public defstruct CrystalSymbolParams <: Equalable :
+  doc: \<DOC>
+  Line width for the shapes drawn.
+  Default value is 0.05 in symbol grid units.
+  <DOC>
+  line-width:Double with:
+    default => DEF_LINE_WIDTH
+    ensure => ensure-positive!
+    updater => sub-line-width
+
+  doc: \<DOC>
+  Sets the Resonator Line length as a proportion of the crystal body
+  <DOC>
+  resonator-line-len:Percentage with:
+    default => DEF_RES_LINE_PERC
+    ensure => ensure-positive!,
+    updater => sub-resonator-line-len
+
+  doc: \<DOC>
+  Sets the Resonator Line's offset from the crystal body.
+  <DOC>
+  resonator-line-offset:Double with:
+    default => DEF_RES_LINE_PAD
+    ensure => ensure-positive!,
+    updater => sub-resonator-line-offset
+
+  doc: \<DOC>
+  Dimensions for rectangular body shape
+  Two pin components are drawn vertically
+  so the Y dimension is between the pins of the symbol
+  and the X dimension is the width.
+  <DOC>
+  crystal-body:Dims with:
+    default => DEF_CRYSTAL_BODY
+    ensure => ensure-positive!,
+    updater => sub-crystal-body
+
+  doc: \<DOC>
+  Optional Case Representation Size
+
+  This is often used when a crystal has a metal
+  case around the device that is commonly connected
+  to ground.
+  <DOC>
+  crystal-case:Maybe<Dims> with:
+    default => None()
+    ensure => ensure-positive!
+    updater => sub-crystal-case
+
+with:
+  keyword-constructor => true
+  printer => true
+  equalable => true
+
+var DEF_CRYSTAL_PARAMS = CrystalSymbolParams()
+public defn get-default-crystal-symbol-params () -> CrystalSymbolParams :
+  DEF_CRYSTAL_PARAMS
+
+public defn set-default-crystal-symbol-params (v:CrystalSymbolParams) -> False :
+  DEF_CRYSTAL_PARAMS = v
+
+
+defn compute-total-width (v:CrystalSymbolParams) -> Double:
+  val l = line-width(v)
+  val res-width = (resonator-line-offset(v) * 2.0) + l
+  val body-width = y(crystal-body(v))
+  res-width + body-width
+
+public defn build-crystal-glyphs (
+  node:SymbolNode
+  pitch:Double,
+  case-ports:Int,
+  params:CrystalSymbolParams
+  ):
+
+  val total-width = compute-total-width(params)
+  if total-width >= pitch:
+    throw $ ValueError("Crystal Symbol is too wide for this pitch: width=%_ pitch=%_" % [total-width, pitch])
+
+  val lw = line-width(params)
+  val p2 = pitch / 2.0
+  val porch-len = (pitch - total-width) / 2.0
+  val porch-end = p2 - porch-len
+  line(node, [Point(0.0, p2), Point(0.0, porch-end)], width = lw, name = "front-porch")
+  line(node, [Point(0.0, (- p2)), Point(0.0, (- porch-end))], width = lw, name = "back-porch")
+
+  val res-len = x(crystal-body(params)) * resonator-line-len(params)
+  val rl2 = res-len / 2.0
+  line(node, [Point(rl2, porch-end), Point((- rl2), porch-end)], width = lw, name = "resonator-line")
+  line(node, [Point(rl2, (- porch-end)), Point((- rl2), (- porch-end))], width = lw, name = "resonator-line")
+
+  val body = crystal-body(params)
+  val [b-x2, b-y2] = [x(body) / 2.0, y(body) / 2.0]
+  line-rectangle(node, Point((- b-x2), b-y2), Point(b-x2, (- b-y2)), lw, name = "body" )
+
+  val case? = crystal-case(params)
+  match(case?):
+    (_:None): false
+    (given:One<Dims>):
+      val case = value(given)
+      val x-margin = lw * 4.0
+      val case-h2 = y(case) / 2.0
+      val case-w2 = x(case) / 2.0
+      line(node, [
+        Point(x-margin, case-h2),
+        Point(case-w2, case-h2),
+        Point(case-w2, (- case-h2))
+        Point(x-margin, (- case-h2))
+        ], width = lw, name = "case")
+      line(node, [
+        Point((- x-margin), case-h2),
+        Point((- case-w2), case-h2),
+        Point((- case-w2), (- case-h2))
+        Point((- x-margin), (- case-h2))
+        ], width = lw, name = "case")
+
+
+val DEF_CRYSTAL_CASE_PORTS = 0
+val CRYSTAL_CASE_REF = #R(case)
+
+public defstruct CrystalSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Crystal Symbol's Resonator.
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with:
+    ensure => ensure-positive!
+    default => TWO_PIN_DEF_PITCH
+    as-method => true
+
+  doc: \<DOC>
+  Number of Case Ports on the Crystal package
+  <DOC>
+  case-ports:Int with:
+    ensure => ensure-non-negative!
+    default => DEF_CRYSTAL_CASE_PORTS
+
+  doc: \<DOC>
+  Optional Crystal Symbol Parameters Override.
+  <DOC>
+  params:Maybe<CrystalSymbolParams> with:
+    default => None()
+    setter => set-crystal-params-override
+with:
+  keyword-constructor => true
+  printer => true
+
+
+defn get-params (x:CrystalSymbol) -> CrystalSymbolParams :
+  match(params(x)):
+    (_:None): get-default-crystal-symbol-params()
+    (v:One<CrystalSymbolParams>): value(v)
+
+public defmethod name (x:CrystalSymbol) -> String :
+  "Crystal"
+
+public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
+  two-pin-build-pins(cx, node)
+  val case-ps = case-ports(cx)
+  if case-ps > 0:
+
+    val pin-pitch = 1.0
+    val pin-span = to-double(case-ps - 1) * pin-pitch
+
+    val p = get-params(cx)
+    val case? = crystal-case(p)
+    val case = match(case?):
+      (_:None):
+        val b = crystal-body(p)
+        val offset = resonator-line-offset(p)
+        val lw = line-width(p)
+        ; Default case size is so that the pins will land
+        ;  on the schematic grid.
+        val def-case = Dims(2.0, pin-span + 0.5)
+        val new-params = sub-crystal-case(p, One(def-case))
+        set-crystal-params-override(cx, One(new-params))
+        println("Def Case: %_" % [def-case])
+        def-case
+      (given:One<Dims>): value(given)
+
+    val p-x = x(case)
+    val start-y = pin-span / 2.0
+
+    if y(case) < pin-span:
+      println("Crystal Case is too Short to support number of Case Pins - Consider passing an overriding 'crystal-case' parameter and increasing the component pitch.")
+
+    val vpin-params = VirtualPinParams(direction = Left, pin-length = 1.0)
+
+    for i in 0 to case-ps do:
+      add-pin(
+        node,
+        CRYSTAL_CASE_REF[i + 1],
+        Point((- p-x / 2.0), start-y - (to-double(i) * pin-pitch)),
+        params = vpin-params,
+        class = "case"
+      )
+
+public defmethod build-artwork (
+  x:CrystalSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x)
+  build-crystal-glyphs(sn, pitch(x), case-ports(x), p)

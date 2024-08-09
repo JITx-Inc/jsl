@@ -1,0 +1,73 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/crystal:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols
+  import jsl/landpatterns
+  import jsl/design/settings
+  import jsl/examples/landpatterns/board
+
+
+pcb-component test-SMT-crystal:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [p[1] | p[1] | Up ]
+    [p[2] | p[2] | Down]
+
+  val symb = CrystalSymbol()
+  assign-symbol(create-symbol(symb))
+
+  val pkg = get-chip-pkg("1206")
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-SMT-crystal-with-case:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [p[1] | p[1] | Up ]
+    [p[2] | p[2] | Down]
+    [case[1] | p[3] | Down]
+    [case[2] | p[4] | Down]
+
+  val params = CrystalSymbolParams(
+    resonator-line-len = (80 %),
+    resonator-line-offset = 0.2,
+    crystal-body = Dims(1.2, 0.5)
+  )
+  val symb = CrystalSymbol(params = One(params), pitch = 3.0, case-ports = 2)
+  assign-symbol(create-symbol(symb))
+
+  val pkg = SOIC-N(
+    num-leads = 4,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst X1 : test-SMT-crystal
+  inst X2 : test-SMT-crystal-with-case
+
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Crystal-Symb-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()

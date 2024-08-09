@@ -27,4 +27,5 @@ defpackage jsl/symbols/generators:
   forward jsl/symbols/transistors/generators
   forward jsl/symbols/logic/generators
   forward jsl/symbols/ferrite
+  forward jsl/symbols/crystal
 
