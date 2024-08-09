@@ -9,6 +9,7 @@ defpackage jsl/tests/design/introspection:
   import jsl/design/settings
   import jsl/landpatterns
   import jsl/symbols
+  import jsl/bundles
 
 
 pcb-component two-pin-non-polar :
@@ -46,6 +47,31 @@ pcb-component two-pin-polar :
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
+pcb-component test-comp:
+  port A : diff-pair
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [VDD     | 1, 2]
+    [GND     | 3, 4]
+    [D[0]    | 5]
+    [D[1]    | 6]
+    [A.P     | 7]
+    [A.N     | 8]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
 deftest(design_introspection) test-port-introspection :
 
   pcb-module uut:
@@ -61,5 +87,177 @@ deftest(design_introspection) test-port-introspection :
     #EXPECT(length(obs2) == 2)
     #EXPECT(to-string(ref(obs2[0])) == "D.c")
     #EXPECT(to-string(ref(obs2[1])) == "D.a")
+
+  set-main-module(uut)
+
+deftest(design_introspection) test-ref-tools :
+  pcb-module uut:
+    port asdf
+    ; `get-ref-name`
+    val A = #R(some.mod.C.GND[0])
+    val N1 = get-ref-name(A)
+    #EXPECT(N1 == #R(GND[0]))
+
+    val B = #R(some.other.C.VDD)
+    val N2 = get-ref-name(B)
+    #EXPECT(N2 == #R(VDD))
+
+    ; `get-parent-ref`
+    val C1 = #R(some.mod.C.GND[0])
+    val P1 = get-parent-ref(C1)
+    #EXPECT(value!(P1) == #R(some.mod.C))
+
+    val C2 = #R(self.qwer.SPI)
+    val P2 = get-parent-ref(C2)
+    #EXPECT(value!(P2) == #R(self.qwer))
+
+    val C3 = ref(self.asdf)
+    val P3 = get-parent-ref(C3)
+    #EXPECT(P3 is None)
+
+  set-main-module(uut)
+
+deftest(design_introspection) test-get-pads-from-port:
+
+  pcb-module wrapper :
+    public inst M : test-comp
+
+  pcb-module uut:
+    inst C : test-comp
+    inst S : wrapper
+
+    val p2p-map = port-to-pads(C)
+
+    val VDD-pads? = get-pads-from-port(p2p-map, C.VDD)
+    match(VDD-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 2" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 2)
+        #EXPECT(ref(pad-set[0]) == #R(p[1]))
+        #EXPECT(ref(pad-set[1]) == #R(p[2]))
+
+        #EXPECT(side(pad-set[0]) == Top)
+        #EXPECT(pad-type(pad(pad-set[0])) == SMD)
+        #EXPECT(pad-shape(pad(pad-set[0])) is Rectangle)
+
+    val GND-pads? = get-pads-from-port(p2p-map, C.GND)
+    match(GND-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 2" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 2)
+        #EXPECT(ref(pad-set[0]) == #R(p[3]))
+        #EXPECT(ref(pad-set[1]) == #R(p[4]))
+
+    val D0-pads? = get-pads-from-port(p2p-map, C.D[0])
+    match(D0-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[5]))
+
+    val AP-pads? = get-pads-from-port(p2p-map, C.A.P)
+    match(AP-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[7]))
+
+
+    val D1-pads? = get-pads-from-port(C.D[1])
+    match(D1-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[6]))
+
+    val AN-pads? = get-pads-from-port(C.A.N)
+    match(AN-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[8]))
+
+    val GND2-pads? = get-pads-from-port(S.M.GND)
+    match(GND2-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 2" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 2)
+        #EXPECT(ref(pad-set[0]) == #R(p[3]))
+        #EXPECT(ref(pad-set[1]) == #R(p[4]))
+
+    val D02-pads? = get-pads-from-port(S.M.D[0])
+    match(D02-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[5]))
+
+    val AN2-pads? = get-pads-from-port(S.M.A.N)
+    match(AN2-pads?):
+      (_:None): #EXPECT("No Pads Found - Expected 1" == "")
+      (given:One<Tuple<JITXObject>>):
+        val pad-set = value(given)
+        #EXPECT(length(pad-set) == 1)
+        #EXPECT(ref(pad-set[0]) == #R(p[8]))
+
+
+  set-main-module(uut)
+
+deftest(design_introspection) test-get-parent-from-port:
+
+  pcb-module wrapper :
+    public inst M : test-comp
+
+  pcb-module uut:
+    port asdf
+    inst D : test-comp
+    inst W : wrapper
+
+    val obj = get-parent-from-port(self.asdf)
+    #EXPECT(value!(obj) == self)
+
+    val obj2 = get-parent-from-port(D.GND)
+    #EXPECT(value!(obj2) == D)
+
+    val obj3 = get-parent-from-port(W.M.VDD)
+    #EXPECT(value!(obj3) == W.M)
+
+  set-main-module(uut)
+
+deftest(design_introspection) test-is-mod-or-comp:
+
+  pcb-module wrapper :
+    public inst M : test-comp
+
+  pcb-module uut:
+    port asdf
+    inst D : test-comp
+    inst W : wrapper
+
+    #EXPECT(is-module?(W) == true)
+    #EXPECT(is-module?(D) == false)
+
+    #EXPECT(is-component?(W) == false)
+    #EXPECT(is-component?(D) == true)
+
+    #EXPECT(is-component?(W.M) == true)
+    #EXPECT(is-module?(W.M) == false)
+
+    val obj = get-parent-from-port(self.asdf)
+    #EXPECT(value!(obj) == self)
+
+    val obj2 = get-parent-from-port(D.GND)
+    #EXPECT(value!(obj2) == D)
+
+    val obj3 = get-parent-from-port(W.M.VDD)
+    #EXPECT(value!(obj3) == W.M)
 
   set-main-module(uut)

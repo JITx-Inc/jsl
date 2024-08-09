@@ -79,3 +79,16 @@ public defstruct InvalidComponentSupports <: Exception:
 
 public defmethod print (o:OutputStream, e:InvalidComponentSupports):
   print(o, "Expected Instance to provide one of '%,' supports - but none were found"  % [expected-supports(e)])
+
+
+doc: \<DOC>
+Exception type for Distinguishing between module and component instances
+<DOC>
+public defstruct InstanceTypeError <: Exception:
+  expects:InstanceType
+  observed:InstanceType
+with:
+  keyword-constructor => true
+
+public defmethod print (o:OutputStream, e:InstanceTypeError):
+  print(o, "Expected Instance of type %_ but Received Instance of type %_" % [expects(e), observed(e)])
