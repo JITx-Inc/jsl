@@ -6,6 +6,7 @@ defpackage jsl/design/introspection:
   import jitx/commands
 
   import jsl/errors
+  import jsl/landpatterns/introspection
 
 doc: \<DOC>
 Retrieve the `Instantiable` that generates the instances of the passed object.
@@ -389,7 +390,7 @@ This function must be called from within a `pcb-module` context.
 
 Note that this function will fail to find a net if the passed `pt`
 port is not part of a component or module in the local context.
-For example, If you have: 
+For example, If you have:
 
 ```stanza
 pcb-module wrapper:
@@ -402,7 +403,7 @@ pcb-module wrapper:
 
 pcb-module top-level:
 
-  inst W : wrapper 
+  inst W : wrapper
   net GND (W.GND)
 
   ; This will work
@@ -454,3 +455,47 @@ public defn get-connected-net! (pt:JITXObject, cxt:JITXObject = self) -> JITXObj
       throw $ ValueError("Invalid Port - Multiple Nets Associated - Expected Singular Net")
 
     n-set[0]
+
+doc: \<DOC>
+Port Info Object
+
+This object is primarily a tool for working around limitations
+in the pcb-module / pcb-component hierarchy.
+
+This object will make requests to retrieve data about a port
+then consolidate into a single pass-able object to various
+functions and generators.
+<DOC>
+public pcb-struct jsl/design/introspection/PortInfo :
+  doc: \<DOC>
+  Net connector this port if any.
+  <DOC>
+  connected-net:Maybe<JITXObject>
+  doc: \<DOC>
+  The info about the pads associated with this port
+  The component contains a `port -> pad` mapping table
+  that we used to extra the `pad` objects that are associated
+  with this port. Then we extract meta data about each of those
+  pads to reference here.
+  <DOC>
+  pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
+
+doc: \<DOC>
+Extract Port Info from a port `JITXObject`
+@param pt Port referenced from an component object, typically
+using dot notation like `MCU.RESET_n`.
+@return Extracted port data for this port.
+<DOC>
+public defn get-port-info (pt:JITXObject) -> PortInfo:
+  inside pcb-module:
+    val pads? = get-pads-from-port(pt)
+    val pd-info = match(pads?):
+      (_:None): []
+      (given:One<Tuple<JITXObject>>):
+        val lp-pds = value(given)
+        to-tuple $ for lp-pd in lp-pds seq:
+          get-pad-info(lp-pd)
+    PortInfo(
+      get-connected-net(pt)
+      pd-info
+    )
