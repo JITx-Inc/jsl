@@ -47,27 +47,21 @@ limitations in the `pcb-module` and `pcb-component` hierarchy.
 This type consolidates much of the meta-data associated with a
 particular pad so that it can be transmitted accross `pcb-module`
 definition boundaries.
+
+It includes data from the following API calls:
+
+ *  `pad-type()`
+ *  `pad-shape()`
+ *  `pose()`
+ *  `side()`
+ *  `layers()`
+
 <DOC>
 public pcb-struct jsl/landpatterns/introspection/PadInfo :
-  doc: \<DOC>
-  See `pad-type()`
-  <DOC>
   type:PadType
-  doc: \<DOC>
-  See `pad-shape()`
-  <DOC>
   shape:Shape
-  doc: \<DOC>
-  See `pose()`
-  <DOC>
   pose:Pose
-  doc: \<DOC>
-  See `side()`
-  <DOC>
   side:Side
-  doc: \<DOC>
-  See `layers()`
-  <DOC>
   layer-data:Tuple<LayerShape>
 
 doc: \<DOC>
