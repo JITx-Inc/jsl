@@ -1,0 +1,239 @@
+#use-added-syntax(jitx)
+defpackage jsl/protocols/hdmi:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/si
+  import jsl/ensure
+  import jsl/errors
+
+public pcb-enum jsl/protocols/hdmi/HDMIVersion:
+  HDMI-v1p0
+  HDMI-v1p1
+  HDMI-v1p2
+  HDMI-v1p3
+  HDMI-v1p4
+  HDMI-v2p0
+  HDMI-v2p1
+
+; Character Rate
+;  Each character = 10-bits
+; Bit Rate = 10x Character rate
+val HDMI-v1p0-CHAR-MAX-HZ = 165.0e6
+val HDMI-v1p1-CHAR-MAX-HZ = HDMI-v1p0-CHAR-MAX-HZ
+val HDMI-v1p2-CHAR-MAX-HZ = HDMI-v1p0-CHAR-MAX-HZ
+val HDMI-v1p3-CHAR-MAX-HZ = 340.0e6
+val HDMI-v1p4-CHAR-MAX-HZ = HDMI-v1p3-CHAR-MAX-HZ
+
+val HDMI-v1-BIT-RATE-MULT = 10.0
+
+; For HDMI 2- above 340MHz Char Rate -
+;  the bit rate becomes 40x Char Rate
+val HDMI-v2p0-CHAR-MAX-HZ = 600.0e6
+val HDMI-v2p1-CHAR-MAX-HZ = HDMI-v2p0-CHAR-MAX-HZ
+
+val HDMI-v2-BIT-RATE-MULT = 40.0
+
+; Standard Character Rate for Low
+;  Freq - typically Automotive.
+val HDMI-CAT-1-CHAR-HZ = 74.25e6
+
+
+public pcb-enum jsl/protocols/hdmi/HDMIOptionalPorts:
+  ; Ethernet and ARC Diff-Pair
+  HDMI-HEC
+
+
+public pcb-bundle hdmi-b (opt-ports:Collection<HDMIOptionalPorts>) :
+  name = "HDMI Bundle"
+  port data : diff-pair[3]
+  port clock : diff-pair
+
+  port rail-5V : power
+  port ddc : i2c
+  port cec
+  port hot-plug-detect
+
+  for opt-port in opt-ports do :
+    switch(opt-port) :
+      HDMI-HEC : make-port(`hec, diff-pair)
+
+
+public defn hdmi ( opt-ports:HDMIOptionalPorts ...) :
+  hdmi-b(opt-ports)
+
+
+public defn has-hec (b:JITXObject) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "hec")
+
+doc: \<DOC>
+Computed HDMI Intra-Pair Skew
+
+@param char-rate Character rate for the interface. This
+rate varies depending on version. This value is in Hz.
+@param bit-rate The bit rate is typically 10x the char-rate for
+HDMI v1. For HDMI v2 above 340MHz character rate, it switches
+to 40x the character rate. This value is in Hz.
+@return The max intra-pair skew allowed per the spec at this
+character rate. This value is in seconds.
+<DOC>
+public defn hdmi-intra-pair-skew (char-rate:Double, bit-rate:Double) -> Toleranced :
+  ; Per the spec this coefficient is multiplied
+  ;  against the `T-bit` period.
+  ; This skew is for the Source -> TP1 on the transmitter side
+  ;  There is no corresponding spec provided for TP2 -> Sink
+  val coeff = 0.15
+  val max-skew = coeff / (char-rate * bit-rate)
+  0 +/- (max-skew / 2.0)
+
+doc: \<DOC>
+HDMI Max character and bit rates by Version
+@param v HDMI Version for generating rates
+@return Tuple of [Char-Rate, Bit-Rate] where the
+character rate is the "pixel clock". The bit rate is the multiple
+of the character rate, typically 10x or 40x.
+<DOC>
+public defn hdmi-char-bit-rates (v:HDMIVersion) -> [Double, Double]:
+  switch(v):
+    HDMI-v1p0: [HDMI-v1p0-CHAR-MAX-HZ, HDMI-v1-BIT-RATE-MULT]
+    HDMI-v1p1: [HDMI-v1p1-CHAR-MAX-HZ, HDMI-v1-BIT-RATE-MULT]
+    HDMI-v1p2: [HDMI-v1p2-CHAR-MAX-HZ, HDMI-v1-BIT-RATE-MULT]
+    HDMI-v1p3: [HDMI-v1p3-CHAR-MAX-HZ, HDMI-v1-BIT-RATE-MULT]
+    HDMI-v1p4: [HDMI-v1p4-CHAR-MAX-HZ, HDMI-v1-BIT-RATE-MULT]
+    HDMI-v2p0: [HDMI-v2p0-CHAR-MAX-HZ, HDMI-v2-BIT-RATE-MULT]
+    HDMI-v2p1: [HDMI-v2p1-CHAR-MAX-HZ, HDMI-v2-BIT-RATE-MULT]
+
+doc: \<DOC>
+Worst Case Intra-pair Skew Requirement
+
+@param v HDMI Version for generating skew requirement
+@return Intra-pair Skew in Seconds
+<DOC>
+defn hdmi-intra-pair-skew (v:HDMIVersion) -> Toleranced:
+  val [char-rate, bit-rate] = hdmi-char-bit-rates(v)
+  hdmi-intra-pair-skew(char-rate, bit-rate)
+
+doc: \<DOC>
+Compute Worst Case HDMI Loss and Skew Specification by Version
+<DOC>
+public defn hdmi-skew-loss (v:HDMIVersion) -> [Toleranced, Double]:
+  val typ-loss = 6.0 ; dB
+  val skew = hdmi-intra-pair-skew(v)
+  println("IntraPair Skew: %_" % [skew])
+  [skew, typ-loss]
+
+doc: \<DOC>
+Differential Pair Trace Impedance Spec
+<DOC>
+public defn hdmi-trace-impedance () -> Toleranced:
+  100.0 +/- (10 %)
+
+doc: \<DOC>
+Inter-pair Skew with respect to Character Rate
+
+Per the spec, the max skew is a ratio of the character
+rate.
+@param char-rate Character rate in Hz
+@return Inter-pair Skew in Seconds.
+<DOC>
+public defn hdmi-inter-pair-skew (char-rate:Double) -> Toleranced:
+  ; This coefficient is specified for the skew max between
+  ;  the Source -> TP1 (the connector on the source board).
+  ;  No equivalent is provided for TP2 -> Sink.
+  val coeff = 0.2
+  val max-skew = coeff / char-rate
+  println("InterPair Skew: %_" % [max-skew])
+  0.0 +/- (max-skew / 2.0)
+
+doc: \<DOC>
+Worst Case Inter-pair Skew by Version
+@param v HDMI Protocol Version
+@return Inter-pair Skew in Seconds
+<DOC>
+public defn hdmi-inter-pair-skew (v:HDMIVersion) -> Toleranced:
+  val [char-rate, bit-rate] = hdmi-char-bit-rates(v)
+  hdmi-inter-pair-skew(char-rate)
+
+; HDMI 1.4
+; Source
+; Intra-Pair Skew - 0.15 Tbit
+; Inter-Pair Skew - 0.20 T Character
+
+; Sink
+; Intra-Pair Skew - 0.4 T-bit below 222.75MHz
+; Intra-Pair Skew - 0.15 T-bit + 112pS above 222.75MHz
+; InterPair Skew - 0.2Tchar + 1.78 nS
+
+; Cable
+; Cat 1 - Up to 74.25MHz
+; Intra-pair - 151 pS
+; Inter-pair - 2.42 nS
+; Cat 2 - Up to 340MHz
+; Intra-pair - 112 pS
+; Inter-pair - 1.78 nS
+
+;
+
+public defstruct HDMI-Constraint <: DiffPair-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew:Toleranced  with:
+    as-method => true
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    as-method => true
+  doc: \<DOC>
+  Inter-pair Timing Skew Constraint in Seconds.
+  <DOC>
+  inter-skew:Toleranced
+  doc: \<DOC>
+  Differential Routing Structure for each Diff-Pair
+  <DOC>
+  route-struct:DifferentialRoutingStructure with:
+    as-method => true
+with:
+  keyword-constructor => true
+
+public defn HDMI-Constraint (v:HDMIVersion, rs:DifferentialRoutingStructure) -> HDMI-Constraint :
+  val [sk, ml] = hdmi-skew-loss(v)
+  HDMI-Constraint(
+    skew = sk,
+    loss = ml,
+    inter-skew = hdmi-inter-pair-skew(v),
+    route-struct = rs
+  )
+
+
+public defmethod constrain (cst:HDMI-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+
+    val src-ep = find-signal-end(src)
+    val dst-ep = find-signal-end(dst)
+
+    val bus-routes = to-tuple $ for i in indices(src-ep.data) seq:
+      diffpair-constrain(cst, src-ep.data[i], dst-ep.data[i])
+      src-ep.data[i] => dst-ep.data[i]
+
+    diffpair-constrain(cst, src-ep.clock, dst-ep.clock)
+
+    ; Inter-pair timing constraint as compared
+    ; to the clock
+    timing-window(
+      inter-skew(cst)
+      src-ep.clock.P => dst-ep.clock.P,
+      topos = bus-routes
+    )
+
+    if has-hec(src-ep) != has-hec(dst-ep):
+      throw $ ValueError("MisMatched HDMI Bundles - HEC availability does not Match")
+
+    if has-hec(src-ep):
+      diffpair-constrain(cst, src-ep.hec, dst-ep.hec)

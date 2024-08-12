@@ -1,0 +1,157 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/hdmi/hdmi-main:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns
+  import jsl/symbols
+  import jsl/design/settings
+
+  import jsl/protocols/hdmi
+  import jsl/examples/protocols/common/example-board
+  import jsl/si
+
+pcb-component hdmi-src:
+
+  pin-properties :
+    [ pin : Ref | pads : Int ... | side:Dir ]
+    [ TX0+      | 2           | Left ]
+    [ TX0-      | 1           | Left ]
+    [ GND[1]    | 3           | Left]
+    [ TX1+      | 5           | Left ]
+    [ TX1-      | 4           | Left ]
+    [ GND[2]    | 6           | Left]
+    [ TX2+      | 8           | Left ]
+    [ TX2-      | 7           | Left ]
+    [ GND[3]    | 9           | Left]
+    [ TXC+      | 11           | Left ]
+    [ TXC-      | 10          | Left ]
+    [ VDD       | 12          | Left]
+    [ CEC       | 13           | Left]
+    [ DSCL       | 14           | Left]
+    [ DSDA       | 15           | Left]
+    [ HPD       | 16           | Left]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+
+  val QFN-pkg = QFN(
+    num-leads = 16,
+    lead-profile = Quad-Lead-Profile(
+      span = min-max(3.2, 3.4),
+      pitch = 0.5,
+      lead = QFN-Lead(
+        length = min-max(0.25, 0.35),
+        width = min-max(0.15, 0.25)
+      )
+    ),
+    thermal-lead? = false,
+    package-body = PackageBody(
+      width = min-max(3.0, 3.05),
+      length = min-max(3.0, 3.05),
+      height = min-max(0.5, 0.8)
+    ),
+  )
+
+  assign-landpattern $ create-landpattern(QFN-pkg)
+
+  supports hdmi():
+    hdmi().data[0].P => self.TX0+
+    hdmi().data[0].N => self.TX0-
+    hdmi().data[1].P => self.TX1+
+    hdmi().data[1].N => self.TX1-
+    hdmi().data[2].P => self.TX2+
+    hdmi().data[2].N => self.TX2-
+    hdmi().clock.P => self.TXC+
+    hdmi().clock.N => self.TXC-
+    hdmi().rail-5V.V+ => self.VDD
+    hdmi().rail-5V.V- => self.GND[1]
+    hdmi().ddc.sda => self.DSDA
+    hdmi().ddc.scl => self.DSCL
+    hdmi().cec => self.CEC
+    hdmi().hot-plug-detect => self.HPD
+
+
+pcb-component hdmi-conn-A:
+  pin-properties :
+    [ pin : Ref | pads : Int ... | side:Dir ]
+    [ TMDS2+    | 1           | Left ]
+    [ TMDS2-SH  | 2           | Left ]
+    [ TMDS2-    | 3           | Left ]
+    [ TMDS1+    | 4           | Left ]
+    [ TMDS1-SH  | 5           | Left ]
+    [ TMDS1-    | 6           | Left ]
+    [ TMDS0+    | 7           | Left ]
+    [ TMDS0-SH  | 8           | Left ]
+    [ TMDS0-    | 9           | Left ]
+    [ TCK+    | 10           | Left ]
+    [ TCK-SH  | 11           | Left ]
+    [ TCK-    | 12           | Left ]
+    [ CEC    | 13           | Left ]
+    [ RES    | 14           | Left ]
+    [ SCL    | 15           | Left ]
+    [ SDA    | 16           | Left ]
+    [ GND    | 17           | Left ]
+    [ VDD-5V  | 18           | Left ]
+    [ HPD    | 19           | Left ]
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  ; This is just for testing - a HDMI
+  ;  connector would obviously work better.
+  val pkg = SOIC-N(
+    num-leads = 20,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 11.0 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+  supports hdmi():
+    hdmi().data[0].P => self.TMDS0+
+    hdmi().data[0].N => self.TMDS0-
+    hdmi().data[1].P => self.TMDS1+
+    hdmi().data[1].N => self.TMDS1-
+    hdmi().data[2].P => self.TMDS2+
+    hdmi().data[2].N => self.TMDS2-
+    hdmi().clock.P => self.TCK+
+    hdmi().clock.N => self.TCK-
+    hdmi().rail-5V.V+ => self.VDD-5V
+    hdmi().rail-5V.V- => self.GND
+    hdmi().ddc.sda => self.SDA
+    hdmi().ddc.scl => self.SCL
+    hdmi().cec => self.CEC
+    hdmi().hot-plug-detect => self.HPD
+
+
+pcb-module hdmi-uut :
+
+  inst ctl : hdmi-src
+  inst conn : hdmi-conn-A
+
+  val cst = HDMI-Constraint(HDMI-v1p4, diff(100.0))
+
+  require tx:hdmi() from ctl
+  require rx:hdmi() from conn
+
+  constrain-topology( tx => rx, cst)
+
+set-current-design("hdmi-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(hdmi-uut)
+
+; View the results
+view-board()
+view-schematic()
+
+
