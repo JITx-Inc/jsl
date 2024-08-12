@@ -465,19 +465,10 @@ in the pcb-module / pcb-component hierarchy.
 This object will make requests to retrieve data about a port
 then consolidate into a single pass-able object to various
 functions and generators.
+
 <DOC>
 public pcb-struct jsl/design/introspection/PortInfo :
-  doc: \<DOC>
-  Net connector this port if any.
-  <DOC>
   connected-net:Maybe<JITXObject>
-  doc: \<DOC>
-  The info about the pads associated with this port
-  The component contains a `port -> pad` mapping table
-  that we used to extra the `pad` objects that are associated
-  with this port. Then we extract meta data about each of those
-  pads to reference here.
-  <DOC>
   pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
 
 doc: \<DOC>
