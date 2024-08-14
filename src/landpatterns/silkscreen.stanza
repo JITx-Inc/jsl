@@ -191,6 +191,81 @@ public defn build-outline-pin-1-triangle (
     class = "pin-1-marker"
     )
 
+
+doc: \<DOC>
+Create a Pin 1 indicator as a round dot next to the pad
+
+This creates a small circle in the silkscreen directly
+above (+Y) the "pin 1" pad of a land pattern.
+
+This function assumes that the space directly above the
+pin 1 pad is available to place this circle.
+@param vp Virtual Landpattern that will store artwork and
+be inspected for pads that match `pin-1-id`. Note that the
+pads must already have been added to the land pattern for
+this function to work.
+@param pin-1-id Indicates which pad by Int or Ref will be
+used as the "Pin 1" of the land pattern.
+@param dir Direction where to place the dot with respect
+to the pin 1 pad. Default value is `Up` (+Y)
+@param line-width Used for the radius of the created Circle. By
+default this is the minimum silk width from the design rules.
+@param mask-clearance Mask clearance rule used to place
+the dot sufficiently far away the Pin 1 Pad. Default is
+the minimum silk to soldermask clearance pulled from the design rules.
+@param side Indicates whether the marker will be drawn on the top
+or bottom side of the board. Default is `Top`.
+<DOC>
+public defn build-smd-pin-1-dot (
+  vp:VirtualLP,
+  --
+  pin-1-id:Int|Ref = 1,
+  dir:Dir = Up,
+  margin:Double = 0.0,
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+  ; Draw a circle dot inside the rectangle above pin 1
+  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
+
+  val pad-loc = pose(pin-1-pad)
+  val pad-center = center(pad-loc)
+
+  val smasks = get-layer(pin-1-pad, SolderMask(side))
+  if length(smasks) == 0:
+    ; This is a very strange error - it means
+    ;  that pad 1 of this component doesn't have a soldermask
+    ;  opening.
+    ; This could happen if the user passed an erroneous `side` argument
+    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
+  val smask = smasks[0]
+
+  ; Apply the transform so that I can get the
+  ;   true "height" of the pad regardless of rotation.
+  val smask* = pad-loc * smask
+  val height = y $ dims(smask*)
+  val y-pos = (height / 2.0) + mask-clearance + line-width + margin
+  val width = x $ dims(smask*)
+  val x-pos = (width / 2.0) + mask-clearance + line-width + margin
+
+  val offset = switch(dir):
+    Up: Point(0.0, y-pos)
+    Down: Point(0.0, (- y-pos))
+    Right: Point(x-pos, 0.0)
+    Left: Point((- x-pos), 0.0)
+
+  val marker-pos = pad-center + offset
+
+  ; TODO - Check that the marker will be visible and not blocked by the package
+  ;   body.
+  ;
+  ; TODO - Check that the marker will not overlap with any existing silkscreen
+  ;   that will prevent it from being easily visible.
+
+  add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin-1-marker")
+
+
 doc: \<DOC>
 Construct a silkscreen outline of a component based on the Package Body
 

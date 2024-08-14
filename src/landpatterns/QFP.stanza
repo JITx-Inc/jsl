@@ -256,53 +256,15 @@ public defn QFP-outline (
 
   add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
 
-public defn QFP-pin-1-marker (
-  pkg:QFP,
-  vp:VirtualLP
-  --
-  pin-1-id:Int|Ref = 1,
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-
-  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
-
-  val pad-loc = pose(pin-1-pad)
-  val pad-center = center(pad-loc)
-
-  val smasks = get-layer(pin-1-pad, SolderMask(side))
-  if length(smasks) == 0:
-    ; This is a very strange error - it means
-    ;  that pad 1 of this component doesn't have a soldermask
-    ;  opening.
-    ; This could happen if the user passed an erroneous `side` argument
-    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
-  val smask = smasks[0]
-
-  val width = x $ dims(smask)
-  val offset = Point((- (width / 2.0) + mask-clearance + line-width), 0.0)
-  val marker-shape = Circle(offset, line-width)
-
-  val marker-geom = pad-loc * marker-shape
-
-  add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
-
-  val outline = get-silkscreen-outline!(vp)
-  val o-box = bounds $ shape(outline)
-
-  val marker = compute-triangle-marker(pad-center, o-box, line-width)
-  add-artwork(
-    vp, Silkscreen("pin-1-marker", side),
-    marker,
-    name = "pin-1-triangle",
-    class = "pin-1-marker"
-    )
-
 public defmethod build-silkscreen (
   pkg:QFP,
   vp:VirtualLP
   ) -> False:
   QFP-outline(pkg, vp)
-  QFP-pin-1-marker(pkg, vp)
+
+  build-smd-pin-1-dot(
+      vp,
+      dir = Left
+  )
+  build-outline-pin-1-triangle(vp)
   add-reference-designator(vp)
