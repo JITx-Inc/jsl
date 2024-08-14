@@ -220,53 +220,27 @@ public defn SON-outline (
 
   add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
 
-public defn SON-pin-1-marker (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  pin-1-id:Int|Ref = 1,
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
+defn extra-dot-margin (dl:DensityLevel) -> Double:
+  val line-width = default-silk-width(),
+  val mask-clearance = default-mask-clearance(),
 
-  val extra-margin = switch(density-level(pkg)):
+  switch(dl):
     DensityLevelA: mask-clearance + line-width
     DensityLevelB: mask-clearance + line-width
     DensityLevelC: 0.0
-
-  val pin-1-pad = get-pad-by-ref!(vp, pin-1-id)
-
-  val pad-loc = pose(pin-1-pad)
-  val pad-center = center(pad-loc)
-
-  val smasks = get-layer(pin-1-pad, SolderMask(side))
-  if length(smasks) == 0:
-    ; This is a very strange error - it means
-    ;  that pad 1 of this component doesn't have a soldermask
-    ;  opening.
-    ; This could happen if the user passed an erroneous `side` argument
-    throw $ ValueError("Pin-1 - No Soldermask Opening for Pad on Side: %_" % [side])
-  val smask = smasks[0]
-
-  val width = x $ dims(smask)
-  val offset = Point((- (width / 2.0) + mask-clearance + line-width + extra-margin), 0.0)
-  val marker-shape = Circle(offset, line-width)
-
-  val marker-geom = pad-loc * marker-shape
-
-  add-artwork(vp, Silkscreen("pin-1-marker", side), marker-geom, name = "pin-1-dot", class = "pin1-marker")
-
-  if density-level(pkg) == DensityLevelA :
-    build-outline-pin-1-triangle(vp)
-
 
 public defmethod build-silkscreen (
   pkg:SON,
   vp:VirtualLP
   ) -> False:
   SON-outline(pkg, vp)
-  SON-pin-1-marker(pkg, vp)
+  build-smd-pin-1-dot(
+    vp,
+    dir = Left,
+    margin = extra-dot-margin(density-level(pkg)),
+    )
+  if density-level(pkg) == DensityLevelA :
+    build-outline-pin-1-triangle(vp)
   add-reference-designator(vp)
 
 

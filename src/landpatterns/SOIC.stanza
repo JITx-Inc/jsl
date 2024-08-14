@@ -280,6 +280,6 @@ public defmethod build-silkscreen (
   vp:VirtualLP,
   ) -> False :
   build-pkg-body-outline(pkg, vp)
-  build-smd-pin-1(pkg, vp)
+  build-smd-pin-1-dot(vp, dir = Left)
   build-outline-pin-1-triangle(vp)
   add-reference-designator(vp)
