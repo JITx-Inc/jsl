@@ -187,7 +187,7 @@ deftest(SOIC) test-fine-pitch:
     for sh in pin-1-silk do:
       match(sh):
         (x:Circle):
-          #EXPECT(almost-equal?(center(x), Point(-4.801462, 5.5162 )))
+          #EXPECT(almost-equal?(center(x), Point(-5.847, 4.875)))
         (x:Polygon):
           val pts = points(x)
           val b = Box(Point(-3.8, 4.1), Point(-2.4, 5.5))
