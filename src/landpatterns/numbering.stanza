@@ -538,3 +538,57 @@ public defmethod to-pad-id (x:C-A-Numbering, row:Int, column:Int) -> Int|Ref :
 
   if row == 0: Ref("a")
   else: Ref("c")
+
+doc: \<DOC>
+Lookup Table Based Numbering Scheme
+
+This numbering scheme to support patterns that are
+not easily programmatic or more random.
+
+@snippet
+
+```stanza
+val lead-scheme = LookupTableNumbering(
+    lookup = [
+    [2, 1]
+    [3, 4]
+  ]
+)
+```
+
+@snip-note Typically, the lookup tables would be
+regular, ie each row would be the same length. But
+nothing prevents an irregular grid where the rows
+are not all the same length.
+
+<DOC>
+public defstruct LookupTableNumbering <: Numbering:
+  doc: \<DOC>
+  Lookup Table for Converting (Rows, Columns) -> Int|Ref
+  This table is assumed to be in Row major order.
+  <DOC>
+  lookup:Tuple<Tuple<Int|Ref>>
+with:
+  printer => true
+  constructor => #LookupTableNumbering
+
+public defn LookupTableNumbering (
+  lookup:Tuple<Tuple<Int|Ref>>
+  ) -> LookupTableNumbering:
+  ensure-positive!("lookup.length", length(lookup))
+  #LookupTableNumbering(lookup)
+
+public defmethod to-pad-id (x:LookupTableNumbering, row:Int, column:Int) -> Int|Ref:
+  if (row < 0 or column < 0):
+    throw $ ValueError("Expecting Non-negative Indices: r=%_ c=%_" % [row,column])
+
+  val LT = lookup(x)
+  val num-rows = length(LT)
+  if not (row < num-rows):
+    throw $ ValueError("Invalid Row Offset: %_ < %_" % [row, num-rows])
+
+  val num-cols = length(LT[row])
+  if not (column < num-cols):
+    throw $ ValueError("Invalid Column Offset: %_ < %_" % [column, num-cols])
+
+  LT[row][column]
