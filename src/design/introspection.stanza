@@ -34,6 +34,11 @@ Retrieve a Port by its symbol name
 This function retrieves a port on a component but doesn't
 throw an error if that port does not exist.
 
+For `PortArray` ports, if the `name` contains the `[]` indexing
+argument, then this will find individual port array elements.
+If there is not `[]` indexing argument, then the `PortArray`
+port itself will be discovered.
+
 @param obj Component or Module to interrogate for a port
 @param name Name of port to interrogate. This name can include
 dot-notation style introspection if needed.
@@ -43,8 +48,13 @@ dot-notation style introspection if needed.
 public defn get-port-by-name (obj:JITXObject, name:String) -> Maybe<JITXObject> :
   label<Maybe<JITXObject>> return:
     val pat = to-string(".%_" % [name])
-    for p in pins(obj) do:
-      val refName = to-string $ ref(p)
+    val has-index? = suffix?(name, "]")
+    for p in ports(obj) do:
+      val refName = to-string $ match(ref(p)):
+        (ir:IndexRef):
+          if not has-index?: ref(ir)
+          else: ir
+        (other): other
       if suffix?(refName, pat) :
         return(One(p))
     return(None())
