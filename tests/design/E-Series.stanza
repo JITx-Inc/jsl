@@ -110,9 +110,14 @@ deftest(E-Series) E48-test :
     println("Faults: %_" % [msg])
     #EXPECT(length(faults) == 0)
 
-  val obs = find-nearest(series, 133.23)
+  var obs = find-nearest(series, 133.23)
   #EXPECT(obs == 133.0)
 
+  obs = find-floor(series, 315.0)
+  #EXPECT(almost-equal?(obs, 301.0, epsilon))
+
+  obs = find-ceil(series, 315.0)
+  #EXPECT(almost-equal?(obs, 316.0, epsilon))
 
 deftest(E-Series) E96-test :
   val series = E96()
@@ -148,7 +153,19 @@ deftest(E-Series) E96-test :
   var obs = find-nearest(series, 133.23)
   #EXPECT(obs == 133.0)
 
+  obs = find-floor(series, 133.23)
+  #EXPECT(almost-equal?(obs, 133.0, epsilon))
+
+  obs = find-ceil(series, 133.23)
+  #EXPECT(almost-equal?(obs, 137.0, epsilon))
+
   obs = find-nearest(series, 203.3)
+  #EXPECT(almost-equal?(obs, 205.0, epsilon))
+
+  obs = find-floor(series, 203.3)
+  #EXPECT(almost-equal?(obs, 200.0, epsilon))
+
+  obs = find-ceil(series, 203.3)
   #EXPECT(almost-equal?(obs, 205.0, epsilon))
 
 deftest(E-Series) find-in-range-test :

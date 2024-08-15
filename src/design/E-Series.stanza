@@ -55,6 +55,19 @@ public defmulti get-series (e:E-Series) -> Tuple<Double>:
   to-tuple $ for i in 0 to N seq:
     rounded-log10(i, N, places(e))
 
+defn abs-err (obs-v:Double, exp-v:Double) -> Double:
+  abs(obs-v - exp-v)
+
+defn find-in-series (e:E-Series, v:Double, filt:(Double -> True|False)) -> Double :
+  val pwr10 = get-power-of-10(v)
+  val series = to-array<Double>(get-series(e))
+  map!(scaled-series{_ , pwr10}, series)
+  val series* = to-tuple $ filter(filt, series)
+  val err = map(abs-err{_, v}, series*)
+  val errVals = to-array<[Double, Double]>(zip(err, series*))
+  qsort!(get{_,0}, errVals)
+  errVals[0][1]
+
 ; Find the closest value in this series to the passed `v` parameter.
 doc: \<DOC>
 Find the closest value in this series.
@@ -66,14 +79,13 @@ using an absolute difference metric.
 @return Scaled value from this series at the appropriate power of 10
 <DOC>
 public defmulti find-nearest (e:E-Series, v:Double) -> Double:
-  val pwr10 = get-power-of-10(v)
-  val series = to-array<Double>(get-series(e))
-  map!(scaled-series{_ , pwr10}, series)
-  val err = map<Double>({abs(_ - v)}, series)
-  val errVals = to-array<[Double, Double]>(zip(err, series))
+  find-in-series(e, v, fn (x): true)
 
-  qsort!(get{_,0}, errVals)
-  errVals[0][1]
+public defmulti find-ceil (e:E-Series, v:Double) -> Double:
+  find-in-series(e, v, fn (x): x >= v)
+
+public defmulti find-floor (e:E-Series, v:Double) -> Double:
+  find-in-series(e, v, fn (x): x <= v)
 
 doc: \<DOC>
 Find all the resistors from this series within a given range.
