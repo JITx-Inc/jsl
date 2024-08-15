@@ -1,0 +1,279 @@
+#use-added-syntax(jitx)
+defpackage jsl/design/E-Series:
+  import core
+  import collections
+  import math
+  import jitx
+  import jitx/commands
+
+  import jsl/math
+  import jsl/errors
+  import jsl/utils
+
+
+doc: \<DOC>
+E-Series Preferred Numbers
+
+This type defines a number series and then provides tools to
+work with numbers in that series. Consider for example,
+the resistor/capacitor/inductor value series when purchasing
+components.
+
+@see https://en.wikipedia.org/wiki/E_series_of_preferred_numbers
+<DOC>
+public deftype E-Series
+
+doc: \<DOC>
+Name of the Series
+<DOC>
+public defmulti name (e:E-Series) -> String
+doc: \<DOC>
+Number of elements in the closed sequence of the series.
+<DOC>
+public defmulti elements (e:E-Series) -> Int
+doc: \<DOC>
+Number of places after the decimal to round values in this series.
+<DOC>
+public defmulti places (e:E-Series) -> Int
+doc: \<DOC>
+Precision for values in this series.
+This value sets the error bars for any value in this
+series.
+<DOC>
+public defmulti precision (e:E-Series) -> Percentage
+
+doc: \<DOC>
+Closed sequence of values in this series.
+This sequence must be in ascending order. The sequence
+must be in the domain [1.0, 10.0).
+
+The default implementation use a rounded log series
+as expected by E-Series.
+<DOC>
+public defmulti get-series (e:E-Series) -> Tuple<Double>:
+  val N = elements(e)
+  to-tuple $ for i in 0 to N seq:
+    rounded-log10(i, N, places(e))
+
+; Find the closest value in this series to the passed `v` parameter.
+doc: \<DOC>
+Find the closest value in this series.
+
+Given a value, find the closest value from this series
+using an absolute difference metric.
+
+@param v Non-negative value in any power of 10. Must be non-negative.
+@return Scaled value from this series at the appropriate power of 10
+<DOC>
+public defmulti find-nearest (e:E-Series, v:Double) -> Double:
+  val pwr10 = get-power-of-10(v)
+  val series = to-array<Double>(get-series(e))
+  map!(scaled-series{_ , pwr10}, series)
+  val err = map<Double>({abs(_ - v)}, series)
+  val errVals = to-array<[Double, Double]>(zip(err, series))
+
+  qsort!(get{_,0}, errVals)
+  errVals[0][1]
+
+doc: \<DOC>
+Find all the resistors from this series within a given range.
+
+@param minV Minimum value of the search range. Must be non-negative.
+@param maxV Maximum value of the search range. Must be greater than `minV`
+<DOC>
+public defmulti find-in-range (e:E-Series, minV:Double, maxV:Double) -> Tuple<Double> :
+  if not (minV < maxV) :
+    throw $ ValueError("Expects minV < maxV : %_ < %_ " % [minV, maxV])
+
+  val minPwr10 = get-power-of-10(minV)
+  val maxPwr10 = get-power-of-10(maxV)
+
+  var ranges:List<Array<Double>> = List()
+
+  val series = get-series(e)
+  for i in to-int(minPwr10) through to-int(maxPwr10) do:
+    val RRange = to-array<Double>(series)
+    map!(scaled-series{_ , to-double(i)}, RRange)
+    ranges = cons(RRange, ranges)
+
+  val searchSpace:Seq<Double> = cat-all(ranges)
+  val restrictedSpace = to-array<Double>(filter(in-range?{_, minV, maxV}, searchSpace))
+  qsort!(restrictedSpace)
+  to-tuple(restrictedSpace)
+
+doc: \<DOC>
+Convert a value to a `Toleranced`
+<DOC>
+public defmulti get-toleranced (e:E-Series, v:Double) -> Toleranced :
+  tol%(v, precision(e))
+
+doc: \<DOC>
+Find the nearest value in this series as a `Toleranced`.
+See {@link find-nearest} for more info.
+<DOC>
+public defmulti find-toleranced (e:E-Series, v:Double) -> Toleranced :
+  val nearVal = find-nearest(e, v)
+  get-toleranced(e, nearVal)
+
+doc: \<DOC>
+Find values from this series within a toleranced range.
+<DOC>
+public defmulti find-in-range (e:E-Series, v:Toleranced) -> Tuple<Toleranced>:
+  val vals = find-in-range(e, min-value(v), max-value(v))
+  map(tol%{_, precision(e)}, vals)
+
+
+
+doc: \<DOC>
+E12 Series
+
+These values are typically 10% precision and
+use 12 elements to cover the 1-10 decade.
+<DOC>
+public defstruct E12 <: E-Series:
+  name:String with:
+    as-method => true
+    default => "E12"
+  elements:Int with:
+    as-method => true
+    default => 12
+  places:Int with:
+    as-method => true
+    default => 1
+  precision:Percentage with:
+    as-method => true
+    default => (10 %)
+
+defmethod get-series (x:E12) -> Tuple<Double> :
+  ; For historical reasons - there are several values
+  ;   in the E12 series that don't match the nth root
+  ;   power series model. I've thus delineated the
+  ;   series manually.
+  [ 1.0 1.2 1.5 1.8 2.2 2.7 3.3 3.9 4.7 5.6 6.8 8.2 ]
+
+doc: \<DOC>
+E24 Series
+
+These values are typically 5% precision and
+use 24 elements to cover the 1-10 decade.
+<DOC>
+public defstruct E24 <: E-Series:
+  name:String with:
+    as-method => true
+    default => "E24"
+  elements:Int with:
+    as-method => true
+    default => 24
+  places:Int with:
+    as-method => true
+    default => 1
+  precision:Percentage with:
+    as-method => true
+    default => (5 %)
+
+defmethod get-series (x:E24) -> Tuple<Double> :
+  ; For historical reasons - there are several values
+  ;   in the E24 series that don't match the nth root
+  ;   power series model. I've thus delineated the
+  ;   series manually.
+  [
+    1.0 1.1 1.2 1.3 1.5 1.6 1.8 2.0 2.2 2.4 2.7 3.0
+    3.3 3.6 3.9 4.3 4.7 5.1 5.6 6.2 6.8 7.5 8.2 9.1
+  ]
+
+doc: \<DOC>
+E48 Series
+
+These values are typically 2% precision and
+use 48 elements to cover the 1-10 decade.
+<DOC>
+public defstruct E48 <: E-Series:
+  name:String with:
+    as-method => true
+    default => "E48"
+  elements:Int with:
+    as-method => true
+    default => 48
+  places:Int with:
+    as-method => true
+    default => 2
+  precision:Percentage with:
+    as-method => true
+    default => (2 %)
+
+doc: \<DOC>
+E96 Series
+
+These values are typically 1% precision and
+use 96 elements to cover the 1-10 decade.
+<DOC>
+public defstruct E96 <: E-Series:
+  name:String with:
+    as-method => true
+    default => "E96"
+  elements:Int with:
+    as-method => true
+    default => 96
+  places:Int with:
+    as-method => true
+    default => 2
+  precision:Percentage with:
+    as-method => true
+    default => (1 %)
+
+var Precision-Map = to-vector<KeyValue<Percentage, E-Series>>([
+  (1 %) => E96(),
+  (2 %) => E48(),
+  (5 %) => E24(),
+  (10 %) => E12(),
+])
+
+doc: \<DOC>
+Add a precision series to the searchable E-series.
+<DOC>
+public defn add-precision-series (e:E-Series) :
+  val prec = precision(e)
+  println("Adding Series: %_ precision = %_)" % [name(e), prec])
+  add(Precision-Map, prec => e)
+  qsort!(key, Precision-Map)
+
+defn find-matching-prec-series (prec:Percentage) -> E-Series:
+  ; Find the Greatest Matching Series
+  ;  if the user passes 3% - this selects 2% series.
+  val gms? = for kvp in in-reverse(Precision-Map) first:
+    val [p, series] = unpack(kvp)
+    if (p <= prec) or almost-equal?(p, prec, 1.0e-6):
+      One(series)
+    else:
+      None()
+
+  match(gms?):
+    (_:None): throw $ ValueError("No Series Matches the Requested Precision: %_" % [prec])
+    (given:One<E-Series>): value(given)
+
+doc: \<DOC>
+(Legacy) - Find Closest Standard Value
+
+@param v Value that we want to convert.
+@param prec Precision series that we will to search for. This value
+can be any positive value percentage. This function will search
+the available value series to find a precision series less than
+or equal to this `prec` value.
+@return The value `v` rounded either down or up to the closest
+value in the selected series. See {@link find-nearest}
+@throws ValueError If no series can be found matching the requested precision.
+<DOC>
+public defn closest-std-val (v:Double, prec:Percentage) -> Double :
+  val gms = find-matching-prec-series(prec)
+  find-nearest(gms, v)
+
+doc: \<DOC>
+Find Closest Standard value as a Toleranced
+
+See {@link closest-std-val}
+<DOC>
+public defn closest-std-tol (v:Double, prec:Percentage) -> Toleranced :
+  val gms = find-matching-prec-series(prec)
+  val v* = find-nearest(gms, v)
+  get-toleranced(gms, v*)
+

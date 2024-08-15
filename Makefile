@@ -33,7 +33,9 @@ JSL_TESTS :=                              \
     jsl/tests/si/Microstrip               \
     jsl/tests/si/couplers                 \
     jsl/tests/si/signal-ends              \
-    jsl/tests/design/introspection
+    jsl/tests/design/introspection        \
+    jsl/tests/design/E-Series             \
+    jsl/tests/math
 
 TABGEN=./tabgen/tabgen
 
