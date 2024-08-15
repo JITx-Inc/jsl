@@ -1,0 +1,75 @@
+#use-added-syntax(jitx)
+defpackage jsl/math:
+  import core
+  import math
+
+  import jsl/errors
+
+doc: \<DOC>
+Check if a value is within the passed range (inclusive)
+@param v Value to query
+@param minV minimum value of the range
+@param maxV maximum value of the range
+<DOC>
+public defn in-range? (v:Double, minV:Double, maxV:Double) -> True|False :
+  (v >= minV) and (v <= maxV)
+
+doc: \<DOC>
+Round a given value to a given number of places after the decimal.
+@param v Value to round
+@param places Number of places after the decimal to round to. This
+value must be greater than 0.
+@return Value rounded to a certain number of places.
+<DOC>
+public defn round-places (v:Double, places:Int) -> Double :
+  if not places > 0 :
+    throw $ ValueError("Expects places > 0 : %_ > 0" % [places])
+
+  val deciPlaces = pow(10.0, to-double(places))
+  round(v * deciPlaces) / deciPlaces
+
+doc: \<DOC>
+Determine the power of 10 series that this value is from.
+
+@snippet
+
+```stanza
+  val A = 532.0
+  println("power10[A] = %_" % [get-power-of-10(A)])
+
+  val B = 0.34
+  println("power10[B] = %_" % [get-power-of-10(B)])
+
+  ; prints:
+  ; power10[A] = 2
+  ; power10[B] = -1
+```
+<DOC>
+public defn get-power-of-10 (v:Double) -> Double :
+  ; Get the power of 10 series for a value. For example:
+  ;   532.0 => 5.32 * 10^2 => Returns 2
+  ;   0.34 => 3.4 * 10^-1 => Returns -1
+  if not (v > 0.0) :
+    throw $ ValueError("Expects v > 0 : %_ > 0" % [v])
+  floor(log10(v))
+
+doc: \<DOC>
+
+<DOC>
+public defn rounded-log10 (v:Int, N:Int, places:Int) -> Double :
+  ; Compute the N-th root of the round log series.
+  if not ( v >= 0 ) :
+    throw $ ValueError("Expects v >= 0 : %_ >= 0 " % [v])
+
+  if not ( N > 0 ) :
+    throw $ ValueError("Expects N > 0 : %_ > 0" % [N])
+
+  if not v < N :
+    throw $ ValueError("Expects v < N : %_ < %_" % [v, N])
+
+  round-places(pow(10.0, to-double(v) / to-double(N)), places)
+
+public defn scaled-series (x:Double, exp:Double) -> Double :
+  ;  Convert a particular series value and an exponent into a
+  ;   scaled series value.
+  x * pow(10.0, exp)

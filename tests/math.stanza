@@ -1,0 +1,103 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/math:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/math
+  import jsl/tests/utils
+
+
+deftest(math) in-range-test :
+  val testVecs = [
+    [1.0, 0.0, 10.0, true]
+    [-1.0, 0.0, 10.0, false]
+    [-1.0, -10.0, 10.0, true]
+    [-9.0, -10.0, 10.0, true]
+    [9.0, -10.0, 10.0, true]
+    [-10.1, -10.0, 10.0, false]
+    [10.1, -10.0, 10.0, false]
+    [9.0, -10.0, -1.0, false]
+    [-9.0, -10.0, -1.0, true]
+  ]
+
+  for testVec in testVecs do :
+    val [v, minV, maxV, expVal] = testVec
+    val obsVal = in-range?(v, minV, maxV)
+    #EXPECT(expVal == obsVal)
+
+deftest(math) round-places-tests :
+
+  val testVecs = [
+    [1.37, 1, 1.4],
+    [1.37532, 3, 1.375],
+    [2.376, 2, 2.38],
+  ]
+
+  for testVec in testVecs do :
+    val [inVal, places, expVal] = testVec
+    val obsVal = round-places(inVal, places)
+    #EXPECT(expVal == obsVal)
+
+  val failVecs = [
+    [{round-places(2.5, -3)}, "Expects places > 0 : -3 > 0"]
+  ]
+
+  for failVec in failVecs do :
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val msg? = expect-throw(f)
+    #EXPECT(msg? is-not None)
+    val msg = value!(msg?)
+    #EXPECT(index-of-chars(msg, "ValueError") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+
+deftest(math) rounded-log10-test :
+  ; Test that exceptions throw in the way we expect
+
+  val failVecs = [
+    [{rounded-log10( 12, 12, 2)}, "Expects v < N : 12 < 12"]
+    [{rounded-log10( -1, 12, 2)}, "Expects v >= 0 : -1 >= 0"]
+    [{rounded-log10( 0, -12, 2)}, "Expects N > 0 : -12 > 0"]
+  ]
+
+  for failVec in failVecs do :
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val msg? = expect-throw(f)
+    #EXPECT(msg? is-not None)
+    val msg = value!(msg?)
+    #EXPECT(index-of-chars(msg, "ValueError") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+deftest(math) get-power-of-10-test :
+  val testVecs = [
+    [1.37, 0.0],
+    [20.45, 1.0],
+    [99.37, 1.0],
+    [200.565, 2.0],
+    [0.11, -1.0],
+    [0.0511, -2.0],
+  ]
+
+  for testVec in testVecs do :
+    val [inVal, expVal] = testVec
+    val obsVal = get-power-of-10(inVal)
+    #EXPECT(expVal == obsVal)
+
+  val failVecs = [
+    [{get-power-of-10(0.0)}, "Expects v > 0 : 0.0 > 0"]
+    [{get-power-of-10(-1.0)}, "Expects v > 0 : -1.0 > 0"]
+  ]
+
+  for failVec in failVecs do :
+    ; Test that exceptions throw in the way we expect
+    val [f, msgClip] = failVec
+    val msg? = expect-throw(f)
+    #EXPECT(msg? is-not None)
+    val msg = value!(msg?)
+    #EXPECT(index-of-chars(msg, "ValueError") != false)
+    #EXPECT(index-of-chars(msg, msgClip) != false)
+
+
