@@ -1,0 +1,44 @@
+doc: \<DOC>
+@brief GDDR 7
+
+GDDR7 is a high speed memory protocol 
+@see https://en.wikipedia.org/wiki/GDDR7_SDRAM
+
+This functions and definitions in this file support defining GDDR7
+connections between microprocessors and memories in a board design.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/memory/gddr7:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+doc: \<DOC>
+@brief GDDR7 Bundle
+One GDDR7 bundle consists of the connections between one controller and one GDDR7 memory which 
+consists of 4 separate byte lanes.
+@member control Control channel for GDDR7
+@member data Data channel for GDDR7
+<DOC>
+
+public defn gddr7 :
+  gddr7-b()
+
+public pcb-bundle gddr7-b () :
+  name = "GDDR7"
+  description = "Graphics Double Data Rate 7 Synchronous Dynamic Random-Access Memory protocol"
+  port data : gddr7-byte-lane[4]
+  port control : gddr7-control-lane[4]
+
+public pcb-bundle gddr7-byte-lane :
+  port DQ : pin[10]
+  port RC : diff-pair
+  port WC : diff-pair
+  
