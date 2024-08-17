@@ -1,0 +1,202 @@
+doc: \<DOC>
+@brief Small Outline Package
+
+@desc
+
+The SOP package is a dual-row SMT package similar to the SOIC and SON.
+This package typically uses a gull-wing style lead.
+
+This package is often also referred to as a SSOP, TSSOP, etc.
+
+TODO - Diagram here of SOP style packages.
+
+<DOC>
+
+
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/SOP:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/design/settings
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+  import jsl/landpatterns/framework
+
+doc: \<DOC>
+Small Outline Package (SOP) Lead Type
+
+This type defines the parameters of each of the individual leads
+of the IC package. It is typically used with {@link Lead-Profile}
+<DOC>
+public defstruct SOP-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with:
+      as-method => true,
+      default => SmallGullWingLeads(),
+  length:Toleranced with:
+    as-method => true,
+    ensure => ensure-positive!
+  width:Toleranced with:
+    as-method => true,
+    ensure => ensure-positive!
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  keyword-constructor => true
+
+
+doc: \<DOC>
+SOP Package Type
+
+This type defines the features of the dual-row
+Small Outline Package (SOP) type of package.
+<DOC>
+public defstruct SOP <: Dual-Package :
+  doc: \<DOC>
+  Total Number of Leads - excluding the thermal pad.
+  <DOC>
+  num-leads: Int with:
+    ensure => ensure-even-positive!,
+    as-method => true
+
+  doc: \<DOC>
+  Lead Profile for the pins on the opposing edges of the SOP package.
+  By default the {@link SOP-Lead} type is used for the `lead` and
+  `protrusion` definitions.
+  <DOC>
+  lead-profile:Lead-Profile with:
+    as-method => true
+
+  doc: \<DOC>
+  Specify the presence and shape of the exposed thermal lead (pad)
+  on the bottom side of the package body.
+  If `false` - then no thermal pad is created.
+  <DOC>
+  thermal-lead?:False|Shape with:
+    as-method => true
+  doc: \<DOC>
+  Package Body for the SOP.
+  <DOC>
+  package-body:PackageBody with:
+    as-method => true
+
+  doc: \<DOC>
+  Pad Planner for the SOP package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with:
+    as-method => true
+
+  doc: \<DOC>
+  Lead Numbering Scheme for the SOP Package
+
+  This provides a numbering scheme for the leads of the SON
+  package. By default, it uses {@link Column-Major-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with:
+    as-method => true
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with:
+    as-method => true
+with:
+  hashable => true
+  printer => true
+  constructor => #SOP
+
+val SOP-DEF-PAD-PLANNER = RectanglePadPlanner
+val SOP-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
+
+doc: \<DOC>
+Constructor for SOP Packages
+
+@param num-leads Total number of leads in the package (not including thermal leads)
+@param lead-profile Lead span profile for describing the pads on the E/W edges.
+@param thermal-lead? Optional thermal lead. This shape will be placed at (0.0, 0.0)
+in the land pattern's reference frame.
+@param package-body 3D component body descriptor.
+@param pad-planner Pad shape planner - default is {@link RectanglePadPlanner}
+@param num-scheme Numbering scheme for pads - default is {@link Column-Major-Numbering}
+@param density-level Density Level of Generated Package
+<DOC>
+public defn SOP (
+  --
+  num-leads:Int,
+  lead-profile:Lead-Profile,
+  thermal-lead?:False|Shape      = false,
+  package-body:PackageBody,
+  pad-planner:PadPlanner         = SOP-DEF-PAD-PLANNER,
+  num-scheme:Numbering           = SOP-DEF-NUM-SCHEME(num-leads),
+  density-level:DensityLevel     = DENSITY-LEVEL
+  ) -> SOP :
+  #SOP(
+    num-leads, lead-profile, thermal-lead?, package-body,
+    pad-planner, num-scheme, density-level
+  )
+
+public defmethod name (pkg:SOP) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+  val body = package-body(pkg)
+  val p = to-deci(pitch $ lead-profile(pkg))
+  val w = to-deci(typ $ width(body))
+  val l = to-deci(typ $ length(body))
+  val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
+  to-string("SOP%_P%_X%_-%_N" % [p, w, l, n])
+
+public defmethod courtyard-excess (pkg:SOP) -> Double :
+  val protrusion = lead-type $ lead $ lead-profile $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
+  courtyard-excess(fillets)
+
+public defn SOP-outline (
+  pkg:SOP,
+  vp:VirtualLP
+  ):
+  val dl = density-level(pkg)
+  if contains?([DensityLevelA, DensityLevelB], dl):
+    create-silkscreen-overall-outline(
+      vp, package-body(pkg),
+      density-level = dl
+      )
+  else:
+    create-silkscreen-outline(
+      vp, package-body(pkg),
+      density-level = dl
+      )
+
+defn extra-dot-margin (dl:DensityLevel) -> Double:
+  val line-width = default-silk-width(),
+  val mask-clearance = default-mask-clearance(),
+
+  switch(dl):
+    DensityLevelA: mask-clearance + line-width
+    DensityLevelB: mask-clearance + line-width
+    DensityLevelC: 0.0
+
+public defmethod build-silkscreen (
+  pkg:SOP,
+  vp:VirtualLP
+  ) -> False:
+  SOP-outline(pkg, vp)
+  build-smd-pin-1-dot(
+    vp,
+    dir = Left,
+    margin = extra-dot-margin(density-level(pkg)),
+    )
+  if density-level(pkg) == DensityLevelA :
+    build-outline-pin-1-triangle(vp)
+  add-reference-designator(vp)
+
+

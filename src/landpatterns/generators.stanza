@@ -15,5 +15,6 @@ defpackage jsl/landpatterns/generators:
   forward jsl/landpatterns/SOIC
   forward jsl/landpatterns/SON
   forward jsl/landpatterns/SOT
+  forward jsl/landpatterns/SOP
   forward jsl/landpatterns/two-pin/generators
   forward jsl/landpatterns/headers
