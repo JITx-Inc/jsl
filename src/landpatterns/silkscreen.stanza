@@ -265,6 +265,25 @@ public defn build-smd-pin-1-dot (
 
   add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin-1-marker")
 
+doc: \<DOC>
+Construct the projected shape of the package body on the board.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+<DOC>
+public defn construct-pkg-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  ) -> Shape:
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+  LineRectangle(pkg-outline*, line-width = line-width)
 
 doc: \<DOC>
 Construct a silkscreen outline of a component based on the Package Body
@@ -274,6 +293,7 @@ Construct a silkscreen outline of a component based on the Package Body
 @param density-level Indicates whether we will use MMC, NMC, or LMC
 @param line-width width of the line to draw.
 @param mask-clearance clearance between soldermask openings and the outline.
+@param side Side of the board. Default is `Top`.
 <DOC>
 public defn create-silkscreen-outline (
   vp:VirtualLP, pkg-body:PackageBody
@@ -281,15 +301,85 @@ public defn create-silkscreen-outline (
   density-level:DensityLevel = DENSITY-LEVEL
   line-width:Double = default-silk-width(),
   mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
   ) -> False :
 
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
-  val outline-geom = LineRectangle(pkg-outline*, line-width = line-width)
-
+  val outline-geom = construct-pkg-outline(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+  )
   ; TODO - I want to use `Difference` here will all of the soldermask openings
   ;  defined by the pads.
 
-  add-artwork(vp, Silkscreen("outline", Top), outline-geom, class = "outline")
+  add-silkscreen-outline(vp, outline-geom, side = side)
+
+
+doc: \<DOC>
+Construct the projected shape of the Package Body and Soldermask Pad Openings
+
+The user must create all of the pads associated with this landpattern before
+invoking this function.
+
+This function takes the union of the pads and the package body outline
+and constructs and overall outline encompassing this shape.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+@return `LineRectangle` Shape for the union of the package body and the
+pad openings.
+<DOC>
+
+public defn construct-overall-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> Shape:
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+
+  val overall = union(pkg-outline, pad-outline)
+  val overall* = fatten(mask-clearance + (line-width / 2.0), overall)
+
+  LineRectangle(overall*, line-width = line-width)
+
+
+doc: \<DOC>
+Construct a silkscreen outline based on the Package Body and Soldermask Pad Openings
+
+The user must create all of the pads associated with this landpattern before
+invoking this function.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+<DOC>
+public defn create-silkscreen-overall-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> False :
+
+  val outline-geom = construct-overall-outline(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+    side = side
+    )
+
+  add-silkscreen-outline(vp, outline-geom, side = side)
 
 
