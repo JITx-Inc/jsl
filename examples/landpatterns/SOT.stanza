@@ -1,0 +1,134 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/SOT:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/landpatterns
+  import jsl/symbols
+
+  import jsl/examples/landpatterns/board
+
+
+defn create-AP2265x ():
+  SOT(
+    num-leads = 6,
+    lead-profile = Lead-Profile(
+      span = min-max(2.7, 2.9),
+      pitch = SOT_DEF_PITCH,
+      lead = SOT-Lead(
+        length = min-max(0.3, 0.45),
+        width = min-max(0.3, 0.5)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(1.5, 1.7)
+      length = min-max(2.8, 3.0)
+      height = min-max(1.4, 1.45)
+    )
+  )
+
+pcb-component test-AP2265x:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [IN | p[1] | Left ]
+    [GND | p[2] | Left ]
+    [EN | p[3] | Left ]
+    [FAULT | p[4] | Left ]
+    [ILIM | p[5] | Left ]
+    [OUT | p[6] | Right ]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = create-AP2265x()
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-REF34-Q1:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [NC[1] | p[1] | Left ]
+    [GND | p[2] | Left ]
+    [IN | p[3] | Left ]
+    [OUT | p[4] | Left ]
+    [NC[2] | p[5] | Left ]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = SOT-23-5(
+    lead-profile = Lead-Profile(
+      span = min-max(2.6, 3.0),
+      pitch = SOT_DEF_PITCH,
+      lead = SOT-Lead(
+        length = min-max(0.3, 0.6),
+        width = min-max(0.3, 0.5)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(1.45, 1.75)
+      length = min-max(2.75, 3.05)
+      height = min-max(0.9, 1.45)
+    )
+  )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-component test-SOT23-3:
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [IN | p[1] | Left ]
+    [GND | p[2] | Left ]
+    [OUT | p[3] | Left ]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = SOT-23-3(
+    lead-profile = Lead-Profile(
+      span = min-max(2.6, 3.0),
+      pitch = SOT_DEF_PITCH,
+      lead = SOT-Lead(
+        length = min-max(0.3, 0.6),
+        width = min-max(0.3, 0.5)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(1.45, 1.75)
+      length = min-max(2.75, 3.05)
+      height = min-max(0.9, 1.45)
+    )
+  )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-AP2265x
+  place(c) at loc(0.0, 0.0) on Top
+
+  inst d : test-REF34-Q1
+  inst e : test-SOT23-3
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("SOT-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

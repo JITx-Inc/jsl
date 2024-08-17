@@ -1,0 +1,458 @@
+doc: \<DOC>
+@brief Small Outline Transistor Packages
+
+@desc
+
+The SOT package is a dual-row SMT package similar to the SON. The leads
+are typically gull-wing style.
+
+There are many popular packages including:
+
+1.  `SOT-23-3` - 3-pin popular for diodes and transistors
+2.  `SOT-23-6` - Similar to `SOT-23-3` but with full pin accoutrement.
+2.  `SOT-23-5` - Similar to `SOT-23-6` but missing one pin.
+
+Thermal leads are uncommon in this package style.
+
+
+TODO - Diagram here of SOT style packages.
+
+
+@see https://www.pcblibraries.com/Products/FPX/UserGuide/download/Footprint%20Expert%20Surface%20Mount%20Families.pdf
+
+<DOC>
+
+
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/SOT:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/ensure
+  import jsl/design/settings
+  import jsl/geometry/box
+  import jsl/geometry/LineRectangle
+  import jsl/landpatterns/framework
+
+public val SOT_DEF_PITCH = 0.95
+
+doc: \<DOC>
+Small Outline Transistor (SOT) Lead Type
+
+This type defines the parameters of each of the individual leads
+of the IC package. It is typically used with {@link Lead-Profile}
+<DOC>
+public defstruct SOT-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with: (
+      as-method => true,
+      default => SmallGullWingLeads(),
+    )
+  length:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+  width:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  keyword-constructor => true
+
+
+val SOT-DEF-PAD-PLANNER = RectanglePadPlanner
+val SOT-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
+
+
+doc: \<DOC>
+SOT Package Type
+
+This type defines the features of the dual-row
+Small Outline Transistor (SOT) type of package.
+
+Note that the base implementation is targeted towards the full
+SOT. To implement non-symmetric SOT packages see {@link SOT-23-3}
+and {@link SOT-23-5}
+
+<DOC>
+public defstruct SOT <: Dual-Package :
+  doc: \<DOC>
+  Total Number of Leads - excluding the thermal pad.
+  <DOC>
+  num-leads: Int with:
+    ensure => ensure-even-positive!,
+    as-method => true
+
+  doc: \<DOC>
+  Lead Profile for the pins on the opposing edges of the SON package.
+  By default the {@link SON-Lead} type is used for the `lead` and
+  `protrusion` definitions.
+  <DOC>
+  lead-profile:Lead-Profile with:
+    as-method => true
+
+  doc: \<DOC>
+  Specify the presence and shape of the exposed thermal lead (pad)
+  Thisi lead is generally on the bottom side of the package body.
+  The default value for SOT is false as it isn't common in most packages.
+  <DOC>
+  thermal-lead?:False|Shape with:
+    as-method => true
+    default => false
+
+  doc: \<DOC>
+  Package Body for the SOT.
+  <DOC>
+  package-body:PackageBody with:
+    as-method => true
+
+  doc: \<DOC>
+  Pad Planner for the SOT package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with:
+    as-method => true
+    default => SOT-DEF-PAD-PLANNER
+  doc: \<DOC>
+  Lead Numbering Scheme for the SOT Package
+
+  This provides a numbering scheme for the leads of the SOT
+  package. By default this uses {@link Column-Major-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with:
+    as-method => true
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with:
+    as-method => true
+    default => DENSITY-LEVEL
+with:
+  hashable => true
+  printer => true
+  constructor => #SOT-Constructor
+    keyword-constructor => true
+
+public defn SOT (
+  --
+  num-leads:Int,
+  lead-profile:Lead-Profile,
+  thermal-lead?:False|Shape      = false,
+  package-body:PackageBody,
+  pad-planner:PadPlanner         = SOT-DEF-PAD-PLANNER,
+  num-scheme:Numbering           = SOT-DEF-NUM-SCHEME(num-leads),
+  density-level:DensityLevel     = DENSITY-LEVEL
+  ) -> SOT:
+  #SOT-Constructor(
+    num-leads, lead-profile, thermal-lead?, package-body,
+    pad-planner, num-scheme, density-level
+  )
+
+public defmethod name (pkg:SOT) -> String :
+  defn to-deci (v:Double) -> String:
+    val v* = to-int( v * 100.0 )
+    to-string("%_" % [v*])
+  val p = to-deci $ pitch $ lead-profile(pkg)
+  val s = to-deci $ typ $ span $ lead-profile(pkg)
+  val n = num-leads(pkg)
+  to-string("SOT%_P%_-%_N" % [p, s, n])
+
+public defmethod courtyard-excess (pkg:SOT) -> Double :
+  val protrusion = lead-type $ lead $ lead-profile $ pkg
+  val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
+  courtyard-excess(fillets)
+
+public defn SOT-overall-outline (
+  pkg:SOT,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+  val pkg-body = package-body(pkg)
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+
+  val overall = union(pkg-outline, pad-outline*)
+  LineRectangle(overall, line-width = line-width)
+
+doc: \<DOC>
+Determine the dimensions of the package body
+
+This function is used to create the minimal package body
+outline that we will use to create the horizontal lines
+at the extremes on the body.
+
+This function attempts to make a conservative size box
+by accounting for both the package body length and the
+location of the soldermask opening of the pads.
+<DOC>
+defn get-extended-pkg-outline (
+  pkg:SOT,
+  vp:VirtualLP
+  line-width:Double
+  mask-clearance:Double
+  side:Side
+  ) -> Box :
+  val pkg-body = package-body(pkg)
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+
+  ; Check to make sure that the pads aren't going to be
+  ;  too close to the outline. If so - we adjust them out a
+  ;  bit so that we don't violate the minimum clearance rules.
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+
+  val diff = dims(pad-outline*) - dims(pkg-outline*)
+
+  ; If we find that the pad outline is larger in Y
+  ;   then we expand the box, but only on the dimension
+  ;   so that the line is still only the width of the body.
+  if y(diff) > 0.0:
+    fatten(Point(0.0, y(diff) / 2.0), pkg-outline*)
+  else:
+    pkg-outline*
+
+public defn SOT-pkg-outline (
+  pkg:SOT,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val pkg-outline = get-extended-pkg-outline(pkg, vp, line-width, mask-clearance, side)
+  ; Just take the top and bottom lines - not the sides
+  val [sw, se, ne, nw] = corners(pkg-outline)
+
+  Union([
+    Line(line-width, [nw, ne])
+    Line(line-width, [sw, se])
+  ])
+
+public defn SOT-outline (
+  pkg:SOT,
+  vp:VirtualLP
+  --
+  side:Side = Top
+  ):
+  val outline-geom = switch(density-level(pkg)):
+    DensityLevelA: SOT-overall-outline(pkg, vp)
+    DensityLevelB: SOT-pkg-outline(pkg, vp)
+    DensityLevelC: SOT-pkg-outline(pkg, vp)
+
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+defn extra-dot-margin (dl:DensityLevel) -> Double:
+  val line-width = default-silk-width(),
+  val mask-clearance = default-mask-clearance(),
+
+  switch(dl):
+    DensityLevelA: mask-clearance + line-width
+    DensityLevelB: 0.0
+    DensityLevelC: 0.0
+
+public defmethod build-silkscreen (
+  pkg:SOT,
+  vp:VirtualLP
+  ) -> False:
+  SOT-outline(pkg, vp)
+  build-smd-pin-1-dot(
+    vp,
+    dir = Left,
+    margin = extra-dot-margin(density-level(pkg)),
+    )
+  if density-level(pkg) == DensityLevelA :
+    build-outline-pin-1-triangle(vp)
+  add-reference-designator(vp)
+
+
+public val SOT23-3-Numbering = LookupTableNumbering(
+  [
+    [1, 0]
+    [0, 3]
+    [2, 0]
+  ]
+)
+
+public defstruct SOT23-3-PadPlanner <: ShapePadPlanner :
+  shaper:(Dims -> Shape) with:
+    as-method => true
+
+public defmethod active? (x:SOT23-3-PadPlanner, row:Int, column:Int):
+  to-pad-id(SOT23-3-Numbering, row, column) != 0
+
+public val SOT-23-3-DEF-PLANNER = SOT23-3-PadPlanner(rect-shaper)
+
+doc: \<DOC>
+3-pin SOT-23 Package
+
+This type customizes the `SOT` implementation to add
+a special L-shaped silkscreen outline. It additionally
+provides custom planner and numbering to support the
+3-pins in non-standard numbering order.
+<DOC>
+public defstruct SOT-23-3 <: SOT :
+  doc: \<DOC>
+  Total Number of Leads - excluding the thermal pad.
+  <DOC>
+  num-leads: Int with:
+    ensure => ensure-even-positive!,
+    as-method => true
+    ; Mark the total number of leads even though
+    ;  only 3 are active.
+    default => 6
+
+  doc: \<DOC>
+  Lead Profile for the pins on the opposing edges of the SON package.
+  By default the {@link SON-Lead} type is used for the `lead` and
+  `protrusion` definitions.
+  <DOC>
+  lead-profile:Lead-Profile with:
+    as-method => true
+
+  doc: \<DOC>
+  Specify the presence and shape of the exposed thermal lead (pad)
+  Thisi lead is generally on the bottom side of the package body.
+  The default value for SOT is false as it isn't common in most packages.
+  <DOC>
+  thermal-lead?:False|Shape with:
+    as-method => true
+    default => false
+
+  doc: \<DOC>
+  Package Body for the SOT.
+  <DOC>
+  package-body:PackageBody with:
+    as-method => true
+
+  doc: \<DOC>
+  Pad Planner for the SOT package
+
+  This provides a default pad planner that assumes that all lead
+  positions are active and provides a rectangle shaped pad for
+  all positions. The user can override this with their preferred
+  shape as desired.
+  <DOC>
+  pad-planner:PadPlanner with:
+    as-method => true
+    default => SOT-23-3-DEF-PLANNER
+  doc: \<DOC>
+  Lead Numbering Scheme for the SOIC Package
+
+  This provides a numbering scheme for the leads of the SON
+  package. By default, it uses {@link Std-IC-Numbering}.
+  <DOC>
+  lead-numbering:Numbering with:
+    as-method => true
+    default => SOT23-3-Numbering
+
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with:
+    as-method => true
+    default => DENSITY-LEVEL
+with:
+  hashable => true
+  printer => true
+  keyword-constructor => true
+
+
+public defn SOT-23-pkg-outline (
+  pkg:SOT-23-3,
+  vp:VirtualLP
+  --
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ):
+
+  val pkg-outline = get-extended-pkg-outline(pkg, vp, line-width, mask-clearance, side)
+  val [sw, se, ne, nw] = corners(pkg-outline)
+
+  ; We need to find the pad 3 and then use that to determine the stopping
+  ;   point for the vertical lines.
+  val pd = get-pad-by-ref!(vp, 3)
+  val outline-pad3 = bounds([pd], layer-spec = SolderMask(side))
+  ; Compensate for the line width and the mask clearance
+  ;    so that we don't violate rules.
+  val hi-pad3 = (y $ hi $ outline-pad3) + line-width + mask-clearance
+  val lo-pad3 = (y $ lo $ outline-pad3) - (line-width + mask-clearance)
+
+  val outline-geom = Union([
+    Line(line-width, [nw, ne, Point(x(ne), hi-pad3)])
+    Line(line-width, [sw, se, Point(x(se), lo-pad3)])
+  ])
+
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+public defmethod build-silkscreen (
+  pkg:SOT-23-3,
+  vp:VirtualLP
+  ) -> False:
+  SOT-23-pkg-outline(pkg, vp)
+  build-smd-pin-1-dot(
+    vp,
+    dir = Left,
+    )
+  add-reference-designator(vp)
+
+
+public val SOT23-5-Numbering = LookupTableNumbering(
+  [
+    [1, 4] ; Dual-Package Rotates 180 degrees on column 1
+    [2, 0]
+    [3, 5]
+  ]
+)
+
+public defstruct SOT23-5-PadPlanner <: ShapePadPlanner :
+  shaper:(Dims -> Shape) with:
+    as-method => true
+
+public defmethod active? (x:SOT23-5-PadPlanner, row:Int, column:Int):
+  to-pad-id(SOT23-5-Numbering, row, column) != 0
+
+public val SOT-23-5-DEF-PLANNER = SOT23-5-PadPlanner(rect-shaper)
+
+
+doc: \<DOC>
+5-pin SOT-23 Package
+
+@param lead-profile Typically the user would use a {@link SOT-Lead} instance
+here to define the leads for the package.
+@param package-body Dimensions for the body of the package.
+@param density-level Density rating for the landpattern. Default is from
+{@link DENSITY-LEVEL} in design settings.
+<DOC>
+public defn SOT-23-5 (
+  --
+  lead-profile:Lead-Profile,
+  package-body:PackageBody,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> SOT:
+
+  SOT(
+    ; Must be the full number of leads here
+    ;   even though only 5 are active.
+    num-leads = 6,
+    lead-profile = lead-profile
+    package-body = package-body,
+    pad-planner = SOT-23-5-DEF-PLANNER
+    lead-numbering = SOT23-5-Numbering,
+    density-level = density-level
+  )
