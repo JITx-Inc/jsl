@@ -89,7 +89,7 @@ public defmethod build-pads (
 
   val profile = lead-profile(pkg)
   val rows = num-leads(pkg) / DUAL-ROW-COLS
-  val params = compute-params(profile)
+  val params = compute-params(profile, density-level = density-level(pkg))
 
   val pad-seq = pad-grid-smt(
     pad-size = pad-size(params),
