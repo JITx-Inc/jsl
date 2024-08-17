@@ -39,7 +39,7 @@ defpackage jsl/tests/utils:
     min-soldermask-bridge = 0.102
     min-hole-to-hole = 0.254
     min-pth-pin-solder-clearance = 3.0
-  set-default-rules(default-rules)
+  set-rules(default-rules)
 
   val DEF-EPS = 1.0e-6
 
