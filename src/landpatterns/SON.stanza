@@ -175,22 +175,6 @@ public defmethod courtyard-excess (pkg:SON) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-public defn SON-outline (
-  pkg:SON,
-  vp:VirtualLP
-  ):
-  val dl = density-level(pkg)
-  if contains?([DensityLevelA, DensityLevelB], dl):
-    create-silkscreen-overall-outline(
-      vp, package-body(pkg),
-      density-level = dl
-      )
-  else:
-    create-silkscreen-outline(
-      vp, package-body(pkg),
-      density-level = dl
-      )
-
 defn extra-dot-margin (dl:DensityLevel) -> Double:
   val line-width = default-silk-width(),
   val mask-clearance = default-mask-clearance(),
@@ -204,14 +188,15 @@ public defmethod build-silkscreen (
   pkg:SON,
   vp:VirtualLP
   ) -> False:
-  SON-outline(pkg, vp)
+  create-silkscreen-pkg-extrema-outline(
+    vp, package-body(pkg),
+    density-level = density-level(pkg)
+  )
   build-smd-pin-1-dot(
     vp,
     dir = Left,
     margin = extra-dot-margin(density-level(pkg)),
     )
-  if density-level(pkg) == DensityLevelA :
-    build-outline-pin-1-triangle(vp)
   add-reference-designator(vp)
 
 
