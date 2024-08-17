@@ -175,52 +175,21 @@ public defmethod courtyard-excess (pkg:SON) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-public defn SON-overall-outline (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
-  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
-
-  val overall = union(pkg-outline, pad-outline*)
-  LineRectangle(overall, line-width = line-width)
-
-
-public defn SON-pkg-outline (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
-  LineRectangle(pkg-outline*, line-width = line-width)
-  ; TODO - Here is where I want to use `Difference` to substract out
-  ;  the combined soldermask on all sides.
-
 public defn SON-outline (
   pkg:SON,
   vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
   ):
-  val outline-geom = switch(density-level(pkg)):
-    DensityLevelA: SON-overall-outline(pkg, vp)
-    DensityLevelB: SON-overall-outline(pkg, vp)
-    DensityLevelC: SON-pkg-outline(pkg, vp)
-
-  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+  val dl = density-level(pkg)
+  if contains?([DensityLevelA, DensityLevelB], dl):
+    create-silkscreen-overall-outline(
+      vp, package-body(pkg),
+      density-level = dl
+      )
+  else:
+    create-silkscreen-outline(
+      vp, package-body(pkg),
+      density-level = dl
+      )
 
 defn extra-dot-margin (dl:DensityLevel) -> Double:
   val line-width = default-silk-width(),
