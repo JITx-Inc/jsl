@@ -64,9 +64,38 @@ with:
   keyword-constructor => true
 
 
+
+doc: \<DOC>
+Small Outline Transistor Flat Lead (SOTFL) Type
+
+This type defines the parameters of each of the individual leads
+of the IC package. It is typically used with {@link Lead-Profile}
+
+This supports packages like `SOT-23F` or `SOT538` which use a
+flat lead style instead of the Gull-Wing Lead style.
+<DOC>
+public defstruct SOTFL-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with: (
+      as-method => true,
+      default => SmallOutlineFlatLeads(),
+    )
+  length:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+  width:Toleranced with: (
+    as-method => true,
+    ensure => ensure-positive!
+    )
+with:
+  equalable => true
+  hashable => true
+  printer => true
+  keyword-constructor => true
+
+
 val SOT-DEF-PAD-PLANNER = RectanglePadPlanner
 val SOT-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
-
 
 doc: \<DOC>
 SOT Package Type
