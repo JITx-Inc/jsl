@@ -200,22 +200,6 @@ public defmethod courtyard-excess (pkg:SOT) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-public defn SOT-overall-outline (
-  pkg:SOT,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
-  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
-
-  val overall = union(pkg-outline, pad-outline*)
-  LineRectangle(overall, line-width = line-width)
-
 doc: \<DOC>
 Determine the dimensions of the package body
 
@@ -279,11 +263,14 @@ public defn SOT-outline (
   side:Side = Top
   ):
   val outline-geom = switch(density-level(pkg)):
-    DensityLevelA: SOT-overall-outline(pkg, vp)
+    DensityLevelA: construct-overall-outline(
+      vp, package-body(pkg),
+      density-level = density-level(pkg)
+      )
     DensityLevelB: SOT-pkg-outline(pkg, vp)
     DensityLevelC: SOT-pkg-outline(pkg, vp)
 
-  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+  add-silkscreen-outline(vp, outline-geom)
 
 defn extra-dot-margin (dl:DensityLevel) -> Double:
   val line-width = default-silk-width(),
