@@ -383,3 +383,88 @@ public defn create-silkscreen-overall-outline (
   add-silkscreen-outline(vp, outline-geom, side = side)
 
 
+doc: \<DOC>
+Determine the dimensions of the package body with Y extension
+
+This function is used to create the minimal package body
+outline that we will use to create the horizontal lines
+at the extremes on the package body.
+
+This function attempts to make a conservative size box
+by accounting for both the package body length and the
+location of the soldermask opening of the pads.
+
+This function is typically only useful for dual-row
+packages like SOP, SON, SOT, etc.
+
+@param vp Virtual Land Pattern Scene Graph
+@param pkg-body Package Body for the IC
+@param density-level Density Level for the Package
+@param line-width Silkscreen min line width as defined by pcb-rules.
+@param mask-clearance Minimum soldermask clearance to silkscreen as defined
+by the pcb-rules.
+@param side Which side of the board this outline will be created on. It
+filters for which pads of the landpattern to inspect.
+<DOC>
+public defn get-extended-pkg-outline (
+  vp:VirtualLP
+  pkg-body:PackageBody
+  density-level:DensityLevel
+  line-width:Double
+  mask-clearance:Double
+  side:Side
+  ) -> Box :
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+
+  ; Check to make sure that the pads aren't going to be
+  ;  too close to the outline. If so - we adjust them out a
+  ;  bit so that we don't violate the minimum clearance rules.
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+
+  val diff = dims(pad-outline*) - dims(pkg-outline*)
+
+  ; If we find that the pad outline is larger in Y
+  ;   then we expand the box, but only on the dimension
+  ;   so that the line is still only the width of the body.
+  if y(diff) > 0.0:
+    fatten(Point(0.0, y(diff) / 2.0), pkg-outline*)
+  else:
+    pkg-outline*
+
+
+public defn construct-pkg-extrema-lines (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> Shape:
+  val pkg-outline = get-extended-pkg-outline(vp, pkg-body, density-level, line-width, mask-clearance, side)
+  ; Just take the top and bottom lines - not the sides
+  val [sw, se, ne, nw] = corners(pkg-outline)
+
+  Union([
+    Line(line-width, [nw, ne])
+    Line(line-width, [sw, se])
+  ])
+
+public defn create-silkscreen-pkg-extrema-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> False :
+  val outline-geom = construct-pkg-extrema-lines(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+    side = side
+    )
+  add-silkscreen-outline(vp, outline-geom, side = side)
+
