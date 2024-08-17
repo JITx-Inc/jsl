@@ -181,7 +181,7 @@ deftest(QFN) test-QFN-non-square :
 
     val outline = dims $ silk[0]
     val silk-width = clearance(current-rules(), MinSilkscreenWidth)
-    #EXPECT(almost-equal?(outline, Dims(8.1262 + silk-width, 6.1262 + silk-width)))
+    #EXPECT(almost-equal?(outline, Dims(8.5262 + silk-width, 6.5262 + silk-width)))
 
     val pin-1-silk  = layer(lp, Silkscreen("pin-1-marker", Top))
     ; Expect to see the Dot and the Triangle
@@ -189,7 +189,7 @@ deftest(QFN) test-QFN-non-square :
     for sh in pin-1-silk do:
       match(sh):
         (x:Circle):
-          #EXPECT(almost-equal?(center(x), Point(-4.3274, 1.0 )))
+          #EXPECT(almost-equal?(center(x), Point(-4.5274, 1.0 )))
         (x:Polygon):
           val pts = points(x)
           val b = Box(Point(-4.358, 1.6), Point(-2.780, 3.373))
