@@ -468,3 +468,69 @@ public defn create-silkscreen-pkg-extrema-outline (
     )
   add-silkscreen-outline(vp, outline-geom, side = side)
 
+
+doc: \<DOC>
+Construct an outline shape of the package body by avoiding overlaps with pads
+
+This function takes an outline (like the outline of the package body)
+and computes the set of shapes that can maximally fill that outline
+but not overlap with any of the pads in a package.
+
+This function will also obey clearance requirements to prevent DRC
+issues.
+
+This function is primarily for supporting dual-row land patterns
+like SON, SOP, etc.
+
+@param vp Virtual Land Pattern Scene Graph
+@param pkg-body Package Body for the IC
+@param density-level Density Level for the Package
+@param line-width Silkscreen min line width as defined by pcb-rules.
+@param mask-clearance Minimum soldermask clearance to silkscreen as defined
+by the pcb-rules.
+@param side Which side of the board this outline will be created on. It
+filters for which pads of the landpattern to inspect.
+@return LineRectangle shape that could be drawn in the silkscreen.
+<DOC>
+public defn compute-pkg-internal-box (
+  vp:VirtualLP,
+  pkg-body:PackageBody,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ) -> Shape :
+
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val courtyard? = get-courtyard-boundary(vp, side = side)
+
+  ; Check for overlap between the pad soldermask and the
+  ;  current proposed outline. We will then shrink the
+  ;  proposed outline until there is at least `mask-clearance`
+  ;  on either side.
+  val h-shrink = let:
+    val col-0-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-0")
+    val col-1-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-1")
+
+    val col-0-outline = bounds(col-0-pads, layer-spec = SolderMask(side))
+    val col-1-outline = bounds(col-1-pads, layer-spec = SolderMask(side))
+
+    val interstitial = Box(
+      Point(right(col-0-outline), down(col-0-outline)),
+      Point(left(col-1-outline), up(col-1-outline))
+    )
+
+    val iW = x(dims(interstitial)) - ((2.0 * mask-clearance) + line-width)
+    val iP = x(dims(pkg-outline))
+
+    ; Compute the shrinkage that will be applid to
+    ;   both sides (if any)
+    val diff = (iW - iP) / 2.0
+    if diff < 0.0 :
+      ; We need to shrink the package outline
+      fatten(Point(diff, 0.0), pkg-outline)
+    else:
+      pkg-outline
+
+  LineRectangle(h-shrink, line-width = line-width)
