@@ -285,8 +285,8 @@ public defmethod build-pads (
   ;   X-grid - 0 (West) & 2 (East)
   ;   Y-grid - 1 (South) & 3 (North)
 
-  val x-params = compute-params(x-leads(profile))
-  val y-params = compute-params(y-leads(profile))
+  val x-params = compute-params(x-leads(profile), density-level = density-level(pkg))
+  val y-params = compute-params(y-leads(profile), density-level = density-level(pkg))
 
   defn gen-pad-info () -> Seq<VirtualPad> :
 
