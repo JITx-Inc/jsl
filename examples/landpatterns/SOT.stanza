@@ -6,6 +6,7 @@ defpackage jsl/examples/landpatterns/SOT:
 
   import jsl/landpatterns
   import jsl/symbols
+  import jsl/design/settings
 
   import jsl/examples/landpatterns/board
 
@@ -111,12 +112,52 @@ pcb-component test-SOT23-3:
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
+pcb-component test-SOT538:
+  ; TPS6293x - DRL0008A
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [RT | p[1] | Left ]
+    [EN | p[2] | Left ]
+    [VIN | p[3] | Left ]
+    [GND | p[4] | Left ]
+    [SW | p[5] | Left ]
+    [BST | p[6] | Right ]
+    [SS | p[7] | Left ]
+    [FB | p[8] | Left ]
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = SOT(
+    num-leads = 8,
+    lead-profile = Lead-Profile(
+      span = min-max(1.5, 1.7),
+      pitch = 0.5,
+      lead = SOTFL-Lead(
+        length = min-max(0.2, 0.4),
+        width = min-max(0.17, 0.27)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(1.1, 1.3)
+      length = min-max(2.0, 2.2)
+      height = min-max(0.5, 0.6)
+    ),
+    density-level = DensityLevelB
+  )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
+
 pcb-module test-design:
   inst c : test-AP2265x
   place(c) at loc(0.0, 0.0) on Top
 
   inst d : test-REF34-Q1
   inst e : test-SOT23-3
+  inst f : test-SOT538
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 
