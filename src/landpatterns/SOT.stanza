@@ -200,78 +200,6 @@ public defmethod courtyard-excess (pkg:SOT) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-doc: \<DOC>
-Determine the dimensions of the package body
-
-This function is used to create the minimal package body
-outline that we will use to create the horizontal lines
-at the extremes on the body.
-
-This function attempts to make a conservative size box
-by accounting for both the package body length and the
-location of the soldermask opening of the pads.
-<DOC>
-defn get-extended-pkg-outline (
-  pkg:SOT,
-  vp:VirtualLP
-  line-width:Double
-  mask-clearance:Double
-  side:Side
-  ) -> Box :
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
-
-  ; Check to make sure that the pads aren't going to be
-  ;  too close to the outline. If so - we adjust them out a
-  ;  bit so that we don't violate the minimum clearance rules.
-  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
-  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
-
-  val diff = dims(pad-outline*) - dims(pkg-outline*)
-
-  ; If we find that the pad outline is larger in Y
-  ;   then we expand the box, but only on the dimension
-  ;   so that the line is still only the width of the body.
-  if y(diff) > 0.0:
-    fatten(Point(0.0, y(diff) / 2.0), pkg-outline*)
-  else:
-    pkg-outline*
-
-public defn SOT-pkg-outline (
-  pkg:SOT,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-
-  val pkg-outline = get-extended-pkg-outline(pkg, vp, line-width, mask-clearance, side)
-  ; Just take the top and bottom lines - not the sides
-  val [sw, se, ne, nw] = corners(pkg-outline)
-
-  Union([
-    Line(line-width, [nw, ne])
-    Line(line-width, [sw, se])
-  ])
-
-public defn SOT-outline (
-  pkg:SOT,
-  vp:VirtualLP
-  --
-  side:Side = Top
-  ):
-  val outline-geom = switch(density-level(pkg)):
-    DensityLevelA: construct-overall-outline(
-      vp, package-body(pkg),
-      density-level = density-level(pkg)
-      )
-    DensityLevelB: SOT-pkg-outline(pkg, vp)
-    DensityLevelC: SOT-pkg-outline(pkg, vp)
-
-  add-silkscreen-outline(vp, outline-geom)
-
 defn extra-dot-margin (dl:DensityLevel) -> Double:
   val line-width = default-silk-width(),
   val mask-clearance = default-mask-clearance(),
@@ -285,7 +213,10 @@ public defmethod build-silkscreen (
   pkg:SOT,
   vp:VirtualLP
   ) -> False:
-  SOT-outline(pkg, vp)
+  create-silkscreen-pkg-extrema-outline(
+    vp, package-body(pkg),
+    density-level = density-level(pkg)
+  )
   build-smd-pin-1-dot(
     vp,
     dir = Left,
@@ -397,7 +328,7 @@ public defn SOT-23-pkg-outline (
   side:Side = Top
   ):
 
-  val pkg-outline = get-extended-pkg-outline(pkg, vp, line-width, mask-clearance, side)
+  val pkg-outline = get-extended-pkg-outline(vp, package-body(pkg), density-level(pkg), line-width, mask-clearance, side)
   val [sw, se, ne, nw] = corners(pkg-outline)
 
   ; We need to find the pad 3 and then use that to determine the stopping
