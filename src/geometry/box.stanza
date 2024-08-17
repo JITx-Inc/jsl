@@ -53,7 +53,7 @@ public defn shrink (dims:Point, b:Box) -> Box :
 public defn shrink (dims:Double, b:Box) -> Box :
   shrink(Point(dims, dims), b)
 
-public defn corners (b:Box) -> Tuple<Point> :
+public defn corners (b:Box) -> [Point, Point, Point, Point] :
   val [l, h] = [lo(b), hi(b)]
   [Point(x(l), y(l)), Point(x(h), y(l)), Point(x(h), y(h)), Point(x(l), y(h))]
 
