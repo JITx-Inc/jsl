@@ -22,10 +22,10 @@ defpackage jsl/protocols/memory/gddr7:
 
 doc: \<DOC>
 @brief GDDR7 Bundle
-One GDDR7 bundle consists of the connections between one controller and one GDDR7 memory which 
-consists of 4 separate byte lanes.
+One GDDR7 bundle consists of the connections between an integrated memory controller and 
+one GDDR7 memory chip. The overall memory connections consists of 4 separate channels.
 @member control Control channel for GDDR7
-@member data Data channel for GDDR7
+@member data Four data channels for GDDR7
 <DOC>
 
 public defn gddr7 :
@@ -34,11 +34,125 @@ public defn gddr7 :
 public pcb-bundle gddr7-b () :
   name = "GDDR7"
   description = "Graphics Double Data Rate 7 Synchronous Dynamic Random-Access Memory protocol"
-  port data : gddr7-byte-lane[4]
-  port control : gddr7-control-lane[4]
+  port data    : gddr7-data-lane[4] ; one of A B C D
+  port control : gddr7-control-lane ; covers all A,B,C,D
 
-public pcb-bundle gddr7-byte-lane :
-  port DQ : pin[10]
-  port RC : diff-pair
-  port WC : diff-pair
+public pcb-bundle gddr7-data-lane :
+  port DQp : pin[10]   ; PAM3 or NRZ
+  port RCK : diff-pair ; NRZ
+  port WCK : diff-pair ; NRZ
+  port DQE             ; PAM3 or NRZ
+  port CA : pin[5]     ; NRZ
+
+public pcb-bundle gddr7-control-lane :
+  port RESET_n         ; NRZ
+  port ZQ_AB
+  port ZQ_CD
+  port ERR : pin[4]    ; PAM3
+
+
+doc: \<DOC>
+@brief Curated values for skew and loss of GDDR7 channel
+This is a helper function that returns the bounds on the intra-pair
+skew timing and maximum loss as expected by the particular standard targeted by
+the user. The values returned are a toleranced value with upper/lower limits for the
+intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
+table are derived from the references listed below.
+
+There is also a very loose lane to lane skew spec for different lane rates:
+| Parameter	       | 2.5 GT/s | 5.0 GT/s | 8.0 GT/s | 16.0 GT/s | Unit  |
+|------------------|----------|----------|----------|-----------|-------|
+|Lane to Lane Skew |     20   |    8     |     6    |      5    |   ns  |
+
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+<DOC>
+
+public defn gddr7-get-skew-loss-vals () -> [Toleranced, Double]:
+  [0.0 +/-  1.0e-12,  12.0] ; 
+
+doc: \<DOC>
+@brief Differential impedance specified by the GDDR7 standard
+This is a helper function that returns the expected differential
+trace impedance for the standard.
+
+@return Upper/lower limits for the impedance.
+<DOC>
+public defn gddr7-get-trace-impedance () -> Toleranced :
+  100.0 +/- (5 %) ; 
+
+
+doc: \<DOC>
+GDDR7 SI Constraint Type
+
+This derives from the whole data lane constraint
+as most of the controlled signals are single-ended but referenced to the 
+read and write clock lane pairs (tx/rx). All of these constraints
+will be applied to the full lane.
+
+The `constrain` function for this type expects two compatible `gddr7-b` types.
+<DOC>
+public defstruct GDDR7-Constraint <: DiffPair-Constraint :
+  doc: \<DOC>
+  Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew:Toleranced  with:
+    as-method => true
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    as-method => true
+  doc: \<DOC>
+  Differential Routing Structure for each Diff-Pair
+  <DOC>
+  route-struct:DifferentialRoutingStructure with:
+    as-method => true
+with:
+  keyword-constructor => true
+  constructor => #GDDR7-Constraint
+
+doc: \<DOC>
+Constructor for the GDDR7 Link Constraint
+
+@param rs Differential Routing Structure constraints for all
+data lane signals, command/address, and the differential write and read clocks. 
+This is not applied to the control signals.
+<DOC>
+public defn PCIe-Constraint (v:PCIeVersion, rs:DifferentialRoutingStructure) -> PCIe-Constraint:
+  val [sk, ml] = pcie-get-skew-loss-vals(v)
+  PCIe-Constraint(
+    skew = sk,
+    loss = ml,
+    route-struct = rs
+  )
+
+doc: \<DOC>
+Constrain a PCIe Link
+
+@param cst Constraint Object
+@param src Source End Point - must be of `pcie-b` type
+@param dst Destination End Point - must be of `pcie-b` type and match
+the parameterization of `src`, including lane counts.
+<DOC>
+public defmethod constrain (cst:PCIe-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+
+    val src-ep = find-signal-end(src)
+    val dst-ep = find-signal-end(dst)
+
+    val src-cnt = length(src-ep.data.lane)
+    val dst-cnt = length(dst-ep.data.lane)
+    if src-cnt != dst-cnt:
+      throw $ ValueError("MisMatched Lane Counted Between Src and Dst: src=%_ dst=%_" % [src-cnt, dst-cnt])
+
+    for i in indices(src-ep.data.lane) do:
+      diffpair-constrain(cst, src-ep.data.lane[i].TX, dst-ep.data.lane[i].TX)
+      diffpair-constrain(cst, src-ep.data.lane[i].RX, dst-ep.data.lane[i].RX)
+
+    diffpair-constrain(cst, src-ep.data.refclk, dst-ep.data.refclk)
+
   
