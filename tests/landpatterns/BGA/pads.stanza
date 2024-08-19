@@ -34,7 +34,7 @@ deftest(BGA) test-bga-pad:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = pad(lp-pad)
+  val p = /pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -87,7 +87,7 @@ deftest(BGA) test-bga-pad-no-paste:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = pad(lp-pad)
+  val p = /pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -129,7 +129,7 @@ deftest(BGA) test-bga-pad-explicit-paste:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = pad(lp-pad)
+  val p = /pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -179,7 +179,7 @@ deftest(BGA) test-bga-nsmd-pad:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = pad(lp-pad)
+  val p = /pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.475))
   val pad-pose = pose(lp-pad)

@@ -31,7 +31,7 @@ public defn bounds (
   ) -> Box :
 
   val unionBox = reduce{union, _} $ for lp-pad in lp-pads seq:
-    val pd = pad(lp-pad)
+    val pd = pad-def(lp-pad)
     val l = pose(lp-pad)
     match(layer-spec):
       (_:False):

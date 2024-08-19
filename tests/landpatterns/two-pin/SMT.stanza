@@ -42,7 +42,7 @@ deftest(two-pin) test-basic:
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       ; X Direction
       #EXPECT(almost-equal?(width(shape), 1.05))
@@ -68,7 +68,7 @@ deftest(two-pin) test-basic:
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       ; X Direction
       #EXPECT(almost-equal?(width(shape), 0.95))
@@ -94,7 +94,7 @@ deftest(two-pin) test-basic:
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       ; X Direction
       #EXPECT(almost-equal?(width(shape), 0.85))
@@ -123,7 +123,7 @@ deftest(two-pin) test-chip-table :
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       #EXPECT(almost-equal?(width(shape), exp-W))
       #EXPECT(almost-equal?(height(shape), exp-L))
@@ -139,7 +139,7 @@ deftest(two-pin) test-chip-table :
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       #EXPECT(almost-equal?(width(shape), exp-W))
       #EXPECT(almost-equal?(height(shape), exp-L))
@@ -161,7 +161,7 @@ deftest(two-pin) test-resistor-smt :
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       #EXPECT(almost-equal?(width(shape), 0.5))
       #EXPECT(almost-equal?(height(shape), 0.380278))
@@ -182,7 +182,7 @@ deftest(two-pin) test-capacitor-smt :
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       #EXPECT(almost-equal?(width(shape), 1.88))
       #EXPECT(almost-equal?(height(shape), 0.920156))
@@ -217,7 +217,7 @@ deftest(two-pin) test-capacitor-smt-with-pose:
   for row in values(rows(grid)) do:
     #EXPECT(length(row) == 1)
     for lp-pad in row do:
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
       val shape = pad-shape(pd) as Rectangle
       #EXPECT(almost-equal?(width(shape), 1.88))
       #EXPECT(almost-equal?(height(shape), 0.920156))

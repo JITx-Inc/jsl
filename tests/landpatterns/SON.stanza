@@ -91,7 +91,7 @@ deftest(SON) test-SON:
     for row in values(rows(grid)) do:
       #EXPECT(length(row) == 2)
       for lp-pad in row do:
-        val pd = pad(lp-pad)
+        val pd = pad-def(lp-pad)
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
 

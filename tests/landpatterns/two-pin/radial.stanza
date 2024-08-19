@@ -58,7 +58,7 @@ deftest(two-pin) test-basic-radial:
   val padcols = to-tuple $ values(columns(grid))
   for col in padcols do:
     for (lp-pad in col, i in 0 to false) do:
-      val p = pad(lp-pad)
+      val p = pad-def(lp-pad)
       val pt = pad-type(p)
       #EXPECT(pt == TH)
       val shape = pad-shape(p) as Circle
