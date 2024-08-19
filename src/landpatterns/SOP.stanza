@@ -1,20 +1,20 @@
 doc: \<DOC>
-@brief Small Outline No-Lead Packages
+@brief Small Outline Package
 
 @desc
 
-The SON package is a dual-row SMT package similar to the QFN. There is no external
-leads resulting in a compact land pattern.
+The SOP package is a dual-row SMT package similar to the SOIC and SON.
+This package typically uses a gull-wing style lead.
 
-This package is also referred to as a `DFN` package.
+This package is often also referred to as a SSOP, TSSOP, etc.
 
-TODO - Diagram here of SON style packages.
+TODO - Diagram here of SOP style packages.
 
 <DOC>
 
 
 #use-added-syntax(jitx)
-defpackage jsl/landpatterns/SON:
+defpackage jsl/landpatterns/SOP:
   import core
   import jitx
   import jitx/commands
@@ -27,15 +27,15 @@ defpackage jsl/landpatterns/SON:
   import jsl/landpatterns/framework
 
 doc: \<DOC>
-Small Outline No Lead (SON) Lead Type
+Small Outline Package (SOP) Lead Type
 
 This type defines the parameters of each of the individual leads
 of the IC package. It is typically used with {@link Lead-Profile}
 <DOC>
-public defstruct SON-Lead <: SMT-Lead:
+public defstruct SOP-Lead <: SMT-Lead:
   lead-type:LeadProtrusion with:
       as-method => true,
-      default => SmallOutlineNoLeads(),
+      default => SmallGullWingLeads(),
   length:Toleranced with:
     as-method => true,
     ensure => ensure-positive!
@@ -46,31 +46,16 @@ with:
   equalable => true
   hashable => true
   printer => true
-  constructor => #SON-Lead
-
-doc: \<DOC>
-Constructor for `SON-Lead`
-
-@param lead-type The default lead protrusion type is {@link SmallOutlineNoLeads}
-@param length Length of the lead in mm - see {@link SMT-Lead} for more info
-@param width Width of the lead in mm - see {@link SMT-Lead} for more info
-<DOC>
-public defn SON-Lead (
-  --
-  lead-type:LeadProtrusion = SmallOutlineNoLeads(),
-  length:Toleranced,
-  width:Toleranced,
-) -> SON-Lead:
-  #SON-Lead(lead-type, length, width)
+  keyword-constructor => true
 
 
 doc: \<DOC>
-SON Package Type
+SOP Package Type
 
 This type defines the features of the dual-row
-small outline no-lead type of package.
+Small Outline Package (SOP) type of package.
 <DOC>
-public defstruct SON <: Dual-Package :
+public defstruct SOP <: Dual-Package :
   doc: \<DOC>
   Total Number of Leads - excluding the thermal pad.
   <DOC>
@@ -79,8 +64,8 @@ public defstruct SON <: Dual-Package :
     as-method => true
 
   doc: \<DOC>
-  Lead Profile for the pins on the opposing edges of the SON package.
-  By default the {@link SON-Lead} type is used for the `lead` and
+  Lead Profile for the pins on the opposing edges of the SOP package.
+  By default the {@link SOP-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -94,13 +79,13 @@ public defstruct SON <: Dual-Package :
   thermal-lead?:False|Shape with:
     as-method => true
   doc: \<DOC>
-  Package Body for the SON.
+  Package Body for the SOP.
   <DOC>
   package-body:PackageBody with:
     as-method => true
 
   doc: \<DOC>
-  Pad Planner for the SON package
+  Pad Planner for the SOP package
 
   This provides a default pad planner that assumes that all lead
   positions are active and provides a rectangle shaped pad for
@@ -111,10 +96,10 @@ public defstruct SON <: Dual-Package :
     as-method => true
 
   doc: \<DOC>
-  Lead Numbering Scheme for the SON Package
+  Lead Numbering Scheme for the SOP Package
 
   This provides a numbering scheme for the leads of the SON
-  package. By default, it uses {@link Std-IC-Numbering}.
+  package. By default, it uses {@link Column-Major-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -127,13 +112,13 @@ public defstruct SON <: Dual-Package :
 with:
   hashable => true
   printer => true
-  constructor => #SON
+  constructor => #SOP
 
-val SON-DEF-PAD-PLANNER = RectanglePadPlanner
-val SON-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
+val SOP-DEF-PAD-PLANNER = RectanglePadPlanner
+val SOP-DEF-NUM-SCHEME = Column-Major-Numbering{_, DUAL-ROW-COLS}
 
 doc: \<DOC>
-Constructor for SON Packages
+Constructor for SOP Packages
 
 @param num-leads Total number of leads in the package (not including thermal leads)
 @param lead-profile Lead span profile for describing the pads on the E/W edges.
@@ -144,22 +129,22 @@ in the land pattern's reference frame.
 @param num-scheme Numbering scheme for pads - default is {@link Column-Major-Numbering}
 @param density-level Density Level of Generated Package
 <DOC>
-public defn SON (
+public defn SOP (
   --
   num-leads:Int,
   lead-profile:Lead-Profile,
   thermal-lead?:False|Shape      = false,
   package-body:PackageBody,
-  pad-planner:PadPlanner         = SON-DEF-PAD-PLANNER,
-  num-scheme:Numbering           = SON-DEF-NUM-SCHEME(num-leads),
+  pad-planner:PadPlanner         = SOP-DEF-PAD-PLANNER,
+  num-scheme:Numbering           = SOP-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
-  ) -> SON :
-  #SON(
+  ) -> SOP :
+  #SOP(
     num-leads, lead-profile, thermal-lead?, package-body,
     pad-planner, num-scheme, density-level
   )
 
-public defmethod name (pkg:SON) -> String :
+public defmethod name (pkg:SOP) -> String :
   defn to-deci (v:Double) -> String:
     val v* = to-int( v * 100.0 )
     to-string("%_" % [v*])
@@ -168,9 +153,9 @@ public defmethod name (pkg:SON) -> String :
   val w = to-deci(typ $ width(body))
   val l = to-deci(typ $ length(body))
   val n = num-leads(pkg) + (1 when thermal-lead?(pkg) is-not False else 0)
-  to-string("SON%_P%_X%_-%_N" % [p, w, l, n])
+  to-string("SOP%_P%_X%_-%_N" % [p, w, l, n])
 
-public defmethod courtyard-excess (pkg:SON) -> Double :
+public defmethod courtyard-excess (pkg:SOP) -> Double :
   val protrusion = lead-type $ lead $ lead-profile $ pkg
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
@@ -185,7 +170,7 @@ defn extra-dot-margin (dl:DensityLevel) -> Double:
     DensityLevelC: 0.0
 
 public defmethod build-silkscreen (
-  pkg:SON,
+  pkg:SOP,
   vp:VirtualLP
   ) -> False:
   create-silkscreen-pkg-extrema-outline(

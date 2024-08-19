@@ -76,7 +76,8 @@ public defstruct SMT-Lead <: Lead :
 
   TODO - add figure here.
   <DOC>
-  length:Toleranced with: (as-method => true)
+  length:Toleranced with:
+    as-method => true
   doc: \<DOC>
   Width of the electrical lead of an SMT package.
 
@@ -85,7 +86,9 @@ public defstruct SMT-Lead <: Lead :
 
   TODO - add figure here.
   <DOC>
-  width:Toleranced with: (as-method => true)
+  width:Toleranced with:
+    as-method => true
+
 with:
   equalable => true
   hashable => true

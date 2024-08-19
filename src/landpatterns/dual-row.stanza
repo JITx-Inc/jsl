@@ -89,7 +89,7 @@ public defmethod build-pads (
 
   val profile = lead-profile(pkg)
   val rows = num-leads(pkg) / DUAL-ROW-COLS
-  val params = compute-params(profile)
+  val params = compute-params(profile, density-level = density-level(pkg))
 
   val pad-seq = pad-grid-smt(
     pad-size = pad-size(params),
@@ -108,104 +108,6 @@ public defmethod build-pads (
       val cls = ["pad", "thermal"]
       append(vp, VirtualPad(num-leads(pkg) + 1, smd-pad(lead-shape), loc(0.0, 0.0), class = cls))
     (x:False): false
-
-
-doc: \<DOC>
-Compute outline shape by avoiding overlaps with pads
-
-This function takes an outline (like the outline of the package body)
-and computes the set of shapes that can maximally fullfill that outline
-but not overlap with any of the pads in a package.
-
-This function will also obey clearance requirements to prevent DRC
-issues.
-
-@param outline Starting Outline centered at origin.
-@param lp-pads Landpattern pads to avoid. These pads should be centered
-  at the origin.
-<DOC>
-public defn compute-outline (
-  vp:VirtualLP,
-  pkg-body:PackageBody,
-  density-level:DensityLevel
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ) -> Shape :
-
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
-  val courtyard? = get-courtyard-boundary(vp, side = side)
-
-  ; Check for overlap between the pad soldermask and the
-  ;  current proposed outline. We will then shrink the
-  ;  proposed outline until there is at least `mask-clearance`
-  ;  on either side.
-  val h-shrink = let:
-    val col-0-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-0")
-    val col-1-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-1")
-
-    val col-0-outline = bounds(col-0-pads, layer-spec = SolderMask(side))
-    val col-1-outline = bounds(col-1-pads, layer-spec = SolderMask(side))
-
-    val interstitial = Box(
-      Point(right(col-0-outline), down(col-0-outline)),
-      Point(left(col-1-outline), up(col-1-outline))
-    )
-
-    val iW = x(dims(interstitial)) - ((2.0 * mask-clearance) + line-width)
-    val iP = x(dims(pkg-outline))
-
-    ; Compute the shrinkage that will be applid to
-    ;   both sides (if any)
-    val diff = (iW - iP) / 2.0
-    if diff < 0.0 :
-      ; We need to shrink the package outline
-      fatten(Point(diff, 0.0), pkg-outline)
-    else:
-      pkg-outline
-
-  LineRectangle(h-shrink, line-width = line-width)
-
-doc: \<DOC>
-Build the silkscreen outline for a dual-row SMD package
-
-This function will generate a silkscreen outline
-of the package body in the interstitial space between
-the two columns of pads. This silkscreen likely will
-not be exactly the package body width for aesthetic reasons.
-
-If the package you are construction has a thermal lead -
-this may not be the best choice of outline to use.
-
-@param pkg Component Package to model
-@param vp Virtual landpattern container.
-@param line-width Thickness of the silkscreen lines that
-will be used to construct the outline. The default wil be
-extracted from the design rules.
-@param mask-clearance Minimum silkmask to soldermask
-clearance requirement to use when constructing the outline.
-The default wil be extracted from the design rules.
-@param side Which side of the board to draw this outline.
-The default is `Top`. Note that if the pads of the component
-are not on `side` - this function will likely fail.
-<DOC>
-public defn build-pkg-body-outline (
-  pkg:Dual-Package,
-  vp:VirtualLP,
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top,
-  ):
-  val pkg-body = package-body(pkg)
-  val outline-geom = compute-outline(
-    vp, pkg-body, density-level(pkg),
-    line-width = line-width,
-    mask-clearance = mask-clearance,
-    side = side,
-  )
-  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
 
 doc: \<DOC>
 Dual-Row Grid Planner

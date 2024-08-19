@@ -380,6 +380,20 @@ public defn get-coppers (vp:VirtualLP) -> Tuple<VirtualCopper> :
   to-tuple $ metal(vp)
 
 doc: \<DOC>
+Construct artwork for the package outline in the silkscreen layer.
+
+@param vp Virtual Landpattern Scene Graph
+@param outline-geom Shape of the silkscreen content to create.
+@param side Optional Side - Default is Top Side.
+<DOC>
+public defn add-silkscreen-outline (
+  vp:VirtualLP, outline-geom:Shape
+  --
+  side:Side = Top,
+  ):
+  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
+
+doc: \<DOC>
 Retrieve the silkscreen outline shape as a `VirtualArtwork` object.
 
 This function looks for a `VirtualArtwork` object with class `outline`.
