@@ -95,7 +95,6 @@ deftest(courtyard) test-courtyard-build-boundary:
   )
 
   val outline = build-courtyard-boundary(root, body, DensityLevelA, excess = 0.1)
-
   #EXPECT(width(outline) == 3.2)
   val exp-height = 1.2
   #EXPECT(height(outline) == 1.2)
