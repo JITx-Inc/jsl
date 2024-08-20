@@ -478,7 +478,10 @@ functions and generators.
 
 <DOC>
 public pcb-struct jsl/design/introspection/PortInfo :
-  connected-net:Maybe<JITXObject>
+  ; Ideally - this is a `Maybe` but that isn't supported
+  ;   yet.
+  ; TODO - consider shifting to `Maybe` in the future.
+  connected-net:JITXObject|False
   pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
 
 doc: \<DOC>
@@ -496,7 +499,7 @@ public defn get-port-info (pt:JITXObject) -> PortInfo:
         val lp-pds = value(given)
         to-tuple $ for lp-pd in lp-pds seq:
           get-pad-info(lp-pd)
-    PortInfo(
-      get-connected-net(pt)
-      pd-info
-    )
+    val con-net = match(get-connected-net(pt)):
+      (_:None): false
+      (given:One<JITXObject>): value(given)
+    PortInfo(con-net, pd-info)
