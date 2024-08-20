@@ -19,10 +19,10 @@ deftest(BGA) test-bga-pad:
     mask-R-adj = (-1 %)
     )
 
-  val pad-def = build-bga-pad(Circle(0.5), cfg)
+  val bga-pad = build-bga-pad(Circle(0.5), cfg)
 
   pcb-landpattern padtest:
-    pad p[1] : pad-def at loc(0.0, 0.0)
+    pad p[1] : bga-pad at loc(0.0, 0.0)
 
 
   val grid = PadGrid(padtest)
@@ -34,7 +34,7 @@ deftest(BGA) test-bga-pad:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = /pad-def(lp-pad)
+  val p = pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -72,10 +72,10 @@ deftest(BGA) test-bga-pad-no-paste:
     paste-R-adj = NoPasteMask
     )
 
-  val pad-def = build-bga-pad(Circle(0.5), cfg)
+  val bga-pad = build-bga-pad(Circle(0.5), cfg)
 
   pcb-landpattern padtest:
-    pad p[1] : pad-def at loc(0.0, 0.0)
+    pad p[1] : bga-pad at loc(0.0, 0.0)
 
 
   val grid = PadGrid(padtest)
@@ -87,7 +87,7 @@ deftest(BGA) test-bga-pad-no-paste:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = /pad-def(lp-pad)
+  val p = pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -114,10 +114,10 @@ deftest(BGA) test-bga-pad-explicit-paste:
     paste-R-adj = (-3 %)
     )
 
-  val pad-def = build-bga-pad(Circle(0.5), cfg)
+  val bga-pad = build-bga-pad(Circle(0.5), cfg)
 
   pcb-landpattern padtest:
-    pad p[1] : pad-def at loc(0.0, 0.0)
+    pad p[1] : bga-pad at loc(0.0, 0.0)
 
 
   val grid = PadGrid(padtest)
@@ -129,7 +129,7 @@ deftest(BGA) test-bga-pad-explicit-paste:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = /pad-def(lp-pad)
+  val p = pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.525))
   val pad-pose = pose(lp-pad)
@@ -164,10 +164,10 @@ deftest(BGA) test-bga-nsmd-pad:
     mask-R-adj = (5 %)
     )
 
-  val pad-def = build-bga-pad(Circle(0.5), cfg)
+  val bga-pad = build-bga-pad(Circle(0.5), cfg)
 
   pcb-landpattern padtest:
-    pad p[1] : pad-def at loc(0.0, 0.0)
+    pad p[1] : bga-pad at loc(0.0, 0.0)
 
 
   val grid = PadGrid(padtest)
@@ -179,7 +179,7 @@ deftest(BGA) test-bga-nsmd-pad:
   val row = padrows[0]
   val lp-pad = row[0]
 
-  val p = /pad-def(lp-pad)
+  val p = pad-def(lp-pad)
   val shape = pad-shape(p) as Circle
   #EXPECT(almost-equal?(radius(shape), 0.475))
   val pad-pose = pose(lp-pad)
