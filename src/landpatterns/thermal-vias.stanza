@@ -164,8 +164,8 @@ public defmethod make-thermal-vias (tv:GridThermalVias, pt:PortInfo -- via-net?:
     val n = match(via-net?, connected-net(pt)):
       ; The argument net is preferred and then we fallback
       ;   to the port net if one is provided.
-      (arg:One<Net>, pt-net): value(arg)
-      (arg:None, pt-net:One<Net>): value(pt-net)
+      (arg:One<JITXObject>, pt-net): value(arg)
+      (arg:None, pt-net:JITXObject): pt-net
       (arg, pt-net):
         throw $ ValueError("No Discernible Net for Thermal Via Grid - The passed port is not connected and no `via-net?` argument was provided")
 
