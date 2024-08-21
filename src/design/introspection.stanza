@@ -37,7 +37,7 @@ throw an error if that port does not exist.
 For `PortArray` ports, if the `name` contains the `[]` indexing
 argument, then this will find individual port array elements.
 If there is not `[]` indexing argument, then the `PortArray`
-port itself will be discovered.
+port itself will be returned.
 
 @param obj Component or Module to interrogate for a port
 @param name Name of port to interrogate. This name can include
@@ -221,7 +221,7 @@ Retrieve the pads associated with a particular port
 
 @param pt Port on a component in the passed context.
 @param cxt Context to search for the component instance. The default is `self`.
-@return If compoenent associated with `pt` is found in `cxt` and that port has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
+@return If component associated with `pt` is found in `cxt` and the port `pt` has pads, this function returns a tuple of `Pad` objects for that port. Otherwise `None()`.
 <DOC>
 
 public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<Tuple<JITXObject>>:
@@ -237,11 +237,10 @@ public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<T
 doc: \<DOC>
 Retrieve the parent instance (component or module) for a port.
 
-This function expects you to pass something like `comp.GND` which
-is a `port` on `comp` and then this function will get a reference
-to `comp` as a `JITXObject`.
+This function expects the caller to pass a port `comp.GND` and then
+this function will return a reference to `comp` as a `JITXObject`.
 
-Be careful of child port on bundle ports - these will give a ref
+Be careful of child ports on bundle ports - these will give a ref
 to the parent bundle port - not the component.
 
 This function expects to be called from `pcb-module` context.
@@ -267,7 +266,9 @@ a `pcb-component` context will likely result in an exception.
 
 @param pt Port on a component instance.
 @param cxt Context to search for components in.
-@return If we
+@return If we successfully, determine the parent component, this returns a reference to that
+component as a JITXObject. If not, we return `None()`.
+@throws ValueError If the user passes a port on a module or we can't determine if this is a component context.
 <DOC>
 public defn get-component-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
   inside pcb-module:
@@ -279,7 +280,6 @@ public defn get-component-from-port (pt:JITXObject, cxt:JITXObject = self) -> Ma
         ;   here otherwise, this component might return a module instance breaking the
         ;   abstraction.
         throw $ ValueError("UnHandle-able Case - Did you pass a module port or from a `pcb-component` context?")
-        ; One(self)
       (given:One<Ref>):
         val parent-R = value(given)
         ; We need to search because if the user were to have passed
@@ -292,7 +292,6 @@ public defn get-component-from-port (pt:JITXObject, cxt:JITXObject = self) -> Ma
           (given:One<JITXObject>):
             val c-or-m? = value(given)
             if not is-component?(c-or-m?):
-              println("Component: %_" % [c-or-m?])
               throw $ InstanceTypeError(expects = SingleComponent, observed = instance-type(c-or-m?))
             given
 
@@ -303,13 +302,15 @@ Retrieve an Instance from a particular context by Ref
 This function must be called from within a `pcb-module`
 context.
 
-This function is not recursive. If you pass `r = some.obj`
-from the `cxt` context, then that object will not be found. This
-function could find `cxt.some` if passed `r = some`.
+This function is not recursive. If the caller passes `some.obj`
+from the `cxt` context, then that object will not be found because `obj` is
+within the `some` object context, not `cxt`. This function could find
+`cxt.some` if passed `some`.
 
 @param r Ref to an object in `cxt` - Note that the path must be
-referenced from the `cxt`. If you have a prefix - then the
-instance will not be found.
+referenced from the `cxt`. Any prefix in the ref before `cxt` will likely
+result in a failure to find the instance. Notice that for the `self` context,
+then we can just pass references without the `self.` prefix.
 @param cxt Context from which we will query the instances. By default
 this value is `self`.
 @return An instance from the `cxt` context. Note that this could be either
@@ -330,13 +331,15 @@ Retrieve a Component Instance from a particular context by Ref
 This function must be called from within a `pcb-module`
 context.
 
-This function is not recursive. If you pass `r = some.obj`
-from the `cxt` context, then that object will not be found. This
-function could find `cxt.some` if passed `r = some`.
+This function is not recursive. If the caller passes `some.obj`
+from the `cxt` context, then that object will not be found because `obj` is
+within the `some` object context, not `cxt`. This function could find
+`cxt.some` if passed `some`.
 
 @param r Ref to an object in `cxt` - Note that the path must be
-referenced from the `cxt`. If you have a prefix - then the
-instance will not be found.
+referenced from the `cxt`. Any prefix in the ref before `cxt` will likely
+result in a failure to find the instance. Notice that for the `self` context,
+then we can just pass references without the `self.` prefix.
 @param cxt Context from which we will query the instances. By default
 this value is `self`.
 @return Instance of a `pcb-component` in the `cxt` context. Note that
@@ -400,7 +403,7 @@ This function must be called from within a `pcb-module` context.
 
 Note that this function will fail to find a net if the passed `pt`
 port is not part of a component or module in the local context.
-For example, If you have:
+For example, if the design contains:
 
 ```stanza
 pcb-module wrapper:
@@ -422,11 +425,12 @@ pcb-module top-level:
   ; This will not work
   val n2 = get-connected-net!(W.C.internal-port)
 ```
+
 The value for `n1` will be successfully found as the `GND`
 net because it is defined within the `pcb-module` context.
 
-The `n2` invocation will throw an exception and not be able to find `INT`
-as the net for `W.C.internal-port`.
+The `n2` invocation will fail to find `INT` as the net
+for `W.C.internal-port` and return `None()`.
 
 @param pt Port of a component or module in this module context.
 @param cxt Optional context to search. The default value is `self`.
