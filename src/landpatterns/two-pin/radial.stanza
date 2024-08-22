@@ -37,19 +37,23 @@ public defstruct Radial-2pin <: Package :
   Package Body
   Typically a cylinder but other shapes work as well.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
   doc: \<DOC>
   Pad Planner
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
   doc: \<DOC>
   Lead numbering scheme
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   constructor => #Radial-2pin
 
