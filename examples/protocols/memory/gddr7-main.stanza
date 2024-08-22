@@ -1,0 +1,45 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/gddr7-main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl/design/settings
+  import jsl/symbols/SymbolDefn
+
+  import jsl/protocols/memory/gddr7
+  import jsl/bundles
+  import jsl/si
+
+  import jsl/examples/protocols/common/example-board
+
+pcb-module gddr7-example :
+  port VDD
+  port GND
+
+  inst dut1 : jsl/examples/protocols/memory/gddr7-src/mem-device
+  inst dut2 : jsl/examples/protocols/memory/gddr7-src/ic-device
+
+  require ic-gddr7 : gddr7() from dut2
+
+  val [d-ti, ti] = gddr7-get-trace-impedance()
+
+  connect-GDDR7(ic-gddr7 dut1.io diff(d-ti) se-50)
+
+  net (GND dut1.pwr.V- dut2.pwr.V-)
+
+set-current-design("gddr7-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-B)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(gddr7-example)
+
+; View the results
+view-board()
+; view-schematic()
+;view-design-explorer()
+; view-bom(BOM-STD)
