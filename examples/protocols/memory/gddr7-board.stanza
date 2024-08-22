@@ -192,10 +192,22 @@ public pcb-differential-routing-structure diff (trace-impedance:Toleranced|Doubl
     clearance    = 0.150    ; mm
     velocity = 0.19e12      ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
-
-
+  ; overall parameters
   uncoupled-region = se-50
 
+val diff-nd = DifferentialNeckDown(0.070, 0.066, 0.075, 1.0, 1.0e8)
+    ; pair-spacing: Double|False
+    ; trace-width: Double|False
+    ; clearance: Double|False
+    ; insertion-loss: Double|False
+    ; velocity: Double|False
+
+
+val nd = NeckDown(0.066, 0.075, 1.0, 1.0e8)
+    ; trace-width: Double|False
+    ; clearance: Double|False
+    ; insertion-loss: Double|False
+    ; velocity: Double|False
 
 doc: \<DOC>
 The pcb-routing-structure(s) below are just examples of the routing structures that need to be maintained
@@ -208,17 +220,11 @@ public pcb-routing-structure se-50 :
     clearance = 0.15     ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = NeckDown(
-      trace-width = 0.156
-      clearance = 0.1
-    )
+    neck-down = nd
 
   layer-constraints(Bottom) :
     trace-width = 0.15    ; mm
     clearance = 0.15         ; mm
     velocity = 0.19e12   ; mm/s
     insertion-loss = 0.008  ; db/mm @ 1GHz
-    neck-down = NeckDown(
-      trace-width = 0.156
-      clearance = 0.1
-    )
+    neck-down = nd
