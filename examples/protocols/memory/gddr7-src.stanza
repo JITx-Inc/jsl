@@ -375,6 +375,17 @@ public pcb-component mem-component :
     diff-pin-model(self.RCK_c[i], self.RCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
     diff-pin-model(self.WCK_c[i], self.WCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
 
+  for i in 0 to 4 do :
+    for j in 0 to 10 do :
+      pin-model(self.DQp[j][i], delay = typ(1.0e-15), loss = typ(0.1))
+    for j in 0 to 5 do :
+      pin-model(self.CA[j][i], delay = typ(1.0e-15), loss = typ(0.1))
+    pin-model(self.DQE[i], delay = typ(1.0e-15), loss = typ(0.1))
+    pin-model(self.ERR[i], delay = typ(1.0e-15), loss = typ(0.1))
+  pin-model(self.RESET_n, delay = typ(1.0e-15), loss = typ(0.1))
+
+    
+
 public pcb-module mem-device :
   port io : gddr7()
   port pwr : power
@@ -439,8 +450,26 @@ defn pin-name (r:Int, c:Int) :
   val letter = red-alph-letter(r)
   Ref(letter)[c + 1]
 
-defn pin-num (a:Int b:Int) -> Int :
-  to-int(to-double(a * 30 + b) / 2.0)
+var sig-pin-cnt = -1
+var gnd-pin-cnt = -1
+
+defn sig-pin-num (a:Int b:Int) -> Int :
+  sig-pin-cnt = sig-pin-cnt + 1
+  sig-pin-cnt
+  ; to-int(to-double(a * 30 + b) / 2.0)
+
+defn gnd-pin-num (a:Int b:Int) -> Int :
+  gnd-pin-cnt = gnd-pin-cnt + 1
+  gnd-pin-cnt
+
+defn signal-ball? (a:Int b:Int) -> True|False :
+  if a == 0 or a == 29 or b == 0 or b == 29 :
+    true
+  else :
+    if (a * 30 + b + a % 2) % 2  == 0 :
+      true
+    else :
+      false
 
 public pcb-component ic-component :
   reference-prefix = "U"
@@ -450,23 +479,16 @@ public pcb-component ic-component :
   pin-properties :
     [pin:Ref     | pads:Ref ... ]
     for i in 0 to 30 do :
-      val offset-row = i % 2
       for j in 0 to 30 do :
-        if (i * 30 + j + offset-row) % 2  == 0 :
-          [ P[(pin-num(i, j))] | (pin-name(i, j)) ]
+        if signal-ball?(i, j) :
+          [ P[(sig-pin-num(i, j))] | (pin-name(i, j)) ]
         else :
-          [ GND[(pin-num(i, j))] | (pin-name(i, j)) ]
-
+          [ GND[(gnd-pin-num(i, j))] | (pin-name(i, j)) ]
 
   val channel-A = Ref("chA")
   val channel-B = Ref("chB")
   val channel-C = Ref("chC")
   val channel-D = Ref("chD")
-  val channel-E = Ref("chE")
-  val channel-F = Ref("chF")
-  val channel-G = Ref("chG")
-  val channel-H = Ref("chH")
-  val channel-I = Ref("chI")
   val pwr       = Ref("pwr")
 
   val box-params = BoxSymbolParams(
@@ -476,13 +498,13 @@ public pcb-component ic-component :
 
   val box = BoxSymbol(self, params = box-params)
 
-  for (c in [channel-A channel-B channel-C channel-D channel-E channel-F channel-G channel-H channel-I], i in 0 to false) do :
-    for j in 0 to 25 do :
-      set-bank(c, self.P[i * 50 + j])
-      set-side(Left, self.P[i * 50 + j])
-    for j in 25 to 50 do :
-      set-bank(c, self.P[i * 50 + j])
-      set-side(Right, self.P[i * 50 + j])
+  for (c in [channel-A channel-B channel-C channel-D], i in 0 to false) do :
+    for j in 0 to 63 do :
+      set-bank(c, self.P[i * 127 + j])
+      set-side(Left, self.P[i * 127 + j])
+    for j in 63 to 127 do :
+      set-bank(c, self.P[i * 127 + j])
+      set-side(Right, self.P[i * 127 + j])
 
 
   set-bank(pwr, self.GND)
@@ -495,11 +517,6 @@ public pcb-component ic-component :
     channel-B => box,
     channel-C => box,
     channel-D => box,
-    channel-E => box,
-    channel-F => box,
-    channel-G => box,
-    channel-H => box,
-    channel-I => box,
   )
 
   val lp = create-landpattern(ic-bga-pkg)

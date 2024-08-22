@@ -69,7 +69,7 @@ table are derived from the references listed below.
 8. Skew match between Reset and CA (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100ps)
 9. Skew match between ERR and WCK (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100 ps)
 10. Skew match between CA (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5ps)
-11. Question? Maximum loss for all signals is 12.0 dB at Nyquist frequency
+11. Question? Maximum loss for all signals is 5.0 dB at Nyquist frequency
 12. Question? Differential impedance for RCK and WCK is 100 ohms +/- 10%
 13. Question? Single-ended impedance for DQ, DQE, CA, and ERR is 50 ohms +/- 10%
 
@@ -168,7 +168,7 @@ public defstruct GDDR7-Constraint <: SI-Constraint :
   <DOC>
   loss:Double with:
     ensure => ensure-positive!,
-    default => 12.0
+    default => 5.0
   doc: \<DOC>
   Differential Routing Structure for each Diff-Pair
   <DOC>
@@ -233,6 +233,10 @@ public defmethod constrain (cst:GDDR7-Constraint, src:JITXObject, dst:JITXObject
       structure(src.data[i].DQE, dst.data[i].DQE) = se-route-struct(cst)
       structure(src.data[i].CA, dst.data[i].CA) = se-route-struct(cst)
       structure(src.data[i].ERR, dst.data[i].ERR) = se-route-struct(cst)
+      max-loss(loss(cst), src.data[i].DQ  => dst.data[i].DQ)
+      max-loss(loss(cst), src.data[i].DQE => dst.data[i].DQE)
+      max-loss(loss(cst), src.data[i].CA  => dst.data[i].CA)
+      max-loss(loss(cst), src.data[i].ERR => dst.data[i].ERR)
 
 public defn connect-GDDR7 (src:JITXObject dst:JITXObject diff-rs:DifferentialRoutingStructure rs:RoutingStructure) :
   inside pcb-module :

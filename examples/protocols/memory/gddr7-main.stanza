@@ -13,7 +13,7 @@ defpackage jsl/examples/protocols/memory/gddr7-main:
   import jsl/bundles
   import jsl/si
 
-  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/memory/gddr7-board
 
 pcb-module gddr7-example :
   port VDD
@@ -29,6 +29,12 @@ pcb-module gddr7-example :
   connect-GDDR7(ic-gddr7 dut1.io diff(d-ti) se-50)
 
   net (GND dut1.pwr.V- dut2.pwr.V-)
+  net (VDD dut1.pwr.V+ dut2.pwr.V+)
+
+  geom(GND) :
+    copper-pour(LayerIndex(1, Top), isolate = 0.127) =  board-shape
+  geom(VDD) :
+    copper-pour(LayerIndex(1, Bottom), isolate = 0.127) =  board-shape
 
 set-current-design("gddr7-example")
 setup-board()
