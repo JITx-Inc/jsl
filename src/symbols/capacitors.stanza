@@ -318,6 +318,8 @@ public defstruct PolarizedCapacitorSymbol <: TwoPinSymbol :
   params:Maybe<PolarizedCapacitorSymbolParams> with: (
     default => None()
   )
+  use-AC?:True|False with:
+    default => false
 with:
   constructor => #PolarizedCapacitorSymbol
 
@@ -325,8 +327,9 @@ public defn PolarizedCapacitorSymbol (
   --
   pitch:Double = TWO_PIN_DEF_PITCH
   params:PolarizedCapacitorSymbolParams = ?
+  use-AC?:True|False = false
   ) -> PolarizedCapacitorSymbol:
-  #PolarizedCapacitorSymbol(pitch, params)
+  #PolarizedCapacitorSymbol(pitch, params, use-AC?)
 
 public defmethod name (x:PolarizedCapacitorSymbol) -> String :
   "Polarized Capacitor"
@@ -338,6 +341,15 @@ public defmethod build-artwork (
     (_:None): get-default-polarized-cap-symbol-params()
     (y:One<PolarizedCapacitorSymbolParams>): value(y)
   build-pol-cap-glyphs(sn, pitch(x), p)
+
+public defmethod build-pins (x:PolarizedCapacitorSymbol, node:SymbolNode) :
+  if not use-AC?(x):
+    two-pin-build-pins(x, node)
+  else:
+    val w = pitch(x) / 2.0
+    add-pin(node, #R(a), [0.0,    w  ], name = "pin-1")
+    add-pin(node, #R(c), [0.0, (- w) ], name = "pin-2")
+
 
 var CURR-POL-CAP-SYMBOL:TwoPinSymbol = PolarizedCapacitorSymbol()
 public defn get-default-polarized-capacitor-symbol () : CURR-POL-CAP-SYMBOL
