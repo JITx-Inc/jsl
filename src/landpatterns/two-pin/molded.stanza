@@ -1,0 +1,129 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/two-pin/molded:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns/framework
+  import jsl/landpatterns/two-pin/utils
+  import jsl/landpatterns/IPC
+  import jsl/geometry/box
+
+
+public defstruct Molded-2pin-Lead <: SMT-Lead:
+  lead-type:LeadProtrusion with:
+    as-method => true
+    default => BigRectangularLeads()
+  length:Toleranced with:
+    as-method => true
+  width:Toleranced with:
+    as-method => true
+with:
+  keyword-constructor => true
+
+public defstruct Molded-2pin <: Package :
+  doc: \<DOC>
+  Span from lead edge to lead edge for this component
+  Value in mm.
+  <DOC>
+  lead-span:Toleranced
+  doc: \<DOC>
+  Lead Specification for this land pattern.
+  Typically this will use {@link Molded-2pin-Lead}.
+  <DOC>
+  lead:SMT-Lead,
+  doc: \<DOC>
+
+  <DOC>
+  polarized?:True|False
+  doc: \<DOC>
+  Package Body
+  Typically a rectangular {@link PackageBody} but other
+  shapes like {@link CylindricalBody} work as well.
+  <DOC>
+  package-body:PackageBody with:
+    as-method => true
+  doc: \<DOC>
+  Pad Planner
+  <DOC>
+  pad-planner:PadPlanner with:
+    as-method => true
+  doc: \<DOC>
+  Lead numbering scheme
+  <DOC>
+  lead-numbering:Numbering with:
+    as-method => true
+  doc: \<DOC>
+  Density Level for the Generated Package
+  <DOC>
+  density-level:DensityLevel with:
+    as-method => true
+with:
+  constructor => #Molded-2pin
+
+
+public defn Molded-2pin (
+  --
+  lead-span:Toleranced
+  lead:SMT-Lead,
+  package-body:PackageBody,
+  polarized?:True|False = false,
+  pad-planner:PadPlanner = RectanglePadPlanner
+  lead-numbering:Numbering = select-numbering(polarized?)
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> Molded-2pin :
+  #Molded-2pin(
+    lead-span, lead, polarized?,
+    package-body, pad-planner, lead-numbering
+    density-level
+  )
+
+defmethod name (pkg:Molded-2pin) -> String :
+  to-string("Molded")
+
+defmethod courtyard-excess (pkg:Molded-2pin):
+  val prot = lead-type $ lead(pkg)
+  val fillets = lead-fillets(prot, density-level = density-level(pkg))
+  courtyard-excess(fillets)
+
+defmethod build-pads (
+  pkg:Molded-2pin,
+  vp:VirtualLP
+  ) :
+
+  val lead-fillets = lead-fillets(lead-type $ lead(pkg), density-level = density-level(pkg))
+
+  val term-L = length $ lead(pkg)
+  val term-W = width $ lead(pkg)
+
+  val ipc = ipc-formula(lead-span(pkg), term-L, term-W, lead-fillets)
+  val pad-size = transpose(pad-size(ipc))
+  val lead-spacing = Gmin(ipc) + y(pad-size)
+
+  val pad-seq = to-tuple $ pad-grid-smt(
+    pad-size = pad-size,
+    planner = pad-planner(pkg)
+    lead-grid = GridPlanner(
+      pitch = lead-spacing,
+      columns = 1,
+      rows = 2
+    )
+    num-scheme = lead-numbering(pkg)
+  )
+
+  println("Pads: %," % [pad-seq])
+  append-all(vp, pad-seq)
+
+public defmethod build-silkscreen (
+  pkg:Molded-2pin,
+  vp:VirtualLP
+  ):
+  val outline = create-silkscreen-pkg-extrema-outline(vp, package-body(pkg), edge = EW-Edge)
+
+  if polarized?(pkg):
+    ; Create the Dot separated from the line
+    val b = bounds(outline)
+    add-pin-1-dot(vp, Point(left(b), up(b) + 0.5))
+
+  add-reference-designator(vp)
