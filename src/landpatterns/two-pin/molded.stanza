@@ -112,7 +112,6 @@ defmethod build-pads (
     num-scheme = lead-numbering(pkg)
   )
 
-  println("Pads: %," % [pad-seq])
   append-all(vp, pad-seq)
 
 public defmethod build-silkscreen (
