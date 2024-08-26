@@ -1,0 +1,85 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/Molded-2pin:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols
+  import jsl/landpatterns
+
+  import jsl/examples/landpatterns/board
+
+pcb-component test-inductor :
+  reference-prefix = "L"
+  pin-properties :
+    [ pin : Ref | pads : Int ... | side:Dir ]
+    [ p[1]      | 1           | Left ]
+    [ p[2]      | 2           | Right ]
+
+  val symb = InductorSymbol()
+  assign-symbol $ create-symbol(symb)
+
+  val pkg = Molded-2pin(
+    lead-span = 4.9 +/- 0.2
+    lead = Molded-2pin-Lead(
+      length = 1.2 +/- 0.2
+      width = 3.8 +/- 0.1
+    )
+    package-body = PackageBody(
+      length = 4.9 +/- 0.2,
+      width = 4.9 +/- 0.2,
+      height = 4.1 +/- 0.1
+    )
+  )
+
+  assign-landpattern $ create-landpattern(pkg)
+
+
+pcb-component this-is-a-cap :
+  reference-prefix = "C"
+  pin-properties :
+    [ pin : Ref | pads : Ref ... | side:Dir ]
+    [ a      | a           | Left ]
+    [ c      | c           | Right ]
+
+
+  val symb = PolarizedCapacitorSymbol(use-AC? = true)
+  assign-symbol $ create-symbol(symb)
+
+  val pkg = Molded-2pin(
+    lead-span = 5.8 +/- 0.2
+    lead = Molded-2pin-Lead(
+      length = 1.3 +/- 0.3
+      width = 2.2 +/- 0.2
+    )
+    polarized? = true
+    package-body = PackageBody(
+      length = 5.8 +/- 0.2,
+      width = 3.2 +/- 0.2,
+      height = 2.5 +/- 0.2
+    )
+  )
+
+  assign-landpattern $ create-landpattern(pkg)
+
+
+pcb-module test-design:
+  inst L1 : test-inductor
+  place(L1) at loc(0.0,0.0) on Top
+
+  inst C1 : this-is-a-cap
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Molded-2pin-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
