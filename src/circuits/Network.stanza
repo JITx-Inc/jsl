@@ -168,11 +168,11 @@ with:
   printer => true
   constructor => #Tap
 
-public defn Tap (a:ANT, name:Symbol -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
+public defn Tap (name:Symbol, a:ANT -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
   #Tap(to-vector<ANT>([a]), name, port-id)
 
-public defn Tap (a:Instantiable, name:Symbol -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
-  Tap(Elem(a), name, port-id = port-id)
+public defn Tap (name:Symbol, a:Instantiable,  -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
+  Tap(name, Elem(a), port-id = port-id)
 
 doc: \<DOC>
 Series Node in the Circuit Network

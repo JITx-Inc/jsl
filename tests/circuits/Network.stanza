@@ -120,7 +120,7 @@ deftest(network) test-taps :
 
   val a = Elem(res)
   val b = Elem(diode, name = `scrubber)
-  val series = a + b + Tap((a|b|cap), `divOut)
+  val series = a + b + Tap(`divOut, (a|b|cap))
 
   pcb-module test:
     val circuit = create-circuit(series)
