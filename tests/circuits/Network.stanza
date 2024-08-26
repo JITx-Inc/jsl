@@ -6,6 +6,8 @@ defpackage jsl/tests/circuits/Network :
   import jitx/commands
 
   import jsl/circuits/Network
+  import jsl/symbols
+  import jsl/landpatterns
 
 public pcb-component res :
 
@@ -14,8 +16,13 @@ public pcb-component res :
   reference-prefix = "R"
   mpn = "asdf"
 
-; Use unified generator to create pins
-  port p : pin[[1 2]]
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [p[1]    | 1]
+    [p[2]    | 2]
+
+  assign-symbol $ create-symbol(ResistorSymbol())
+  assign-landpattern $ create-landpattern(get-resistor-pkg("0603"))
 
 public pcb-component cap :
   manufacturer     = "Test"
@@ -23,8 +30,13 @@ public pcb-component cap :
   reference-prefix = "C"
   mpn = "asdf"
 
-; Use unified generator to create pins
-  port p : pin[[1 2]]
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [p[1]    | 1]
+    [p[2]    | 2]
+
+  assign-symbol $ create-symbol(CapacitorSymbol())
+  assign-landpattern $ create-landpattern(get-capacitor-pkg("0603"))
 
 
 public pcb-component diode :
@@ -34,9 +46,13 @@ public pcb-component diode :
   reference-prefix = "D"
   mpn = "asdf"
 
-; Use unified generator to create pins
-  port c : pin
-  port a : pin
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [a    | 1]
+    [c    | 2]
+
+  assign-symbol $ create-symbol(DiodeSymbol())
+  assign-landpattern $ create-landpattern(get-chip-pkg("0603"))
 
 
 deftest(network) test-basic :
