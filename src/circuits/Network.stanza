@@ -64,7 +64,9 @@ instantiated in the resultant network definition.
 <DOC>
 public defstruct CircuitElement <: ANT:
   doc: \<DOC>
-  Elements of this node - This Empty by default for `CircuitElement`
+  Sub-Elements of the `CircuitElement`
+  A CircuitElement is the Element so this collection is empty by default.
+  We construct the element from the `elem-type` object.
   <DOC>
   elements:IndexedCollection<ANT> with:
     as-method => true
