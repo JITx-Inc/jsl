@@ -81,7 +81,9 @@ public defstruct FerriteSymbol <: TwoPinSymbol :
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
-
+  polarized?:True|False with:
+    as-method => true
+    default => false
   params:Maybe<FerriteSymbolParams> with:
     default => None()
 

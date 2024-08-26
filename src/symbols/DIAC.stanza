@@ -109,10 +109,15 @@ public defn build-diac-glyphs (
 
 
 public defstruct DiacSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+      as-method => true
+      default => false
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:DiacSymbol) -> String :
   "DIAC"

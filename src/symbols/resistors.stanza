@@ -190,11 +190,22 @@ public defstruct ResistorSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Resistor Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => false
+with:
+  printer => true
+  constructor => #ResistorSymbol
+
+public defn ResistorSymbol (
+  --
+  pitch:Double = TWO_PIN_DEF_PITCH,
+  ) -> ResistorSymbol:
+  #ResistorSymbol(pitch, false)
 
 public defmethod name (x:ResistorSymbol) -> String :
   "Resistor"
@@ -277,10 +288,18 @@ public defstruct VariableResistorSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Resistor Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => false
+with:
+  printer => true
+  constructor => #VariableResistorSymbol
+
+public defn VariableResistorSymbol (-- pitch:Double = TWO_PIN_DEF_PITCH) -> VariableResistorSymbol:
+  #VariableResistorSymbol(pitch, false)
 
 public defmethod name (x:VariableResistorSymbol) -> String :
   "Variable-Resistor"
@@ -410,10 +429,18 @@ public defstruct PhotoResistorSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Resistor Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => false
+with:
+  printer => true
+  constructor => #PhotoResistorSymbol
+
+public defn PhotoResistorSymbol (pitch:Double = TWO_PIN_DEF_PITCH) -> PhotoResistorSymbol:
+  #PhotoResistorSymbol(pitch, false)
 
 public defmethod name (x:PhotoResistorSymbol) -> String :
   "Photo-Resistor"
