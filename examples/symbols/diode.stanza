@@ -17,8 +17,8 @@ pcb-component test-Diode:
   mpn = "1N1234"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = DiodeSymbol()
   val symb = create-symbol(symb-defn)
@@ -40,8 +40,8 @@ pcb-component test-Schottky:
   mpn = "1N1235"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = SchottkyDiodeSymbol()
   val symb = create-symbol(symb-defn)
@@ -62,8 +62,8 @@ pcb-component test-Zener:
   mpn = "1N1236"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = ZenerDiodeSymbol()
   val symb = create-symbol(symb-defn)
@@ -84,8 +84,8 @@ pcb-component test-Tunnel:
   mpn = "1N1237"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = TunnelDiodeSymbol()
   val symb = create-symbol(symb-defn)
@@ -106,8 +106,8 @@ pcb-component test-LED:
   mpn = "1N1238"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = LEDSymbol()
   val symb = create-symbol(symb-defn)
@@ -128,8 +128,8 @@ pcb-component test-Photodiode:
   mpn = "1N1239"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
-    [ p[1] | p[1] ]
-    [ p[2] | p[2] ]
+    [ a | p[1] ]
+    [ c | p[2] ]
 
   val symb-defn = PhotoDiodeSymbol()
   val symb = create-symbol(symb-defn)

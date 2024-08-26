@@ -145,6 +145,9 @@ public defstruct CrystalSymbol <: TwoPinSymbol :
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
+  polarized?:True|False with:
+      as-method => true
+      default => false
 
   doc: \<DOC>
   Number of Case Ports on the Crystal package
