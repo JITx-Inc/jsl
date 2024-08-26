@@ -36,6 +36,7 @@ defpackage jsl/circuits/Network :
   import jsl/design/introspection
   import jsl/errors
   import jsl/ensure
+  import jsl/si/signal-ends
 
 doc: \<DOC>
 Abstract Network Type
@@ -424,14 +425,22 @@ ports that are created dynamically by the `Tap` and `ShuntTo` types.
 @member p PortArray of 2 pins, `p[1]` and `p[2]`. These are
 the two end points of the network.
 <DOC>
-public defn create-circuit (a:ANT) -> Instantiable :
+public defn create-circuit (a:ANT -- name?:Maybe<String> = None()) -> Instantiable :
 
   pcb-module network-circuit:
+    match(name?):
+      (_:None): false
+      (given:One<String>):
+        name = value(given)
+
     port p : pin[[1 2]]
     val taps = Vector<[Symbol,JITXObject]>()
     val [p1, p2] = elaborate(a, taps)
     net (p[1], p1)
+    set-signal-end(p[1], p1)
     net (p[2], p2)
+    set-signal-end(p[2], p2)
+
 
     ; Programmatically create ports for all the
     ;   taps
@@ -457,9 +466,24 @@ public defn create-circuit (a:ANT) -> Instantiable :
       val [name, pinObj] = tap
       val namedPort = namedPorts[name]
       net (namedPort, pinObj)
+      set-signal-end(namedPort, pinObj)
+
 
   network-circuit
 
+
+doc: \<DOC>
+Construct an Instantiable given a Union of ANT or Instantiable
+
+@param x Sub-Circuit to form into an Instantiable
+@param name? Optional name to apply to the create ANT sub-circuit. If
+`x` is an `Instantiable` - this argument is ignored.
+<DOC>
+public defn to-instantiable (x:ANT|Instantiable -- name?:Maybe<String> = None()) -> Instantiable:
+  match(x):
+    (x-ANT:ANT):
+        create-circuit(x-ANT, name? = name?)
+    (x-Inst:Instantiable): x-Inst
 
 ;;;;;;;;;;;;;;;;;;
 ; Operators
