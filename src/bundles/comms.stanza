@@ -37,8 +37,8 @@ pcb-bundle smbus-b (pins:Collection<SMBUSPins>):
   port smbdat
   for p in pins do :
     switch(p) :
-      SMBALERT#  : make-pin(`smbalert#)
-      SMBSUS#    : make-pin(`smbsus#)
+      SMBALERT#  : make-port(`smbalert#)
+      SMBSUS#    : make-port(`smbsus#)
 
 doc: \<DOC>
 Configurable SMBus Bundle
@@ -128,9 +128,9 @@ pcb-bundle spi-b (pins:Collection<SPIPins>):
   port sck
   for p in pins do :
     switch(p) :
-      SPI-CS  : make-pin(`cs)
-      SPI-COPI : make-pin(`copi)
-      SPI-CIPO : make-pin(`cipo)
+      SPI-CS  : make-port(`cs)
+      SPI-COPI : make-port(`copi)
+      SPI-CIPO : make-port(`cipo)
 
 doc: \<DOC>
 SPI Bundle Generator
@@ -204,7 +204,7 @@ public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
   port data : pin[width]
   for p in pins do :
     switch(p):
-      SPI-CS : make-pin(`cs)
+      SPI-CS : make-port(`cs)
       else:
         throw $ ValueError("Wide-SPI does not support pin type: %_" % [p])
 
@@ -256,16 +256,16 @@ pcb-bundle uart-b (pins:Collection<UARTPins>):
   name = "UART"
   for p in pins do :
     switch(p) :
-      UART-DTR : make-pin(`dtr)
-      UART-CTS : make-pin(`cts)
-      UART-DCD : make-pin(`dcd)
-      UART-RI  : make-pin(`ri)
-      UART-DST : make-pin(`dst)
-      UART-RTS : make-pin(`rts)
-      UART-CK : make-pin(`ck)
-      UART-DE : make-pin(`de)
-      UART-RX : make-pin(`rx)
-      UART-TX : make-pin(`tx)
+      UART-DTR : make-port(`dtr)
+      UART-CTS : make-port(`cts)
+      UART-DCD : make-port(`dcd)
+      UART-RI  : make-port(`ri)
+      UART-DST : make-port(`dst)
+      UART-RTS : make-port(`rts)
+      UART-CK : make-port(`ck)
+      UART-DE : make-port(`de)
+      UART-RX : make-port(`rx)
+      UART-TX : make-port(`tx)
 
 doc: \<DOC>
 UART Bundle Generator

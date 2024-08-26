@@ -120,7 +120,7 @@ pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   port CLKREQ#         ; clock request
   for p in pins do :
     switch(p) :
-      PCIe-PRSNT# : make-pin(`PRSNT#) ; hot plug detection
+      PCIe-PRSNT# : make-port(`PRSNT#) ; hot plug detection
 
 doc: \<DOC>
 @brief PCI-e Control bundle
