@@ -225,7 +225,7 @@ possible to use this in combination with the Parallel `|` operator.
 Example:
 This circuit:
 ```
-A + (B | ShuntTo(C, "named-shunt-port"))
+A + (B | ShuntTo(C, `named-shunt-port))
 ```
 
 Results in:
@@ -338,9 +338,12 @@ Instantiate and Connect all parallel elements
 @param a Parallel Network Element
 @param taps Accumulator for the external ports of the network.
 @return Tuple of `[p1, p2]` which is typically the first parallel elements ports. All of
-the other element's `p1` and `p2` are netted to t he first parallel element, respectively.
-`ShuntTo` elements are handled differently - typically p1 of the shunted component is connected
-by the `p2` is not connected.
+the other element's `p1` and `p2` are netted to the first parallel element, respectively.
+
+`ShuntTo` elements are handled differently. Typically, `p1` port of the shunted sub-network is
+connected to the `p1` of all the other components in paralle. The `p2` port of the shunted
+sub-network is not connected to the other parallel components, and is instead connected to a
+external port.
 <DOC>
 public defn connect-parallel (a:Parallel, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module:
