@@ -191,9 +191,10 @@ with:
 public defn InductorSymbol (
   --
   pitch:Double = TWO_PIN_DEF_PITCH
-  params:InductorSymbolParams = ?
+  params:InductorSymbolParams = ?,
+  polarized?:True|False = false
   ) -> InductorSymbol:
-  #InductorSymbol(pitch, false, params)
+  #InductorSymbol(pitch, polarized?, params)
 
 public defmethod name (x:InductorSymbol) -> String :
   "Inductor"
