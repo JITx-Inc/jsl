@@ -13,11 +13,11 @@ Create short-trace relationships using `signal-ends`
 This function is generator and is expected to run in
 a `pcb-module` context.
 
-This function uses the `find-singal-end` function to
+This function uses the `find-signal-end` function to
 inspect for pad forwarding and then uses the forwarded
 pad if any to construct the `short-trace`.
 
-This helps get around cases where a module's port is
+This helps address cases where a module's port is
 passed in the arguments as the module itself has used
 `set-signal-ends` on the appropriate port
 
