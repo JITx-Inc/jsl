@@ -134,10 +134,10 @@ public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
   val xy = (side / 2.0) * cos(to-radians(45.0))
 
   val poses = [
-    loc(xy, xy) * loc(0.0, 0.0, -135.0),
-    loc((- xy), xy) * loc(0.0, 0.0, -45.0)
-    loc((- xy), (- xy)) * loc(0.0, 0.0, -135.0)
-    loc(xy, (- xy)) * loc(0.0, 0.0, -45.0)
+    loc(xy, xy) * loc(0.0, 0.0, 45.0),
+    loc((- xy), xy) * loc(0.0, 0.0, 135.0)
+    loc((- xy), (- xy)) * loc(0.0, 0.0, 45.0)
+    loc(xy, (- xy)) * loc(0.0, 0.0, 135.0)
   ]
   for p1 in poses do:
     val child = create-child(node, pose = p1, class = "diode")
