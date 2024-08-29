@@ -1,0 +1,160 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/arrays:
+  import core
+  import jitx
+  import jitx/commands
+
+doc: \<DOC>
+Construct a schematic symbol that is an array of glyphs
+
+For network arrays of resistors, capacitors, etc, it is common
+to take a glyph for a particular symbol, replicate it N times,
+and then capture all of those components in a schematic symbol
+box.
+
+# Examples:
+
+Example:
+https://industrial.panasonic.com/cdbs/www-data/pdf/AOC0000/AOC0000C14.pdf
+
+This is a resistor network component with N individual resistors. These
+are typically referred to as `Isolated`
+
+TODO - Image Here
+
+There are other variants - such as a "bussed" network:
+https://industrial.panasonic.com/cdbs/www-data/pdf/AOC0000/AOC0000C12.pdf
+
+In the bussed version - each component only has one of its element
+pins exposed. The other side of the element is "bussed" or tied together
+with all of the other pins and exposed as a single pin (or a fixed small
+number of pins).
+
+TODO - Image Here
+
+# Limitations
+
+This type is intended to capture the case where all individual components
+are shown in the same schematic symbol. It does not capture
+the component network where each resistor/capacitor/etc are separate
+symbol units that can be positioned independently from the others. This
+is another common pattern but it is left for a separate implementation.
+
+
+<DOC>
+public defstruct SymbolArray <: SymbolDefn :
+  doc: \<DOC>
+  Pitch for the constructed array of symbols
+  The X-dim is for the individual symbol
+  <DOC>
+  pitch:Dims with:
+    ensure => ensure-positive!
+
+  doc: \<DOC>
+  Glyph Generator Function for each element
+
+  This function should generate the per-element symbol content
+  This function should use the `x(pitch)` from `SymbolArray` to
+  determine the
+  <DOC>
+  build-glyph:((SymbolNode, SymbolArray) -> False) with:
+  doc: \<DOC>
+  Encodes the pin pair for each element of the network
+
+  This tuple determines how many symbols will be drawn
+  via the `build-glyph` function and will generally determine
+  how large the symbol is.
+
+  In an isolated array - there will be N `KeyValue`
+  elements in this tuple. Each will have a unique Ref Pair
+  for the element.
+
+  ```
+    [
+      p[1] => p[8],
+      p[2] => p[7],
+      p[3] => p[6],
+      ...
+    ]
+  ```
+
+  In the bussed array case - there will be N `KeyValue`
+  elements in this Tuple - but they may not be unique.
+  For example - you may have several where the second value
+  is the same:
+
+  ```
+    [
+      p[1] => p[8]
+      p[2] => p[8]
+      p[3] => p[8]
+      ...
+    ]
+  ```
+  In cases, where there are more than 1 bussed connected, the
+  user would use a PadArray in the component declaration to
+  map to this single schematic pin (ie, `p[8]` above)
+
+  <DOC>
+  pin-mapping:Tuple<KeyValue<Ref,Ref>>
+
+
+doc: \<DOC>
+Create a symbol unit mapping for independent symbols for component network arrays
+
+This function creates the bank mapping type required to feed {@link assign-symbols}
+in `box-symbol`. The idea is that this function helps construct a
+symbol structure for the case where the user wants to use independent
+symbols that can be positioned in the schematic separately from each other, but
+are part of the same root component network component.
+
+This is typically most effective for isolated network arrays not bussed network arrays.
+
+The user will be expected to setup the `pin-properties` table in their component like this:
+
+```
+  pin-properties:
+    [pin:Ref | pad:Int ... | bank:Int ]
+    [p[1]    |  1          | 1]
+    [p[8]    |  8          | 1]
+    [p[2]    |  2          | 2]
+    [p[7]    |  7          | 2]
+    [p[3]    |  3          | 3]
+    [p[6]    |  6          | 3]
+    ...
+```
+
+Then this function will create a mapping that looks like this for feeding to
+the `assign-symbols` function:
+
+```
+val symb-banks = [
+  1 => create-symbol $ symb([#R(p[1]), #R(p[8])])
+  2 => create-symbol $ symb([#R(p[2]), #R(p[7])])
+  3 => create-symbol $ symb([#R(p[3]), #R(p[6])])
+  ...
+]
+assign-symbols(banks = symb-banks)
+```
+
+Where `symb` is the constructor for the symbol definition that takes a
+set of refs to the pins that must exist on the create symbol to map to the
+definitions in the `pin-properties` table.
+
+
+@param symb Constructor for the `SymbolDefn`. This function will be passed a
+tuple of Refs for each of the pins of that object. For some symbols, the order
+won't matter - ie for resistors - it just needs two. For components where the
+order matters, the best path is to use a particular naming sequence in the pin-properties
+table that this `symb` function can then decode.
+@param obj Object this function inspects to find the bank -> pin mappings. This
+object is where the `pin-properties` table exists. The most common way to use
+this would be to reference `self` - that is the default.
+@param banks Set of banks to create symbols. This function will inspect the symbol
+properties (see box-symbol) and determine the pins associated with each bank and then
+pass the refs to those pins to the `symb` function to create a symbol.
+If this value is `None()` - then this function will find all banks defined in the
+component object and report them as a separate symbol units associatd with each bank.
+<DOC>
+public defn create-independent-network-symbols (symb:(Tuple<Ref> -> SymbolDefn) -- obj:Instantiable|Self = self, banks:Tuple<Int|Ref> = ?) -> Tuple<KeyValue<Int|Ref, UnitSymbol>>:
+  []
