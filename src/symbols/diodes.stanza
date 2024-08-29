@@ -99,16 +99,16 @@ public defn build-diode-glyphs (
   if h > p2 :
     throw $ ValueError("Invalid Diode Symbol Dimension: Body is too Large: body=%_ pitch=%_" % [body-dims, pitch])
 
-  line(node, [Point(0.0, p2), Point(0.0, h)], width = line-width, name = "front-porch")
-  line(node, [Point( (- bw2), h), Point(bw2, h)], width = line-width, name = "T-bar")
+  line(node, [Point(0.0, (- p2)), Point(0.0, (- h))], width = line-width, name = "front-porch")
+  line(node, [Point( (- bw2), (- h)), Point(bw2, (- h))], width = line-width, name = "T-bar")
 
-  val tri-pts = [Point(0.0, h), Point(bw2, (- h)), Point((- bw2), (- h)), Point(0.0, h)]
+  val tri-pts = [Point(0.0, (- h)), Point(bw2, h), Point((- bw2), h), Point(0.0, (- h))]
   if filled?:
     polygon(node, tri-pts, name = "triangle")
   else:
     line(node, tri-pts, width = line-width, name = "triangle")
 
-  line(node, [Point(0.0, (- h)), Point(0.0, (- p2))], width = line-width, name = "back-porch")
+  line(node, [Point(0.0, h), Point(0.0, p2)], width = line-width, name = "back-porch")
 
 
 public defstruct DiodeSymbol <: TwoPinSymbol :
@@ -218,9 +218,9 @@ public defn build-schottky-diode-glyphs (
 
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size)), Point(wing-size, (- wing-size))])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h, 180.0) * wing-shape
+  val R-wing = loc(bw2, (- h), 180.0) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -337,9 +337,9 @@ public defn build-zener-diode-glyphs (
 
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point((- wing-size), (- wing-size))])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h, 180.0) * wing-shape
+  val R-wing = loc(bw2, (- h), 180.0) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -449,11 +449,11 @@ public defn build-tunnel-diode-glyphs (
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
 
-  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size))])
+  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, wing-size)])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h) * wing-shape
+  val R-wing = loc(bw2, (- h)) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -571,15 +571,15 @@ public defn build-led-glyphs (node:SymbolNode, pitch:Double, params:LEDSymbolPar
 
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
-  val angle = (- 30.0)
+  val angle = 30.0
 
   val shaft = shaft-length(arrow-params)
   val x-off = (- (bw2 + (1.2 * shaft)))
-  val y-off = (h / 2.0)
-  val y-adj = 0.3 * y-off
-  val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
+  val y-off = (h / -2.0)
+  val y-adj = 1.5 * y-off
+  val arrow-1 = loc(x-off, y-off , angle) * arrow
   add-glyph(node, arrow-1, name? = One("arrow-1"))
-  val arrow-2 = loc(x-off, (y-adj - y-off), angle) * arrow
+  val arrow-2 = loc(x-off, (y-off + y-adj), angle) * arrow
   add-glyph(node, arrow-2, name? = One("arrow-2"))
 
 
@@ -681,10 +681,10 @@ public defn build-photo-diode-glyphs (node:SymbolNode, pitch:Double, params:Phot
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
 
-  val angle = (- (30.0 + 180.0))
+  val angle = (150.0)
 
   val x-off = (- (1.2 * bw2)  )
-  val y-off = (h / 2.0)
+  val y-off = (h / -2.0)
   val y-adj = 0.3 * y-off
   val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
   add-glyph(node, arrow-1, name? = One("arrow-1"))
