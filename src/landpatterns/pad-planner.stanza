@@ -372,6 +372,27 @@ public defmethod hole-generator (x:PthPadPlanner, row:Int, column:Int) -> (Dims 
   to-CircleOrCapsule
 
 
+public defstruct Pin1-PthPadPlanner <: PthPadPlanner :
+  doc: \<DOC>
+  Pin 1 Pad Shapper
+  This function is called for `col=0, row=0` to construct
+  the copper pad shape.
+  <DOC>
+  pin1-shaper:(Dims -> Shape)
+  doc: \<DOC>
+  Copper pad shape
+  Both top and bottom copper for the PTH will
+  have the same shape.
+  <DOC>
+  shaper:(Dims -> Shape) with:
+    as-method => true
+    default => to-CircleOrCapsule
+
+public defmethod shape-generator (x:Pin1-PthPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
+  if column == 0 and row == 0: pin1-shaper(x)
+  else: shaper(x)
+
+
 public defstruct StaggerPthPlanner <: PthPadPlanner :
   doc: \<DOC>
   Copper pad shape
