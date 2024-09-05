@@ -13,6 +13,15 @@ defpackage jsl/si/bus :
 doc: \<DOC>
 A wrapper for `KeyValue` indicating that the given pair of
 objects should be connected by a short trace.
+
+In this toy example, port `p1` will be connected to `r1.p[1]` with
+a short trace.
+```stanza
+require p1 from mcu
+inst r1 : my-resitor
+port p2
+topo-bus(ShortTrace(p1 => r1) => p2)
+```
 <DOC>
 public deftype ShortTrace <: KeyValue
 public defn ShortTrace (kv:KeyValue) :
