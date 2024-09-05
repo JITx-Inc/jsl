@@ -45,7 +45,7 @@ pcb-module gddr7-example :
   symbol(VDD) = PWR-SYMB
 
 
-set-current-design("gddr7-example-redux")
+set-current-design("gddr7-example-bd")
 setup-board()
 ; Set the schematic sheet size
 set-paper(ANSI-B)
