@@ -110,8 +110,8 @@ doc: \<DOC>
   length as necessary.
 
   A "bus segment" is either:
-  * A tuple of pins
-  * A single pin
+  * A tuple of single-pin or array ports
+  * A single-pin or array port
   * An Instantiable
   * A "ShortTrace"
 
@@ -119,6 +119,29 @@ doc: \<DOC>
   either a pin or a tuple of pins. If given an Instantiable
   for one segment of the chain, this function will create as many concrete
   instances as necessary.
+
+  We do not currently accept concrete instances, just pins or Instantiables.
+
+  We assume that any compatible Instantiable has pins `p[1]` and `p[2]`.
+
+  We assume that all concrete segments are the same size and shape:
+  we can only compute `topo-bus([a, b, c], [d, e, f])` when port `a`
+  matches port `d`, and so on.
+
+  @snippet
+
+  ```stanza
+  port mii : rmii-bus
+  require sw-bus : rmii-bus from mcu
+  val series-R-type = create-resistor(resistance = 51.0, precision = (1 %), case = ["0603"])
+  val rx-bus = [sw-bus.rxd, sw-bus.crs-dv, sw-bus.ref-clk]
+  val rx-out = [mii.rxd, mii.crs-dv, mii.ref-clk]
+  topo-bus(ShortTrace(rx-bus => series-R-type) => rx-out)
+  ```
+
+  @snip-note 3 `create-resistor` returns an `Instantiable`
+  @snip-note 4 `sw-bus.rxd` and `mii.rxd` are both arrays of two pins. `topo-bus` will have to instantiate four resistors to connect the entire bus.
+  @snip-note 6 All objects in `rx-bus` will be connected to their respective resistor with a short-trace.
 <DOC>
 public defn topo-bus (pair:KeyValue) -> Tuple<JITXObject> :
   ensure-valid-tree!(pair)
