@@ -89,6 +89,115 @@ public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
       topo-net(p1, p2)
 
 doc: \<DOC>
+A wrapper for `KeyValue` indicating that the given pair of
+objects should be connected by a short trace.
+<DOC>
+public deftype ShortTrace <: KeyValue
+public defn ShortTrace (kv:KeyValue) :
+  new ShortTrace :
+    defmethod key (this) : key(kv)
+    defmethod value (this) : value(kv) 
+defmethod print (o:OutputStream, st:ShortTrace) :
+  print(o, "ShortTrace(%_ => %_)" % [key(st) value(st)])
+
+doc: \<DOC>
+  This function will construct chained topology net consisting of
+  a sequence of "bus segments".
+
+  Given a sequence of key-value pairs of "bus segments", this function
+  will connect them, generate topology segments, and constrain the trace
+  length as necessary.
+
+  A "bus segment" is either:
+  * A tuple of pins
+  * A single pin
+  * An Instantiable
+  * A "ShortTrace"
+
+  The left- and right-most components of the chain must be concrete --
+  either a pin or a tuple of pins. If given an Instantiable
+  for one segment of the chain, this function will create as many concrete
+  instances as necessary.
+<DOC>
+public defn topo-bus (pair:KeyValue) :
+  ensure-valid-tree!(pair)
+  val [l, r] = unpack(pair)
+  make-topo-bus(l, r, short-trace? = pair is ShortTrace)
+
+defn ensure-valid-tree! (kv:KeyValue) : false ; [TODO] : check precondition
+
+; Traverse left, then connect to the right
+defn make-topo-bus (l:KeyValue|JITXObject|Tuple, r:KeyValue|JITXObject|Tuple|Instantiable -- short-trace?:True|False = false) -> Tuple<JITXObject> :
+  val lhs = flatten(l)
+  connect(lhs, r, short-trace?)
+
+defn connect (lhs:Tuple, r:KeyValue|JITXObject|Tuple|Instantiable, short-trace?) -> Tuple :
+  match(r) :
+    (x:KeyValue) :
+      val [l, r] = unpack(x)
+      val lhs* = connect(lhs, l, short-trace?)
+      connect(lhs*, r, x is ShortTrace)
+    (x:JITXObject) :
+      connect-topo-bus(lhs, flatten-obj(x), short-trace?)
+    (x:Tuple) :
+      val r* = to-tuple $ seq-cat(flatten-obj, x)
+      connect-topo-bus(lhs, r*, short-trace?)
+    (x:Instantiable) :
+      connect-topo-bus(lhs, x, short-trace?)
+
+defn connect-topo-bus (lhs:Tuple, rhs:Instantiable, short-trace?:True|False) -> Tuple :
+  inside pcb-module :
+    to-tuple $
+      for l in lhs seq :
+        inst i : rhs 
+        topo-net(l, i.p[1])
+        if short-trace? :
+          short-trace(l, i.p[1])
+        i.p[2]
+
+defn connect-topo-bus (lhs:Tuple, rhs:Tuple, short-trace?:True|False) -> Tuple :
+  inside pcb-module :
+    to-tuple $
+      for (a in lhs, b in rhs) seq :
+        topo-net(a => b)
+        if short-trace? :
+          short-trace(a, b)
+        b
+
+defn flatten (x:KeyValue|JITXObject|Tuple) -> Tuple<JITXObject> :
+  match(x) :
+    (x:KeyValue) :
+      val [l, r] = unpack(x)
+      make-topo-bus(l, r, short-trace? = x is ShortTrace)
+    (x:JITXObject) : flatten-obj(x)
+    (x:Tuple) : to-tuple $ seq-cat(flatten-obj, x)
+
+defn flatten-obj (x:JITXObject) -> Tuple<JITXObject> :
+  match(port-type(x)) :
+    (t:SinglePin) : [x]
+    (t:PortArray) : to-tuple $ pins(x)
+    (otherwise) : throw $ Exception("nope")
+
+
+; [TODO] : return val
+; [TODO] : short-trace
+defn topo-bus (lhs:JITXObject, instantiable:Instantiable, rhs:JITXObject) -> False :
+
+  defn make-bus (l, r) :
+    inside pcb-module :
+      inst i : instantiable
+      topo-net(l => i.p[1])
+      topo-net(i.p[2] => r)
+      i
+  if port-type(lhs) == port-type(rhs) :
+    for (p in pins(lhs), q in pins(rhs)) do : make-bus(p, q)
+  else : throw(Exception("Cannot bus mismatched types"))
+
+  false
+      ;short-trace(lhs, i.p[1])
+
+
+doc: \<DOC>
 Construct a KeyValue Daisy Chain of Ports
 
 This function is most useful when used with an `InstanceArray` of components
