@@ -1,0 +1,129 @@
+#use-added-syntax(jitx)
+defpackage jsl/si/bus :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/utils
+  import jsl/design/introspection
+  import jsl/si/helpers
+
+doc: \<DOC>
+A wrapper for `KeyValue` indicating that the given pair of
+objects should be connected by a short trace.
+<DOC>
+public deftype ShortTrace <: KeyValue
+public defn ShortTrace (kv:KeyValue) :
+  new ShortTrace :
+    defmethod key (this) : key(kv)
+    defmethod value (this) : value(kv) 
+defmethod print (o:OutputStream, st:ShortTrace) :
+  print(o, "ShortTrace(%_ => %_)" % [key(st) value(st)])
+
+doc: \<DOC>
+  This function will construct chained topology net consisting of
+  a sequence of "bus nodes".
+
+  Given a sequence of key-value pairs of nodes, this function
+  will connect them and generate topology segments.
+
+  In this context, a node is either:
+  * A tuple of single-pin or array ports
+  * A single-pin or array port
+  * An Instantiable
+  * A "ShortTrace"
+
+  If given an Instantiable for one node of the chain, this function will 
+  create as many concrete instances as necessary.
+  The left- and right-most nodes of the chain must be pins from the JITX
+  design. Both concrete and abstract require pins work.
+
+  We do not currently accept concrete instances, just pins or Instantiables.
+
+  We assume that any compatible Instantiable has pins `p[1]` and `p[2]`.
+
+  We assume that all concrete segments are the same size and shape:
+  we can only compute `topo-bus([a, b, c], [d, e, f])` when port `a`
+  matches port `d`, and so on.
+
+  Returns a tuple of all newly-instantiated objects.
+
+  @snippet
+
+  ```stanza
+  port mii : rmii-bus
+  require sw-bus : rmii-bus from mcu
+  val series-R-type = create-resistor(resistance = 51.0, precision = (1 %), case = ["0603"])
+  val rx-bus = [sw-bus.rxd, sw-bus.crs-dv, sw-bus.ref-clk]
+  val rx-out = [mii.rxd, mii.crs-dv, mii.ref-clk]
+  topo-bus(ShortTrace(rx-bus => series-R-type) => rx-out)
+  ```
+
+  @snip-note 3 `create-resistor` returns an `Instantiable`
+  @snip-note 4 `sw-bus.rxd` and `mii.rxd` are both PortArray instances containing two pins. `topo-bus` will thus return a tuple of four new resistors that connect the two buses.
+  @snip-note 6 All objects in `rx-bus` will be connected to their respective resistor with a short-trace.
+<DOC>
+public defn topo-bus (pair:KeyValue) -> Tuple<JITXObject> :
+  ensure-valid-tree!(pair)
+  val [l, r] = unpack(pair)
+  val acc = Vector<JITXObject>()
+  make-topo-bus(l, r, acc, short-trace? = pair is ShortTrace)
+  to-tuple $ acc
+
+defn ensure-valid-tree! (kv:KeyValue) : false ; [TODO] : check preconditions
+
+; Traverse left, then connect to the right
+defn make-topo-bus (l:KeyValue|JITXObject|Tuple, r:KeyValue|JITXObject|Tuple|Instantiable, acc:Vector, -- short-trace?:True|False = false) -> Tuple<JITXObject> :
+  val lhs = flatten(l, acc)
+  connect(lhs, r, acc, short-trace?)
+
+defn connect (lhs:Tuple, r:KeyValue|JITXObject|Tuple|Instantiable, acc:Vector, short-trace?) -> Tuple :
+  match(r) :
+    (x:KeyValue) :
+      val [l, r] = unpack(x)
+      val lhs* = connect(lhs, l, short-trace?, acc)
+      connect(lhs*, r, acc, x is ShortTrace)
+    (x:JITXObject) :
+      connect-topo-bus(lhs, flatten-obj(x), short-trace?)
+    (x:Tuple) :
+      val r* = to-tuple $ seq-cat(flatten-obj, x)
+      connect-topo-bus(lhs, r*, short-trace?)
+    (x:Instantiable) :
+      connect-topo-bus(lhs, x, acc, short-trace?)
+
+defn connect-topo-bus (lhs:Tuple, rhs:Instantiable, acc, short-trace?:True|False) -> Tuple :
+  inside pcb-module :
+    to-tuple $
+      for l in lhs seq :
+        inst i : rhs 
+        add(acc, i)
+        val [p1, p2] = get-element-ports(i)
+        topo-net(l, p1)
+        if short-trace? :
+          short-trace(l, p1)
+        p2
+
+defn connect-topo-bus (lhs:Tuple, rhs:Tuple, short-trace?:True|False) -> Tuple :
+  inside pcb-module :
+    to-tuple $
+      for (a in lhs, b in rhs) seq :
+        topo-net(a => b)
+        if short-trace? :
+          short-trace(a, b)
+        b
+
+defn flatten (x:KeyValue|JITXObject|Tuple, acc:Vector) -> Tuple<JITXObject> :
+  match(x) :
+    (x:KeyValue) :
+      val [l, r] = unpack(x)
+      make-topo-bus(l, r, acc, short-trace? = x is ShortTrace)
+    (x:JITXObject) : flatten-obj(x)
+    (x:Tuple) : to-tuple $ seq-cat(flatten-obj, x)
+
+defn flatten-obj (x:JITXObject) -> Tuple<JITXObject> :
+  match(port-type(x)) :
+    (t:SinglePin) : [x]
+    (t:PortArray) : to-tuple $ pins(x)
+    (bundle) : throw $ ValueError("topo-bus cannot connect bundle ports. Port %_ is a bundle port of type %_" % [ref(x), bundle])
