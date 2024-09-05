@@ -471,19 +471,17 @@ public pcb-component mem-component :
   assign-landpattern(lp)
 
   for i in 0 to 4 do :
-    diff-pin-model(self.RCK_c[i], self.RCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
-    diff-pin-model(self.WCK_c[i], self.WCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.RCK_c[i], self.RCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
+    diff-pin-model(self.WCK_c[i], self.WCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
 
-  ; for i in 0 to 4 do :
-  ;   for j in 0 to 10 do :
-  ;     pin-model(self.DQp[j][i], delay = typ(1.0e-15), loss = typ(0.1))
-  ;   for j in 0 to 5 do :
-  ;     pin-model(self.CA[j][i], delay = typ(1.0e-15), loss = typ(0.1))
-  ;   pin-model(self.DQE[i], delay = typ(1.0e-15), loss = typ(0.1))
-  ;   pin-model(self.ERR[i], delay = typ(1.0e-15), loss = typ(0.1))
-  ; pin-model(self.RESET_n, delay = typ(1.0e-15), loss = typ(0.1))
-
-    
+  for i in 0 to 4 do :
+    for j in 0 to 10 do :
+      pin-model(self.DQp[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    for j in 0 to 5 do :
+        pin-model(self.CA[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.DQE[i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.ERR[i]) = PinModel(typ(1.0e-15), typ(0.1))
+  pin-model(self.RESET_n) = PinModel(typ(1.0e-15), typ(0.1))
 
 public pcb-module mem-device :
   port io : gddr7()
@@ -508,6 +506,9 @@ public pcb-module mem-device :
   topo-net(io.control.ZQ_CD mem.ZQ_CD)
 
   for p in pins(mem.VDDQ) do :
+    net (pwr.V+ p)
+
+  for p in pins(mem.VDD) do :
     net (pwr.V+ p)
 
   for p in pins(mem.VSS) do :

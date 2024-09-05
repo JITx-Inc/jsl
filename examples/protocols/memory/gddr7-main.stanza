@@ -7,6 +7,8 @@ defpackage jsl/examples/protocols/memory/gddr7-main:
 
 
   import jsl/design/settings
+  import jsl/symbols
+  import jsl/symbols/net-symbols
   import jsl/symbols/SymbolDefn
 
   import jsl/protocols/memory/gddr7
@@ -16,8 +18,11 @@ defpackage jsl/examples/protocols/memory/gddr7-main:
   import jsl/examples/protocols/memory/gddr7-board
 
 pcb-module gddr7-example :
-  port VDD
-  port GND
+  port vdd
+  port gnd
+
+  net GND (gnd)
+  net VDD (vdd)
 
   inst dut1 : jsl/examples/protocols/memory/gddr7-src/mem-device
   inst dut2 : jsl/examples/protocols/memory/gddr7-src/ic-device
@@ -36,7 +41,11 @@ pcb-module gddr7-example :
   geom(VDD) :
     copper-pour(LayerIndex(1, Bottom), isolate = 0.127) =  board-shape
 
-set-current-design("gddr7-example")
+  symbol(GND) = GND-SYMB
+  symbol(VDD) = PWR-SYMB
+
+
+set-current-design("gddr7-example-redux")
 setup-board()
 ; Set the schematic sheet size
 set-paper(ANSI-B)
