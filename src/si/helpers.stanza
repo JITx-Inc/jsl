@@ -128,6 +128,8 @@ doc: \<DOC>
   we can only compute `topo-bus([a, b, c], [d, e, f])` when port `a`
   matches port `d`, and so on.
 
+  Returns a tuple of all newly-instantiated objects.
+
   @snippet
 
   ```stanza
@@ -140,7 +142,7 @@ doc: \<DOC>
   ```
 
   @snip-note 3 `create-resistor` returns an `Instantiable`
-  @snip-note 4 `sw-bus.rxd` and `mii.rxd` are both arrays of two pins. `topo-bus` will have to instantiate four resistors to connect the entire bus.
+  @snip-note 4 `sw-bus.rxd` and `mii.rxd` are both arrays of two pins. `topo-bus` will return a tuple of four new resistors that connect the two buses.
   @snip-note 6 All objects in `rx-bus` will be connected to their respective resistor with a short-trace.
 <DOC>
 public defn topo-bus (pair:KeyValue) -> Tuple<JITXObject> :
