@@ -47,6 +47,10 @@ doc: \<DOC>
   we can only compute `topo-bus([a, b, c], [d, e, f])` when port `a`
   matches port `d`, and so on.
 
+  When connecting instances or Instantiables, we assume that the object
+  either has ports [p[1], p[2]] or ports [c, a]. We will connect them
+  in that order.
+
   Returns a tuple of all newly-instantiated objects.
 
   @snippet
