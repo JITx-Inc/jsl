@@ -34,6 +34,18 @@ public defstruct PotentiometerSymbol <: ResistorSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   )
+  polarized?:True|False with:
+    as-method => true
+    default => false
+with:
+  printer => true
+  constructor => #PotentiometerSymbol
+
+public defn PotentiometerSymbol (
+  --
+  pitch:Double = TWO_PIN_DEF_PITCH
+  ) -> PotentiometerSymbol:
+  #PotentiometerSymbol(pitch)
 
 public defmethod name (x:PotentiometerSymbol) -> String :
   "Potentiometer"

@@ -5,6 +5,8 @@ defpackage jsl/design/introspection:
   import jitx
   import jitx/commands
 
+  import jsl/errors
+  import jsl/landpatterns/introspection
 
 doc: \<DOC>
 Retrieve the `Instantiable` that generates the instances of the passed object.
@@ -32,6 +34,11 @@ Retrieve a Port by its symbol name
 This function retrieves a port on a component but doesn't
 throw an error if that port does not exist.
 
+For `PortArray` ports, if the `name` contains the `[]` indexing
+argument, then this will find individual port array elements.
+If there is not `[]` indexing argument, then the `PortArray`
+port itself will be returned.
+
 @param obj Component or Module to interrogate for a port
 @param name Name of port to interrogate. This name can include
 dot-notation style introspection if needed.
@@ -41,8 +48,13 @@ dot-notation style introspection if needed.
 public defn get-port-by-name (obj:JITXObject, name:String) -> Maybe<JITXObject> :
   label<Maybe<JITXObject>> return:
     val pat = to-string(".%_" % [name])
-    for p in pins(obj) do:
-      val refName = to-string $ ref(p)
+    val has-index? = suffix?(name, "]")
+    for p in ports(obj) do:
+      val refName = to-string $ match(ref(p)):
+        (ir:IndexRef):
+          if not has-index?: ref(ir)
+          else: ir
+        (other): other
       if suffix?(refName, pat) :
         return(One(p))
     return(None())
@@ -109,7 +121,7 @@ println("N: %_" % [N])
 ; N: GND[0]
 
 val B = #R(some.other.C.VDD)
-val N2 = get-ref-name(A)
+val N2 = get-ref-name(B)
 println("N2: %_" % [N2])
 
 ; Will Print:
@@ -125,6 +137,41 @@ public defn get-ref-name (r:Ref) -> Ref:
     (x): 1
   tail(r, ref-length(r) - nameIndex)
 
+doc: \<DOC>
+Check if the passed object is a `pcb-module` instance
+<DOC>
+public defn is-module? (obj:JITXObject) -> True|False :
+  instance-type(obj) is SingleModule
+
+doc: \<DOC>
+Check if the passed object is a `pcb-component` instance
+<DOC>
+public defn is-component? (obj:JITXObject) -> True|False :
+  instance-type(obj) is SingleComponent
+
+doc: \<DOC>
+Get the parent ref for a particular object
+
+This is useful to get the Ref of the parent
+component when passed a Ref to a `port` of that component.
+@param r Ref to a child object of a parent - ie `some.parent.child`
+@return Ref to the parent of the child object - ie `some.parent`
+<DOC>
+public defn get-parent-ref (r:Ref) -> Maybe<Ref>:
+  val n = get-ref-name(r)
+  val n-len = ref-length(n)
+  val total-len = ref-length(r)
+  if total-len - n-len > 0:
+    One $ base(r, ref-length(r) - n-len)
+  else:
+    None()
+
+public defn get-parent-ref! (r:Ref) -> Ref:
+  match(get-parent-ref(r)):
+    (_:None): throw $ ValueError("No Parent Ref Present for Ref '%_'" % [to-string(r)])
+    (given:One<Ref>):
+      value(given)
+
 
 doc: \<DOC>
 Retrieve a mapping of Ports to Pads
@@ -137,7 +184,6 @@ public defn port-to-pads (dev:JITXObject) -> Tuple<KeyValue<JITXObject, Tuple<JI
   inside pcb-module:
     ;Get the landpattern definition of the instance's component.
     val lp = landpattern(instance-definition(dev))
-
     ;Build a table storing each landpattern pad by its ref.
     val pad-table = to-hashtable<Ref, JITXObject>(seq({ref(_0) => _0}, pads(lp)))
     ;Scroll through pin property table to map instance port to landpattern pads.
@@ -173,9 +219,291 @@ public defn get-pads-from-port (p2p-map:Tuple<KeyValue<JITXObject, Tuple<JITXObj
 doc: \<DOC>
 Retrieve the pads associated with a particular port
 
-@param comp A `pcb-component` instance
-@param pt Port of that very same component instance `comp`
-@return If port is found and has pads, a tuple of `Pad` objects for that port. Otherwise `None()`.
+@param pt Port on a component in the passed context.
+@param cxt Context to search for the component instance. The default is `self`.
+@return If component associated with `pt` is found in `cxt` and the port `pt` has pads, this function returns a tuple of `Pad` objects for that port. Otherwise `None()`.
 <DOC>
-public defn get-pads-from-port (comp:JITXObject, pt:JITXObject) -> Maybe<Tuple<JITXObject>> :
-  get-pads-from-port(port-to-pads(comp), pt)
+
+public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<Tuple<JITXObject>>:
+  inside pcb-module:
+    val comp? = get-component-from-port(pt, cxt)
+    match(comp?):
+      (_:None):
+        throw $ ValueError("No Parent Component Found for Port '%_'" % [ref(pt)])
+      (given:One<JITXObject>):
+        val p2p-map = port-to-pads(value(given))
+        get-pads-from-port(p2p-map, pt)
+
+doc: \<DOC>
+Retrieve the parent instance (component or module) for a port.
+
+This function expects the caller to pass a port `comp.GND` and then
+this function will return a reference to `comp` as a `JITXObject`.
+
+Be careful of child ports on bundle ports - these will give a ref
+to the parent bundle port - not the component.
+
+This function expects to be called from `pcb-module` context.
+
+@param pt Port on a component or module
+@return Reference to a `pcb-module` or `pcb-component` instance.
+<DOC>
+public defn get-parent-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    val pt-R = ref(pt)
+    val parent-R? = get-parent-ref(pt-R)
+    match(parent-R?):
+      (_:None): One(self)
+      (given:One<Ref>):
+        find-instance-by-ref(value(given), cxt)
+
+
+doc: \<DOC>
+Get a component instance from a Port
+
+This function can be called from a `pcb-module` context. Calling from
+a `pcb-component` context will likely result in an exception.
+
+@param pt Port on a component instance.
+@param cxt Context to search for components in.
+@return If we successfully, determine the parent component, this returns a reference to that
+component as a JITXObject. If not, we return `None()`.
+@throws ValueError If the user passes a port on a module or we can't determine if this is a component context.
+<DOC>
+public defn get-component-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    val pt-R = ref(pt)
+    val parent-R? = get-parent-ref(pt-R)
+    match(parent-R?):
+      (_:None):
+        ; TODO - I need a way to differentiate between `pcb-module` and `pcb-component`
+        ;   here otherwise, this component might return a module instance breaking the
+        ;   abstraction.
+        throw $ ValueError("UnHandle-able Case - Did you pass a module port or from a `pcb-component` context?")
+      (given:One<Ref>):
+        val parent-R = value(given)
+        ; We need to search because if the user were to have passed
+        ;  a SinglePin port of a bundle port - then we need to continue looking up the tree
+        ;  until we find the component instance and not just bundle port.
+        val trail-comp? = find-instance-by-ref(parent-R, cxt)
+        ; I want to make sure this is a component
+        match(trail-comp?):
+          (_:None): None()
+          (given:One<JITXObject>):
+            val c-or-m? = value(given)
+            if not is-component?(c-or-m?):
+              throw $ InstanceTypeError(expects = SingleComponent, observed = instance-type(c-or-m?))
+            given
+
+
+doc: \<DOC>
+Retrieve an Instance from a particular context by Ref
+
+This function must be called from within a `pcb-module`
+context.
+
+This function is not recursive. If the caller passes `some.obj`
+from the `cxt` context, then that object will not be found because `obj` is
+within the `some` object context, not `cxt`. This function could find
+`cxt.some` if passed `some`.
+
+@param r Ref to an object in `cxt` - Note that the path must be
+referenced from the `cxt`. Any prefix in the ref before `cxt` will likely
+result in a failure to find the instance. Notice that for the `self` context,
+then we can just pass references without the `self.` prefix.
+@param cxt Context from which we will query the instances. By default
+this value is `self`.
+@return An instance from the `cxt` context. Note that this could be either
+a `pcb-module` or a `pcb-component` instance.
+<DOC>
+public defn get-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for obj in instances(cxt) first:
+      if ref(obj) == r:
+        One(obj)
+      else:
+        None()
+
+
+doc: \<DOC>
+Retrieve a Component Instance from a particular context by Ref
+
+This function must be called from within a `pcb-module`
+context.
+
+This function is not recursive. If the caller passes `some.obj`
+from the `cxt` context, then that object will not be found because `obj` is
+within the `some` object context, not `cxt`. This function could find
+`cxt.some` if passed `some`.
+
+@param r Ref to an object in `cxt` - Note that the path must be
+referenced from the `cxt`. Any prefix in the ref before `cxt` will likely
+result in a failure to find the instance. Notice that for the `self` context,
+then we can just pass references without the `self.` prefix.
+@param cxt Context from which we will query the instances. By default
+this value is `self`.
+@return Instance of a `pcb-component` in the `cxt` context. Note that
+`pcb-module` instances will be filtered out.
+<DOC>
+public defn get-component-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for obj in component-instances(cxt) first:
+      if ref(obj) == r:
+        One(obj)
+      else:
+        None()
+
+doc: \<DOC>
+Find an instance by `Ref` by searching the design hierarchy.
+
+This function must be called from within a `pcb-module` context.
+
+@param r Ref of the `Instance` object we wish to find. An instance can
+be either a `pcb-module` or `pcb-component`.
+@param cxt Parent scope to search in. By default this is `self`.
+
+@return If we find an instance by the pass Ref `r` in the `cxt` context, then
+we will return a `JITXObject` for that instance. Otherwise, None().
+<DOC>
+public defn find-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObject> :
+  inside pcb-module:
+
+    var search-space = cxt
+    var last-comp:Maybe<JITXObject> = None()
+    val comps = Array<Maybe<JITXObject>>(ref-length(r))
+    for i in 1 through ref-length(r) do:
+      val b = base(r, i)
+      val comp? = for obj in instances(search-space) first:
+        if ref(obj) == b:
+          One(obj)
+        else:
+          None()
+
+      comps[i - 1] = comp?
+      match(comp?:One<JITXObject>):
+        search-space = value!(comp?)
+
+    ; Now I have a list of all of the elements in my ref from start
+    ;  to finish.
+    ; I want to filter this for the last non-None value and confirm
+    ;  that it is a component
+
+    val trail-comp? = for comp in in-reverse(comps) first:
+      if comp is-not None:
+        One(value!(comp))
+      else:
+        None()
+
+    trail-comp?
+
+doc: \<DOC>
+Get the net associated with a module or component port
+
+This function must be called from within a `pcb-module` context.
+
+Note that this function will fail to find a net if the passed `pt`
+port is not part of a component or module in the local context.
+For example, if the design contains:
+
+```stanza
+pcb-module wrapper:
+  port GND
+  inst C : some-component
+
+  ; `INT` is defined only in the `wrapper`
+  ;   context.
+  net INT (C.internal-port, ...)
+
+pcb-module top-level:
+
+  inst W : wrapper
+  net GND (W.GND)
+
+  ; This will work
+  val n1 = get-connected-net!(W.GND)
+
+  ; This will not work
+  val n2 = get-connected-net!(W.C.internal-port)
+```
+
+The value for `n1` will be successfully found as the `GND`
+net because it is defined within the `pcb-module` context.
+
+The `n2` invocation will fail to find `INT` as the net
+for `W.C.internal-port` and return `None()`.
+
+@param pt Port of a component or module in this module context.
+@param cxt Optional context to search. The default value is `self`.
+@return If a connection is found - this function returns the Net as
+a JITXObject. If no connection is found - then None().
+<DOC>
+public defn get-connected-net (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+  inside pcb-module:
+    for n in nets(cxt) first :
+      if connected?([pt, n]):
+        One(n)
+      else:
+        None()
+
+doc: \<DOC>
+Get the net associated with a module or component port
+
+This function must be called from within a `pcb-module` context.
+
+This function has similar constraints to @{link get-connected-net}.
+
+@param pt Port of a component or module in this module context.
+@param cxt Optional context to search. The default value is `self`.
+@return A `Net` object as a JITXObject if the port is connected.
+@throws ValueError if no net connections are found or if more than one net
+connection is found.
+<DOC>
+public defn get-connected-net! (pt:JITXObject, cxt:JITXObject = self) -> JITXObject:
+  inside pcb-module:
+    val n-set = to-tuple $ for n in nets(cxt) filter :
+      connected?([pt, n])
+
+    if length(n-set) == 0:
+      throw $ ValueError("Invalid Port - No net connection found")
+    else if length(n-set) > 1 :
+      throw $ ValueError("Invalid Port - Multiple Nets Associated - Expected Singular Net")
+
+    n-set[0]
+
+doc: \<DOC>
+Port Info Object
+
+This object is primarily a tool for working around limitations
+in the pcb-module / pcb-component hierarchy.
+
+This object will make requests to retrieve data about a port
+then consolidate into a single pass-able object to various
+functions and generators.
+
+<DOC>
+public pcb-struct jsl/design/introspection/PortInfo :
+  ; Ideally - this is a `Maybe` but that isn't supported
+  ;   yet.
+  ; TODO - consider shifting to `Maybe` in the future.
+  connected-net:JITXObject|False
+  pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
+
+doc: \<DOC>
+Extract Port Info from a port `JITXObject`
+@param pt Port referenced from an component object, typically
+using dot notation like `MCU.RESET_n`.
+@return Extracted port data for this port.
+<DOC>
+public defn get-port-info (pt:JITXObject) -> PortInfo:
+  inside pcb-module:
+    val pads? = get-pads-from-port(pt)
+    val pd-info = match(pads?):
+      (_:None): []
+      (given:One<Tuple<JITXObject>>):
+        val lp-pds = value(given)
+        to-tuple $ for lp-pd in lp-pds seq:
+          get-pad-info(lp-pd)
+    val con-net = match(get-connected-net(pt)):
+      (_:None): false
+      (given:One<JITXObject>): value(given)
+    PortInfo(con-net, pd-info)

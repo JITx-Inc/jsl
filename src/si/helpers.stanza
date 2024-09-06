@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/si/helpers:
   import core
+  import collections
   import jitx
   import jitx/commands
 

@@ -145,6 +145,9 @@ public defstruct CrystalSymbol <: TwoPinSymbol :
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
+  polarized?:True|False with:
+      as-method => true
+      default => false
 
   doc: \<DOC>
   Number of Case Ports on the Crystal package
@@ -192,7 +195,6 @@ public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
         val def-case = Dims(2.0, pin-span + 0.5)
         val new-params = sub-crystal-case(p, One(def-case))
         set-crystal-params-override(cx, One(new-params))
-        println("Def Case: %_" % [def-case])
         def-case
       (given:One<Dims>): value(given)
 

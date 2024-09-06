@@ -32,17 +32,14 @@ The `pitch` of the two-pin component defines the overall length.
 
 <DOC>
 public defstruct DiodeSymbolParams <: Equalable :
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?
-  )
 with:
   constructor => #DiodeSymbolParams
   equalable => true
@@ -102,16 +99,16 @@ public defn build-diode-glyphs (
   if h > p2 :
     throw $ ValueError("Invalid Diode Symbol Dimension: Body is too Large: body=%_ pitch=%_" % [body-dims, pitch])
 
-  line(node, [Point(0.0, p2), Point(0.0, h)], width = line-width, name = "front-porch")
-  line(node, [Point( (- bw2), h), Point(bw2, h)], width = line-width, name = "T-bar")
+  line(node, [Point(0.0, (- p2)), Point(0.0, (- h))], width = line-width, name = "front-porch")
+  line(node, [Point( (- bw2), (- h)), Point(bw2, (- h))], width = line-width, name = "T-bar")
 
-  val tri-pts = [Point(0.0, h), Point(bw2, (- h)), Point((- bw2), (- h)), Point(0.0, h)]
+  val tri-pts = [Point(0.0, (- h)), Point(bw2, h), Point((- bw2), h), Point(0.0, (- h))]
   if filled?:
     polygon(node, tri-pts, name = "triangle")
   else:
     line(node, tri-pts, width = line-width, name = "triangle")
 
-  line(node, [Point(0.0, (- h)), Point(0.0, (- p2))], width = line-width, name = "back-porch")
+  line(node, [Point(0.0, h), Point(0.0, p2)], width = line-width, name = "back-porch")
 
 
 public defstruct DiodeSymbol <: TwoPinSymbol :
@@ -119,10 +116,15 @@ public defstruct DiodeSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:DiodeSymbol) -> String :
   "Diode"
@@ -145,24 +147,20 @@ public defn set-default-diode-symbol (symb:TwoPinSymbol) :
 
 public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
 
-  wing-size:Double with: (
-    ensure => ensure-positive!,
+  wing-size:Double with:
+    ensure => ensure-positive!
     updater => sub-wing-size
-  )
-  body-dims:Dims|Double with: (
-    ensure => ensure-positive!,
+  body-dims:Dims|Double with:
+    ensure => ensure-positive!
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
-    updater => sub-line-width,
+    updater => sub-line-width
     as-method => true
-  )
-  filled?:True|False with: (
-    updater => sub-filled?,
+  filled?:True|False with:
+    updater => sub-filled?
     as-method => true
-  )
 with:
   constructor => #SchottkyDiodeSymbolParams
   equalable => true
@@ -220,9 +218,9 @@ public defn build-schottky-diode-glyphs (
 
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size)), Point(wing-size, (- wing-size))])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h, 180.0) * wing-shape
+  val R-wing = loc(bw2, (- h), 180.0) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -231,10 +229,16 @@ public defstruct SchottkyDiodeSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
+
 
 public defmethod name (x:SchottkyDiodeSymbol) -> String :
   "SchottkyDiode"
@@ -257,24 +261,20 @@ public defn set-default-schottky-diode-symbol (symb:TwoPinSymbol) :
 
 public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
 
-  wing-size:Double with: (
+  wing-size:Double with:
     ensure => ensure-positive!,
     updater => sub-wing-size
-  )
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?,
     as-method => true
-  )
 with:
   constructor => #ZenerDiodeSymbolParams
   equalable => true
@@ -337,9 +337,9 @@ public defn build-zener-diode-glyphs (
 
   val wing-shape = Line(line-width, [Point(0.0, 0.0), Point((- wing-size), (- wing-size))])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h, 180.0) * wing-shape
+  val R-wing = loc(bw2, (- h), 180.0) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -348,10 +348,15 @@ public defstruct ZenerDiodeSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:ZenerDiodeSymbol) -> String :
   "ZenerDiode"
@@ -375,24 +380,20 @@ public defn set-default-zener-diode-symbol (symb:TwoPinSymbol) :
 
 public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
 
-  wing-size:Double with: (
+  wing-size:Double with:
     ensure => ensure-positive!,
     updater => sub-wing-size
-  )
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?,
     as-method => true
-  )
 with:
   constructor => #TunnelDiodeSymbolParams
   equalable => true
@@ -448,11 +449,11 @@ public defn build-tunnel-diode-glyphs (
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
 
-  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, (- wing-size))])
+  val wing-shape = Line(line-width, [Point(0.0, 0.0), Point(0.0, wing-size)])
 
-  val L-wing = loc((- bw2), h) * wing-shape
+  val L-wing = loc((- bw2), (- h)) * wing-shape
   add-glyph(node, L-wing, name? = One("L-wing"))
-  val R-wing = loc(bw2, h) * wing-shape
+  val R-wing = loc(bw2, (- h)) * wing-shape
   add-glyph(node, R-wing, name? = One("R-wing"))
 
 
@@ -461,10 +462,15 @@ public defstruct TunnelDiodeSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:TunnelDiodeSymbol) -> String :
   "TunnelDiode"
@@ -488,24 +494,19 @@ public defn set-default-tunnel-diode-symbol (symb:TwoPinSymbol) :
 
 public defstruct LEDSymbolParams <: DiodeSymbolParams :
 
-  arrow-params:ArrowSymbolParams with: (
+  arrow-params:ArrowSymbolParams with:
     updater => sub-arrow-params
-  )
-
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?,
     as-method => true
-  )
 with:
   constructor => #LEDSymbolParams
   equalable => true
@@ -570,15 +571,15 @@ public defn build-led-glyphs (node:SymbolNode, pitch:Double, params:LEDSymbolPar
 
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
-  val angle = (- 30.0)
+  val angle = 30.0
 
   val shaft = shaft-length(arrow-params)
   val x-off = (- (bw2 + (1.2 * shaft)))
-  val y-off = (h / 2.0)
-  val y-adj = 0.3 * y-off
-  val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
+  val y-off = (h / -2.0)
+  val y-adj = 1.5 * y-off
+  val arrow-1 = loc(x-off, y-off , angle) * arrow
   add-glyph(node, arrow-1, name? = One("arrow-1"))
-  val arrow-2 = loc(x-off, (y-adj - y-off), angle) * arrow
+  val arrow-2 = loc(x-off, (y-off + y-adj), angle) * arrow
   add-glyph(node, arrow-2, name? = One("arrow-2"))
 
 
@@ -587,10 +588,15 @@ public defstruct LEDSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:LEDSymbol) -> String :
   "LED"
@@ -613,24 +619,19 @@ public defn set-default-led-symbol (symb:TwoPinSymbol) :
 
 public defstruct PhotoDiodeSymbolParams <: DiodeSymbolParams :
 
-  arrow-params:ArrowSymbolParams with: (
+  arrow-params:ArrowSymbolParams with:
     updater => sub-arrow-params
-  )
-
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?,
     as-method => true
-  )
 with:
   constructor => #PhotoDiodeSymbolParams
   equalable => true
@@ -680,10 +681,10 @@ public defn build-photo-diode-glyphs (node:SymbolNode, pitch:Double, params:Phot
   val bw2 = body-width(params) / 2.0
   val h = compute-body-start(params)
 
-  val angle = (- (30.0 + 180.0))
+  val angle = (150.0)
 
   val x-off = (- (1.2 * bw2)  )
-  val y-off = (h / 2.0)
+  val y-off = (h / -2.0)
   val y-adj = 0.3 * y-off
   val arrow-1 = loc(x-off, y-adj + y-off, angle) * arrow
   add-glyph(node, arrow-1, name? = One("arrow-1"))
@@ -696,10 +697,16 @@ public defstruct PhotoDiodeSymbol <: TwoPinSymbol :
   Pitch between the Pins of a Diode Symbol
   This value is in symbol grid units (not mm)
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => true
+with:
+  printer => true
+  keyword-constructor => true
+
 
 public defmethod name (x:PhotoDiodeSymbol) -> String :
   "PhotoDiode"

@@ -43,12 +43,20 @@ all two-pin component symbols. These symbols will:
 4.  The pitch of the component is
 <DOC>
 public defstruct TwoPinSymbol <: SymbolDefn :
-  pitch:Double with: (default => TWO_PIN_DEF_PITCH)
+  pitch:Double with:
+    default => TWO_PIN_DEF_PITCH
+  polarized?:True|False with:
+    default => false
 
 public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
-  val w = pitch(x) / 2.0
-  add-pin(node, PINREF[1], [0.0,    w  ], name = "pin-1")
-  add-pin(node, PINREF[2], [0.0, (- w) ], name = "pin-2")
+  if not polarized?(x):
+    val w = pitch(x) / 2.0
+    add-pin(node, PINREF[1], [0.0,    w  ], name = "pin-1")
+    add-pin(node, PINREF[2], [0.0, (- w) ], name = "pin-2")
+  else:
+    val w = pitch(x) / 2.0
+    add-pin(node, #R(a), [0.0,    w  ], name = "pin-1")
+    add-pin(node, #R(c), [0.0, (- w) ], name = "pin-2")
 
 public defmethod build-pins (x:TwoPinSymbol, node:SymbolNode) :
   two-pin-build-pins(x, node)

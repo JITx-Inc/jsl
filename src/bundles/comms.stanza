@@ -245,7 +245,7 @@ public pcb-enum jsl/bundles/comms/UARTPins :
   UART-CTS
   UART-DCD
   UART-RI
-  UART-DST
+  UART-DSR
   UART-RTS
   UART-CK
   UART-DE
@@ -260,7 +260,7 @@ pcb-bundle uart-b (pins:Collection<UARTPins>):
       UART-CTS : make-pin(`cts)
       UART-DCD : make-pin(`dcd)
       UART-RI  : make-pin(`ri)
-      UART-DST : make-pin(`dst)
+      UART-DSR : make-pin(`dsr)
       UART-RTS : make-pin(`rts)
       UART-CK : make-pin(`ck)
       UART-DE : make-pin(`de)
@@ -278,8 +278,11 @@ Constructs a bundle with the passed pin configuration
 @member cts Clear to Send Line
 @member rts Ready to Send Line
 @member dtr Data Terminal Ready Line
+@member dsr Data Set Ready Line
+@member dcd Data Carrier Detect Line
 @member ri Ring Indicator Line
 @member ck Clock Line
+@member de Driver Enable Line
 <DOC>
 public defn uart (pins:UARTPins ...):
   uart-b(pins)

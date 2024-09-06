@@ -1,0 +1,123 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits/utils:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/si/signal-ends
+  import jsl/design/introspection
+
+doc: \<DOC>
+Create short-trace relationships using `signal-ends`
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+This function uses the `find-signal-end` function to
+inspect for pad forwarding and then uses the forwarded
+pad if any to construct the `short-trace`.
+
+This helps address cases where a module's port is
+passed in the arguments as the module itself has used
+`set-signal-ends` on the appropriate port
+
+@param ports A set of component or module ports that are
+assumed to have already been `net`'d together. If they are
+not connected to the same net - then this will likely result
+in an error in the JITX runtime.
+
+<DOC>
+public defn short-signal-ends (ports:JITXObject ... ):
+  inside pcb-module:
+    val prim-ep = find-signal-end $ ports[0]
+    for sec-port in ports[1 to false] do:
+      val sec-ep = find-signal-end(sec-port)
+      short-trace(prim-ep, sec-ep)
+
+doc: \<DOC>
+Combination of `net` and `short-trace` statements
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+This function uses `find-signal-ends` to allow the user to
+forward around a module port if any.
+
+@param name Name of the constructed net
+@param ports Variadic of ports that will be net'd and a `short-trace`
+applied to them.
+<DOC>
+public defn short-net (name:String|Symbol|Printable, ports:JITXObject ...):
+  inside pcb-module:
+    val n-symb = match(name):
+      (x:Symbol): x
+      (x:String): to-symbol(x)
+      (x:Printable): to-symbol $ to-string(x)
+
+    make-net(n-symb, ports)
+    short-signal-ends(ports = ports)
+
+doc: \<DOC>
+Combination of `net` and `short-trace` statements
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+This function uses `find-signal-ends` to allow the user to
+forward around a module port if any.
+
+@param ports Set of component or module ports. This function
+works best if the module ports have a `set-signal-ends`
+application.
+<DOC>
+public defn short-net (ports:JITXObject ...):
+  inside pcb-module:
+    net (ports)
+    short-signal-ends(ports = ports)
+
+doc: \<DOC>
+Bypass two ports with an element instance
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+It is common to bypass voltage rails with capacitors. Typically,
+these capacitors need to be placed close to the rail in question.
+
+The `bypass` function is a general purpose tool for creating
+the net and short-trace statements for bypassing.
+
+@param elem component or module instance with either:
+*  Standard Non-Polar Interface - `p[1]/p[2]`
+*  Standard Polarized Interface - `a/c`
+<DOC>
+public defn bypass (elem:Instance, p1:JITXObject, p2:JITXObject):
+  inside pcb-module:
+    val [e-p1, e-p2] = get-element-ports(elem)
+    short-net(e-p1, p1)
+    net (e-p2, p2)
+
+doc: \<DOC>
+Forward a component port/pad through a module port
+
+This function construct a net statement and applies the signal end
+that allows for forwarding a component through a module port. This is
+useful
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+@param pt Module Port to connect to a component port with forwarding
+@param pd Component port that identifies a specific pad that will forward
+through the port `pt`.
+@param name? Optional name for the constructed net.
+<DOC>
+public defn port-forward-net (pt:JITXObject, pd:JITXObject, name?:Symbol = ?):
+  inside pcb-module:
+    match(name?):
+      (_:None):
+        net (pt, pd)
+      (given:One<Symbol>):
+        make-net(value(given), [pt, pd])
+    set-signal-end(pt, pd)
+

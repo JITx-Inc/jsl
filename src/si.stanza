@@ -11,3 +11,4 @@ defpackage jsl/si:
   forward jsl/si/physics
   forward jsl/si/signal-ends
   forward jsl/si/TransmissionLine
+  forward jsl/si/bus

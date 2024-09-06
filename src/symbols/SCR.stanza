@@ -92,7 +92,7 @@ public defn build-scr-glyphs (
   val gh = gate-height(p)
   val Gp = gate-position(pitch, width, p)
 
-  val start = Point(0.0, porch-end)
+  val start = Point(0.0, (- porch-end))
   line(node, [
     start
     Point(x(start) - gh, y(Gp))
@@ -116,7 +116,7 @@ public defmethod name (x:SCRSymbol) -> String :
 
 defn gate-position (pitch:Double, width:Double, p:SCRSymbolParams) -> Point :
   val porch-end = compute-body-start(p as DiodeSymbolParams)
-  Point((- width), porch-end + gate-height(p))
+  Point((- width), (- porch-end + gate-height(p)))
 
 public defmethod build-pins (
   x:SCRSymbol, sn:SymbolNode

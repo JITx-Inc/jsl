@@ -36,3 +36,49 @@ public defn get-pad-by-name! (obj:LandPattern, name:String) -> JITXObject :
     (_:None):
       throw $ ValueError("No Pad by name '%_' found in LandPattern '%_'" % [name, obj])
     (v:One<JITXObject>): value(v)
+
+
+doc: \<DOC>
+Info about a Particular Pad of a LandPattern
+
+This type is primarily a helper function for working around
+limitations in the `pcb-module` and `pcb-component` hierarchy.
+
+This type consolidates much of the meta-data associated with a
+particular pad so that it can be transmitted accross `pcb-module`
+definition boundaries.
+
+It includes data from the following API calls:
+
+ *  `pad-type()`
+ *  `pad-shape()`
+ *  `pose()`
+ *  `side()`
+ *  `layers()`
+
+<DOC>
+public pcb-struct jsl/landpatterns/introspection/PadInfo :
+  type:PadType
+  shape:Shape
+  pose:Pose
+  side:Side
+  layer-data:Tuple<LayerShape>
+
+doc: \<DOC>
+Helper functions to consolidate all of the introspection data related to a pad.
+
+@param pd `LandPatternPad` object that we will inspect for data. Typically
+this accessed using the `pads()` API function or using the {@link get-pads-from-port}
+function.
+@return PadInfo object that captures all of the info related to this pad.
+<DOC>
+public defn get-pad-info (lp-pd:JITXObject) -> PadInfo :
+  val pd = pad(lp-pd)
+  PadInfo(
+    pad-type(pd)
+    pad-shape(pd)
+    pose(lp-pd)
+    side(lp-pd)
+    layers(pd)
+  )
+

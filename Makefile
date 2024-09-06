@@ -35,6 +35,7 @@ JSL_TESTS :=                              \
     jsl/tests/si/signal-ends              \
     jsl/tests/design/introspection        \
     jsl/tests/design/E-Series             \
+    jsl/tests/circuits/Network            \
     jsl/tests/math
 
 TABGEN=./tabgen/tabgen

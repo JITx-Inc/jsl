@@ -1,0 +1,234 @@
+doc: \<DOC>
+Thermal Via Grid Generator
+
+This package contains the interface definition for the
+thermal via grid generator. The idea is that this
+code is used to construct a via pattern inside a QFN or
+QFP style package with a thermal lead on the bottom that
+typically ties to ground. Many times the datasheet may
+suggest a particular grid pattern or you want need to
+specify your own pattern to meet your application's
+requirments.
+
+@snippet Grid Example
+
+```stanza
+  public inst netsw : ethernet_io_lib/components/KSZ9563/module
+
+  val tv-g = GridThermalVias(
+    via-def = therm-via,
+    grid-def = GridPlanner(
+      pitch = 1.2,
+      columns = 6,
+      rows = 6
+    )
+  )
+
+  make-via-grid(tv-g, netsw.C.PAD, GND)
+```
+
+TODO -- Add image here showing the constructed planner.
+
+The `therm-via` is a reference to a `pcb-via` definition. Typically these
+vias will need to have `via-in-pad = true`. Depending on your fabrication
+technology, you may need `filled = true` as well.
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/thermal-vias:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/geometry/box
+  import jsl/design/introspection
+  import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/introspection
+
+doc: \<DOC>
+Thermal Via Interface
+
+This interface outlines the functions needed to create a thermal via
+grid. The idea is that the `make-thermal-vias` function gets called
+as a generator inside a `pcb-module` definition and targets one of
+the pads of a component instantiated in that module.
+
+<DOC>
+public deftype ThermalVias
+
+doc: \<DOC>
+Check if this via grid location is active.
+
+In this context, `active` means that there should be a via
+at this location. `inactive` means that no via should be
+placed at this location.
+
+@param x ThermaVias (self)
+@param row Zero-based Index into the grid of a via positions.
+@param column Zero-based Index into the grid of a via positions.
+@return Thermal Via location is Active.
+<DOC>
+public defmulti active? (x:ThermalVias, row:Int, column:Int) -> True|False
+
+doc: \<DOC>
+Via Definition for Populating the Thermal Via Grid.
+<DOC>
+public defmulti via-def (tv:ThermalVias) -> Via
+
+doc: \<DOC>
+Generator for creating the thermal vias
+
+This function is intended to be called from a `pcb-module` context.
+
+@param tv The Thermal Via type
+@param pt PortInfo for a port on a `pcb-component` which we will inspect for net and pad features. This
+cannot be a `pcb-module` port. Note that this a distillation of the port `JITXObject` into features of
+that port because of limitations on how / where `JITXObject` port objects can be used. For example,
+you can't use the port from component `A` defined in module `B` in the creation of a new module `C`.
+@param via-net? Optional Net argument that we can use to manually set the net that the created
+vias will be part of. This is primarily to work around issues with module and component hierarchy. It
+is the user's responsibility to verify that this net and the net of the port will resolve to the
+same net when flattened.
+<DOC>
+public defmulti make-thermal-vias (tv:ThermalVias, pt:PortInfo -- via-net?:JITXObject = ?) -> False
+
+doc: \<DOC>
+Manual Grid of Thermal Vias
+
+This type is used to manually construct a grid of vias for a
+component. It does not leverage the pad shape for optimization.
+
+@snippet Example Grid
+
+```stanza
+pcb-module circuit:
+  ...
+  val tv-g = GridThermalVias(
+    via-def = therm-via,
+    grid-def = GridPlanner(
+      pitch = 1.2,
+      columns = 6,
+      rows = 6
+    )
+  )
+
+  make-thermal-vias(tv-g, netsw.C.PAD)
+```
+
+@snip-note 1 Note that these functions must be called within a pcb-module
+@snip-note 12 This generates a `geom` statement with child `via` statements
+for the grid.
+
+<DOC>
+public defstruct GridThermalVias <: ThermalVias:
+  doc: \<DOC>
+  Via definition used to construct the via grid.
+  This definition must have `via-in-pad` definition set true.
+  This via's layer span must include either the top or bottom layer
+  depending on what side the `thermal-lead` pad is located on.
+  <DOC>
+  via-def:Via with:
+    as-method => true
+
+  doc: \<DOC>
+  Grid Generator
+
+  This type defines the shape and construction of the grid and
+  provides the pose locations for each via.
+  <DOC>
+  grid-def:GridPlanner
+
+with:
+  printer => true
+  keyword-constructor => true
+
+public defmethod active? (tv:GridThermalVias, row:Int, column:Int) -> True|False :
+  true
+
+doc: \<DOC>
+Retrieve the Largest Pad by Area from a set
+<DOC>
+defn get-largest-pad (objs:Tuple<PadInfo>) -> PadInfo:
+  defn get-area (pd-info) -> Double :
+    val sh = shape(pd-info)
+    area $ bounds(sh)
+
+  val sorted-objs = to-tuple $ in-reverse $ qsort(get-area, objs)
+  sorted-objs[0]
+
+public defmethod make-thermal-vias (tv:GridThermalVias, pt:PortInfo -- via-net?:JITXObject = ?):
+  inside pcb-module:
+    val v-def = via-def(tv)
+    val n = match(via-net?, connected-net(pt)):
+      ; The argument net is preferred and then we fallback
+      ;   to the port net if one is provided.
+      (arg:One<JITXObject>, pt-net): value(arg)
+      (arg:None, pt-net:JITXObject): pt-net
+      (arg, pt-net):
+        throw $ ValueError("No Discernible Net for Thermal Via Grid - The passed port is not connected and no `via-net?` argument was provided")
+
+    ; If the passed port has more than one pad associated with it (common in grounds)
+    ;  then the heuristic for this function is to grab the largest pad. This typically
+    ;  works well for QFN, QFP, etc with ground pads.
+    ; If this heuristic doesn't work, then the fallback is to define a `1:1` port to pad
+    ;  arrangement so that the target pad is associated with a single port.
+    val pd-info = get-largest-pad( pad-set(pt) )
+    val pad-origin = pose(pd-info)
+
+    geom(n):
+      for pos in grid(grid-def(tv)) do:
+        val [r, c] = [row(pos), column(pos)]
+        if active?(tv, r, c):
+          via(v-def) at center(pose(pos) * pad-origin)
+
+doc: \<DOC>
+Construct a module Instantiable to encapsulate the a thermal via grid.
+
+This is a useful tool for construct a via grid inside a module. This module
+can then be instantiated and placed with respect to a component. This is a
+convenient way to lock the via grid relative to a component position without
+needing to use `place` on the component instance.
+
+@param tv Thermal Via definition
+@param pt PortInfo for a port of the component that contains the pad that the via grid will
+be applied to. Note that, we explicitly do not pass the `JITXObject` here to prevent a
+misuse of the `pcb-module` construction.
+@return `pcb-module` definition with a single port `via-conn` that
+must be connected to the same `net` as the originating port that constructed the
+`pt` PortInfo.
+<DOC>
+public defn create-via-grid-module (tv:ThermalVias, pt-info:PortInfo) -> Instantiable :
+
+  pcb-module thermal-via-grid :
+    port via-conn
+    net via-conn-net (via-conn)
+    make-thermal-vias(tv, pt-info, via-net? = via-conn-net)
+
+  thermal-via-grid
+
+doc: \<DOC>
+Generate the Via Grid Instance and place it relative to the Component
+
+@param tv Thermal Via Definition
+@param pt Port on a component whose pad the thermal via grid will live on.
+@param via-net Net that the via grid will connect to. This must be the same net
+as connected to `pt`.
+@param offset Optional offset to place the grid with respect to the component
+<DOC>
+public defn make-via-grid (tv:ThermalVias, pt:JITXObject -- offset:Pose = loc(0.0, 0.0)) :
+  inside pcb-module:
+    val comp? = get-component-from-port(pt)
+    val comp = match(comp?):
+      (_:None): throw $ ValueError("No Component for Port '%_' Found" % [ref(pt)])
+      (given:One<JITXObject>): value(given)
+
+    val via-net = get-connected-net!(pt)
+
+    val pt-info = get-port-info(pt)
+    val via-grid = create-via-grid-module(tv, pt-info)
+    inst vg : via-grid
+    net (vg.via-conn, via-net)
+    place(vg) at offset on Top (relative-to comp)
+

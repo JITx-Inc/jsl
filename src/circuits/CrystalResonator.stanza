@@ -1,0 +1,90 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits/CrystalResonator:
+  import core
+  import jitx
+  import jitx/commands
+  import jitx/parts/query-api
+
+  import jsl/design/E-Series
+  import jsl/design/introspection
+
+doc: \<DOC>
+Construct a Crystal Resonator Circuit
+
+@param xtal-type Crystal that will be instantiated and connected with load capacitors
+@param C-load Load Capacitance of the Crystal.
+@param C-stray Stray capacitance in the traces and input/output pins of the IC oscillator
+that this circuit will attach to.
+@param V-rating Minimum voltage rating for the capacitors selected for this circuit. The
+user is assumed to have added the necessary voltage derating for their application.
+@param prec Capacitor Value Precision Series that load capacitors will be selected from.
+@param query? Override-able base query for the capacitor selection. By default, this algorithm
+filters on:
+
+*  Type = "ceramic"
+*  Temp Code = "C0G"
+*  Min Voltage = `V-rating`
+
+@return A `pcb-module` definition that can be instantiated to form the
+resonant tank for a crystal resonator. This module will have the following ports:
+
+*  `p[[1, 2]]` - Crystal connections
+*  `COMMON` - Common reference, typically ground.
+<DOC>
+public defn create-crystal-resonator (
+  --
+  xtal-type:Instantiable,
+  C-load:Toleranced,
+  C-stray:Toleranced,
+  V-rating:Double,
+  prec:Percentage = (5 %),
+  query?:CapacitorQuery = ?
+  ) -> Instantiable:
+
+  val cap-V = 2.0 * (C-load - C-stray)
+  val c-bal = closest-std-val(typ(cap-V), prec)
+
+  val q = match(query?):
+    (_:None):
+      CapacitorQuery(
+        type = "ceramic",
+        temperature-coefficient_code = "C0G",
+        rated-voltage = AtLeast(V-rating),
+        sort! = SortKey(rated-voltage = Increasing)
+      )
+    (given:One<CapacitorQuery>): value(given)
+
+  val cap-type = create-capacitor(
+    q,
+    capacitance = c-bal
+    precision = prec
+  )
+
+  pcb-module crystal-resonator-mod:
+
+    port p : pin[[1,2]]
+    port COMMON
+
+    inst xtal : xtal-type
+    for i in indices(xtal.p) do:
+      net (p[i], xtal.p[i])
+
+    ; check for case pins on xtal
+    val case-pt? = get-port-by-name(xtal, "case")
+    match(case-pt?):
+      (_:None): false
+      (given:One<JITXObject>):
+        val case-pt = value(given)
+        for i in indices(case-pt) do:
+          net (case-pt[i], COMMON)
+
+    ; Instantiate the capacitors
+    inst load-caps : cap-type[2]
+    for (i in indices(xtal.p), j in 0 to false) do:
+      net (load-caps[j].p[1], xtal.p[i])
+      short-trace(load-caps[j].p[1], xtal.p[i])
+      net (load-caps[j].p[2], COMMON)
+
+
+  crystal-resonator-mod
+

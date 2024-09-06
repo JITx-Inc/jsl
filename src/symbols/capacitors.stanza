@@ -77,30 +77,24 @@ public defstruct PolarizedCapacitorSymbolParams <: CapacitorSymbolParams :
   This value can be either an absolute value in symbol grid units or it
   can be a percentage of the `pitch / 2.0`.
   <DOC>
-  porch-width:Double|Percentage with: (
+  porch-width:Double|Percentage with:
     ensure => ensure-positive!,
     updater => sub-porch-width,
     as-method => true
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!,
     updater => sub-width,
     as-method => true
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!,
     updater => sub-line-width
     as-method => true
-  )
-  pol-radius:Double with: (
+  pol-radius:Double with:
     ensure => ensure-positive!,
     updater => sub-pol-radius,
-  )
-  plus-size:Double|Percentage with: (
+  plus-size:Double|Percentage with:
     ensure => ensure-positive!,
     updater => sub-plus-size
-  )
-
 with:
   constructor => #PolarizedCapacitorSymbolParams
   equalable => true
@@ -267,10 +261,12 @@ This type is used to generate the two-pin electrical
 symbol for standard capacitors
 <DOC>
 public defstruct CapacitorSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  polarized?:True|False with:
+    as-method => true
+    default => false
   doc: \<DOC>
   Optional Capacitor Symbol Parameters Override
   If this value is not None, then we will use these
@@ -291,7 +287,7 @@ public defn CapacitorSymbol (
   pitch:Double = TWO_PIN_DEF_PITCH
   params:CapacitorSymbolParams = ?
   ) -> CapacitorSymbol:
-  #CapacitorSymbol(pitch, params)
+  #CapacitorSymbol(pitch, false, params)
 
 public defmethod name (x:CapacitorSymbol) -> String :
   "Capacitor"
@@ -311,22 +307,24 @@ public defn set-default-capacitor-symbol (symb:TwoPinSymbol) :
 
 
 public defstruct PolarizedCapacitorSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
-  params:Maybe<PolarizedCapacitorSymbolParams> with: (
+  polarized?:True|False with:
+    as-method => true
+    default => true
+  params:Maybe<PolarizedCapacitorSymbolParams> with:
     default => None()
-  )
 with:
   constructor => #PolarizedCapacitorSymbol
 
 public defn PolarizedCapacitorSymbol (
   --
   pitch:Double = TWO_PIN_DEF_PITCH
+  polarized?:True|False = true
   params:PolarizedCapacitorSymbolParams = ?
   ) -> PolarizedCapacitorSymbol:
-  #PolarizedCapacitorSymbol(pitch, params)
+  #PolarizedCapacitorSymbol(pitch, polarized?, params)
 
 public defmethod name (x:PolarizedCapacitorSymbol) -> String :
   "Polarized Capacitor"

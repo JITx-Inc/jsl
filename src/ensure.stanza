@@ -125,3 +125,12 @@ public defn ensure-non-negative! (
         (x:One<Int|Long|Double|Float|Dims>): helper(field, value(x))
     ensure-func
 
+public defn ensure-in-set! (accepted:Tuple<Int>):
+
+  defn ensure-func (
+    field:String,
+    value:Int
+  ):
+    if not contains?(accepted, value):
+      throw $ ValueError("Value '%_' not in Accepted Value Set: [%,]" % [value, accepted])
+  ensure-func

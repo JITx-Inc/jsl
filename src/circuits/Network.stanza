@@ -1,0 +1,522 @@
+#use-added-syntax(jitx)
+doc: \<DOC>
+@brief Lump Circuit Networks
+
+The concept of this code is to provide a means for defining a lumped
+circuit network tree. The idea is to provide a "DSL" for defining
+components that are used together to form a circuit network.
+
+In this graph there are Elements and Nodes.
+
+* Elements are the edges of the graph - the resistors, capacitors, etc.
+* Nodes are the pins, ground, nets, etc of the circuit
+
+We can think of the circuit network as a graph. We have the following
+ operations to this graph for 2-pin elements
+
+ 1.  Series (+) - string multiple elements in series
+ 2.  Parallel (|) - put multiple elements in parallel
+ 3.  Tap - For a particular node in the circuit graph, connect this node to
+     an external port on the resultant network instantiable (pcb-module). The
+     components are still connected on both sides in the network.
+ 4.  ShuntTo - Connect a given node to a port through an element.
+     This allows connecting a component that escapes the network. For example,
+     this might be used connect a particular component or sub-network to ground.
+ 5.  Invert (~) - Instead of connecting 1 -> 2 , connect 2 -> 1. reverses the
+       orientation of the component. Useful for polarizing caps, diodes, etc.
+
+
+<DOC>
+defpackage jsl/circuits/Network :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/introspection
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si/signal-ends
+
+doc: \<DOC>
+Abstract Network Type
+
+The circuit tree is composed of `ANT` instances that form
+a sequence of operations for the tree.
+<DOC>
+public deftype ANT
+doc: \<DOC>
+Each `ANT` instance contains a recursive set of ANT elements
+
+The elements of each ANT instance are interpreted by that node.
+Some may be empty, others may have a single instance, and others
+may have 1 or more instances.
+<DOC>
+public defmulti elements (a:ANT) -> IndexedCollection<ANT>
+
+
+val DEF_ELEM_NAME = `elem
+val DEF_ELEM_PUBLIC = false
+doc: \<DOC>
+Circuit Element for a Circuit Network
+
+This type typically includes an instantiable that will be
+instantiated in the resultant network definition.
+<DOC>
+public defstruct CircuitElement <: ANT:
+  doc: \<DOC>
+  Sub-Elements of the `CircuitElement`
+  A CircuitElement is the Element so this collection is empty by default.
+  We construct the element from the `elem-type` object.
+  <DOC>
+  elements:IndexedCollection<ANT> with:
+    as-method => true
+    default => to-vector<ANT>([])
+  doc: \<DOC>
+  Element Instantiable to be created in the network
+  This instantiable type needs to define either of the following ports:
+  1.  `p[1]/p[2]` like a standard unpolarized 2-pin
+  2.  `c/a` like a standard polarized 2-pin
+
+  When the component/module has more than just these ports - it is often
+  convenient to mark it as `public` so that it can be accessed inside the
+  module.
+  <DOC>
+  elem-type:Instantiable
+  doc: \<DOC>
+  Alternative Instance Name for this Element
+  By default the elements are named `elem` but this can be c
+  confusing when constructing a complex network. This allows for the names to
+  be more explicitly defined by the user.
+  <DOC>
+  name:Symbol with:
+    default => DEF_ELEM_NAME
+  doc: \<DOC>
+  Mark's this component instance as public
+
+  This means that after the network is constructed - it will be accessible
+  by the user using dot-notation.
+  <DOC>
+  is-public?:True|False with:
+    default => DEF_ELEM_PUBLIC
+with:
+  printer => true
+  keyword-constructor => true
+
+doc: \<DOC>
+Short Helper Method for Creating `CircuitElement`
+<DOC>
+public defn Elem (
+  i:Instantiable
+  --
+  name:Symbol = DEF_ELEM_NAME,
+  is-public?:True|False = DEF_ELEM_PUBLIC
+  ) -> CircuitElement :
+  CircuitElement(elem-type = i, name = name, is-public? = is-public?)
+
+
+val DEF_TAP_PORT_ID = 1
+
+doc: \<DOC>
+Tap on a port of an Circuit Element in the Network
+
+This is a method of accessing an internal node
+of the circuit element by creating a named port.
+
+Example:
+
+Given the following circuit
+
+```
+val circ = create-circuit(a + Tap(b, `divOut`))
+```
+
+It will create a module like this:
+
+```
+p[1] -> O -- a -- O -- b -- O -> p[2]
+                  |
+                  ---> divOut
+```
+
+A and B are connected in series as normal and their
+intermediate node is extracted to a port.
+
+<DOC>
+public defstruct Tap <: ANT:
+  doc: \<DOC>
+  Elements of this node - by default has one element.
+  <DOC>
+  elements:IndexedCollection<ANT> with:
+    as-method => true
+  doc: \<DOC>
+  Symbol Name for the tap port on Network Instantiable
+
+  This name is used to construct a `port` on the resulting
+  instantiable of the network.
+  It must be a valid stanza symbol - otherwise, it will not be
+  able to construct the instantiable.
+  <DOC>
+  name:Symbol
+  doc: \<DOC>
+  Port Id for a port on the element of the tap.
+  Typically this will be `1` or `2` for two-pin components,
+  The default value is 1
+  <DOC>
+  ; TODO - Make this `Ref` so we can do any port connection here.
+  port-id:Int with:
+    ensure =>  ensure-in-set!([1, 2])
+    default => DEF_TAP_PORT_ID
+with:
+  printer => true
+  constructor => #Tap
+
+public defn Tap (name:Symbol, a:ANT -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
+  #Tap(to-vector<ANT>([a]), name, port-id)
+
+public defn Tap (name:Symbol, a:Instantiable,  -- port-id:Int = DEF_TAP_PORT_ID) -> Tap:
+  Tap(name, Elem(a), port-id = port-id)
+
+doc: \<DOC>
+Series Node in the Circuit Network
+
+The series node encodes a sequence of components connected in
+series. This typically means `N1.p[2] -> N2.p[1]` then `N2.p[2] -> N3.p[1]`, etc
+
+<DOC>
+public defstruct Series <: ANT :
+  elements:Vector<ANT> with:
+    as-method => true
+with:
+  printer => true
+  constructor => #Series
+
+public defn Series (elems:Seqable<ANT> = []) -> Series:
+  #Series(to-vector<ANT>(elems))
+
+doc: \<DOC>
+Parallel Node in the Circuit Network
+
+The parallel node encodes a set of components that are all connected
+in parallel.
+<DOC>
+public defstruct Parallel <: ANT:
+  elements:Vector<ANT> with:
+    as-method => true
+with:
+  printer => true
+  constructor => #Parallel
+
+public defn Parallel (elems:Seqable<ANT> = []) -> Parallel:
+  #Parallel(to-vector<ANT>(elems))
+
+doc: \<DOC>
+Shunt to a Port on the Network
+
+This type is similar to `Tap` except instead of having
+the a continuous component connection in the network, the
+shunted component only has one pin connected in the network.
+The other pin is connected out to an external port on the
+network circuit.
+
+This type will not work with `Series` - it is only
+possible to use this in combination with the Parallel `|` operator.
+
+
+Example:
+This circuit:
+```
+A + (B | ShuntTo(C, `named-shunt-port))
+```
+
+Results in:
+
+```
+p[1] -> O--A--O--B--O -> p[2]
+              |
+              --C--O -> named-shunt-port
+```
+
+Note that `p[2]` of C is connected to `named-shunt-port`. To
+flip the component see {@link Invert}
+
+<DOC>
+public defstruct ShuntTo <: ANT:
+  elements:IndexedCollection<ANT> with:
+    as-method => true
+  doc: \<DOC>
+  Name for the shunt port on Network Instantiable
+
+  This name is used to construct a `port` on the resulting
+  instantiable of the network.
+  It must be a valid stanza symbol - otherwise, it will not be
+  able to construct the instantiable.
+  <DOC>
+  name:Symbol
+with:
+  printer => true
+  constructor => #ShuntTo
+
+public defn ShuntTo (a:ANT, name:Symbol) -> ShuntTo :
+  #ShuntTo(to-vector<ANT>([a]), name)
+
+public defn ShuntTo (a:Instantiable, name:Symbol) -> ShuntTo :
+  ShuntTo(Elem(a), name)
+
+public defn is-shunted? (x:JITXObject) -> True|False :
+  inside pcb-module:
+    match( property?(x.is-shunted) ):
+      (_:None): false
+      (s:One<True|False>): value(s)
+
+public defn set-shunted (x:JITXObject) -> False :
+  inside pcb-module:
+    property(x.is-shunted) = true
+
+doc: \<DOC>
+Invert Node for the Circuit Network
+
+Invert causes an Element to be connected `2 -> 1` instead of `1 -> 2`
+<DOC>
+public defstruct Invert <: ANT :
+  elements:IndexedCollection<ANT> with:
+    as-method => true
+with:
+  printer => true
+  constructor => #Invert
+
+public defn Invert (a:ANT) -> Invert:
+  #Invert(to-vector<ANT>([a]))
+
+doc: \<DOC>
+Convert the network representation into instantiate components and nets
+
+This function is potentially recursive.
+
+@param a Network to elaborate
+@param taps Accumulator for the external ports of the network.
+@return Sequence of `[p1, p2]` for each element at the top level of the network.
+For Parallel - this sequence may be 2 or more tuples
+For others - this is typically only 1 tuple
+<DOC>
+public defn elaborate-all (a:ANT, taps:Vector<[Symbol,JITXObject]>) -> Seq<[JITXObject, JITXObject]> :
+  inside pcb-module:
+    for elem in elements(a) seq:
+      elaborate(elem, taps)
+
+doc: \<DOC>
+Construct instances and net connectors for a series circuit
+
+@param a Series Network Element
+@param taps Accumulator for the external ports of the network.
+@return The `[p1, p2]` tuple of the ports of the endpoints of the series network.
+This is typically `p[1]` of element 0 and `p[2]` of element `N-1` where `N` is the
+number of elements in series.
+
+@throws ValueError If any of the series components have been marked `ShuntTo`. The
+`ShuntTo` mechanism is not handled in series connections.
+<DOC>
+public defn connect-series (a:Series, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
+  inside pcb-module:
+    val pinSets = to-tuple(elaborate-all(a, taps))
+    val cnt = length(pinSets)
+
+    for pinSet in pinSets do:
+      val [p1, p2] = pinSet
+      if is-shunted?(p1) or is-shunted?(p2):
+        throw $ ValueError("Shunted Elements Are Not Handled in Series Configurations - Try using Tap")
+
+    ; Series connect all of the components
+    for i in 0 to (cnt - 1) do :
+      net (pinSets[i][1], pinSets[i + 1][0])
+
+    ; Return the first pin and the last pin
+    [pinSets[0][0], pinSets[cnt - 1][1]]
+
+doc: \<DOC>
+Instantiate and Connect all parallel elements
+
+@param a Parallel Network Element
+@param taps Accumulator for the external ports of the network.
+@return Tuple of `[p1, p2]` which is typically the first parallel elements ports. All of
+the other element's `p1` and `p2` are netted to the first parallel element, respectively.
+
+`ShuntTo` elements are handled differently. Typically, `p1` port of the shunted sub-network is
+connected to the `p1` of all the other components in paralle. The `p2` port of the shunted
+sub-network is not connected to the other parallel components, and is instead connected to a
+external port.
+<DOC>
+public defn connect-parallel (a:Parallel, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
+  inside pcb-module:
+    val pinSets = to-tuple(elaborate-all(a, taps))
+    val cnt = length(pinSets)
+
+    ; Filter out any shunted pins
+    ;  as they get connected to ports instead of to the
+    ;  next element in the sequence.
+
+    val notShunted = {not is-shunted?(_)}
+    defn filter-pins (pSet:Tuple<[JITXObject, JITXObject]>, pinIdx:Int) :
+      to-tuple(filter(notShunted, map(get{_, pinIdx}, pSet)))
+
+    val p1Set = filter-pins(pinSets, 0)
+    val p2Set = filter-pins(pinSets, 1)
+
+    net (p1Set)
+    net (p2Set)
+
+    [p1Set[0], p2Set[0]]
+
+doc: \<DOC>
+Instantiate and Connect the elements of a Circuit Network
+
+This function is recursive.
+
+@param a Circuit network to elaborate
+@param taps Accumulator for the external ports of the network.
+@param Tuple of `[p1, p2]` that are the ports of the endpoints of
+the network.
+<DOC>
+public defn elaborate (a:ANT, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
+  inside pcb-module :
+    match(a) :
+      (s:Series):
+        ; println("elaborate Series: %~" % [s])
+        connect-series(s, taps)
+      (s:Parallel):
+        ;println("elaborate Parallel: %~" % [s])
+        connect-parallel(s, taps)
+      (s:CircuitElement):
+        ;println("elaborate CircuitElement: %~" % [s])
+        val obj = make-inst(name(s), elem-type(s), is-public?(s))
+        get-element-ports(obj)
+      (s:ShuntTo):
+        ;println("elaborate ShuntTo: %~" % [s])
+        val child = elements(s)[0]
+        val [p1, p2] = elaborate(child, taps)
+        val shuntPin = p2
+        set-shunted(shuntPin)
+        add(taps, [name(s), shuntPin])
+        [p1, shuntPin]
+      (s:Invert):
+        ;println("elaborate Invert: %~" % [s])
+        val child = elements(s)[0]
+        val [p1, p2] = elaborate(child, taps)
+        [p2, p1]
+      (s:Tap):
+        ;println("elaborate Tap: %~" % [s])
+        val child = elements(s)[0]
+        val childPins = elaborate(child, taps)
+        ; Add the tap here.
+        val tapPin = childPins[ port-id(s) - 1 ]
+        add(taps, [name(s), tapPin])
+        childPins
+
+
+doc: \<DOC>
+Construct an instantiable for the passed Network
+
+This function will create a `pcb-module` based on the passed
+network description. This network will have at least port `p` with
+two elements. It may optionally have one or more unique `SinglePin`
+ports that are created dynamically by the `Tap` and `ShuntTo` types.
+
+@param a Network definition that will be converted into a `pcb-module`.
+@member p PortArray of 2 pins, `p[1]` and `p[2]`. These are
+the two end points of the network.
+<DOC>
+public defn create-circuit (a:ANT -- name?:Maybe<String> = None()) -> Instantiable :
+
+  pcb-module network-circuit:
+    match(name?):
+      (_:None): false
+      (given:One<String>):
+        name = value(given)
+
+    port p : pin[[1 2]]
+    val taps = Vector<[Symbol,JITXObject]>()
+    val [p1, p2] = elaborate(a, taps)
+    net (p[1], p1)
+    set-signal-end(p[1], p1)
+    net (p[2], p2)
+    set-signal-end(p[2], p2)
+
+
+    ; Programmatically create ports for all the
+    ;   taps
+
+    ; Find all of the unique tap ports that we want to
+    ;  create
+    val unique-ports = unique $ for tap in taps seq:
+      val [name, _] = tap
+      if name == `p:
+        throw $ ValueError("Invalid Tap Name '%_' - Must be unique in 'network-circuit'" % [name])
+      name
+
+    val namedPorts-seq = for unique-port in unique-ports seq:
+      val namedPort = make-port(unique-port, SinglePin())
+      unique-port => namedPort
+
+    val namedPorts = to-hashtable<Symbol,JITXObject>(namedPorts-seq)
+
+    ; Each namedPort can be referenced multiple times
+    ;  for example - ground might be something we want to connect to
+    ;  in multiple locations.
+    for tap in taps do:
+      val [name, pinObj] = tap
+      val namedPort = namedPorts[name]
+      net (namedPort, pinObj)
+      set-signal-end(namedPort, pinObj)
+
+
+  network-circuit
+
+
+doc: \<DOC>
+Construct an Instantiable given a Union of ANT or Instantiable
+
+@param x Sub-Circuit to form into an Instantiable
+@param name? Optional name to apply to the create ANT sub-circuit. If
+`x` is an `Instantiable` - this argument is ignored.
+<DOC>
+public defn to-instantiable (x:ANT|Instantiable -- name?:Maybe<String> = None()) -> Instantiable:
+  match(x):
+    (x-ANT:ANT):
+        create-circuit(x-ANT, name? = name?)
+    (x-Inst:Instantiable): x-Inst
+
+;;;;;;;;;;;;;;;;;;
+; Operators
+;;;;;;;;;;;;;;;;;;
+
+public defn bit-not (a:ANT) -> ANT:
+  Invert(a)
+
+public defn bit-not (a:Instantiable) -> ANT:
+  Invert(Elem(a))
+
+; @TODO - for Series and Parallel, I kind of figure
+;   there will be multiple plusses in a row like this:
+;  R1 + R2 + (R3|R4|Rg|Rf)
+;
+;  It would be nice if there was some pass that collapses
+;  the Parallel(R3, Parallel(R4, Parallel(Rg, Rf))) into
+;      Parallel(R3, R4, Rg, Rf)
+
+public defn plus (a:ANT, b:ANT) -> ANT:
+  Series([a,b])
+
+public defn plus (a:ANT, b:Instantiable) -> ANT :
+  Series([a, Elem(b)])
+
+public defn plus (a:Instantiable, b:ANT) -> ANT :
+  Series([Elem(a), b])
+
+public defn bit-or (a:ANT, b:ANT) -> ANT:
+  Parallel([a,b])
+
+public defn bit-or (a:ANT, b:Instantiable) -> ANT :
+  Parallel([a, Elem(b)])
+
+public defn bit-or (a:Instantiable, b:ANT) -> ANT :
+  Parallel([Elem(a), b])
