@@ -123,6 +123,7 @@ defstruct StandardBank :
   symbol: SchematicSymbol
   pin-mappings: Tuple<KeyValue<JITXObject, JITXObject>>
 
+
 public defn make-box-symbol (banks:Seqable<StandardBank>) :
   inside pcb-component :
     symbol :
@@ -175,7 +176,7 @@ defn flatten-pin-entries (es:Seqable<KeyValue<Dir,JITXObject|Seqable<JITXObject>
       (ps:Seqable<Pin>) : do(add{entries, key(e) => _}, ps)
   entries
 
-defn unique-banks (banks:Tuple<Maybe>) :
+public defn unique-banks (banks:Tuple<Maybe>) :
   val banks* = to-vector<Int|Ref> $ to-hashset<Int|Ref> $
     for b in banks seq :
       match(b) :

@@ -1306,3 +1306,54 @@ public defn assign-symbols (banks: Seqable<KeyValue<Int|Ref, UnitSymbol>>) -> Fa
         (s: SchematicSymbol) : s
     )
   assign-schematic-symbols(to-tuple $ schem-syms)
+
+
+doc: \<DOC>
+[Legacy] Make Box Symbol
+
+This replicates the legacy box symbol approach which
+is not as configurable but is commonly used in many
+existing components.
+
+This function is a generator and must be called
+from a `pcb-component` context.
+
+This function handles both the "No banks" case and
+the "Multi-Bank" cases by constructing the bank set
+by introspection.
+
+For the "No Bank" case, there should be no component
+ports with the `bank` property set.
+
+For the "Multi-bank" case, all components ports
+must have an explicit bank property set.
+
+@param params Optional box symbol parameters to override
+the default `BoxSymbol` parameters.
+
+<DOC>
+public defn make-box-symbol (params:BoxSymbolParams = ?) :
+
+  inside pcb-component:
+
+    val pins = sort-by-row-index(pins(self))
+    val pin-banks = map({property?(_.bank)}, pins)
+
+    defn has-banks? (pin-banks:Tuple<Maybe>) -> True|False:
+      for pb in pin-banks any?:
+        pb is-not None
+
+    val uniq-bank = if has-banks?(pin-banks):
+      unique-banks(pin-banks)
+    else:
+      []
+
+    val box = match(params):
+      (_:None):  BoxSymbol(self)
+      (given:One<BoxSymbolParams>) : BoxSymbol(self, params = value(given))
+    if length(uniq-bank) > 0:
+      println("Banks: %," % [to-tuple(uniq-bank)])
+      assign-symbols $ for b in uniq-bank seq:
+        b => box
+    else:
+      assign-symbol $ create-symbol(box)
