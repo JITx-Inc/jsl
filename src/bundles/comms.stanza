@@ -236,6 +236,20 @@ Octal SPI Bundle Generator
 public defn octal-spi (pins:SPIPins ...):
   wide-spi(8, pins)
 
+doc: \<DOC>
+Octal SPI Bundle with Chip Select and Data Strobe
+
+@member sck Synchronous Clock Line
+@member cs Chip Select
+@member dqs Data Strobe
+@member data Data Bus of width=8
+<DOC>
+public pcb-bundle octal-spi-with-cs-dqs :
+  port sck
+  port cs
+  port dqs
+  port data : pin[8]
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UART - Univeral Asynchronous Receiver/Transmitter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
