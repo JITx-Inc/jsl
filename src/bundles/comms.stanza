@@ -122,7 +122,6 @@ public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CS
   SPI-COPI
   SPI-CIPO
-  SPI-DQS
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
   name = "SPI"
@@ -132,7 +131,6 @@ pcb-bundle spi-b (pins:Collection<SPIPins>):
       SPI-CS  : make-pin(`cs)
       SPI-COPI : make-pin(`copi)
       SPI-CIPO : make-pin(`cipo)
-      SPI-DQS : make-pin(`dqs)
 
 doc: \<DOC>
 SPI Bundle Generator
@@ -198,7 +196,6 @@ or on flash chips.
   Note CIPO and COPI are not supported.
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member dqs Data Strobe
 @member data Variable Width Data Bus depending on `width` parameter
 <DOC>
 public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
@@ -208,7 +205,6 @@ public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
   for p in pins do :
     switch(p):
       SPI-CS : make-pin(`cs)
-      SPI-DQS : make-pin(`dqs)
       else:
         throw $ ValueError("Wide-SPI does not support pin type: %_" % [p])
 
@@ -216,7 +212,6 @@ doc: \<DOC>
 Dual SPI Bundle Generator
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member dqs Data Strobe
 @member data Data Bus of width=2
 <DOC>
 public defn dual-spi (pins:SPIPins ...):
@@ -226,7 +221,6 @@ doc: \<DOC>
 Quad SPI Bundle Generator
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member dqs Data Strobe
 @member data Data Bus of width=4
 <DOC>
 public defn quad-spi (pins:SPIPins ...):
@@ -237,11 +231,24 @@ Octal SPI Bundle Generator
 
 @member sck Synchronous Clock Line
 @member cs Chip Select
-@member dqs Data Strobe
 @member data Data Bus of width=8
 <DOC>
 public defn octal-spi (pins:SPIPins ...):
   wide-spi(8, pins)
+
+doc: \<DOC>
+Octal SPI Bundle with Chip Select and Data Strobe
+
+@member sck Synchronous Clock Line
+@member cs Chip Select
+@member dqs Data Strobe
+@member data Data Bus of width=8
+<DOC>
+public pcb-bundle octal-spi-with-cs-dqs :
+  port sck
+  port cs
+  port dqs
+  port data : pin[8]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UART - Univeral Asynchronous Receiver/Transmitter
