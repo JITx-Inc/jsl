@@ -3,10 +3,12 @@ defpackage jsl/circuits/utils:
   import core
   import jitx
   import jitx/commands
+  import jitx/parts
+
+  import maybe-utils
 
   import jsl/si/signal-ends
   import jsl/design/introspection
-  import jsl/bundles
   import jsl/errors
 
 doc: \<DOC>
@@ -77,43 +79,6 @@ public defn short-net (ports:JITXObject ...):
     net (ports)
     short-signal-ends(ports = ports)
 
-doc: \<DOC>
-Bypass two ports with an element instance
-
-This function is generator and is expected to run in
-a `pcb-module` context.
-
-It is common to bypass voltage rails with capacitors. Typically,
-these capacitors need to be placed close to the rail in question.
-
-The `bypass` function is a general purpose tool for creating
-the net and short-trace statements for bypassing.
-
-@param elem component or module instance with either:
-*  Standard Non-Polar Interface - `p[1]/p[2]`
-*  Standard Polarized Interface - `a/c`
-<DOC>
-public defn bypass (elem:JITXObject, p1:JITXObject, p2:JITXObject):
-  inside pcb-module:
-    val [e-p1, e-p2] = get-element-ports(elem)
-    short-net(e-p1, p1)
-    net (e-p2, p2)
-
-
-public defn add-pullup (elem:JITXObject, sig:JITXObject, rail:JITXObject) :
-  inside pcb-module:
-    val [e-p1, e-p2] = get-element-ports(elem)
-
-    net (e-p1, sig)
-
-    match(port-type(rail)):
-      (_:SinglePin):
-        net (e-p2, rail)
-      (b:Bundle):
-        if b == power :
-          net (e-p2, rail.V+)
-        else:
-          throw $ ArgumentError("Unexpected 'rail' - Not SinglePin or 'power' bundle: port-type = %_" % [b])
 
 doc: \<DOC>
 Forward a component port/pad through a module port
