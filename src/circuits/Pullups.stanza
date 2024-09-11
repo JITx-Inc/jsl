@@ -1,0 +1,131 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits/Pullups:
+  import core
+  import jitx
+  import jitx/commands
+
+  import maybe-utils
+
+  import jsl/errors
+  import jsl/design/introspection
+  import jsl/bundles
+
+
+defn add-puller (elem:JITXObject, sig:JITXObject, rail:JITXObject, updown:True|False) :
+  inside pcb-module:
+    val [e-p1, e-p2] = get-element-ports(elem)
+
+    net (e-p1, sig)
+
+    val other = match(rail):
+      (n:Net): n
+      (p:Pin):
+        match(port-type(p)):
+          (_:SinglePin): rail
+          (b:Bundle):
+            if b == power :
+              if updown:
+                rail.V+
+              else:
+                rail.V-
+            else:
+              throw $ ArgumentError("Unexpected 'rail' - Not SinglePin or 'power' bundle: port-type = %_" % [b])
+
+    net (e-p2, other)
+
+
+doc: \<DOC>
+Add connections for a pullup to a net or power rail
+
+@param elem Instance supporting standard two-pin interface
+@param sig Signal that we want to add a pullup resistor to.
+@param rail Power Rail as either a `power` bundle, `SinglePin` or a Net.
+For a `power` bundle, the `rail.V+` port will be used.
+<DOC>
+public defn add-pullup (elem:JITXObject, sig:JITXObject, rail:JITXObject) :
+  inside pcb-module:
+    add-puller(elem, sig, rail, true)
+
+doc: \<DOC>
+Add connections for a pulldown to a net or power rail.
+
+@param elem Instance supporting standard two-pin interface
+@param sig Signal that we want to add a pulldown resistor to.
+@param rail Power Rail as either a `power` bundle, `SinglePin` or `Net`.
+For a `power` bundle, the `rail.V-` port will be used.
+<DOC>
+public defn add-pulldown (elem:JITXObject, sig:JITXObject, rail:JITXObject) :
+  inside pcb-module:
+    add-puller(elem, sig, rail, false)
+
+val PULLUP_DEF_QB =  ResistorQuery(precision = (5 %))
+
+doc: \<DOC>
+Construct a pullup instance from an Instantiable
+
+This function expects to be called from a `pcb-module` context.
+
+See {@link add-pullup} for more info.
+
+@param sig Port or net that we wish to add a pullup to.
+@param rail Port or Net to provide the voltage rail to pull the signal to. If this
+is a `power` bundle, then this function will pull to the `rail.V+` signal.
+@param elem-type Optional value to control the instance definition. If this
+value is an `Instantiable` - we will instantiate it directly.
+Alternatively, the user can provide a resistance value as a `Double`, and a resistor
+of that value will be created using the JITX query API. By default - this function
+will create a 10k resistor for the pullup.
+@param inst-name? Name of the created instance. If no name is provided, we will
+use the Ref of the `sig` argument. For example, `netsw.C.IRQ_N` will be converted
+to `IRQ_N-pu`.
+@param qb? Optional Resistor query builder for the selection of the pullup resistor
+in the case that `elem-type?` is a `Double`. By default, the global query defaults are
+extended with `ResistorQuery(precision = (5 %))`.
+<DOC>
+public defn insert-pullup (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?) :
+  val inst-name = to-string $ value-or(inst-name?, "%_-pu" % [get-ref-name $ ref(sig)])
+  val qb = value-or(qb?, PULLUP_DEF_QB)
+
+  inside pcb-module:
+    val et = match(elem-type):
+      (given:Instantiable): given
+      (R-v:Double): ; Resistance Value
+        create-resistor(resistance = R-v, precision = (1 %))
+
+    val elem = make-inst(to-symbol(inst-name), et, false)
+    add-pullup(elem, sig, rail)
+
+doc: \<DOC>
+Construct a pulldown instance from an Instantiable
+
+This function expects to be called from a `pcb-module` context.
+
+See {@link add-pulldown} for more info.
+
+@param sig Port or net that we wish to add a pullup to.
+@param rail Port or Net to provide the voltage rail to pull the signal to. If
+this rail is a `power` bundle, then the signal is pulled to `rail.V-`.
+@param elem-type This function will instantiate a component of this type. Alternatively,
+the user can provide a resistance value, and a resistor of that value will be created
+using the JITX query API. By default - this function will create a 10k 1% resistor by
+default.
+@param inst-name? Optional name of the created instance. If no name is provided, we will
+use the Ref name of the `sig` argument. For example, `netsw.C.IRQ_N` will be converted
+to `IRQ_N-pu`.
+@param qb? Optional Resistor query builder for the selection of the pullup resistor
+in the case that `elem-type?` is a `Double`. By default, the global query defaults are
+extended with `ResistorQuery(precision = (5 %))`.
+<DOC>
+public defn insert-pulldown (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?, qb?:ResistorQuery = ?) :
+  val inst-name = to-string $ value-or(inst-name?, "%_-pd" % [get-ref-name $ ref(sig)])
+  val qb = value-or(qb?, PULLUP_DEF_QB)
+
+  inside pcb-module:
+    val et = match(elem-type):
+      (given:Instantiable): given
+      (R-v:Double): ; Resistance Value
+        create-resistor(qb, resistance = R-v)
+
+    val elem = make-inst(to-symbol(inst-name), elem-type, false)
+    add-pulldown(elem, sig, rail)
+
