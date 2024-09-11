@@ -3,6 +3,7 @@ defpackage jsl/circuits/Pullups:
   import core
   import jitx
   import jitx/commands
+  import jitx/parts
 
   import maybe-utils
 
@@ -82,7 +83,7 @@ to `IRQ_N-pu`.
 in the case that `elem-type?` is a `Double`. By default, the global query defaults are
 extended with `ResistorQuery(precision = (5 %))`.
 <DOC>
-public defn insert-pullup (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?) :
+public defn insert-pullup (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?, qb?:ResistorQuery = ?) :
   val inst-name = to-string $ value-or(inst-name?, "%_-pu" % [get-ref-name $ ref(sig)])
   val qb = value-or(qb?, PULLUP_DEF_QB)
 
@@ -126,6 +127,6 @@ public defn insert-pulldown (sig:JITXObject, rail:JITXObject -- elem-type:Instan
       (R-v:Double): ; Resistance Value
         create-resistor(qb, resistance = R-v)
 
-    val elem = make-inst(to-symbol(inst-name), elem-type, false)
+    val elem = make-inst(to-symbol(inst-name), et, false)
     add-pulldown(elem, sig, rail)
 
