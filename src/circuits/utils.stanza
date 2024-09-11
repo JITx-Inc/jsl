@@ -5,8 +5,6 @@ defpackage jsl/circuits/utils:
   import jitx/commands
   import jitx/parts
 
-  import maybe-utils
-
   import jsl/si/signal-ends
   import jsl/design/introspection
   import jsl/errors
