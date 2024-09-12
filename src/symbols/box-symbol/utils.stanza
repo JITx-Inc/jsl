@@ -32,7 +32,9 @@ val DEF_COL = 0
 ; struct for passing around row/col/side data
 public defstruct RCS <: Equalable & Hashable :
   row:Int
+    with: (ensure => ensure-non-negative!)
   col:Int
+    with: (ensure => ensure-non-negative!)
   side:Dir
 with :
   printer => true

@@ -378,6 +378,7 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
         (none: None) :
           false
 
+    ; Pin grid checks
     val pin-rcs = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
     rcs-by-pin[ref(p)] = pin-rcs
     val pin-row = row $ pin-rcs
