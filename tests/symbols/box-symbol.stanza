@@ -8,6 +8,17 @@ defpackage jsl/tests/symbols/SymbolNode:
   import jsl/symbols/box-symbol
   import jsl/tests/utils
 
+pcb-pad rectangle-smd-pad :
+  name = "rectangle-smd-pad"
+  type = SMD
+  shape = Rectangle(0.7, 0.32)
+  layer(SolderMask(Top)) = Rectangle(0.802, 0.422)
+  layer(Paste(Top)) = Rectangle(0.7, 0.32)
+
+pcb-landpattern dummy (n: Int):
+  for i in 1 through n do :
+    pad p[i] : rectangle-smd-pad at loc(to-double(i), 0.0) on Top
+
 deftest(box-symbol) test-props-filter:
   pcb-component basic-bank:
     pin-properties:
@@ -30,6 +41,7 @@ deftest(box-symbol) test-props-filter:
         1 => box
       ]
     )
+    assign-landpattern(dummy(2))
   evaluate(basic-bank)
 
 deftest(box-symbol) test-mixed-bank-unbank-msg:
@@ -60,5 +72,42 @@ deftest(box-symbol) test-mixed-bank-unbank-msg:
     set-bank(0, self.OUT1)
     set-bank(0, self.OUT2)
     assign-f()
-
+    assign-landpattern(dummy(3))
   evaluate(basic-bank)
+
+deftest(box-symbol) test-row-col-bounds:
+  pcb-component component:
+    pin-properties:
+      [ pin:Ref | pads:Int ... | side:Dir | row:Int | column:Int ]
+      [ GND     | 1            | Left     | 0       | -          ]
+      [ ABC     | 2            | Left     | 99      | -          ]
+      [ VCC     | 3            | Up       | -       | -          ]
+      [ EN      | 4            | Right    | -       | -          ]
+
+    val box = BoxSymbol(self)
+    set-grid(box, [2, 2])
+    val create-f = {create-symbol(box, false)}
+    match(expect-throw(create-f)) :
+      (o:One) :
+        #EXPECT(all?({substring?(value(o), _)}, ["ABC" "row", "exceeds"]))
+      ; Fail if this doesn't return a message we can check
+      (n: None) :
+        fail()
+    ; fix it
+    set-row(0, self.ABC)
+
+    set-column(99, self.VCC)
+    match(expect-throw(create-f)) :
+      (o:One) :
+        println("TEST %_" % [value(o)])
+        #EXPECT(all?({substring?(value(o), _)}, ["VCC", "col", "exceeds"]))
+      ; Fail if this doesn't return a message we can check
+      (n: None) :
+        fail()
+
+    ; fix it
+    set-column(0, self.VCC)
+    assign-symbol $ create-f()
+
+    assign-landpattern(dummy(4))
+  evaluate(component)

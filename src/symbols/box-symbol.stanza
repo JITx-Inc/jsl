@@ -378,7 +378,17 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
         (none: None) :
           false
 
-    rcs-by-pin[ref(p)] = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
+    ; Pin grid checks
+    val pin-rcs = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
+    rcs-by-pin[ref(p)] = pin-rcs
+    val pin-row = row $ pin-rcs
+    val pin-col = col $ pin-rcs
+
+    if pin-row >= dims(bank-grid)[0] :
+      throw $ Exception("row %_ for pin %_ exceeds grid size [%_]" % [pin-row, ref(p), dims(bank-grid)])
+    if pin-col >= dims(bank-grid)[1] :
+      throw $ Exception("col %_ for pin %_ exceeds grid size [%_]" % [pin-col, ref(p), dims(bank-grid)])
+
     pin-infos[ref(p)] = props
     ;println("DEBUG %_ %_" % [ref(p), props])
     add(pin-order, ref(p))
@@ -409,7 +419,7 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
       within group-tail-margin = got?(group-props, GROUP_TAIL_MARGIN_PROP) :
         pin-infos[ref(tail-pin)][GROUP_TAIL_MARGIN_PROP] = group-tail-margin
 
-  check-properties(matched-pins)
+  check-properties(matched-pins, bank-grid)
 
   BoxSymbolBank(
     bank-grid
@@ -420,7 +430,7 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
     decorators
   )
 
-defn check-properties (pins:Seqable<JITXObject>) :
+defn check-properties (pins:Seqable<JITXObject>, gridInfo: GridInfo) :
   for p in pins do :
     val side? = get-property?(p, SIDE_PROP)
     match(side?, get-property?(p, ALIGN_PROP)) :
@@ -430,7 +440,7 @@ defn check-properties (pins:Seqable<JITXObject>) :
           or ((value(o1) == Up or value(o1) == Down)
             and not contains?(UD_ANCHORS, value(o2))) :
           throw $ InvalidAlignProperty("Side %_ and Alignment %_ not compatible \
-            for pin %_" % [value(o1), value(o2), ref(p)])
+            for pin %_ (Grid: %_)" % [value(o1), value(o2), ref(p), dims(gridInfo)])
       (f1, f2) :
         false
 
