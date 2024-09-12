@@ -29,6 +29,31 @@ public defn get-instantiable (comps:JITXObject|InstantiableType) -> Instantiable
       hc-inst
 
 doc: \<DOC>
+Helper functions to search through a symbol or object for a child
+
+This function supports the {@link get-port-by-name} and {@link get-symbpin-by-name}
+functions as a means of extracting a port or pin matching a particular name
+
+@param obj Object to search
+@param name Name to match with the port or pin ref name
+@param get-children Function that returns the children of a particular
+object as a Seqable of JITXObjects
+<DOC>
+defn get-child-by-name (obj:SchematicSymbol|JITXObject, name:String, get-children:((?) -> Seqable<JITXObject>)):
+  label<Maybe<JITXObject>> return:
+    val pat = to-string(".%_" % [name])
+    val has-index? = suffix?(name, "]")
+    for p in get-children(obj) do:
+      val refName = to-string $ match(ref(p)):
+        (ir:IndexRef):
+          if not has-index?: ref(ir)
+          else: ir
+        (other): other
+      if suffix?(refName, pat) :
+        return(One(p))
+    return(None())
+
+doc: \<DOC>
 Retrieve a Port by its symbol name
 
 This function retrieves a port on a component but doesn't
@@ -46,30 +71,39 @@ dot-notation style introspection if needed.
 `One<JITXObject>` if a port is found by the passed name.
 <DOC>
 public defn get-port-by-name (obj:JITXObject, name:String) -> Maybe<JITXObject> :
-  label<Maybe<JITXObject>> return:
-    val pat = to-string(".%_" % [name])
-    val has-index? = suffix?(name, "]")
-    for p in ports(obj) do:
-      val refName = to-string $ match(ref(p)):
-        (ir:IndexRef):
-          if not has-index?: ref(ir)
-          else: ir
-        (other): other
-      if suffix?(refName, pat) :
-        return(One(p))
-    return(None())
+  get-child-by-name(obj, name, ports)
+
+
+doc: \<DOC>
+Retrieve a schematic symbol pin by name
+
+Similar to {@link get-port-by-name} but works for `SchematicSymbol` objects.
+
+@param obj Schematic Symbol object
+@param name Potential name of a pin on the schematic symbol.
+@return If a pin with this name exists, return one.
+If not - return `None()`.
+<DOC>
+public defn get-symbpin-by-name (obj:SchematicSymbol, name:String) -> Maybe<JITXObject> :
+  get-child-by-name(obj, name, pins)
+
 
 doc: \<DOC>
 Get the Cathode / Anode Ports of a device if they exist
-@param obj Two-pin component or module instance that may or
+@param obj Two-pin component/module instance or SchematicSymbol that may or
 may not be a polarized device with cathode (`c`) and anode (`a`) ports.
 @return If the passed object is a polarized device, then this returns
 One<Tuple> of the ports in the order `[c, a]`. If not a polarized device,
 this function returns `None()`
 <DOC>
-public defn cathode-anode? (obj:JITXObject) -> Maybe<[JITXObject, JITXObject]> :
-  val mC = get-port-by-name(obj, "c")
-  val mA = get-port-by-name(obj, "a")
+public defn cathode-anode? (obj-symb:JITXObject|SchematicSymbol) -> Maybe<[JITXObject, JITXObject]> :
+  val conv-func = match(obj-symb):
+    (obj:JITXObject): get-port-by-name{obj, _}
+    (symb:SchematicSymbol): get-symbpin-by-name{symb, _}
+
+  val mC = conv-func("c")
+  val mA = conv-func("a")
+
   match(mC, mA) :
     (oC:One<JITXObject>, oA:One<JITXObject>): One([value(oC), value(oA)])
     (x,y): None()
@@ -87,20 +121,21 @@ devices.
 This function interrogates an object and retrieves the ports
 in a known order for use in circuits.
 
-@param obj Two-Pin component or module instance
-@return Tuple of two ports of the component - They are returned either as:
+@param obj Two-Pin component/module instance or a SchematicSymbol
+@return Tuple of two ports of the object - They are returned either as:
 1.  `[p[1], p[2]]`
 2.  `[c, a]`
 
 Depending on whether the passed device is polarized.
 
 <DOC>
-public defn get-element-ports (obj:JITXObject) -> [JITXObject, JITXObject] :
+public defn get-element-ports (obj:JITXObject|SchematicSymbol) -> [JITXObject, JITXObject] :
   val mCA = cathode-anode?(obj)
   match(mCA):
     (given:One<[JITXObject, JITXObject]>): value(given)
     (_:None):
       [obj.p[1], obj.p[2]]
+
 
 doc: \<DOC>
 Get the final name field for a ref
