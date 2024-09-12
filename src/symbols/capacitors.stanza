@@ -220,14 +220,16 @@ public defn build-pol-cap-glyphs (
       val pol-r = pol-radius(params)
       val half-angle = to-degrees $ atan( w2 / pol-r )
 
+      val porch-line = Line(line-width, [Point(0.0, (- h)), Point(0.0, (- cross-y))])
+      val pol-r-center = Point(0.0, (- (cross-y + pol-r)))
       val pline = Polyline(line-width,[
         [
-          Point(0.0, (- h)), Point(0.0, (- cross-y)), ; Shaft
-          Arc(Point(0.0, (- pol-r)), pol-r, 90.0 + half-angle, (- 2.0 * half-angle))
-          Arc(Point(0.0, (- pol-r)), pol-r, 90.0 - half-angle, (2.0 * half-angle))
+          Arc(pol-r-center, pol-r, 90.0 + half-angle, (- 2.0 * half-angle))
+          Arc(pol-r-center, pol-r, 90.0 - half-angle, (2.0 * half-angle))
           ]
       ] )
-      pline
+      ; pline
+      Union([porch-line, pline])
   add-glyph(node, bot-plate, name? = One("bot-plate"))
 
   val plus-len = match(plus-size(params)):
