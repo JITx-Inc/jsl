@@ -5,6 +5,8 @@ defpackage jsl/symbols/resistors:
   import jitx
   import math
 
+  import maybe-utils
+
   import jsl/errors
   import jsl/ensure
   import jsl/geometry/LineRectangle
@@ -30,14 +32,16 @@ of a triangle-wave style resistor sybmol.
 TODO - Diagram here showing parameters.
 <DOC>
 public defstruct ResistorSymbolParams <: Equalable:
-  style:ResistorStyle
+  style:ResistorStyle with:
+    default => DEF_RES_STYLE
   doc: \<DOC>
   Length of the line from the pin to the start of the resistor body.
   <DOC>
-  porch-width:Double with: (
+  porch-width:Double with:
     ensure => ensure-positive!,
     updater => sub-porch-width
-  )
+    default => DEF_PORCH_WIDTH
+
   doc: \<DOC>
   Width of the body of the resistor
   For triangle wave versions, this is the amplitude of the
@@ -45,10 +49,11 @@ public defstruct ResistorSymbolParams <: Equalable:
   For the rectangle shaped version, this is the distance from
   X=0 to either edge of the rectangle shape.
   <DOC>
-  amplitude:Double with: (
+  amplitude:Double with:
     ensure => ensure-positive!
     updater => sub-amplitude
-  )
+    default => DEF_AMPLITUDE
+
   doc: \<DOC>
   Number of oscillation periods in the triangle wave.
   This value should typically be a whole- or half-number,
@@ -56,31 +61,23 @@ public defstruct ResistorSymbolParams <: Equalable:
   This values does not apply to the rectangular shaped
   variants.
   <DOC>
-  periods:Double with: (
+  periods:Double with:
     ensure => ensure-positive!
     updater => sub-periods
-  )
+    default => DEF_PERIODS
+
   doc: \<DOC>
   Line width for the shapes drawn
   <DOC>
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
-  )
+    default => DEF_LINE_WIDTH
+
 with:
-  constructor => #ResistorSymbolParams
+  keyword-constructor => true
   printer => true
   equalable => true
-
-public defn ResistorSymbolParams (
-  --
-  style:ResistorStyle = DEF_RES_STYLE
-  porch-width:Double = DEF_PORCH_WIDTH
-  amplitude:Double = DEF_AMPLITUDE
-  periods:Double = DEF_PERIODS
-  line-width:Double = DEF_LINE_WIDTH
-  ) -> ResistorSymbolParams :
-  #ResistorSymbolParams(style, porch-width, amplitude, periods, line-width)
 
 public defn to-tuple (p:ResistorSymbolParams) -> [ResistorStyle, Double, Double, Double, Double] :
   [style(p), porch-width(p), amplitude(p), periods(p), line-width(p)]
@@ -194,26 +191,41 @@ public defstruct ResistorSymbol <: TwoPinSymbol :
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
+  doc: \<DOC>
+  Indicates whether the symbol will use c/a style pins
+
+  This is typically not used in resistors because they
+  are not polarized - but it is part of the TwoPinSymbol
+  definition. The default is `false`.
+  <DOC>
   polarized?:True|False with:
     as-method => true
     default => false
-with:
-  printer => true
-  constructor => #ResistorSymbol
+  doc: \<DOC>
+  Optional Override Parameters for Resistor Glyph
 
-public defn ResistorSymbol (
-  --
-  pitch:Double = TWO_PIN_DEF_PITCH,
-  ) -> ResistorSymbol:
-  #ResistorSymbol(pitch, false)
+  This value can be used to override the resistor glyph
+  parameters and replace them with custom parameters.
+  This value is by default `None()` which will cause
+  {@link get-default-resistor-symbol-params} to be
+  consulted for parameters when the symbol is built.
+  <DOC>
+  params:Maybe<ResistorSymbolParams> with:
+    default => None()
+with:
+  keyword-constructor => true
+  printer => true
 
 public defmethod name (x:ResistorSymbol) -> String :
   "Resistor"
 
+defn get-params (x:ResistorSymbol) -> ResistorSymbolParams :
+  value-or-else(params(x), get-default-resistor-symbol-params)
+
 public defmethod build-artwork (
   x:ResistorSymbol, sn:SymbolNode
   ):
-  val p = get-default-resistor-symbol-params()
+  val p = get-params(x)
   build-resistor-glyphs(sn, pitch(x), p)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -234,42 +246,31 @@ public defstruct VariableResistorSymbolParams <: Equalable :
   doc: \<DOC>
   Override the default resistor symbol parameters with this value.
   <DOC>
-  res-params?:Maybe<ResistorSymbolParams> with: (
+  res-params?:Maybe<ResistorSymbolParams> with:
     default => None()
     updater => sub-res-params
-  )
   doc: \<DOC>
   Override the default arrow parameters with this value.
   We will grab `get-default-arrow-symbol-params()` by
   default if this value is `None`.
   <DOC>
-  arrow-params?:Maybe<ArrowSymbolParams> with: (
+  arrow-params?:Maybe<ArrowSymbolParams> with:
     default => None()
     updater => sub-arrow-params
-  )
   doc: \<DOC>
   Set the X span of the arrow
   This, along with the body length of the resistor symbol, defines
   the shaft length of the arrow. This value is relative to the
   `amplitude` of the resistor body.
   <DOC>
-  arrow-span:Percentage with: (
+  arrow-span:Percentage with:
     ensure => ensure-positive!
     default => DEF_VAR_ARROW_SPAN
     updater => sub-arrow-span
-  )
 with:
-  constructor => #VariableResistorSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-public defn VariableResistorSymbolParams (
-  --
-  res-params:ResistorSymbolParams = ?
-  arrow-params:ArrowSymbolParams = ?,
-  arrow-span:Percentage = DEF_VAR_ARROW_SPAN
-  ) -> VariableResistorSymbolParams :
-  #VariableResistorSymbolParams(res-params, arrow-params, arrow-span)
 
 
 var DEF_VAR_RESISTOR_PARAMS = VariableResistorSymbolParams()
@@ -291,28 +292,43 @@ public defstruct VariableResistorSymbol <: TwoPinSymbol :
   pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
+  doc: \<DOC>
+  Indicates whether the symbol will use c/a style pins
+
+  This is typically not used in resistors because they
+  are not polarized - but it is part of the TwoPinSymbol
+  definition. The default is `false`.
+  <DOC>
   polarized?:True|False with:
     as-method => true
     default => false
+  doc: \<DOC>
+  Optional Override Parameters for Variable Resistor Glyph
+
+  This value can be used to override the resistor glyph
+  parameters and replace them with custom parameters.
+  This value is by default `None()` which will cause
+  {@link get-default-variable-resistor-symbol-params} to be
+  consulted for parameters when the symbol is built.
+  <DOC>
+  params:Maybe<VariableResistorSymbolParams> with:
+    default => None()
 with:
   printer => true
-  constructor => #VariableResistorSymbol
-
-public defn VariableResistorSymbol (-- pitch:Double = TWO_PIN_DEF_PITCH) -> VariableResistorSymbol:
-  #VariableResistorSymbol(pitch, false)
+  keyword-constructor => true
 
 public defmethod name (x:VariableResistorSymbol) -> String :
   "Variable-Resistor"
+
+defn get-params (x:VariableResistorSymbol) -> VariableResistorSymbolParams :
+  value-or-else(params(x), get-default-variable-resistor-symbol-params)
 
 public defn build-variable-resistor-glyphs (
   sn:SymbolNode,
   pitch:Double,
   x:VariableResistorSymbolParams
   ):
-  val p = match(res-params?(x)):
-    (_:None): get-default-resistor-symbol-params()
-    (def-p:One<ResistorSymbolParams>): value(def-p)
-
+  val p = value-or-else(res-params?(x), get-default-resistor-symbol-params)
   build-resistor-glyphs(sn, pitch, p)
 
   ; Draw arrow here.
@@ -330,10 +346,7 @@ public defn build-variable-resistor-glyphs (
   )
   val angle = to-degrees $ atan2((- y-dim), (- x-dim))
 
-  val curr-params = match(arrow-params?(x)):
-    (_:None): get-default-arrow-symbol-params()
-    (p:One<ArrowSymbolParams>): value(p)
-
+  val curr-params = value-or-else(arrow-params?(x), get-default-arrow-symbol-params)
   val arrow-params = sub-shaft-length(curr-params, shaft)
   val arrow-sh = loc(start, angle) * construct-arrow(arrow-params)
   add-glyph(sn, arrow-sh, name? = One("arrow"))
@@ -341,7 +354,7 @@ public defn build-variable-resistor-glyphs (
 public defmethod build-artwork (
   x:VariableResistorSymbol, sn:SymbolNode
   ):
-  val p = get-default-variable-resistor-symbol-params()
+  val p = get-params(x)
   build-variable-resistor-glyphs(sn, pitch(x), p)
 
 var CURR-VARRES-SYMBOL:TwoPinSymbol = VariableResistorSymbol()
@@ -361,57 +374,42 @@ public defstruct PhotoResistorSymbolParams <: Equalable :
   doc: \<DOC>
   Override the default resistor symbol parameters with this value.
   <DOC>
-  res-params?:Maybe<ResistorSymbolParams> with: (
+  res-params?:Maybe<ResistorSymbolParams> with:
     default => None()
     updater => sub-res-params
-  )
   doc: \<DOC>
   Override the default arrow parameters with this value.
   We will grab `get-default-arrow-symbol-params()` by
   default if this value is `None`.
   <DOC>
-  arrow-params?:Maybe<ArrowSymbolParams> with: (
+  arrow-params?:Maybe<ArrowSymbolParams> with:
     default => None()
     updater => sub-arrow-params
-  )
   doc: \<DOC>
   Margin between the start of the arrows and the body of the resistors
   <DOC>
-  arrow-margin:Double with: (
+  arrow-margin:Double with:
     ensure => ensure-positive!
     default => DEF_PHOTO_ARR_MARGIN
     updater => sub-arrow-margin
-  )
   doc: \<DOC>
   Distance between the photo symbol arrows (pointing at the body)
   <DOC>
-  arrow-pitch:Double with: (
+  arrow-pitch:Double with:
     ensure => ensure-positive!
     default => DEF_PHOTO_ARR_PITCH
     updater => sub-arrow-pitch
-  )
   doc: \<DOC>
   Angle of the arrows with respect to the X-axis in Degrees
   <DOC>
-  arrow-angle:Double with: (
+  arrow-angle:Double with:
     ensure => ensure-positive!
     default => DEF_PHOTO_ARR_ANGLE
     updater => sub-arrow-angle
-  )
 with:
-  constructor => #PhotoResistorSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-public defn PhotoResistorSymbolParams (
-  --
-  res-params:ResistorSymbolParams = ?
-  arrow-params:ArrowSymbolParams = ?,
-  arrow-margin:Double = DEF_PHOTO_ARR_MARGIN
-  arrow-pitch:Double = DEF_PHOTO_ARR_PITCH
-  arrow-angle:Double = DEF_PHOTO_ARR_ANGLE
-  ) -> PhotoResistorSymbolParams :
-  #PhotoResistorSymbolParams(res-params, arrow-params, arrow-margin, arrow-pitch, arrow-angle)
 
 
 var DEF_PHOTO_RESISTOR_PARAMS = PhotoResistorSymbolParams()
@@ -432,15 +430,30 @@ public defstruct PhotoResistorSymbol <: TwoPinSymbol :
   pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
+  doc: \<DOC>
+  Indicates whether the symbol will use c/a style pins
+
+  This is typically not used in resistors because they
+  are not polarized - but it is part of the TwoPinSymbol
+  definition. The default is `false`.
+  <DOC>
   polarized?:True|False with:
     as-method => true
     default => false
-with:
-  printer => true
-  constructor => #PhotoResistorSymbol
+  doc: \<DOC>
+  Optional Override Parameters for Photo Resistor Glyph
 
-public defn PhotoResistorSymbol (pitch:Double = TWO_PIN_DEF_PITCH) -> PhotoResistorSymbol:
-  #PhotoResistorSymbol(pitch, false)
+  This value can be used to override the resistor glyph
+  parameters and replace them with custom parameters.
+  This value is by default `None()` which will cause
+  {@link get-default-photo-resistor-symbol-params} to be
+  consulted for parameters when the symbol is built.
+  <DOC>
+  params:Maybe<PhotoResistorSymbolParams> with:
+    default => None()
+with:
+  keyword-constructor => true
+  printer => true
 
 public defmethod name (x:PhotoResistorSymbol) -> String :
   "Photo-Resistor"
@@ -451,13 +464,8 @@ public defn build-photo-resistor-glyphs (
   x:PhotoResistorSymbolParams
   ) :
 
-  val p = match(res-params?(x)):
-    (_:None): get-default-resistor-symbol-params()
-    (def-p:One<ResistorSymbolParams>): value(def-p)
-
-  val arrow-params = match(arrow-params?(x)):
-    (_:None): get-default-arrow-symbol-params()
-    (p:One<ArrowSymbolParams>): value(p)
+  val p = value-or-else(res-params?(x), get-default-resistor-symbol-params)
+  val arrow-params = value-or-else(arrow-params?(x), get-default-arrow-symbol-params)
 
   build-resistor-glyphs(sn, pitch, p)
 
@@ -473,10 +481,13 @@ public defn build-photo-resistor-glyphs (
   val arrow-2 = loc(Point(amp + margin, (- y-offset)), angle) * arrow-sh
   add-glyph(sn, arrow-2, name? = One("arrow-2"))
 
+defn get-params (x:PhotoResistorSymbol) -> PhotoResistorSymbolParams:
+  value-or-else(params(x), get-default-photo-resistor-symbol-params)
+
 public defmethod build-artwork (
   x:PhotoResistorSymbol, sn:SymbolNode
   ):
-  val p = get-default-photo-resistor-symbol-params()
+  val p = get-params(x)
   build-photo-resistor-glyphs(sn, pitch(x), p)
 
 
