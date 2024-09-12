@@ -42,21 +42,23 @@ with :
 ; TODO(azhu): most of this is lifted from previous ocdb implementation.
 ; Could use a facelift.
 ;
-public defn assign-schematic-symbols (banks: Tuple<KeyValue<Int|Ref,SchematicSymbol>>) :
+public defn assign-schematic-symbols (bank-syms: Tuple<KeyValue<Int|Ref,SchematicSymbol>>) :
   defn ensure-non-empty-banks! () :
-    if empty?(banks) :
+    if empty?(bank-syms) :
       throw(EmptyBanks(""))
+
   defn ensure-unique-bank-arguments! () :
     val seen-banks = HashSet<Int|Ref>()
     val duplicate-banks = Vector<Int|Ref>()
-    for bank-kv in banks do :
+    for bank-kv in bank-syms do :
       val bank = key(bank-kv)
       if not add(seen-banks, bank) :
         add(duplicate-banks, bank)
     if not empty?(duplicate-banks) :
       throw(DuplicateBanks(to-tuple(duplicate-banks)))
+
   defn ensure-banks-exist! (pin-banks:Tuple<Maybe>) :
-    val banks* = map(key, banks)
+    val banks* = map(key, bank-syms)
     val pin-banks* = unique-banks(pin-banks)
     val extra-banks = difference(banks*, pin-banks*)
     if not empty?(extra-banks) :
@@ -64,19 +66,20 @@ public defn assign-schematic-symbols (banks: Tuple<KeyValue<Int|Ref,SchematicSym
     val missing-banks = difference(pin-banks*, banks*)
     if not empty?(missing-banks) :
       throw(MissingBankArguments(qsort(missing-banks)))
+
   defn ensure-symbol-pins! (pins:Tuple<JITXObject>, pin-banks:Tuple<Maybe>) :
     val bad-matches = to-tuple $
-      for bank in banks seq? :
-        val symbol-pins = to-hashset(ref, /pins(value(bank)))
+      for kv in bank-syms seq? :
+        val symbol-pins = to-hashset(ref, /pins(value(kv)))
         val mismatched-pins = to-tuple $
           for (p in pins, b in pin-banks) seq? :
             val pin-ref = ref(p)
-            if value!(b) == bank and not symbol-pins[pin-ref] :
+            if value!(b) == key(kv) and not symbol-pins[pin-ref] :
               One(pin-ref)
             else :
               None()
         if not empty?(mismatched-pins) :
-          One(name(value(bank)) => to-tuple(mismatched-pins))
+          One(name(value(kv)) => to-tuple(mismatched-pins))
         else :
           None()
     if not empty?(bad-matches) :
@@ -93,7 +96,8 @@ public defn assign-schematic-symbols (banks: Tuple<KeyValue<Int|Ref,SchematicSym
     ensure-banks-exist!(pin-banks)
     ensure-symbol-pins!(pins, pin-banks)
     val wrapped-banks =
-      for [bank, symbol] in kvs(banks) seq :
+      for kv in bank-syms seq :
+        val [bank, symbol] = [key(kv), value(kv)]
         val pin-mappings = for (p in pins, b in pin-banks) seq? :
           if value!(b) == bank :
             One(p => dot(symbol, ref(p)))
