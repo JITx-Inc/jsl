@@ -309,3 +309,57 @@ public defn swizzle-bus (bus-bundle:JITXObject -- locked:Tuple<Int>) :
           swiz-Bus.D[i] => lb.p
 
     swiz-Bus
+
+doc: \<DOC>
+Connect a set of ports/nets to require ports on `C`
+
+This function expects to be called from a `pcb-module` context.
+
+This function is recursive for `PortArray` instances.
+
+This function will create a new `require` port for each of the
+port objects in `port-set` and then `net` that port to the
+newly created require port.
+
+This function assumes that `C` has sufficient supports defined to
+satisfy all of the passed ports. If not - this will likely result in
+an `UNSAT` or Unsatisfiable condition at runtime.
+
+@param C Component Instance from which require ports will be extracted.
+
+@param port-set The port objects that we will interrogate and then
+construct require ports for. Each element, we will find its `PortType` and
+then take one of three actions:
+1.  For `SinglePin`, we will `require` a `def-bundle` from `C` and net to it.
+2.  For `PortArray`, we will recursively call `connect-require-ports` on each child element.
+3.  For `Bundle`, we will `require a bundle of matching type from `C` and net to it.
+@param def-bundle For `SinglePin` ports, we will use this default bundle
+type when creating require statements. This bundle must have one port in its definition
+and that port must be a `SinglePin`. By default this function uses `gpio`.
+<DOC>
+public defn connect-require-ports (C:JITXObject, port-set:Seqable<JITXObject> -- def-bundle:Bundle = gpio) :
+  val b = def-bundle
+  val def-cnt = length(ports(b))
+  if def-cnt != 1:
+    throw $ ValueError("Default Bundle Type is Expected to have a single port - Found: %_ ports" % [def-cnt])
+
+  val def-ptype = port-type(ports(b)[0])
+  if def-ptype is-not SinglePin :
+    throw $ ValueError("Default Bundle Type is Expected to have a single port of type 'SinglePin' - Found: %_" % [def-ptype])
+
+  inside pcb-module:
+    for pt in port-set do:
+      match(port-type(pt)):
+        (_:SinglePin):
+          require given:b from C
+          val given-pt = ports(given)[0]
+          net (pt, given-pt)
+        (pa:PortArray):
+          val kids = to-tuple $ ports(pt)
+          connect-require-ports(C, kids, def-bundle = b)
+        (pt-b:Bundle):
+          require given:pt-b from C
+          net (pt, given)
+
+
+
