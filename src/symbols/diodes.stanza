@@ -35,24 +35,19 @@ public defstruct DiodeSymbolParams <: Equalable :
   body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?
+    default => DEF_FILLED?
 with:
-  constructor => #DiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-
-public defn DiodeSymbolParams (
-  --
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> DiodeSymbolParams :
-  #DiodeSymbolParams(body-dims, line-width, filled?)
 
 public defn to-tuple (p:DiodeSymbolParams) -> [Double|Dims, Double, True|False]:
   [body-dims(p), line-width(p), filled?(p)]
@@ -145,37 +140,32 @@ public defn set-default-diode-symbol (symb:TwoPinSymbol) :
 ; Schottky Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
+val DEF_WING_SIZE = 0.1
 
+
+public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
   wing-size:Double with:
     ensure => ensure-positive!
     updater => sub-wing-size
+    default => DEF_WING_SIZE
   body-dims:Dims|Double with:
     ensure => ensure-positive!
     updater => sub-body-dims
     as-method => true
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     as-method => true
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?
     as-method => true
+    default => DEF_FILLED?
 with:
-  constructor => #SchottkyDiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-val DEF_WING_SIZE = 0.1
-
-public defn SchottkyDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_WING_SIZE
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> SchottkyDiodeSymbolParams :
-  #SchottkyDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
 
 public defn sub-base-params (p:SchottkyDiodeSymbolParams, b:DiodeSymbolParams) -> SchottkyDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
@@ -259,37 +249,32 @@ public defn set-default-schottky-diode-symbol (symb:TwoPinSymbol) :
 ; Zener Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
+val DEF_ZENER_WING_SIZE = 0.1
 
+public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
   wing-size:Double with:
     ensure => ensure-positive!,
     updater => sub-wing-size
+    default => DEF_ZENER_WING_SIZE
   body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?,
     as-method => true
+    default => DEF_FILLED?
 with:
-  constructor => #ZenerDiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-val DEF_ZENER_WING_SIZE = 0.1
-
-public defn ZenerDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_ZENER_WING_SIZE
-  body-dims:Double|Dims = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> ZenerDiodeSymbolParams :
-  #ZenerDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
 
 public defn sub-base-params (p:ZenerDiodeSymbolParams, b:DiodeSymbolParams) -> ZenerDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
@@ -376,39 +361,31 @@ public defn set-default-zener-diode-symbol (symb:TwoPinSymbol) :
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Tunnel Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
-
-  wing-size:Double with:
-    ensure => ensure-positive!,
-    updater => sub-wing-size
-  body-dims:Dims|Double with:
-    ensure => ensure-positive!,
-    updater => sub-body-dims
-    as-method => true
-  line-width:Double with:
-    ensure => ensure-positive!
-    updater => sub-line-width,
-    as-method => true
-  filled?:True|False with:
-    updater => sub-filled?,
-    as-method => true
-with:
-  constructor => #TunnelDiodeSymbolParams
-  equalable => true
-  printer => true
-
 val DEF_TUNNEL_WING_SIZE = 0.1
 
-public defn TunnelDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_TUNNEL_WING_SIZE
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> TunnelDiodeSymbolParams :
-  #TunnelDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
+public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
+  wing-size:Double with:
+    ensure => ensure-positive!
+    updater => sub-wing-size
+    default => DEF_TUNNEL_WING_SIZE
+  body-dims:Dims|Double with:
+    ensure => ensure-positive!
+    updater => sub-body-dims
+    as-method => true
+    default => DEF_BODY_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    as-method => true
+    default => DEF_LINE_WIDTH
+  filled?:True|False with:
+    updater => sub-filled?
+    as-method => true
+    default => DEF_FILLED?
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
 
 public defn sub-base-params (p:TunnelDiodeSymbolParams, b:DiodeSymbolParams) -> TunnelDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
