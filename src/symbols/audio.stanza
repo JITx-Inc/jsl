@@ -13,33 +13,23 @@ val DEF_AUDIO_PIN_LEN = 2.0
 val DEF_AUDIO_PAD_REF_SIZE = 0.65
 
 public defstruct AudioSymbolParams <: Equalable :
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_AUDIO_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_AUDIO_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_AUDIO_PAD_REF_SIZE
-  )
 with:
-  constructor => #AudioSymbolParams
+  keyword-constructor => true
   printer => true
   equalable => true
 
-public defn AudioSymbolParams (
-  --
-  line-width:Double = DEF_AUDIO_LINE_WIDTH,
-  pin-length:Double = DEF_AUDIO_PIN_LEN,
-  pad-ref-size:Double = DEF_AUDIO_PAD_REF_SIZE
-  ) -> AudioSymbolParams:
-  #AudioSymbolParams(line-width, pin-length, pad-ref-size)
 
 var DEF_AUDIO_PARAMS = AudioSymbolParams()
 public defn get-default-audio-symbol-params () -> AudioSymbolParams :
@@ -53,22 +43,15 @@ val DEF_AUDIO_PITCH = TWO_PIN_DEF_PITCH
 
 
 public defstruct SpeakerSymbol <: SymbolDefn :
-  pitch:Double with: (
+  pitch:Double with:
     default => DEF_AUDIO_PITCH
     ensure => ensure-positive!
-  )
-  params:Maybe<AudioSymbolParams> with: (
+  params:Maybe<AudioSymbolParams> with:
     default => None()
-  )
 with:
-  constructor => #SpeakerSymbol
+  keyword-constructor => true
+  printer => true
 
-public defn SpeakerSymbol (
-  --
-  pitch:Double = DEF_AUDIO_PITCH
-  params:AudioSymbolParams = ?
-  ) -> SpeakerSymbol :
-  #SpeakerSymbol(pitch, params)
 
 defn get-params (x:SpeakerSymbol) -> AudioSymbolParams :
   match(params(x)):
@@ -130,22 +113,14 @@ public defmethod build-params (x:SpeakerSymbol, sn:SymbolNode) :
 
 
 public defstruct BuzzerSymbol <: SymbolDefn :
-  pitch:Double with: (
+  pitch:Double with:
     default => DEF_AUDIO_PITCH
     ensure => ensure-positive!
-  )
-  params:Maybe<AudioSymbolParams> with: (
+  params:Maybe<AudioSymbolParams> with:
     default => None()
-  )
 with:
-  constructor => #BuzzerSymbol
-
-public defn BuzzerSymbol (
-  --
-  pitch:Double = DEF_AUDIO_PITCH
-  params:AudioSymbolParams = ?
-  ) -> BuzzerSymbol :
-  #BuzzerSymbol(pitch, params)
+  keyword-constructor => true
+  printer => true
 
 defn get-params (x:BuzzerSymbol) -> AudioSymbolParams :
   match(params(x)):
@@ -207,22 +182,14 @@ public defmethod build-params (x:BuzzerSymbol, sn:SymbolNode) :
 
 
 public defstruct MicrophoneSymbol <: SymbolDefn :
-  pitch:Double with: (
+  pitch:Double with:
     default => DEF_AUDIO_PITCH
     ensure => ensure-positive!
-  )
-  params:Maybe<AudioSymbolParams> with: (
+  params:Maybe<AudioSymbolParams> with:
     default => None()
-  )
 with:
-  constructor => #MicrophoneSymbol
-
-public defn MicrophoneSymbol (
-  --
-  pitch:Double = DEF_AUDIO_PITCH
-  params:AudioSymbolParams = ?
-  ) -> MicrophoneSymbol :
-  #MicrophoneSymbol(pitch, params)
+  keyword-constructor => true
+  printer => true
 
 defn get-params (x:MicrophoneSymbol) -> AudioSymbolParams :
   match(params(x)):
