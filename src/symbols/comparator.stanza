@@ -20,34 +20,30 @@ public defstruct ComparatorSymbol <: OpAmpSymbol :
   doc: \<DOC>
   Pos/Neg Terminal Pitch
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!
     default => DEF_OPAMP_PITCH
     as-method => true
-  )
 
   doc: \<DOC>
   Input Base Reference or Explicit Input Refs.
   @see OpAmpSymbol for more Information.
   <DOC>
-  in-ref:Ref|[Ref, Ref] with: (
+  in-ref:Ref|[Ref, Ref] with:
     default => OPAMP_IN_BASE_REF,
     as-method => true
-  )
   doc: \<DOC>
   Output Reference
   User can override the default for supporting multi-channel
   chips. The default expected output pin ref is `out`
   <DOC>
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => OPAMP_OUT_REF,
     as-method => true
-  )
 
-  params:OpAmpSymbolParams with: (
+  params:OpAmpSymbolParams with:
     default => get-default-comparator-symbol-params()
     as-method => true
-  )
 with:
   constructor => #ComparatorSymbol
 

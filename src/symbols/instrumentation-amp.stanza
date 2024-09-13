@@ -35,37 +35,34 @@ public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
   doc: \<DOC>
   Pos/Neg Terminal Pitch
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!
     default => DEF_IAMP_PITCH
     as-method => true
-  )
 
   doc: \<DOC>
   Gain Resistor Terminal Pitch
   <DOC>
-  rg-pitch:Double with: (
+  rg-pitch:Double with:
     ensure => ensure-positive!
     default => DEF_IAMP_RG_PITCH
-  )
 
   doc: \<DOC>
   Input Base Reference or Explicit Input References.
   @see OpAmpSymbol for more Information.
   <DOC>
-  in-ref:Ref|[Ref, Ref] with: (
+  in-ref:Ref|[Ref, Ref] with:
     default => OPAMP_IN_BASE_REF,
     as-method => true
-  )
+
   doc: \<DOC>
   Output Reference
   User can override the default for supporting multi-channel
   chips. The default expected output pin ref is `out`
   <DOC>
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => OPAMP_OUT_REF,
     as-method => true
-  )
 
   doc: \<DOC>
   Gain Resistor Interface Reference
@@ -73,23 +70,21 @@ public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
   chips. The default Rg pin ref is `Rg` and this will result
   in two pins `Rg[0]` and `Rg[1]`
   <DOC>
-  rg-ref:Ref with: (
+  rg-ref:Ref with:
     default => IAMP_RG_REF_DEF
-  )
 
   doc: \<DOC>
   Voltage Reference Pin RefName
   User can override the default for supporting multi-channel
   chips. The default vref pin is `REF`.
   <DOC>
-  vref-ref:Ref with: (
+  vref-ref:Ref with:
     default => IAMP_VREF_REF_DEF
-  )
 
-  params:OpAmpSymbolParams with: (
+  params:OpAmpSymbolParams with:
     default => get-default-iamp-symbol-params()
     as-method => true
-  )
+
 with:
   constructor => #InstrumentationAmpSymbol
 
