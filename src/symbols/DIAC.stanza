@@ -16,43 +16,35 @@ public defstruct DiacSymbolParams <: Equalable :
   doc: \<DOC>
   Porch width is the leader line length from pin to body of the symbol
   <DOC>
-  porch-width:Double with: (
-    ensure => ensure-positive!,
+  porch-width:Double with:
+    ensure => ensure-positive!
     updater => sub-porch-width
-  )
+    default => DEF_PORCH_WIDTH
   doc: \<DOC>
   Overhang defines the extra line lengths that exceed the triangle
   <DOC>
-  overhang:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-overhang,
-  )
+  overhang:Double with:
+    ensure => ensure-positive!
+    updater => sub-overhang
+    default => DEF_OVERHANG
   doc: \<DOC>
   Line width defines the width of the lines used for drawing the shapes of the symbol
   <DOC>
-  line-width:Double with: (
-    ensure => ensure-positive!,
+  line-width:Double with:
+    ensure => ensure-positive!
     updater => sub-line-width
-  )
+    default => DEF_LINE_WIDTH
   doc: \<DOC>
   Determines if the triangle shapes are filled polygons or just lines.
   <DOC>
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?
-  )
+    default => DEF_FILLED?
 with:
-  constructor => #DiacSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-public defn DiacSymbolParams (
-  --
-  porch-width:Double = DEF_PORCH_WIDTH
-  overhang:Double = DEF_OVERHANG
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-  ) -> DiacSymbolParams :
-  #DiacSymbolParams(porch-width, overhang, line-width, filled?)
 
 var DEF_DIAC_PARAMS = DiacSymbolParams()
 public defn get-default-diac-symbol-params () -> DiacSymbolParams :
