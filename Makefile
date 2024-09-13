@@ -2,6 +2,7 @@
 SLM_STANZA ?= jstanza
 STANZA := $(SLM_STANZA)
 CWD := $(shell pwd)
+SLM := $(SLM)
 
 # execute all lines of a target in one shell
 .ONESHELL:
@@ -58,12 +59,18 @@ FILLETS_NAME=jsl/landpatterns/leads/lead-fillets-table
 $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
+fetch-deps:
+    # This forces SLM to fetch the dependencies
+    #  it will fail - but we don't care as longs as the
+    #  deps get fetched.
+    -$(SLM) build fetch-deps
+
 .PHONY: tests
-tests:
+tests: fetch-deps
 	$(STANZA) run-test $(JSL_TESTS)
 
 .PHONY: test-%
-test-%:
+test-%: fetch-deps
 	$(STANZA) run-test $(JSL_TESTS) -tagged $(@:test-%=%) | grep -v "SKIP" | awk NF
 
 .PHONY: clean
