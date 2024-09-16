@@ -5,6 +5,7 @@ defpackage jsl/symbols/ferrite:
 
   import jsl/ensure
   import jsl/symbols/framework
+  import jsl/geometry/box
 
 val DEF_LINE_WIDTH = 0.05
 val DEF_SYMB_BODY = Dims(0.9, 0.4)
@@ -113,3 +114,23 @@ public defmethod build-artwork (
 
 public defmethod build-orientation (x:FerriteSymbol, sn:SymbolNode):
   set-preferred-orientation(sn, PreferRotation([1]))
+
+public defmethod build-params (x:FerriteSymbol, sn:SymbolNode) :
+  val overall = glyph-bounds(sn)
+  val p = get-params(x) as FerriteSymbolParams
+
+  val offset = Point(left(overall), 0.0)
+
+  val r-P = loc(offset, 90.0)
+
+  val lp = get-label-params(p)
+  val r-H = ref-label-size(lp)
+  val v-P = loc(offset + Point((- r-H), 0.0), 90.0)
+
+  build-labels(
+    get-label-params(p),
+    sn,
+    LabelPosition(r-P, SE)
+    LabelPosition(v-P, SE)
+    )
+

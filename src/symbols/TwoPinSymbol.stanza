@@ -76,11 +76,13 @@ public defn two-pin-build-labels (x:TwoPinSymbol, sn:SymbolNode, symb-params:Sym
   val overall = glyph-bounds(sn)
   val p = get-label-params(symb-params)
 
+  val offset = Point(right(overall) + 0.5, 0.0)
+  val [r-pos, v-pos] = compute-label-positions(symb-params, N)
   build-labels(
     p,
     sn,
-    LabelPosition([right(overall) + 0.5, 0.5], W)
-    LabelPosition([right(overall) + 0.5, -0.5], W)
+    LabelPosition(offset + r-pos, W)
+    LabelPosition(offset + v-pos, W)
     )
 
 public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
