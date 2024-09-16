@@ -165,7 +165,8 @@ public defstruct CrystalSymbol <: TwoPinSymbol :
   Optional Crystal Symbol Parameters Override.
   <DOC>
   params:Maybe<CrystalSymbolParams> with:
-    setter => set-crystal-params-override
+    ; setter => set-crystal-params-override
+    setter => set-params-override
     default => None()
     as-method => true
 with:
@@ -199,7 +200,7 @@ public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
         ;  on the schematic grid.
         val def-case = Dims(2.0, pin-span + 0.5)
         val new-params = sub-crystal-case(p, One(def-case))
-        set-crystal-params-override(cx, One(new-params))
+        set-params-override(cx, One(new-params))
         def-case
       (given:One<Dims>): value(given)
 

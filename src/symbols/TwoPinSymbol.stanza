@@ -51,6 +51,10 @@ public defstruct TwoPinSymbol <: SymbolDefn :
     default => false
   params:Maybe<SymbolParams> with:
     default => None()
+    ; This is support any derived objects that need to implement
+    ;   a setter. If I don't provide this - then none will be able
+    ;   to do this.
+    setter => set-params-override
 
 public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
   if not polarized?(x):
