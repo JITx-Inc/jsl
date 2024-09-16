@@ -132,6 +132,8 @@ public defmethod build-artwork (x:BufferSymbol, node:SymbolNode) :
   val p = get-params(x) as BufferSymbolParams
   build-buffer-glyphs(node, p)
 
+
+
 public defmethod build-params (x:BufferSymbol, sn:SymbolNode) :
   val p = get-params(x) as BufferSymbolParams
   val w = tri-width(p)
@@ -142,9 +144,11 @@ public defmethod build-params (x:BufferSymbol, sn:SymbolNode) :
   ; We then pad on this a bit for the ref point.
   val y = 0.25 * w
 
+  val offset = Point(0.5, y + 0.5)
+  val [r-pos, v-pos] = compute-label-positions(p, S)
   build-labels(
     get-label-params(p),
     sn,
-    LabelPosition([0.5, y + 1.5], W)
-    LabelPosition([0.5, y + 0.5], W)
+    LabelPosition(offset + r-pos, W)
+    LabelPosition(offset + v-pos, W)
     )

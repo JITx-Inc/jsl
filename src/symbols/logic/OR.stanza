@@ -379,10 +379,14 @@ public defmethod build-artwork (x:ORGateSymbol, node:SymbolNode) :
 public defmethod build-params (x:ORGateSymbol, sn:SymbolNode) :
   val p = get-params(x) as ORGateSymbolParams
   val [w, h] = get-body-size(p, exclusive?(x))
-  val h2 = h / 2.0
+  val h2 = h / 4.0
+
+  val offset = Point(0.0, h2 + 0.5)
+  val [r-pos, v-pos] = compute-label-positions(p, S)
+
   build-labels(
     get-label-params(p),
     sn,
-    LabelPosition([0.0, h2 + 0.5], SW)
-    LabelPosition([0.0, (- (h2 + 0.5))], NW)
+    LabelPosition(offset + r-pos, W)
+    LabelPosition(offset + v-pos, W)
     )
