@@ -13,39 +13,38 @@ public defenum InductorCoreStyle:
   SingleBarCore
   DoubleBarCore
 
-public defstruct InductorSymbolParams <: Equalable:
+val DEF_CORE_STYLE = NoBarCore
+val DEF_PORCH_WIDTH = 0.25
+val DEF_PERIODS = 3
+val DEF_LINE_WIDTH = 0.05
+
+public defstruct InductorSymbolParams <: SymbolParams:
   core-style:InductorCoreStyle with:
     updater => sub-core-style
+    default => DEF_CORE_STYLE
   porch-width:Double with:
     ensure => ensure-non-negative!,
     updater => sub-porch-width
+    default => DEF_PORCH_WIDTH
   doc: \<DOC>
   Number of half-circles in the inductor winding shape.
   <DOC>
   periods:Int with:
     ensure => ensure-positive!
     updater => sub-periods
+    default => DEF_PERIODS
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
+    default => DEF_LINE_WIDTH
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #InductorSymbolParams
+  keyword-constructor => true
   printer => true
   equalable => true
-
-val DEF_CORE_STYLE = NoBarCore
-val DEF_PORCH_WIDTH = 0.25
-val DEF_PERIODS = 3
-val DEF_LINE_WIDTH = 0.05
-
-public defn InductorSymbolParams (
-  --
-  core-style:InductorCoreStyle = DEF_CORE_STYLE
-  porch-width:Double = DEF_PORCH_WIDTH
-  periods:Int = DEF_PERIODS
-  line-width:Double = DEF_LINE_WIDTH
-  ) -> InductorSymbolParams :
-  #InductorSymbolParams(core-style, porch-width, periods, line-width)
 
 public defn to-tuple (p:InductorSymbolParams) -> [InductorCoreStyle, Double, Int, Double] :
   [core-style(p), porch-width(p), periods(p), line-width(p)]
@@ -183,9 +182,10 @@ public defstruct InductorSymbol <: TwoPinSymbol :
     as-method => true
     default => false
   params:Maybe<InductorSymbolParams> with:
+    as-method => true
     default => None()
 with:
-  printer =>true
+  printer => true
   constructor => #InductorSymbol
 
 public defn InductorSymbol (
@@ -199,14 +199,15 @@ public defn InductorSymbol (
 public defmethod name (x:InductorSymbol) -> String :
   "Inductor"
 
-public defmethod build-artwork (
-  x:InductorSymbol, sn:SymbolNode
-  ):
-
-  val p = match(params(x)):
+defmethod get-params (x:InductorSymbol) -> InductorSymbolParams:
+  match(params(x)):
     (_:None): get-default-inductor-symbol-params()
     (prm:One<InductorSymbolParams>): value(prm)
 
+public defmethod build-artwork (
+  x:InductorSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x) as InductorSymbolParams
   build-inductor-glyphs(sn, pitch(x), p)
 
 

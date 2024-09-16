@@ -31,7 +31,7 @@ of a triangle-wave style resistor sybmol.
 
 TODO - Diagram here showing parameters.
 <DOC>
-public defstruct ResistorSymbolParams <: Equalable:
+public defstruct ResistorSymbolParams <: SymbolParams:
   style:ResistorStyle with:
     default => DEF_RES_STYLE
   doc: \<DOC>
@@ -73,6 +73,11 @@ public defstruct ResistorSymbolParams <: Equalable:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_LINE_WIDTH
+
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 
 with:
   keyword-constructor => true
@@ -211,6 +216,7 @@ public defstruct ResistorSymbol <: TwoPinSymbol :
   consulted for parameters when the symbol is built.
   <DOC>
   params:Maybe<ResistorSymbolParams> with:
+    as-method => true
     default => None()
 with:
   keyword-constructor => true
@@ -219,13 +225,13 @@ with:
 public defmethod name (x:ResistorSymbol) -> String :
   "Resistor"
 
-defn get-params (x:ResistorSymbol) -> ResistorSymbolParams :
-  value-or-else(params(x), get-default-resistor-symbol-params)
+defmethod get-params (x:ResistorSymbol) -> ResistorSymbolParams :
+  value-or-else(params(x) as Maybe<ResistorSymbolParams>, get-default-resistor-symbol-params)
 
 public defmethod build-artwork (
   x:ResistorSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as ResistorSymbolParams
   build-resistor-glyphs(sn, pitch(x), p)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -242,7 +248,7 @@ public defn set-default-resistor-symbol (symb:TwoPinSymbol) :
 
 val DEF_VAR_ARROW_SPAN = (300 %)
 
-public defstruct VariableResistorSymbolParams <: Equalable :
+public defstruct VariableResistorSymbolParams <: SymbolParams :
   doc: \<DOC>
   Override the default resistor symbol parameters with this value.
   <DOC>
@@ -267,6 +273,11 @@ public defstruct VariableResistorSymbolParams <: Equalable :
     ensure => ensure-positive!
     default => DEF_VAR_ARROW_SPAN
     updater => sub-arrow-span
+
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+
 with:
   keyword-constructor => true
   equalable => true
@@ -312,6 +323,7 @@ public defstruct VariableResistorSymbol <: TwoPinSymbol :
   consulted for parameters when the symbol is built.
   <DOC>
   params:Maybe<VariableResistorSymbolParams> with:
+    as-method => true
     default => None()
 with:
   printer => true
@@ -320,8 +332,8 @@ with:
 public defmethod name (x:VariableResistorSymbol) -> String :
   "Variable-Resistor"
 
-defn get-params (x:VariableResistorSymbol) -> VariableResistorSymbolParams :
-  value-or-else(params(x), get-default-variable-resistor-symbol-params)
+defmethod get-params (x:VariableResistorSymbol) -> VariableResistorSymbolParams :
+  value-or-else(params(x) as Maybe<VariableResistorSymbolParams>, get-default-variable-resistor-symbol-params)
 
 public defn build-variable-resistor-glyphs (
   sn:SymbolNode,
@@ -354,7 +366,7 @@ public defn build-variable-resistor-glyphs (
 public defmethod build-artwork (
   x:VariableResistorSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as VariableResistorSymbolParams
   build-variable-resistor-glyphs(sn, pitch(x), p)
 
 var CURR-VARRES-SYMBOL:TwoPinSymbol = VariableResistorSymbol()
@@ -370,7 +382,7 @@ val DEF_PHOTO_ARR_MARGIN = 0.2
 val DEF_PHOTO_ARR_PITCH = 0.5
 val DEF_PHOTO_ARR_ANGLE = 45.0
 
-public defstruct PhotoResistorSymbolParams <: Equalable :
+public defstruct PhotoResistorSymbolParams <: SymbolParams :
   doc: \<DOC>
   Override the default resistor symbol parameters with this value.
   <DOC>
@@ -406,6 +418,11 @@ public defstruct PhotoResistorSymbolParams <: Equalable :
     ensure => ensure-positive!
     default => DEF_PHOTO_ARR_ANGLE
     updater => sub-arrow-angle
+
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+
 with:
   keyword-constructor => true
   equalable => true
@@ -450,6 +467,7 @@ public defstruct PhotoResistorSymbol <: TwoPinSymbol :
   consulted for parameters when the symbol is built.
   <DOC>
   params:Maybe<PhotoResistorSymbolParams> with:
+    as-method => true
     default => None()
 with:
   keyword-constructor => true
@@ -481,13 +499,13 @@ public defn build-photo-resistor-glyphs (
   val arrow-2 = loc(Point(amp + margin, (- y-offset)), angle) * arrow-sh
   add-glyph(sn, arrow-2, name? = One("arrow-2"))
 
-defn get-params (x:PhotoResistorSymbol) -> PhotoResistorSymbolParams:
-  value-or-else(params(x), get-default-photo-resistor-symbol-params)
+defmethod get-params (x:PhotoResistorSymbol) -> PhotoResistorSymbolParams:
+  value-or-else(params(x) as Maybe<PhotoResistorSymbolParams>, get-default-photo-resistor-symbol-params)
 
 public defmethod build-artwork (
   x:PhotoResistorSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as PhotoResistorSymbolParams
   build-photo-resistor-glyphs(sn, pitch(x), p)
 
 

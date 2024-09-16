@@ -29,50 +29,39 @@ val DEF_OR_LINE_WIDTH = 0.05
 val DEF_OR_PIN_LEN = 2.0
 val DEF_OR_PAD_REF_SIZE = 0.65
 
-public defstruct ORGateSymbolParams <: Equalable :
+public defstruct ORGateSymbolParams <: SymbolParams :
   doc: \<DOC>
   Gate Body Height
   All of the other dimensions of the OR gate are derived from the
   total height of the body. Typically we select this so that the pins
   will fit nicely in the input side.
   <DOC>
-  height:Double with: (
+  height:Double with:
     updater => sub-size
     default => DEF_OR_HEIGHT
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?
     default => DEF_OR_FILLED?
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_OR_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_OR_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_OR_PAD_REF_SIZE
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #ORGateSymbolParams
+  keyword-constructor => true
   printer => true
   equalable => true
-
-public defn ORGateSymbolParams (
-  --
-  height:Double = DEF_OR_HEIGHT
-  filled?:True|False = DEF_OR_FILLED?,
-  line-width:Double = DEF_OR_LINE_WIDTH,
-  pin-length:Double = DEF_OR_PIN_LEN,
-  pad-ref-size:Double = DEF_OR_PAD_REF_SIZE
-  ) -> ORGateSymbolParams:
-  #ORGateSymbolParams(height, filled?, line-width, pin-length, pad-ref-size)
 
 defn get-body-size (p:ORGateSymbolParams, exclusive?:True|False) -> [Double, Double] :
   val h = height(p)
@@ -271,84 +260,60 @@ public defstruct ORGateSymbol <: SymbolDefn :
   Sets a active low bubble out the output or not
   This is how to make an NOR gate symbol.
   <DOC>
-  inverted?:True|False with: (
+  inverted?:True|False with:
     updater => sub-inverted?,
     default => DEF_OR_INVERTED
-  )
   doc: \<DOC>
   Sets the symbol to an Exclusive OR (XOR) style
   <DOC>
-  exclusive?:True|False with: (
+  exclusive?:True|False with:
     updater => sub-exclusive?,
     default => DEF_OR_EXCLUSIVE
-  )
   doc: \<DOC>
   Optional open-collector symbol on output pin.
   Default is None()
   <DOC>
-  open-collector?:Maybe<OpenCollectorType> with: (
+  open-collector?:Maybe<OpenCollectorType> with:
     updater => sub-oc-type,
     default => DEF_OR_OC_TYPE
-  )
   doc: \<DOC>
   Number of OR gate inputs
   The default is 2 and this value must be greater than 1
   <DOC>
-  num-inputs:Int with: (
+  num-inputs:Int with:
     updater => sub-num-inputs,
     default => DEF_OR_NUM_INPUTS
     ensure => ensure-greater!(1)
-  )
   doc: \<DOC>
   Spacing between input pins.
   This value is in symbol grid units. The best values are
   whole numbers or half-numbers (0.5, 1.5, etc).
   <DOC>
-  pin-pitch:Double with: (
+  pin-pitch:Double with:
     updater => sub-pin-pitch,
     default => DEF_OR_PIN_PITCH,
     ensure => ensure-positive!
-  )
   doc: \<DOC>
   Input Base Reference
   The symbol will construct individual `IndexRef` values from this
   base `Ref`, starting at 1. Example: For a 2-input OR gate, the
   input pins would be `in[1]` and `in[2]`.
   <DOC>
-  in-ref:Ref with: (
+  in-ref:Ref with:
     default => OR_IN_REF
-  )
   doc: \<DOC>
   Output Reference
   User can override the default for supporting multi-channel
   chips.
   <DOC>
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => OR_OUT_REF
-  )
-  params:Maybe<ORGateSymbolParams> with: (
+  params:Maybe<ORGateSymbolParams> with:
     default => None()
-  )
 with:
-  constructor => #ORGateSymbol
+  printer => true
+  keyword-constructor => true
 
-public defn ORGateSymbol (
-  --
-  inverted?:True|False = DEF_OR_INVERTED,
-  exclusive?:True|False = DEF_OR_EXCLUSIVE,
-  open-collector?:Maybe<OpenCollectorType> = DEF_OR_OC_TYPE,
-  num-inputs:Int = DEF_OR_NUM_INPUTS,
-  pin-pitch:Double = DEF_OR_PIN_PITCH,
-  in-ref:Ref = OR_IN_REF,
-  out-ref:Ref = OR_OUT_REF,
-  params:ORGateSymbolParams = ?
-  ) -> ORGateSymbol :
-  #ORGateSymbol(inverted?, exclusive?, open-collector?, num-inputs, pin-pitch, in-ref, out-ref, params)
-
-defn get-params (x:ORGateSymbol) -> ORGateSymbolParams :
-  match(params(x)):
-    (_:None): get-default-or-gate-symbol-params()
-    (v:One<ORGateSymbolParams>): value(v)
 
 public defmethod name (x:ORGateSymbol) -> String :
   match(inverted?(x), exclusive?(x)):
@@ -356,6 +321,11 @@ public defmethod name (x:ORGateSymbol) -> String :
     (i:True,e:False): "NOR Gate"
     (i:False,e:True): "XOR Gate"
     (i:False,e:False): "OR Gate"
+
+defmethod get-params (x:ORGateSymbol) -> ORGateSymbolParams :
+  match(params(x)):
+    (_:None): get-default-or-gate-symbol-params()
+    (v:One<ORGateSymbolParams>): value(v)
 
 doc: \<DOC>
 Compute the pin positions for the Gate Symbol.
@@ -369,7 +339,7 @@ defn get-output-pin-position (width:Double) -> Point :
   Point(0.0, 0.0)
 
 public defmethod build-pins (x:ORGateSymbol, node:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as ORGateSymbolParams
 
   val numPins = num-inputs(x)
   val pinPitch = pin-pitch(x)
@@ -403,12 +373,16 @@ public defmethod build-pins (x:ORGateSymbol, node:SymbolNode) :
       add-decorator(out-pin, OpenCollectorDecorator(oc-type = value(oc-type)))
 
 public defmethod build-artwork (x:ORGateSymbol, node:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as ORGateSymbolParams
   build-or-gate-glyphs(node, num-inputs(x), pin-pitch(x), exclusive?(x), p)
 
 public defmethod build-params (x:ORGateSymbol, sn:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as ORGateSymbolParams
   val [w, h] = get-body-size(p, exclusive?(x))
   val h2 = h / 2.0
-  text(sn, [0.0, h2 + 0.5], ">REF", anchor = SW, font-size = 8)
-  text(sn, [0.0, (- (h2 + 0.5))], ">VALUE", anchor = NW, font-size = 8)
+  build-labels(
+    get-label-params(p),
+    sn,
+    LabelPosition([0.0, h2 + 0.5], SW)
+    LabelPosition([0.0, (- (h2 + 0.5))], NW)
+    )

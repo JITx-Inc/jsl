@@ -15,57 +15,37 @@ val DEF_BUF_PIN_LEN = 2.0
 val DEF_BUF_PAD_REF_SIZE = 0.75
 
 
-public defstruct BufferSymbolParams <: Equalable :
-  tri-height:Double with: (
+public defstruct BufferSymbolParams <: SymbolParams :
+  tri-height:Double with:
     ensure => ensure-positive!
     updater => sub-tri-height
     default => DEF_BUF_TRI_HEIGHT
-  )
-  tri-width:Double with: (
+  tri-width:Double with:
     ensure => ensure-positive!
     updater => sub-tri-width
     default => DEF_BUF_TRI_WIDTH
-  )
-  filled?:True|False with: (
+  filled?:True|False with:
     updater => sub-filled?
     default => DEF_BUF_FILLED?
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_BUF_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_BUF_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_BUF_PAD_REF_SIZE
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #BufferSymbolParams
+  keyword-constructor => true
   printer => true
-
-public defn BufferSymbolParams (
-  --
-  tri-height:Double = DEF_BUF_TRI_HEIGHT,
-  tri-width:Double = DEF_BUF_TRI_WIDTH,
-  filled?:True|False = DEF_BUF_FILLED?,
-  line-width:Double = DEF_BUF_LINE_WIDTH,
-  pin-length:Double = DEF_BUF_PIN_LEN,
-  pad-ref-size:Double = DEF_BUF_PAD_REF_SIZE
-  ) -> BufferSymbolParams:
-  #BufferSymbolParams(
-    tri-height,
-    tri-width,
-    filled?,
-    line-width,
-    pin-length,
-    pad-ref-size
-  )
 
 var DEF_BUFFER_PARAMS = BufferSymbolParams()
 public defn get-default-buffer-symbol-params () -> BufferSymbolParams :
@@ -100,37 +80,20 @@ public val BUF_IN_REF = Ref("in")
 public val BUF_OUT_REF = Ref("out")
 
 public defstruct BufferSymbol <: SymbolDefn :
-  inverter?:True|False with: (
+  inverter?:True|False with:
     default => false
-  )
   ; These References are used to override the default `in/out`
   ;  references. This is needed for multi-channel inverters
   ;  such as TI, SN74AHCU04-EP
-  in-ref:Ref with: (
+  in-ref:Ref with:
     default => BUF_IN_REF
-  )
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => BUF_OUT_REF
-  )
-  params:Maybe<BufferSymbolParams> with: (
+  params:Maybe<BufferSymbolParams> with:
     default => None()
-  )
 with:
-  constructor => #BufferSymbol
-
-public defn BufferSymbol (
-  --
-  inverter?:True|False = false,
-  in-ref:Ref = BUF_IN_REF,
-  out-ref:Ref = BUF_OUT_REF,
-  params:BufferSymbolParams = ?
-  ) -> BufferSymbol :
-  #BufferSymbol(inverter?, in-ref, out-ref, params)
-
-defn get-params (x:BufferSymbol) -> BufferSymbolParams :
-  match(params(x)):
-    (_:None): get-default-buffer-symbol-params()
-    (v:One<BufferSymbolParams>): value(v)
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:BufferSymbol) -> String :
   if inverter?(x):
@@ -138,8 +101,13 @@ public defmethod name (x:BufferSymbol) -> String :
   else:
     "Buffer"
 
+defmethod get-params (x:BufferSymbol) -> BufferSymbolParams :
+  match(params(x)):
+    (_:None): get-default-buffer-symbol-params()
+    (v:One<BufferSymbolParams>): value(v)
+
 public defmethod build-pins (x:BufferSymbol, node:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as BufferSymbolParams
 
   val th2 = tri-height(p) / 2.0
 
@@ -161,11 +129,11 @@ public defmethod build-pins (x:BufferSymbol, node:SymbolNode) :
 
 
 public defmethod build-artwork (x:BufferSymbol, node:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as BufferSymbolParams
   build-buffer-glyphs(node, p)
 
 public defmethod build-params (x:BufferSymbol, sn:SymbolNode) :
-  val p = get-params(x)
+  val p = get-params(x) as BufferSymbolParams
   val w = tri-width(p)
 
   ; If you compute the geometry, the
@@ -174,5 +142,9 @@ public defmethod build-params (x:BufferSymbol, sn:SymbolNode) :
   ; We then pad on this a bit for the ref point.
   val y = 0.25 * w
 
-  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
+  build-labels(
+    get-label-params(p),
+    sn,
+    LabelPosition([0.5, y + 1.5], W)
+    LabelPosition([0.5, y + 0.5], W)
+    )

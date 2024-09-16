@@ -3,6 +3,8 @@ defpackage jsl/symbols/TwoPinSymbol:
   import core
   import jitx
 
+  import maybe-utils
+
   import jsl/symbols/SymbolDefn
   import jsl/symbols/SymbolNode
   import jsl/geometry/box
@@ -47,6 +49,8 @@ public defstruct TwoPinSymbol <: SymbolDefn :
     default => TWO_PIN_DEF_PITCH
   polarized?:True|False with:
     default => false
+  params:Maybe<SymbolParams> with:
+    default => None()
 
 public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
   if not polarized?(x):
@@ -61,9 +65,20 @@ public defn two-pin-build-pins (x:TwoPinSymbol, node:SymbolNode) :
 public defmethod build-pins (x:TwoPinSymbol, node:SymbolNode) :
   two-pin-build-pins(x, node)
 
-public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
-  val overall = glyph-bounds(sn)
-  ; TODO - make `font-size` parametric and configurable.
-  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [right(overall) + 0.5, -0.5], ">VALUE", anchor = W, font-size = 8)
+public defmethod get-params (x:TwoPinSymbol) -> SymbolParams :
+  value-or-else(params(x), SymbolParams)
 
+public defn two-pin-build-labels (x:TwoPinSymbol, sn:SymbolNode, symb-params:SymbolParams) :
+  val overall = glyph-bounds(sn)
+  val p = get-label-params(symb-params)
+
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(overall) + 0.5, 0.5], W)
+    LabelPosition([right(overall) + 0.5, -0.5], W)
+    )
+
+public defmethod build-params (x:TwoPinSymbol, sn:SymbolNode):
+  val p = get-params(x)
+  two-pin-build-labels(x, sn, p)

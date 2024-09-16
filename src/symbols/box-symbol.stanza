@@ -6,6 +6,8 @@ defpackage jsl/symbols/box-symbol:
   import lang-utils
   import pcre
 
+  import maybe-utils
+
   import jitx
   import jitx/commands
   import jitx/utils/got
@@ -130,25 +132,30 @@ This type contains various parmaeters that we may
 want to apply to all box symbols. We provide default
 values for a sane consistent default look.
 <DOC>
-public defstruct BoxSymbolParams <: Equalable :
+public defstruct BoxSymbolParams <: SymbolParams :
   min-col-width:Int with:
     ensure => ensure-non-negative!
     updater => sub-min-col-width
+    default => DEF_COL_WIDTH
   min-row-width:Int with:
     ensure => ensure-non-negative!
     updater => sub-min-row-width
+    default => DEF_ROW_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
+    default => DEF_LINE_WIDTH
   pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
+    default => DEF_PIN_LEN
   doc: \<DOC>
   Font size for pad names that appear on the symbol.
   <DOC>
   pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
+    default => DEF_PAD_REF_SIZE
   doc: \<DOC>
   Spacing between input pins.
   This value is in symbol grid units. The best values are
@@ -157,11 +164,13 @@ public defstruct BoxSymbolParams <: Equalable :
   pin-pitch:Double with:
     updater => sub-pin-pitch,
     ensure => ensure-positive!
+    default => DEF_PIN_PITCH
   doc: \<DOC>
   Font size for pin names that appear on the symbol.
   <DOC>
   pin-name-size:Double with:
     ensure => ensure-positive!
+    default => DEF_PIN_NAME_SIZE
   doc: \<DOC>
   Show row/col grid lines for debugging.
   <DOC>
@@ -176,7 +185,10 @@ public defstruct BoxSymbolParams <: Equalable :
   ; For the future:
   ;  Color - stroke, fill, etc.
   ;
-
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   keyword-constructor => true
   equalable => true
@@ -289,11 +301,6 @@ with :
 
 ; ============== Helper Functions ================
 ;
-defn get-params (x:BoxSymbol) -> BoxSymbolParams :
-  match(params(x)):
-    (_:None): get-default-box-symbol-params()
-    (v:One<BoxSymbolParams>): value(v)
-
 ; save all relevant pin property information
 ; explicitly since eventuallly we will lose the reference to self.
 ; If no bank is specified, everything in the box symbol is used,
@@ -387,7 +394,7 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
 
   BoxSymbolBank(
     bank-grid
-    get-params(x)
+    get-params(x) as BoxSymbolParams
     pin-infos
     to-tuple $ pin-order
     rcs-by-pin
@@ -426,6 +433,9 @@ defn check-prop (prop: ?, filter: ?) -> True|False :
 
 public defmethod name (x:BoxSymbol) -> String :
   to-string("Box-%_" % [obj(x)])
+
+defmethod get-params (x:BoxSymbol) -> BoxSymbolParams :
+  value-or-else(params(x) as Maybe<BoxSymbolParams>, get-default-box-symbol-params)
 
 ; Need an override here because `self` will get
 ; clobbered inside the nested contexts so
@@ -919,8 +929,13 @@ public defmethod build-artwork (x:BoxSymbolBank, node:SymbolNode) :
 
 public defmethod build-params (x:BoxSymbolBank, sn:SymbolNode) :
   val b = glyph-bounds(sn)
-  text(sn, [left(b), up(b) + DESIGNATOR_MARGIN], ">REF", anchor = SW, font-size = 8)
-  text(sn, [left(b), down(b) - DESIGNATOR_MARGIN], ">VALUE", anchor = NW, font-size = 8)
+  val p = get-label-params $ params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([left(b), up(b) + DESIGNATOR_MARGIN], SW)
+    LabelPosition([left(b), down(b) - DESIGNATOR_MARGIN], NW)
+  )
 
 public defmethod build-orientation (x:BoxSymbolBank, sn:SymbolNode) :
   inside pcb-symbol:

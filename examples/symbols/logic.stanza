@@ -47,7 +47,7 @@ pcb-component test-Inverter:
   val oldParams = get-default-buffer-symbol-params()
   val newParams = sub-filled?(oldParams, false)
 
-  val symb = BufferSymbol(inverter? = true, params = newParams)
+  val symb = BufferSymbol(inverter? = true, params = One $ newParams)
   assign-symbol(create-symbol(symb))
 
   val chip-def = chips["1206"]
@@ -149,7 +149,7 @@ pcb-component test-Crazy-AND:
   val h = 7.5
   val newParams = sub-size(oldParams, Dims(DEF_AND_W_OVER_H_RATIO * h, h))
 
-  val symb = ANDGateSymbol(num-inputs = 7, pin-pitch = 1.0, params = newParams)
+  val symb = ANDGateSymbol(num-inputs = 7, pin-pitch = 1.0, params = One $ newParams)
   assign-symbol(create-symbol(symb))
 
   val lp = create-landpattern(SOIC-pkg)

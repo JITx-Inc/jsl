@@ -22,7 +22,7 @@ Each keyword argument for this function has a default value
 that can be overriden. These parameters are all of the
 configurable aspects of the symbol.
 <DOC>
-public defstruct CapacitorSymbolParams <: Equalable :
+public defstruct CapacitorSymbolParams <: SymbolParams :
   doc: \<DOC>
   The porch width is the length of line from the pin to the capacitor plate lines
   This value can be either an absolute value in symbol grid units or it
@@ -40,6 +40,10 @@ public defstruct CapacitorSymbolParams <: Equalable :
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_LINE_WIDTH
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   keyword-constructor => true
   equalable => true
@@ -102,6 +106,10 @@ public defstruct PolarizedCapacitorSymbolParams <: CapacitorSymbolParams :
     ensure => ensure-positive!
     updater => sub-plus-size
     default => DEF_PLUS_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   keyword-constructor => true
   equalable => true
@@ -276,6 +284,7 @@ public defstruct CapacitorSymbol <: TwoPinSymbol :
     ; NOTE: I'm not using `get-default-cap-symbol-params()` here
     ;  because it would prevent the user from overriding the defaults
     ;  because `CURR-CAPACITOR-SYMBOL` gets instantiate on run.
+    as-method => true
     default => None()
 with:
   keyword-constructor => true
@@ -285,10 +294,13 @@ with:
 public defmethod name (x:CapacitorSymbol) -> String :
   "Capacitor"
 
+defmethod get-params (x:CapacitorSymbol) -> CapacitorSymbolParams :
+  value-or-else(params(x) as Maybe<CapacitorSymbolParams>, get-default-cap-symbol-params)
+
 public defmethod build-artwork (
   x:CapacitorSymbol, sn:SymbolNode
   ):
-  val p = value-or-else(params(x), get-default-cap-symbol-params)
+  val p = get-params(x) as CapacitorSymbolParams
   build-capacitor-glyphs(sn, pitch(x), p)
 
 var CURR-CAPACITOR-SYMBOL:TwoPinSymbol = CapacitorSymbol()
@@ -320,6 +332,7 @@ public defstruct PolarizedCapacitorSymbol <: TwoPinSymbol :
   consulted for parameters when the symbol is built.
   <DOC>
   params:Maybe<PolarizedCapacitorSymbolParams> with:
+    as-method => true
     default => None()
 with:
   constructor => #PolarizedCapacitorSymbol
@@ -335,10 +348,16 @@ public defn PolarizedCapacitorSymbol (
 public defmethod name (x:PolarizedCapacitorSymbol) -> String :
   "Polarized Capacitor"
 
+defmethod get-params (x:PolarizedCapacitorSymbol) -> PolarizedCapacitorSymbolParams:
+  value-or-else(
+    params(x) as Maybe<PolarizedCapacitorSymbolParams>,
+    get-default-polarized-cap-symbol-params
+    )
+
 public defmethod build-artwork (
   x:PolarizedCapacitorSymbol, sn:SymbolNode
   ):
-  val p = value-or-else(params(x), get-default-polarized-cap-symbol-params)
+  val p = get-params(x) as PolarizedCapacitorSymbolParams
   build-pol-cap-glyphs(sn, pitch(x), p)
 
 var CURR-POL-CAP-SYMBOL:TwoPinSymbol = PolarizedCapacitorSymbol()

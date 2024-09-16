@@ -15,7 +15,7 @@ val DEF_NODE_RADIUS = 0.25
 doc: \<DOC>
 Switch Schematic Symbol Parameterizations
 <DOC>
-public defstruct SwitchSymbolParams <: Equalable :
+public defstruct SwitchSymbolParams <: SymbolParams :
   doc: \<DOC>
   Porch Width is the "pin" length of the symbol
   Units are in symbol grid units.
@@ -47,6 +47,10 @@ public defstruct SwitchSymbolParams <: Equalable :
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_PAD_REF_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   equalable => true
@@ -115,7 +119,7 @@ with:
   printer => true
   keyword-constructor => true
 
-defn get-params (x:SPSTSymbol) -> SwitchSymbolParams :
+defmethod get-params (x:SPSTSymbol) -> SwitchSymbolParams :
   match(params(x)):
     (_:None): get-default-switch-symbol-params()
     (v:One<SwitchSymbolParams>): value(v)
@@ -123,7 +127,7 @@ defn get-params (x:SPSTSymbol) -> SwitchSymbolParams :
 defmethod build-pins (
   x:SPSTSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as SwitchSymbolParams
 
   val w = pitch(x) / 2.0
   val [P1-R, P2-R] = pin-refs(x)
@@ -147,13 +151,18 @@ defmethod build-pins (
 defmethod build-artwork (
   x:SPSTSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as SwitchSymbolParams
   glyph-func(x)(sn, pitch(x), p)
 
 defmethod build-params (x:SPSTSymbol, sn:SymbolNode) :
   val b = glyph-bounds(sn)
-  text(sn, [right(b) + 0.1, 0.0], ">REF", anchor = SW, font-size = 4)
-  text(sn, [right(b) + 0.1, (- 0.5)], ">VALUE", anchor = NW, font-size = 4)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.1, 0.0], SW)
+    LabelPosition([right(b) + 0.1, (- 0.5)], NW)
+  )
 
 
 

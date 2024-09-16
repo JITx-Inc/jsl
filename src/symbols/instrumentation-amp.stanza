@@ -81,8 +81,8 @@ public defstruct InstrumentationAmpSymbol <: OpAmpSymbol :
   vref-ref:Ref with:
     default => IAMP_VREF_REF_DEF
 
-  params:OpAmpSymbolParams with:
-    default => get-default-iamp-symbol-params()
+  params:Maybe<OpAmpSymbolParams> with:
+    default => None()
     as-method => true
 
 with:
@@ -96,7 +96,7 @@ public defn InstrumentationAmpSymbol (
   out-ref:Ref = OPAMP_OUT_REF,
   rg-ref:Ref = IAMP_RG_REF_DEF,
   vref-ref:Ref = IAMP_VREF_REF_DEF,
-  params:OpAmpSymbolParams = get-default-iamp-symbol-params()
+  params:Maybe<OpAmpSymbolParams> = None()
   ) -> InstrumentationAmpSymbol :
   if rg-pitch > pitch :
     throw $ ValueError("Invalid Pitch Configuration for Instrumentation Amp Symbol: pitch %_ > rg-pitch %_" % [pitch, rg-pitch])
@@ -105,8 +105,13 @@ public defn InstrumentationAmpSymbol (
 public defmethod name (x:InstrumentationAmpSymbol) -> String :
   "InstrumentationAmp"
 
+defmethod get-params (x:InstrumentationAmpSymbol) -> OpAmpSymbolParams:
+  match(params(x)):
+    (_:None): get-default-iamp-symbol-params()
+    (given:One<OpAmpSymbolParams>): value(given)
+
 public defn add-iamp-rg-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
 
   ; Add the Gain Resistor Terminals
   val rg-params = VirtualPinParams(
@@ -123,7 +128,7 @@ public defn add-iamp-rg-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
 
 
 public defn add-iamp-ref-pin (x:InstrumentationAmpSymbol, node:SymbolNode) :
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
 
   ; Add the Gain Resistor Terminals
   val ref-params = VirtualPinParams(
@@ -146,7 +151,7 @@ public defmethod build-pins (x:InstrumentationAmpSymbol, node:SymbolNode) :
   add-iamp-ref-pin(x, node)
 
 public defn add-iamp-gain-indicator (x:InstrumentationAmpSymbol, node:SymbolNode) :
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
   val lw = line-width(p)
   val rg-p = rg-pitch(x)
   val w = rg-p / 2.0
@@ -169,7 +174,8 @@ public defn add-iamp-gain-indicator (x:InstrumentationAmpSymbol, node:SymbolNode
   text(node, [(- indent), 0.0] "G", font-size = 8)
 
 public defmethod build-artwork (x:InstrumentationAmpSymbol, node:SymbolNode) :
+  val p = get-params(x) as OpAmpSymbolParams
   val child = create-child(node, name = "amp")
-  build-opamp-glyphs(child, pitch(x), params(x))
+  build-opamp-glyphs(child, pitch(x), p)
 
   add-iamp-gain-indicator(x, node)

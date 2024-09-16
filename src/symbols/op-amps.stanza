@@ -17,7 +17,7 @@ val DEF_PAD_REF_SIZE = 0.75
 doc: \<DOC>
 Op-Amp Triangle Symbol Parameterization
 <DOC>
-public defstruct OpAmpSymbolParams <: Equalable :
+public defstruct OpAmpSymbolParams <: SymbolParams :
   tri-height:Double with:
     ensure => ensure-positive!,
     updater => sub-tri-height
@@ -38,6 +38,10 @@ public defstruct OpAmpSymbolParams <: Equalable :
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_PAD_REF_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   keyword-constructor => true
   equalable => true
@@ -126,8 +130,8 @@ public defstruct OpAmpSymbol <: SymbolDefn :
   out-ref:Ref with:
     default => OPAMP_OUT_REF
 
-  params:OpAmpSymbolParams with:
-    default => get-default-opamp-symbol-params()
+  params:Maybe<OpAmpSymbolParams> with:
+    default => None()
 
 with:
   keyword-constructor => true
@@ -136,6 +140,11 @@ with:
 
 public defmethod name (x:OpAmpSymbol) -> String :
   "OpAmp"
+
+defmethod get-params (x:OpAmpSymbol) -> OpAmpSymbolParams :
+  match(params(x)):
+    (_:None): get-default-opamp-symbol-params()
+    (given:One<OpAmpSymbolParams>): value(given)
 
 public defn get-input-refs (x:OpAmpSymbol) -> [Ref, Ref]:
   val in-ref-arg = in-ref(x)
@@ -147,7 +156,7 @@ public defn get-input-refs (x:OpAmpSymbol) -> [Ref, Ref]:
 public defn add-opamp-pins (x:OpAmpSymbol, node:SymbolNode) :
 
   val w = pitch(x) / 2.0
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
   val h2 = tri-height(p) / 2.0
 
   val input-params = VirtualPinParams(
@@ -172,10 +181,12 @@ public defmethod build-pins (x:OpAmpSymbol, node:SymbolNode) :
   add-opamp-pins(x, node)
 
 public defmethod build-artwork (x:OpAmpSymbol, node:SymbolNode) :
-  build-opamp-glyphs(node, pitch(x), params(x))
+  val p = get-params(x) as OpAmpSymbolParams
+  build-opamp-glyphs(node, pitch(x), p)
 
 public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
+  val lp = get-label-params(p)
   val w = tri-width(p)
 
   ; If you compute the geometry, the
@@ -184,6 +195,10 @@ public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
   ; We then pad on this a bit for the ref point.
   val y = 0.25 * w
 
-  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
+  build-labels(
+    lp,
+    sn,
+    LabelPosition([0.5, y + 1.5], W)
+    LabelPosition([0.5, y + 0.5], W)
+  )
 

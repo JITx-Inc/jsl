@@ -12,7 +12,7 @@ val DEF_OVERHANG = 0.25
 val DEF_LINE_WIDTH = 0.1
 val DEF_FILLED? = true
 
-public defstruct DiacSymbolParams <: Equalable :
+public defstruct DiacSymbolParams <: SymbolParams :
   doc: \<DOC>
   Porch width is the leader line length from pin to body of the symbol
   <DOC>
@@ -40,6 +40,10 @@ public defstruct DiacSymbolParams <: Equalable :
   filled?:True|False with:
     updater => sub-filled?
     default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   keyword-constructor => true
   equalable => true
@@ -105,8 +109,11 @@ public defstruct DiacSymbol <: TwoPinSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   polarized?:True|False with:
-      as-method => true
-      default => false
+    as-method => true
+    default => false
+  params:Maybe<DiacSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -114,10 +121,15 @@ with:
 public defmethod name (x:DiacSymbol) -> String :
   "DIAC"
 
+defmethod get-params (x:DiacSymbol) -> DiacSymbolParams :
+  match(params(x)):
+    (_:None): get-default-diac-symbol-params()
+    (given:One<DiacSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:DiacSymbol, sn:SymbolNode
   ):
-  val p = get-default-diac-symbol-params()
+  val p = get-params(x) as DiacSymbolParams
   val ch = create-child(sn, name = "diac")
   build-diac-glyphs(ch, pitch(x), p)
 

@@ -16,7 +16,7 @@ val DEF_RES_LINE_PAD = 0.1
 doc: \<DOC>
 Crystal Symbol Parameters Object
 <DOC>
-public defstruct CrystalSymbolParams <: Equalable :
+public defstruct CrystalSymbolParams <: SymbolParams :
   doc: \<DOC>
   Line width for the shapes drawn.
   Default value is 0.05 in symbol grid units.
@@ -64,6 +64,11 @@ public defstruct CrystalSymbolParams <: Equalable :
     default => None()
     ensure => ensure-positive!
     updater => sub-crystal-case
+
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 
 with:
   keyword-constructor => true
@@ -160,20 +165,20 @@ public defstruct CrystalSymbol <: TwoPinSymbol :
   Optional Crystal Symbol Parameters Override.
   <DOC>
   params:Maybe<CrystalSymbolParams> with:
-    default => None()
     setter => set-crystal-params-override
+    default => None()
+    as-method => true
 with:
   keyword-constructor => true
   printer => true
 
+public defmethod name (x:CrystalSymbol) -> String :
+  "Crystal"
 
-defn get-params (x:CrystalSymbol) -> CrystalSymbolParams :
+defmethod get-params (x:CrystalSymbol) -> CrystalSymbolParams :
   match(params(x)):
     (_:None): get-default-crystal-symbol-params()
     (v:One<CrystalSymbolParams>): value(v)
-
-public defmethod name (x:CrystalSymbol) -> String :
-  "Crystal"
 
 public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
   two-pin-build-pins(cx, node)
@@ -183,7 +188,7 @@ public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
     val pin-pitch = 1.0
     val pin-span = to-double(case-ps - 1) * pin-pitch
 
-    val p = get-params(cx)
+    val p = get-params(cx) as CrystalSymbolParams
     val case? = crystal-case(p)
     val case = match(case?):
       (_:None):
@@ -218,5 +223,5 @@ public defmethod build-pins (cx:CrystalSymbol, node:SymbolNode) :
 public defmethod build-artwork (
   x:CrystalSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as CrystalSymbolParams
   build-crystal-glyphs(sn, pitch(x), case-ports(x), p)
