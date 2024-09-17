@@ -12,4 +12,4 @@ packages jsl/examples/* defined-in "./examples/"
 build fetch-deps:
     inputs:
         jsl/tests/math
-    o: "quadand"
+    s: "tmp-fetch.s"
