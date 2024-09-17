@@ -31,28 +31,27 @@ The `pitch` of the two-pin component defines the overall length.
 
 
 <DOC>
-public defstruct DiodeSymbolParams <: Equalable :
+public defstruct DiodeSymbolParams <: SymbolParams :
   body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?
+    default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #DiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-
-public defn DiodeSymbolParams (
-  --
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> DiodeSymbolParams :
-  #DiodeSymbolParams(body-dims, line-width, filled?)
 
 public defn to-tuple (p:DiodeSymbolParams) -> [Double|Dims, Double, True|False]:
   [body-dims(p), line-width(p), filled?(p)]
@@ -122,6 +121,9 @@ public defstruct DiodeSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<DiodeSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -129,10 +131,15 @@ with:
 public defmethod name (x:DiodeSymbol) -> String :
   "Diode"
 
+defmethod get-params (x:DiodeSymbol) -> DiodeSymbolParams :
+  match(params(x)):
+    (_:None): get-default-diode-symbol-params()
+    (given:One<DiodeSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:DiodeSymbol, sn:SymbolNode
   ):
-  val p = get-default-diode-symbol-params()
+  val p = get-params(x) as DiodeSymbolParams
   build-diode-glyphs(sn, pitch(x), p)
 
 var CURR-DIODE-SYMBOL:TwoPinSymbol = DiodeSymbol()
@@ -145,37 +152,36 @@ public defn set-default-diode-symbol (symb:TwoPinSymbol) :
 ; Schottky Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
+val DEF_WING_SIZE = 0.1
 
+
+public defstruct SchottkyDiodeSymbolParams <: DiodeSymbolParams :
   wing-size:Double with:
     ensure => ensure-positive!
     updater => sub-wing-size
+    default => DEF_WING_SIZE
   body-dims:Dims|Double with:
     ensure => ensure-positive!
     updater => sub-body-dims
     as-method => true
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     as-method => true
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?
     as-method => true
+    default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #SchottkyDiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-val DEF_WING_SIZE = 0.1
-
-public defn SchottkyDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_WING_SIZE
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> SchottkyDiodeSymbolParams :
-  #SchottkyDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
 
 public defn sub-base-params (p:SchottkyDiodeSymbolParams, b:DiodeSymbolParams) -> SchottkyDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
@@ -235,6 +241,10 @@ public defstruct SchottkyDiodeSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<SchottkyDiodeSymbolParams> with:
+    as-method => true
+    default => None()
+
 with:
   printer => true
   keyword-constructor => true
@@ -243,10 +253,15 @@ with:
 public defmethod name (x:SchottkyDiodeSymbol) -> String :
   "SchottkyDiode"
 
+defmethod get-params (x:SchottkyDiodeSymbol) -> SchottkyDiodeSymbolParams :
+  match(params(x)):
+    (_:None): get-default-schottky-diode-symbol-params()
+    (given:One<SchottkyDiodeSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:SchottkyDiodeSymbol, sn:SymbolNode
   ):
-  val p = get-default-schottky-diode-symbol-params()
+  val p = get-params(x) as SchottkyDiodeSymbolParams
   build-schottky-diode-glyphs(sn, pitch(x), p)
 
 var CURR-SCHOTTKY-DIODE-SYMBOL:TwoPinSymbol = SchottkyDiodeSymbol()
@@ -259,37 +274,36 @@ public defn set-default-schottky-diode-symbol (symb:TwoPinSymbol) :
 ; Zener Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
+val DEF_ZENER_WING_SIZE = 0.1
 
+public defstruct ZenerDiodeSymbolParams <: DiodeSymbolParams :
   wing-size:Double with:
     ensure => ensure-positive!,
     updater => sub-wing-size
+    default => DEF_ZENER_WING_SIZE
   body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
+    default => DEF_BODY_WIDTH
   line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width,
     as-method => true
+    default => DEF_LINE_WIDTH
   filled?:True|False with:
     updater => sub-filled?,
     as-method => true
+    default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #ZenerDiodeSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-val DEF_ZENER_WING_SIZE = 0.1
-
-public defn ZenerDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_ZENER_WING_SIZE
-  body-dims:Double|Dims = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> ZenerDiodeSymbolParams :
-  #ZenerDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
 
 public defn sub-base-params (p:ZenerDiodeSymbolParams, b:DiodeSymbolParams) -> ZenerDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
@@ -354,6 +368,9 @@ public defstruct ZenerDiodeSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<ZenerDiodeSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -361,10 +378,16 @@ with:
 public defmethod name (x:ZenerDiodeSymbol) -> String :
   "ZenerDiode"
 
+defmethod get-params (x:ZenerDiodeSymbol) -> ZenerDiodeSymbolParams :
+  match(params(x)):
+    (_:None): get-default-zener-diode-symbol-params()
+    (given:One<ZenerDiodeSymbolParams>): value(given)
+
+
 public defmethod build-artwork (
   x:ZenerDiodeSymbol, sn:SymbolNode
   ):
-  val p = get-default-zener-diode-symbol-params()
+  val p = get-params(x) as ZenerDiodeSymbolParams
   build-zener-diode-glyphs(sn, pitch(x), p)
 
 var CURR-ZENER-DIODE-SYMBOL:TwoPinSymbol = ZenerDiodeSymbol()
@@ -376,39 +399,35 @@ public defn set-default-zener-diode-symbol (symb:TwoPinSymbol) :
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Tunnel Diode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
-
-  wing-size:Double with:
-    ensure => ensure-positive!,
-    updater => sub-wing-size
-  body-dims:Dims|Double with:
-    ensure => ensure-positive!,
-    updater => sub-body-dims
-    as-method => true
-  line-width:Double with:
-    ensure => ensure-positive!
-    updater => sub-line-width,
-    as-method => true
-  filled?:True|False with:
-    updater => sub-filled?,
-    as-method => true
-with:
-  constructor => #TunnelDiodeSymbolParams
-  equalable => true
-  printer => true
-
 val DEF_TUNNEL_WING_SIZE = 0.1
 
-public defn TunnelDiodeSymbolParams (
-  --
-  wing-size:Double = DEF_TUNNEL_WING_SIZE
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-) -> TunnelDiodeSymbolParams :
-  #TunnelDiodeSymbolParams(wing-size, body-dims, line-width, filled?)
+public defstruct TunnelDiodeSymbolParams <: DiodeSymbolParams :
+  wing-size:Double with:
+    ensure => ensure-positive!
+    updater => sub-wing-size
+    default => DEF_TUNNEL_WING_SIZE
+  body-dims:Dims|Double with:
+    ensure => ensure-positive!
+    updater => sub-body-dims
+    as-method => true
+    default => DEF_BODY_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    as-method => true
+    default => DEF_LINE_WIDTH
+  filled?:True|False with:
+    updater => sub-filled?
+    as-method => true
+    default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
 
 public defn sub-base-params (p:TunnelDiodeSymbolParams, b:DiodeSymbolParams) -> TunnelDiodeSymbolParams :
   p $> sub-body-dims{_, body-dims(b)}
@@ -468,6 +487,9 @@ public defstruct TunnelDiodeSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<TunnelDiodeSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -475,10 +497,15 @@ with:
 public defmethod name (x:TunnelDiodeSymbol) -> String :
   "TunnelDiode"
 
+defmethod get-params (x:TunnelDiodeSymbol) -> TunnelDiodeSymbolParams:
+  match(params(x)):
+    (_:None): get-default-tunnel-diode-symbol-params()
+    (given:One<TunnelDiodeSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:TunnelDiodeSymbol, sn:SymbolNode
   ):
-  val p = get-default-tunnel-diode-symbol-params()
+  val p = get-params(x) as TunnelDiodeSymbolParams
   build-tunnel-diode-glyphs(sn, pitch(x), p)
 
 var CURR-TUNNEL-DIODE-SYMBOL:TwoPinSymbol = TunnelDiodeSymbol()
@@ -507,6 +534,11 @@ public defstruct LEDSymbolParams <: DiodeSymbolParams :
   filled?:True|False with:
     updater => sub-filled?,
     as-method => true
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+
 with:
   constructor => #LEDSymbolParams
   equalable => true
@@ -594,6 +626,9 @@ public defstruct LEDSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<LEDSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -601,10 +636,15 @@ with:
 public defmethod name (x:LEDSymbol) -> String :
   "LED"
 
+defmethod get-params (x:LEDSymbol) -> LEDSymbolParams:
+  match(params(x)):
+    (_:None): get-default-led-symbol-params()
+    (given:One<LEDSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:LEDSymbol, sn:SymbolNode
   ):
-  val p = get-default-led-symbol-params()
+  val p = get-params(x) as LEDSymbolParams
   build-led-glyphs(sn, pitch(x), p)
 
 var CURR-LED-SYMBOL:TwoPinSymbol = LEDSymbol()
@@ -632,6 +672,10 @@ public defstruct PhotoDiodeSymbolParams <: DiodeSymbolParams :
   filled?:True|False with:
     updater => sub-filled?,
     as-method => true
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   constructor => #PhotoDiodeSymbolParams
   equalable => true
@@ -703,6 +747,9 @@ public defstruct PhotoDiodeSymbol <: TwoPinSymbol :
   polarized?:True|False with:
     as-method => true
     default => true
+  params:Maybe<PhotoDiodeSymbolParams> with:
+    as-method => true
+    default => None()
 with:
   printer => true
   keyword-constructor => true
@@ -711,10 +758,15 @@ with:
 public defmethod name (x:PhotoDiodeSymbol) -> String :
   "PhotoDiode"
 
+defmethod get-params (x:PhotoDiodeSymbol) -> PhotoDiodeSymbolParams:
+  match(params(x)):
+    (_:None): get-default-photo-diode-symbol-params()
+    (given:One<PhotoDiodeSymbolParams>): value(given)
+
 public defmethod build-artwork (
   x:PhotoDiodeSymbol, sn:SymbolNode
   ):
-  val p = get-default-photo-diode-symbol-params()
+  val p = get-params(x) as PhotoDiodeSymbolParams
   build-photo-diode-glyphs(sn, pitch(x), p)
 
 var CURR-PHOTO-DIODE-SYMBOL:TwoPinSymbol = PhotoDiodeSymbol()

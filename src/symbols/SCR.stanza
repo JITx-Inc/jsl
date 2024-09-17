@@ -17,54 +17,45 @@ val DEF_PAD_REF_SIZE = 0.75
 
 public defstruct SCRSymbolParams <: DiodeSymbolParams :
 
-  body-dims:Dims|Double with: (
+  body-dims:Dims|Double with:
     ensure => ensure-positive!,
     updater => sub-body-dims
     as-method => true
-  )
-  line-width:Double with: (
+    default => DEF_BODY_WIDTH
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     as-method => true
-  )
-  filled?:True|False with: (
+    default => DEF_LINE_WIDTH
+  filled?:True|False with:
     updater => sub-filled?
     as-method => true
-  )
+    default => DEF_FILLED?
 
   doc: \<DOC>
   Sets the Y-offset from the Diode Body for the gate pin
   <DOC>
-  gate-height:Double with: (
+  gate-height:Double with:
     ensure => ensure-positive!,
     updater => sub-gate-height
-  )
-  pin-length:Double with: (
+    default => DEF_GATE_HEIGHT
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
-  )
-  pad-ref-size:Double with: (
+    default => DEF_PIN_LEN
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
-  )
+    default => DEF_PAD_REF_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 
 with:
-  constructor => #SCRSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-
-public defn SCRSymbolParams (
-  --
-  body-dims:Dims|Double = DEF_BODY_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  filled?:True|False = DEF_FILLED?
-
-  gate-height:Double = DEF_GATE_HEIGHT
-  pin-length:Double = DEF_PIN_LEN
-  pad-ref-size:Double = DEF_PAD_REF_SIZE
-  ) -> SCRSymbolParams :
-  #SCRSymbolParams(body-dims, line-width, filled?, gate-height, pin-length, pad-ref-size)
 
 var DEF_SCR_PARAMS = SCRSymbolParams()
 public defn get-default-scr-symbol-params () -> SCRSymbolParams :
@@ -100,19 +91,27 @@ public defn build-scr-glyphs (
   ], width = lw, name = "gate-wire")
 
 public defstruct SCRSymbol <: ThreePinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!,
     default => THREE_PIN_DEF_PITCH
     as-method => true
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!
     default => THREE_PIN_DEF_WIDTH
     as-method => true
-  )
+  params:Maybe<SCRSymbolParams> with:
+    default => None()
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:SCRSymbol) -> String :
   "SCR"
+
+defmethod get-params (x:SCRSymbol) -> SCRSymbolParams:
+  match(params(x)):
+    (_:None): get-default-scr-symbol-params()
+    (given:One<SCRSymbolParams>): value(given)
 
 defn gate-position (pitch:Double, width:Double, p:SCRSymbolParams) -> Point :
   val porch-end = compute-body-start(p as DiodeSymbolParams)
@@ -121,7 +120,7 @@ defn gate-position (pitch:Double, width:Double, p:SCRSymbolParams) -> Point :
 public defmethod build-pins (
   x:SCRSymbol, sn:SymbolNode
   ):
-  val p = get-default-scr-symbol-params()
+  val p = get-params(x) as SCRSymbolParams
   val p2 = pitch(x) / 2.0
 
   val dirs = [Up, Down, Left]
@@ -144,17 +143,21 @@ public defmethod build-pins (
 public defmethod build-artwork (
   x:SCRSymbol, sn:SymbolNode
   ):
-  val p = get-default-scr-symbol-params()
+  val p = get-params(x) as SCRSymbolParams
   val ch = create-child(sn, name = "scr")
   build-scr-glyphs(ch, pitch(x), width(x), p)
 
 public defmethod build-params (
   x:SCRSymbol, sn:SymbolNode
   ):
-  val overall = glyph-bounds(sn)
-  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
-
+  val b = glyph-bounds(sn)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.5, 0.5], W)
+    LabelPosition([right(b) + 0.5, (- 0.5)], W)
+    )
 
 var CURR-SCR-SYMBOL:ThreePinSymbol = SCRSymbol()
 public defn get-default-scr-symbol () : CURR-SCR-SYMBOL

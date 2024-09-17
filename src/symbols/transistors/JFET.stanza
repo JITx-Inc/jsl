@@ -33,7 +33,7 @@ These parameters set the features of the JFET symbol.
 
 TODO - Drawing Here
 <DOC>
-public defstruct JFETSymbolParams <: Equalable :
+public defstruct JFETSymbolParams <: SymbolParams :
   doc: \<DOC>
   Length of the vertical line on the source and drain pins
   The source and drain have a leader line between the channel
@@ -42,11 +42,10 @@ public defstruct JFETSymbolParams <: Equalable :
   This value can be 0.0 if no porch-width is desired and the pin
   will start immediately from the end of the channel structure.
   <DOC>
-  porch-width:Double with: (
+  porch-width:Double with:
     ensure => ensure-non-negative!
     updater => sub-porch-width
     default => DEF_JFET_PORCH_WIDTH
-  )
 
   doc: \<DOC>
   Sets the base line length for the channel structure.
@@ -54,21 +53,19 @@ public defstruct JFETSymbolParams <: Equalable :
   intersects with at a 90 degree angle, and the collector/emitter
   intersect with at a 45 degree angle.
   <DOC>
-  base-line:Double with: (
+  base-line:Double with:
     ensure => ensure-positive!,
     updater => sub-base-line
     default => DEF_JFET_BASE_LINE
-  )
   doc: \<DOC>
   Sets the width of the line from the channel to the porch lines of the source and drain.
   Unlike in the FET symbol, the arrow doesn't set this length so we need an explicit
   value that sets the width of the channel body.
   <DOC>
-  sd-channel-width:Double with: (
+  sd-channel-width:Double with:
     ensure => ensure-positive!,
     updater => sub-sd-channel-width
     default => DEF_JFET_SD_CH_WIDTH
-  )
   doc: \<DOC>
   Set the style and parameters of the base arrow into channel.
   The arrow leg is the line from the gate to the channel.
@@ -78,10 +75,9 @@ public defstruct JFETSymbolParams <: Equalable :
   and replaced with the computed shaft length based on the symbol
   parameters.
   <DOC>
-  arrow-params:ArrowSymbolParams with: (
+  arrow-params:ArrowSymbolParams with:
     default => DEF_JFET_ARROW_PARAMS
     updater => sub-arrow-params
-  )
   doc: \<DOC>
   Arrow offset moves the head of the arrow along the line from channel to gate pin position
   Without an offset, the arrow can often interfere with the outline circle for the P-channel
@@ -89,62 +85,37 @@ public defstruct JFETSymbolParams <: Equalable :
   line for easier read-ability and clarity. This parameter may not be desirable for the N-Channel
   representation. In this case - `(0 %)` is effectively "No Offset"
   <DOC>
-  arrow-offset:Percentage with: (
+  arrow-offset:Percentage with:
     default => DEF_JFET_ARROW_OFFSET
     updater => sub-arrow-offset
-  )
   doc: \<DOC>
   Add the outline circle around the transistor
   Often for power transistors, the BJT symbol
   will have a circle outline
   <DOC>
-  outline:True|False with: (
+  outline:True|False with:
     updater => sub-outline
     default => DEF_JFET_OUTLINE
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_JFET_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_JFET_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_JFET_PAD_REF_SIZE
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #JFETSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-
-public defn JFETSymbolParams (
-  --
-  porch-width:Double = DEF_JFET_PORCH_WIDTH
-  base-line:Double = DEF_JFET_BASE_LINE
-  sd-channel-width:Double = DEF_JFET_SD_CH_WIDTH
-  arrow-params:ArrowSymbolParams = DEF_JFET_ARROW_PARAMS
-  arrow-offset:Percentage = DEF_JFET_ARROW_OFFSET
-  outline-diam:True|False = DEF_JFET_OUTLINE
-  line-width:Double = DEF_JFET_LINE_WIDTH
-  pin-length:Double = DEF_JFET_PIN_LEN
-  pad-ref-size:Double = DEF_JFET_PAD_REF_SIZE
-  ) -> JFETSymbolParams:
-  #JFETSymbolParams(
-    porch-width
-    base-line
-    sd-channel-width
-    arrow-params
-    arrow-offset
-    outline-diam
-    line-width
-    pin-length
-  )
 
 public defn build-jfet-glyphs (
   node:SymbolNode,
@@ -306,34 +277,33 @@ public defn set-default-jfet-symbol-params (v:JFETSymbolParams) -> False :
 
 public defstruct JFETSymbol <: ThreePinSymbol :
   junction-type:FET-Junction
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!,
     default => THREE_PIN_DEF_PITCH
     as-method => true
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!
     default => THREE_PIN_DEF_WIDTH
     as-method => true
-  )
+  params:Maybe<JFETSymbolParams> with:
+    default => None()
 with:
-  constructor => #JFETSymbol
+  printer => true
+  keyword-constructor => true
 
-public defn JFETSymbol (
-  --
-  junction-type:FET-Junction
-  pitch:Double = THREE_PIN_DEF_PITCH
-  width:Double = THREE_PIN_DEF_WIDTH
-  ) -> JFETSymbol :
-  #JFETSymbol(junction-type, pitch, width)
 
 public defmethod name (x:JFETSymbol) -> String :
   "JFET"
 
+defmethod get-params (x:JFETSymbol) -> JFETSymbolParams:
+  match(params(x)):
+    (_:None): get-default-jfet-symbol-params()
+    (given:One<JFETSymbolParams>): value(given)
+
 public defmethod build-pins (
   x:JFETSymbol, sn:SymbolNode
   ):
-  val p = get-default-jfet-symbol-params()
+  val p = get-params(x) as JFETSymbolParams
 
   val refs = match(junction-type(x)):
     (_:N-Channel): [FET_DRAIN_REF, FET_SOURCE_REF, FET_GATE_REF]
@@ -354,15 +324,19 @@ public defmethod build-pins (
 public defmethod build-artwork (
   x:JFETSymbol, sn:SymbolNode
   ):
-  val params = get-default-jfet-symbol-params()
+  val p = get-params(x) as JFETSymbolParams
   val child = create-child(sn, name = "JFET", class = "transistor")
-  build-jfet-glyphs(child, junction-type(x), pitch(x), width(x), params)
+  build-jfet-glyphs(child, junction-type(x), pitch(x), width(x), p)
 
 public defmethod build-params (
   x:JFETSymbol, sn:SymbolNode
   ):
-  val p = get-default-jfet-symbol-params()
-  val overall = glyph-bounds(sn)
-  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+  val b = glyph-bounds(sn)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.5, 0.5], W)
+    LabelPosition([right(b) + 0.5, (- 0.5)], W)
+    )
 

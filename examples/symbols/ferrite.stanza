@@ -10,7 +10,7 @@ defpackage jsl/examples/symbols/ferrite:
 
 
 pcb-component test-SMT-ferrite:
-
+  mpn = "BLM18KG331SN1D"
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir]
     [p[1] | p[1] | Up ]

@@ -20,53 +20,47 @@ public defstruct ComparatorSymbol <: OpAmpSymbol :
   doc: \<DOC>
   Pos/Neg Terminal Pitch
   <DOC>
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!
     default => DEF_OPAMP_PITCH
     as-method => true
-  )
 
   doc: \<DOC>
   Input Base Reference or Explicit Input Refs.
   @see OpAmpSymbol for more Information.
   <DOC>
-  in-ref:Ref|[Ref, Ref] with: (
+  in-ref:Ref|[Ref, Ref] with:
     default => OPAMP_IN_BASE_REF,
     as-method => true
-  )
   doc: \<DOC>
   Output Reference
   User can override the default for supporting multi-channel
   chips. The default expected output pin ref is `out`
   <DOC>
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => OPAMP_OUT_REF,
     as-method => true
-  )
 
-  params:OpAmpSymbolParams with: (
-    default => get-default-comparator-symbol-params()
+  params:Maybe<OpAmpSymbolParams> with:
+    default => None()
     as-method => true
-  )
 with:
-  constructor => #ComparatorSymbol
-
-public defn ComparatorSymbol (
-  --
-  pitch:Double = DEF_OPAMP_PITCH,
-  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
-  out-ref:Ref = OPAMP_OUT_REF,
-  params:OpAmpSymbolParams = get-default-comparator-symbol-params()
-  ) -> ComparatorSymbol :
-  #ComparatorSymbol(pitch, in-ref, out-ref, params)
+  printer => true
+  keyword-constructor => true
 
 
 public defmethod name (x:ComparatorSymbol) -> String :
   "Comparator"
 
+defmethod get-params (x:ComparatorSymbol) -> OpAmpSymbolParams :
+  match(params(x)):
+    (_:None): get-default-comparator-symbol-params()
+    (given:One<OpAmpSymbolParams>): value(given)
+
 public defmethod build-artwork (x:ComparatorSymbol, node:SymbolNode) :
+  val p = get-params(x) as OpAmpSymbolParams
   val child = create-child(node, name = "amp")
-  build-opamp-glyphs(child, pitch(x), params(x))
+  build-opamp-glyphs(child, pitch(x), p)
 
   val hyst-params = HysteresisParams()
   val hyst-g = HysteresisGlyph(params = hyst-params)
