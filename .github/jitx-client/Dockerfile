@@ -6,5 +6,5 @@ WORKDIR /app
 COPY ./user.params /root/.jitx/user.params
 COPY ./license /root/.jitx/license
 
-CMD ["/bin/bash", "-c", "apt update ; apt install make build-essential -y ; export STANZA_CONFIG=/root/.jitx/current ; cat $STANZA_CONFIG/scripts/install-info.sh ; cd jsl ; make tests"]
+CMD ["/bin/bash", "-c", "apt update ; apt install make build-essential -y ; export STANZA_CONFIG=/root/.jitx/current ; export PATH=$PATH:/root/.jitx/current/slm ; cat $STANZA_CONFIG/scripts/install-info.sh ; cd jsl ; make tests"]
  
