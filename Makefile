@@ -60,10 +60,10 @@ $(FILLETS): $(FILLETS_CSV) tabgen
 	$(TABGEN) generate $(FILLETS_CSV) -f $@ -pkg-name $(FILLETS_NAME) -force
 
 fetch-deps:
-    # This forces SLM to fetch the dependencies
-    #  it will fail - but we don't care as longs as the
-    #  deps get fetched.
-    -$(SLM) build fetch-deps
+	# This forces SLM to fetch the dependencies
+	#  it will fail - but we don't care as longs as the
+	#  deps get fetched.
+	-$(SLM) build fetch-deps
 
 .PHONY: tests
 tests: fetch-deps
