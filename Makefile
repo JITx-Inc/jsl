@@ -2,7 +2,7 @@
 SLM_STANZA ?= jstanza
 STANZA := $(SLM_STANZA)
 CWD := $(shell pwd)
-SLM := $(SLM)
+SLM ?= slm
 
 # execute all lines of a target in one shell
 .ONESHELL:
