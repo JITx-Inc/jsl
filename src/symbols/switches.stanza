@@ -202,6 +202,7 @@ public defn MomentarySPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Re
   SPSTSymbol(
     name = "Momentary SPST Switch"
     pitch = pitch,
+    pin-refs = pin-refs,
     glyph-func = build-mom-SP-ST-glyphs
     params = params,
   )
@@ -238,6 +239,7 @@ public defn ToggleSPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Ref, 
   SPSTSymbol(
     name = "Toggle SPST Switch"
     pitch = pitch,
+    pin-refs = pin-refs,
     glyph-func = build-toggle-SP-ST-glyphs
     params = params,
   )
