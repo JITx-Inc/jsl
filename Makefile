@@ -26,6 +26,7 @@ JSL_TESTS :=                              \
     jsl/tests/geometry                    \
     jsl/tests/landpatterns/QFN            \
     jsl/tests/symbols/SymbolNode          \
+    jsl/tests/symbols/box-symbol          \
     jsl/tests/bundles                     \
     jsl/tests/pin-assignment              \
     jsl/tests/layerstack                  \
