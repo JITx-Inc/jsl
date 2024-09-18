@@ -26,7 +26,7 @@ val DEF_BJT_ARROW_PARAMS = ArrowSymbolParams(
 val DEF_BJT_OUTLINE = true
 val DEF_BJT_PAD_REF_SIZE = 0.75
 
-public defstruct BJTSymbolParams <: Equalable :
+public defstruct BJTSymbolParams <: SymbolParams :
   doc: \<DOC>
   Length of the vertical line on the Emmiter and collector pins
   The emitter and collector pins have a angled line that
@@ -36,11 +36,10 @@ public defstruct BJTSymbolParams <: Equalable :
   This value can be 0.0 if no porch-width is desired and the pin
   will start immediately from the end of the angled line.
   <DOC>
-  porch-width:Double with: (
+  porch-width:Double with:
     ensure => ensure-non-negative!
     updater => sub-porch-width
     default => DEF_BJT_PORCH_WIDTH
-  )
 
   doc: \<DOC>
   Sets the base line length
@@ -48,11 +47,10 @@ public defstruct BJTSymbolParams <: Equalable :
   intersects with at a 90 degree angle, and the collector/emitter
   intersect with at a 45 degree angle.
   <DOC>
-  base-line:Double with: (
+  base-line:Double with:
     ensure => ensure-positive!,
     updater => sub-base-line
     default => DEF_BJT_BASE_LINE
-  )
   doc: \<DOC>
   Set the style and parameters of the arrow leg of the transistor.
   The arrow leg is the line from the base to the emitter.
@@ -62,57 +60,38 @@ public defstruct BJTSymbolParams <: Equalable :
   will also be used to control the length of the base-collector line
   primarily for symmetry reasons.
   <DOC>
-  arrow-params:ArrowSymbolParams with: (
+  arrow-params:ArrowSymbolParams with:
     default => DEF_BJT_ARROW_PARAMS
-  )
   doc: \<DOC>
   Add the outline circle around the transistor
   Often for power transistors, the BJT symbol
   will have a circle outline
   <DOC>
-  outline:True|False with: (
+  outline:True|False with:
     updater => sub-outline
     default => DEF_BJT_OUTLINE
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_BJT_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_BJT_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_BJT_PAD_REF_SIZE
-  )
+
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #BJTSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-
-public defn BJTSymbolParams (
-  --
-  porch-width:Double = DEF_BJT_PORCH_WIDTH
-  base-line:Double = DEF_BJT_BASE_LINE
-  arrow-params:ArrowSymbolParams = DEF_BJT_ARROW_PARAMS
-  outline-diam:True|False = DEF_BJT_OUTLINE
-  line-width:Double = DEF_BJT_LINE_WIDTH
-  pin-length:Double = DEF_BJT_PIN_LEN
-  pad-ref-size:Double = DEF_BJT_PAD_REF_SIZE
-  ) -> BJTSymbolParams:
-  #BJTSymbolParams(
-    porch-width
-    base-line
-    arrow-params
-    outline-diam
-    line-width
-    pin-length
-  )
 
 public defn build-bjt-glyphs (
   node:SymbolNode,
@@ -193,18 +172,19 @@ public defn set-default-bjt-symbol-params (v:BJTSymbolParams) -> False :
 
 public defstruct BJTSymbol <: ThreePinSymbol :
   junction-type:BJT-Junction
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!,
     default => THREE_PIN_DEF_PITCH
     as-method => true
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!
     default => THREE_PIN_DEF_WIDTH
     as-method => true
-  )
+  params:Maybe<BJTSymbolParams> with:
+    default => None()
 with:
-  constructor => #BJTSymbol
+  printer => true
+  keyword-constructor => true
 
 defn pin-positions (pitch:Double, width:Double) -> [Point, Point, Point] :
   val p2 = pitch / 2.0
@@ -214,16 +194,13 @@ defn pin-positions (pitch:Double, width:Double) -> [Point, Point, Point] :
     Point((- width), 0.0) ; Base
   ]
 
-public defn BJTSymbol (
-  --
-  junction-type:BJT-Junction
-  pitch:Double = THREE_PIN_DEF_PITCH
-  width:Double = THREE_PIN_DEF_WIDTH
-  ) -> BJTSymbol :
-  #BJTSymbol(junction-type, pitch, width)
-
 public defmethod name (x:BJTSymbol) -> String :
   "BJT"
+
+defmethod get-params (x:BJTSymbol) -> BJTSymbolParams:
+  match(params(x)):
+    (_:None): get-default-bjt-symbol-params()
+    (given:One<BJTSymbolParams>): value(given)
 
 val BJT_BASE_REF = Ref("B")
 val BJT_COLLECTOR_REF = Ref("C")
@@ -232,7 +209,7 @@ val BJT_EMITTER_REF = Ref("E")
 public defmethod build-pins (
   x:BJTSymbol, sn:SymbolNode
   ):
-  val p = get-default-bjt-symbol-params()
+  val p = get-params(x) as BJTSymbolParams
 
   val refs = match(junction-type(x)):
     (_:PNP): [BJT_EMITTER_REF, BJT_COLLECTOR_REF, BJT_BASE_REF]
@@ -253,15 +230,18 @@ public defmethod build-pins (
 public defmethod build-artwork (
   x:BJTSymbol, sn:SymbolNode
   ):
-  val params = get-default-bjt-symbol-params()
+  val p = get-params(x) as BJTSymbolParams
   val child = create-child(sn, name = "BJT", class = "transistor")
-  build-bjt-glyphs(child, junction-type(x), pitch(x), width(x), params)
+  build-bjt-glyphs(child, junction-type(x), pitch(x), width(x), p)
 
 public defmethod build-params (
   x:BJTSymbol, sn:SymbolNode
   ):
-  val p = get-default-bjt-symbol-params()
-  val overall = glyph-bounds(sn)
-  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
-
+  val b = glyph-bounds(sn)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.5, 0.5], W)
+    LabelPosition([right(b) + 0.5, (- 0.5)], W)
+    )
