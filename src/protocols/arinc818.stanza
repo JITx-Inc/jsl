@@ -1,0 +1,160 @@
+doc: \<DOC>
+@brief ARINC-818 Protocol
+
+ARINC-818 is a serial high speed protocol supporting video links in avionics applications.
+Also known as Avionics Digital Video Bus over Fibre Channel.
+@see https://en.wikipedia.org/wiki/ARINC_818
+
+This functions and definitions in this file support defining ARINC818
+connections between sources and receivers on a printed circuit board.
+@see https://docs.wixstatic.com/ugd/aefb08_37d298772ed9485f97af8f2954270e38.pdf?index=true
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/arinc818:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/errors
+  import jsl/bundles
+  import jsl/pin-assignment
+  import jsl/si/helpers
+  import jsl/si/pairs
+  import jsl/si/constraints
+
+doc: \<DOC>
+@brief ARINC Type
+This enumerated type defines either a TX type or RX type for the ARINC818 bundle.
+<DOC>
+public pcb-enum jsl/protocols/arinc818/ARINC818Type :
+  TX
+  RX
+
+doc: \<DOC>
+@brief ARINC Generation enums
+This is a fixed list of possible generation definitions for ARINC818
+<DOC>
+
+public pcb-enum jsl/protocols/arinc818/ARINC818Version:
+  ARINC818-FC1x   ;   1.0625 Gbits/s
+  ARINC818-1p5    ;   1.5    Gbits/s
+  ARINC818-1p62   ;   1.62   Gbits/s
+  ARNIC818-FC2x   ;   2.125  Gbits/s
+  ARINC818-2p5    ;   2.5    Gbits/s
+  ARINC818-3p1875 ;   3.1875 Gbits/s
+  ARNIC818-FC4x   ;   4.5    Gbits/s
+  ARINC818-5p0    ;   5.0    Gbits/s
+  ARINC818-FC6x   ;   6.375  Gbits/s
+  ARINC818-FC8x   ;   8.5    Gbits/s
+  ARINC818-FC12x  ;  12.75   Gbits/s
+  ARINC818-FC16x  ;  14.025  Gbits/s
+  ARINC818-FC24x  ;  21.0375 Gbits/s
+  ARINC818-FC32x  ;  28.05   Gbits/s
+
+
+
+doc: \<DOC>
+@brief ARINC818 Bundle
+The Data Bundle consists of 1 differential pair (1 RX or TX)
+@member TX/RX for the ARINC818 bundle (consists of either a TX or RX diff pair)
+<DOC>
+
+public pcb-bundle ARINC818 (type:ARINC818Type) :
+  name = "ARINC818"
+  description = "ARINC 818 AVDB protocol"
+  switch(type) :
+    TX : make-port(`TX, diff-pair)
+    RX : make-port(`RX, diff-pair)
+
+doc: \<DOC>
+@brief Construct the ARINC818 Topology and Constraints
+
+This function constructs the ARINC818 topology and applies constraints
+to the channel for intra-pair skew and channel loss. Note that a connection
+needs to be between a TX on a transmitter and a RX on a receiver.
+
+@param sw The intra-pair skew value for the differential signals being connected.
+@param ml The maximum loss for all differential signals being connected.
+@param src This is expected to be a port of `Bundle` type `ARINC818`
+@param dst This is expected to be a port of `Bundle` type `ARINC818`
+
+<DOC>
+public defn connect-ARINC818 (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(ARINC818(TX), src)
+    check-bundle(ARINC818(RX), dst)
+    check-correct-pins(src.TX.P, dst.RX.P)
+    within [s,d] = constrain-topology(src.TX => dst.RX, cons) :
+      topo-net(s d)
+
+doc: \<DOC>
+@brief Check the presence of a TX and RX version of the ARINC818 bundle
+
+This function checks the presence of the TX and RX pins on the ARINC818 bundle.
+
+@param p-tx The TX pin
+@param p-rx The RX pin
+<DOC>
+public defn check-correct-pins (p-tx:JITXObject p-rx:JITXObject):
+  for p1 in [p-tx p-rx] do:
+    match(port-type(p1)):
+      (x:SinglePin): false
+      (x):
+        throw $ ArgumentError("Expected TX & RX Pins - Received: %_" % [x])
+
+doc: \<DOC>
+@brief Curated values for skew and loss of ARINC818 connection
+This is a helper function that returns the bounds on the intra-pair
+skew timing and maximum loss as expected by the particular standard targeted by
+the user.The values returned are a toleranced value with upper/lower limits for the
+intra-pair skew and the maximum loss as a double representing dB.
+
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+<DOC>
+
+public defn ARINC818-get-skew-loss-vals (version:jsl/protocols/arinc818/ARINC818Version) -> [Toleranced, Double]:
+  switch(version) :
+    ARINC818-FC1x   : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-1p5    : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-1p62   : [0.0 +/- 1.0e-12, 15.0]
+    ARNIC818-FC2x   : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-2p5    : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-3p1875 : [0.0 +/- 1.0e-12, 15.0]
+    ARNIC818-FC4x   : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-5p0    : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC6x   : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC8x   : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC12x  : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC16x  : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC24x  : [0.0 +/- 1.0e-12, 15.0]
+    ARINC818-FC32x  : [0.0 +/- 1.0e-12, 15.0]
+
+
+doc: \<DOC>
+@brief Differential impedance specified by the ARINC818 standard
+This is a helper function that returns the expected differential
+trace impedance.
+
+@return Upper/lower limits for the impedance.
+<DOC>
+
+public defn ARINC818-get-trace-impedance () -> Toleranced :
+  100.0 +/- (10 %)
+
+doc: \<DOC>
+Construct a ARINC818-Constraints object
+
+@param route-struct Differential Pair Routing Structure - Use
+`pcb-differential-routing-structure` to create.
+@return Diff-Pair Constraint Object
+<DOC>
+public defn ARINC818-Constraint (
+  --
+  version:jsl/protocols/arinc818/ARINC818Version = ARINC818-FC8x
+  route-struct:DifferentialRoutingStructure
+  ) -> DP-Constraint :
+  val [s, ml] = ARINC818-get-skew-loss-vals(version)
+  DP-Constraint(skew = s, loss = ml, route-struct = route-struct)
