@@ -1,5 +1,5 @@
 #use-added-syntax(jitx, tests)
-defpackage jsl/tests/symbols/SymbolNode:
+defpackage jsl/tests/symbols/box-symbol:
   import core
   import jitx
   import jitx/commands
