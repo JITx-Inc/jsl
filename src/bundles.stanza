@@ -4,10 +4,10 @@ defpackage jsl/bundles:
   import jitx
   import jitx/commands
 
-  forward jsl/bundles/general
-  forward jsl/bundles/debug
   forward jsl/bundles/comms
+  forward jsl/bundles/debug
   forward jsl/bundles/gates
+  forward jsl/bundles/general
 
 ; Utilities
 

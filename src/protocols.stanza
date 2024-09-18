@@ -3,15 +3,10 @@ defpackage jsl/protocols:
   import core
   import jitx
 
-  forward jsl/protocols/pcie
   forward jsl/protocols/displayport
-  forward jsl/protocols/usb
-  forward jsl/protocols/ethernet/MDI/e10GBASE-KR
-  forward jsl/protocols/ethernet/MDI/MDI-1000Base-T
-  forward jsl/protocols/ethernet/MII/GMII
-  forward jsl/protocols/ethernet/MII/MII
-  forward jsl/protocols/ethernet/MII/RGMII
-  forward jsl/protocols/ethernet/MII/RMII
+  forward jsl/protocols/ethernet
+  forward jsl/protocols/pcie
   forward jsl/protocols/sata
+  forward jsl/protocols/usb
   
   
