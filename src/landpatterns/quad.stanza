@@ -51,9 +51,11 @@ See {@link select-quad-numbering} for more information.
 <DOC>
 public defstruct Quad-Lead-Profile <: Equalable & Hashable:
   x-leads : Lead-Profile
-  x-count : Maybe<Int> with: (ensure => ensure-positive!)
+  x-count : Maybe<Int> with:
+    ensure => ensure-positive!
   y-leads : Lead-Profile
-  y-count : Maybe<Int> with: (ensure => ensure-positive!)
+  y-count : Maybe<Int> with:
+    ensure => ensure-positive!
 with:
   equalable => true
   printer => true
@@ -200,7 +202,9 @@ public defstruct Quad-Package <: Package :
   doc: \<DOC>
   Number of leads ignoring any depopulated leads and thermal leads
   <DOC>
-  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
 
   doc: \<DOC>
   Lead Profiles for All Edges of the Quad Package
@@ -214,7 +218,8 @@ public defstruct Quad-Package <: Package :
   doc: \<DOC>
   Package Body for the Quad-based Package.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Quad package
@@ -224,7 +229,8 @@ public defstruct Quad-Package <: Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Quad Package
@@ -232,12 +238,14 @@ public defstruct Quad-Package <: Package :
   This provides a numbering scheme for the leads of the Quad
   package. By default, it uses {@link Column-Major-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   printer => true

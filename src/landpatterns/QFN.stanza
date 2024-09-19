@@ -15,18 +15,15 @@ doc: \<DOC>
 QFN Lead Type
 <DOC>
 public defstruct QFN-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => QuadFlatNoLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => QuadFlatNoLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -68,7 +65,9 @@ public defstruct QFN <: Quad-Package :
   doc: \<DOC>
   Number of leads ignoring any depopulated leads and thermal leads
   <DOC>
-  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
 
   doc: \<DOC>
   Lead Profiles for all of the QFN's edges
@@ -76,16 +75,19 @@ public defstruct QFN <: Quad-Package :
   By default the QFN uses the {@link QuadFlatNoLeads} protrusion
   type by default.
   <DOC>
-  lead-profile:Quad-Lead-Profile with: (as-method => true)
+  lead-profile:Quad-Lead-Profile with:
+    as-method => true
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape with: (as-method => true)
+  thermal-lead?:False|Shape with:
+    as-method => true
 
   doc: \<DOC>
   Package Body for the Quad-based Package.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Quad package
@@ -95,7 +97,8 @@ public defstruct QFN <: Quad-Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Quad Package
@@ -103,12 +106,14 @@ public defstruct QFN <: Quad-Package :
   This provides a numbering scheme for the leads of the Quad
   package. By default, it uses {@link Column-Major-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   printer => true
