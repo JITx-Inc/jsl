@@ -24,18 +24,15 @@ public defstruct QFP-Lead <: SMT-Lead:
   the lead-type {@link SmallGullWingLeads} should be
   considered.
   <DOC>
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => BigGullWingLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => BigGullWingLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
