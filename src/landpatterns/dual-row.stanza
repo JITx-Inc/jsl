@@ -23,6 +23,7 @@ defpackage jsl/landpatterns/dual-row:
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/grid-planner
   import jsl/landpatterns/pad-grid
+  import jsl/landpatterns/thermal-pads
 
 public val DUAL-ROW-COLS = 2
 
@@ -50,7 +51,7 @@ public defstruct Dual-Package <: Package :
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape
+  thermal-lead?:False|Shape|ThermalPad
 
   doc: \<DOC>
   Package Body for the Quad-based Package.
@@ -109,11 +110,9 @@ public defmethod build-pads (
 
   append-all(vp, pad-seq)
 
-  match(thermal-lead?(pkg)):
-    (lead-shape:Shape):
-      val cls = ["pad", "thermal"]
-      append(vp, VirtualPad(num-leads(pkg) + 1, smd-pad(lead-shape), loc(0.0, 0.0), class = cls))
-    (x:False): false
+  if thermal-lead?(pkg) is-not False:
+    add-thermal-pad(vp, num-leads(pkg) + 1, thermal-lead?(pkg))
+
 
 doc: \<DOC>
 Dual-Row Grid Planner
