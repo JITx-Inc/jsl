@@ -9,6 +9,7 @@ defpackage jsl/landpatterns/VirtualLP:
   import jsl/design/Classable
   import jsl/geometry/box
   import jsl/landpatterns/courtyard
+  import jsl/landpatterns/thermal-pads
 
 doc: \<DOC>
 Base Type for the Elements of the Virtual Landpattern Tree
@@ -75,6 +76,7 @@ public defn build-vpad-classes (r:Int, c:Int) -> Tuple<String> :
     to-string("col-%_" % [c]),
     to-string("row-%_" % [r])
   ]
+
 
 
 public defn print-pads (o:OutputStream, pds:Seqable<VirtualPad> ) :
@@ -483,6 +485,38 @@ public defn add-keepout (
     for s in shapes seq :
       VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class)
   append-all(vp, new-kos)
+
+
+doc: \<DOC>
+Add a Thermal Pad to the Virtual LandPattern Scene Graph
+
+@param vp Scene Graph
+@param pad-id Pad Id for this thermal pad - this is used in the
+`pin-properties` mapping of the `pcb-component` to map symbol pin
+to landpattern pad.
+@param thermal-lead? Thermal Lead Object Definition.
+If `False` - this function does nothing.
+If `Shape` - then we construct a `ThermalPad` with no special
+handling.
+Otherwise, we use the `ThermalPad` to construct a large thermal
+pad with optional paste subdivision etc. and add it to the
+passed scenegraph.
+<DOC>
+public defn add-thermal-pad (
+  vp:VirtualLP, pad-id:Int|Ref, thermal-lead?:False|Shape|ThermalPad,
+  --
+  pose:Pose = loc(0.0, 0.0)
+  ):
+  if thermal-lead? is-not False:
+    val tp = match(thermal-lead?):
+      (lead-shape:Shape):
+        ThermalPad(shape = lead-shape)
+      (tp-obj:ThermalPad): tp-obj
+
+    val cls = ["pad", "thermal"]
+    val pd-def = smd-thermal-pad(tp)
+    append(vp, VirtualPad(pad-id, pd-def, pose, class = cls))
+
 
 doc: \<DOC>
 Create a reference designator in the current virtual landpattern

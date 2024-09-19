@@ -31,6 +31,7 @@ defpackage jsl/landpatterns/quad:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/thermal-pads
 
 public val QUAD-NUM-COLUMNS = 4
 
@@ -213,7 +214,7 @@ public defstruct Quad-Package <: Package :
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape
+  thermal-lead?:False|Shape|ThermalPad
 
   doc: \<DOC>
   Package Body for the Quad-based Package.
@@ -255,7 +256,7 @@ public defn Quad-Package (
   --
   num-leads:Int,
   lead-profile:Quad-Lead-Profile,
-  thermal-lead?:False|Shape,
+  thermal-lead?:False|Shape|ThermalPad,
   package-body:PackageBody,
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
@@ -323,11 +324,9 @@ public defmethod build-pads (
 
   append-all(vp, gen-pad-info())
 
-  match(thermal-lead?(pkg)):
-    (lead-shape:Shape):
-      val cls = ["pad", "thermal"]
-      append(vp, VirtualPad(num-leads(pkg) + 1, smd-pad(lead-shape), loc(0.0, 0.0), class = cls))
-    (x:False): false
+  if thermal-lead?(pkg) is-not False:
+      add-thermal-pad(vp, num-leads(pkg) + 1, thermal-lead?(pkg))
+
 
 
 doc: \<DOC>

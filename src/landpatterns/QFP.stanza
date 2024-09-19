@@ -118,7 +118,7 @@ public defstruct QFP <: Quad-Package :
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
 
   doc: \<DOC>
@@ -167,7 +167,7 @@ public defn QFP (
   --
   num-leads:Int,
   lead-profile:Quad-Lead-Profile,
-  thermal-lead?:False|Shape,
+  thermal-lead?:False|Shape|ThermalPad,
   package-body:PackageBody,
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),

@@ -76,7 +76,7 @@ public defstruct SOP <: Dual-Package :
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
   doc: \<DOC>
   Package Body for the SOP.
@@ -133,7 +133,7 @@ public defn SOP (
   --
   num-leads:Int,
   lead-profile:Lead-Profile,
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   package-body:PackageBody,
   pad-planner:PadPlanner         = SOP-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOP-DEF-NUM-SCHEME(num-leads),
