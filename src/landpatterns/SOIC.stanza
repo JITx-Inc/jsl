@@ -139,7 +139,7 @@ public defstruct SOIC <: Dual-Package :
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
 
   doc: \<DOC>
@@ -192,7 +192,7 @@ public defn SOIC (
   package-body:PackageBody,
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SMT-Lead,                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
@@ -219,7 +219,7 @@ public defn SOIC-N (
   package-body:PackageBody       = make-SOIC-narrow-body(package-length),
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
@@ -246,7 +246,7 @@ public defn SOIC-W (
   package-body:PackageBody       = make-SOIC-wide-body(package-length)
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL

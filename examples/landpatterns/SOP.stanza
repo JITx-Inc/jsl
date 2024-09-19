@@ -22,7 +22,7 @@ defn create-PWP0014A ():
         width = min-max(0.19, 0.3)
       )
     ),
-    thermal-lead? = Rectangle(3.155, 3.255),
+    thermal-lead? = ThermalPad(Rectangle(3.155, 3.255), padding = 0.25),
     package-body = PackageBody(
       width = min-max(4.3, 4.5)
       length = min-max(4.9, 5.1)

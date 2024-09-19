@@ -1,0 +1,198 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/thermal-pads:
+  import core
+  import jitx
+  import jitx/commands
+
+  import maybe-utils
+
+  import jsl/errors
+  import jsl/landpatterns/pad-planner
+  import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/pads
+
+doc: \<DOC>
+Paste Subdivision Generator
+
+This type is used to construct a grid of paste applications.
+This is typically used for large thermal pads associated with
+QFNs, QFPs, SOIC, TSSOP, etc for high power applications.
+
+The idea is to provide empty space for the excess
+solder paste to flow into during the phase transition
+of the solder material. This reduces short circuits
+and other assembly attrition.
+
+<DOC>
+public defstruct PasteSubdivision :
+  doc: \<DOC>
+  Paste Element Dimensions
+  This parameter determines the shape of the paste opening
+  elements in the grid. The user can either:
+  1.  Provide a static `Dims` object that is applied to all openings. This
+  is the most typical case.
+  2.  A function that converts the `GridPosition` to `Dims`. This allows for
+  variable sized openings in teh grid. (This is less common).
+  The `Dims` must be in units of mm.
+  <DOC>
+  elem-dims:Dims|(GridPosition -> Dims)
+  doc: \<DOC>
+  Paste Application Element Planner
+
+  This planner coordinates the shape and population
+  of paste elements in the grid.
+
+  By default this uses `RectanglePadPlanner`
+  <DOC>
+  elem-planner:PadPlanner with:
+    default => RectanglePadPlanner
+  doc: \<DOC>
+  Grid Structure for the Paste Elements
+  <DOC>
+  paste-grid:GridPlanner
+
+  ; TODO - I want to add a 'strict-no-overlap'
+  ;  flag that will cause this generator to check
+  ;  for any paste elements are overlapping/touching.
+  ;  We currently don't expose the intersection
+  ;  algorithms so we will have to wait for that.
+  ; doc: \<DOC>
+  ; Enable for the Strict No Overlap Detection Check
+
+  ; If this value is true - then the paste sub divider
+  ; will check that each paste element does not overlap
+  ; with any other element in the grid.
+
+  ; If an overlap is detected - then an exception is thrown.
+  ; <DOC>
+  ; strict-no-overlap:True|False with:
+  ;   default => true
+with:
+  printer => true
+  keyword-constructor => true
+
+
+doc: \<DOC>
+Create the paste application shape for the thermal pad
+
+@param p Parameters for the paste subdivider
+@return A `Union` shape of multiple elements. It is possible
+that these elements overlap.
+<DOC>
+public defn create-paste-subdivision (p:PasteSubdivision) -> Shape :
+  val ep = elem-planner(p)
+  val G = paste-grid(p)
+  val elem-gen = match(elem-dims(p)):
+    (elem:Dims): fn (x): elem
+    (elem-func): elem-func
+
+  Union $ for pos in grid(G) seq?:
+    val shaper? = shape-generator(ep, row(pos), column(pos))
+    match(shaper?):
+      (_:False): None()
+      (shaper):
+        val sh = shaper $ elem-gen(pos)
+        One $ (pose(pos) * sh)
+
+
+
+doc: \<DOC>
+Thermal Pad Generator
+This type is used to construct large thermal
+pads for land patterns like QFNs, TSSOPs, etc.
+<DOC>
+public defstruct ThermalPad :
+  doc: \<DOC>
+  Copper Shape for the Thermal Lead
+  Dimensions of this shape are in mm
+  <DOC>
+  shape:Shape
+
+  doc: \<DOC>
+  Optional override of the default soldermask expansion
+  This value is in mm and increases the soldermask opening
+  by `sm-expand` mm on each side of `shape`. For example,
+  the width of the soldermask opening will be `2 * sm-expand`
+  larger than the originating `shape`.
+  This value is allowed to be negative - but it is on the user to
+  make sure the generated opening is compatible with the package.
+  <DOC>
+  sm-expand:Maybe<Double> with:
+    default => None()
+
+  doc: \<DOC>
+  Optional Paste Subdivider
+
+  This object provides the information necessary to
+  subdivide the paste application into a grid of elements.
+
+  By default, this value is `None()`.
+  <DOC>
+  paste-subdiv:Maybe<PasteSubdivision> with:
+    default => None()
+with:
+  printer => true
+  keyword-constructor => true
+
+doc: \<DOC>
+Construct a thermal SMD `pcb-pad` definition
+@param tp Thermal Pad Specification
+@return The constructed `pcb-pad` definition we can use
+in our landpatterns.
+<DOC>
+public defn smd-thermal-pad (tp:ThermalPad) -> Pad:
+  val sm = value-or-else(sm-expand(tp), get-default-soldermask-amount)
+  val sh = shape(tp)
+  val paste = match(paste-subdiv(tp)):
+    (_:None): sh ; Replicate the copper shape
+    (given:One<PasteSubdivision>):
+      create-paste-subdivision $ value(given)
+  smd-pad(sh, expand(sh, sm), paste)
+
+
+doc: \<DOC>
+Create a thermal pad with a simple paste subdivision pattern.
+
+This is a helper routine for constructing the paste subdivision
+more easily.
+
+@param shape Rectangular shape for the thermal pad. General purpose
+shapes aren't allowed here so that we can make the math easier.
+@param padding Spacing in mm between paste openings and between the
+edge of the copper pad and the paste opening. The default
+value is 0.2mm.
+@param grid-size This function assumes a square grid and this value
+determines how many openings on each side of this grid. So a value
+of `3` would indicate a 3x3 grid with 9 openings. The default value
+is `2`.
+<DOC>
+public defn ThermalPad (shape:Rectangle -- padding:Double = 0.2, grid-size:Int = 2) -> ThermalPad:
+
+  val num-paddings = grid-size + 1
+  val padding-space = to-double(num-paddings) * padding
+
+  val elem-x = (width(shape) - padding-space) / to-double(grid-size)
+  val elem-y = (height(shape) - padding-space) / to-double(grid-size)
+
+  if (elem-x < 0.0) or (elem-y < 0.0):
+    throw $ ValueError("Invalid Thermal Pad Configuration - Padding Causes a Negative Opening Size")
+
+  val elem-pitch = Dims(
+    elem-x + padding,
+    elem-y + padding
+  )
+
+  ThermalPad(
+    shape = shape,
+    paste-subdiv = One $ PasteSubdivision(
+      elem-dims = Dims(elem-x, elem-y),
+      paste-grid = GridPlanner(
+        pitch = elem-pitch,
+        columns = grid-size,
+        rows = grid-size,
+        anchor = C
+      )
+    )
+  )
+
+  ;
