@@ -45,18 +45,15 @@ This type defines the parameters of each of the individual leads
 of the IC package. It is typically used with {@link Lead-Profile}
 <DOC>
 public defstruct SOT-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => SmallGullWingLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => SmallGullWingLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -75,18 +72,15 @@ This supports packages like `SOT-23F` or `SOT538` which use a
 flat lead style instead of the Gull-Wing Lead style.
 <DOC>
 public defstruct SOTFL-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
+  lead-type:LeadProtrusion with:
       as-method => true,
-      default => SmallOutlineFlatLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+      default => SmallOutlineFlatLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -113,7 +107,7 @@ public defstruct SOT <: Dual-Package :
   Total Number of Leads - excluding the thermal pad.
   <DOC>
   num-leads: Int with:
-    ensure => ensure-even-positive!,
+    ensure => ensure-even-positive!
     as-method => true
 
   doc: \<DOC>

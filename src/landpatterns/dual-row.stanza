@@ -39,7 +39,9 @@ provide the remaining methods to construct
 the landpattern, like `build-silkscreen`.
 <DOC>
 public defstruct Dual-Package <: Package :
-  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
 
   doc: \<DOC>
   Lead Profile Defines the Configuration of leads on each edge
@@ -53,7 +55,8 @@ public defstruct Dual-Package <: Package :
   doc: \<DOC>
   Package Body for the Quad-based Package.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Quad package
@@ -63,7 +66,8 @@ public defstruct Dual-Package <: Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Quad Package
@@ -71,12 +75,14 @@ public defstruct Dual-Package <: Package :
   This provides a numbering scheme for the leads of the Dual
   package. By default, it uses {@link Column-Major-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   printer => true
