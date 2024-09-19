@@ -1,0 +1,108 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits/Bypass:
+  import core
+  import jitx
+  import jitx/commands
+  import jitx/parts
+
+  import maybe-utils
+
+  import jsl/bundles
+  import jsl/si/signal-ends
+  import jsl/design/introspection
+  import jsl/circuits/utils
+
+doc: \<DOC>
+Bypass two ports with an element instance
+
+This function is generator and is expected to run in
+a `pcb-module` context.
+
+It is common to bypass voltage rails with capacitors. Typically,
+these capacitors need to be placed close to the rail in question.
+
+The `bypass` function is a general purpose tool for creating
+the net and short-trace statements for bypassing.
+
+@param elem component or module instance with either:
+*  Standard Non-Polar Interface - `p[1]/p[2]`
+*  Standard Polarized Interface - `a/c`
+<DOC>
+public defn bypass (elem:JITXObject, p1:JITXObject, p2:JITXObject):
+  inside pcb-module:
+    val [e-p1, e-p2] = get-element-ports(elem)
+    short-net(e-p1, p1)
+    net (e-p2, p2)
+
+val BYPASS_DEF_QB = CapacitorQuery()
+val BYPASS_DEF_VAL = 0.1e-6 ; Farads
+
+
+defn insert-bypass (pos:JITXObject, neg:JITXObject -- elem-type?:Instantiable|Double, inst-name?:Maybe<String|Symbol> = None(), qb?:Maybe<CapacitorQuery> = None()) :
+
+  val inst-name = to-string $ value-or(inst-name?, "%_-byp" % [get-ref-name $ ref(pos)])
+  val qb = value-or(qb?, BYPASS_DEF_QB)
+
+  inside pcb-module:
+    val elem-type = match(elem-type?):
+      (et:Instantiable): et
+      (C-v:Double): ; Resistance Value
+        create-capacitor(qb, capacitance = C-v)
+
+    val elem = make-inst(to-symbol(inst-name), elem-type, false)
+    bypass(elem, pos, neg)
+    elem
+
+
+doc: \<DOC>
+Insert a bypass capacitor of a particular type.
+
+This function expects to be called from within a `pcb-module` context.
+
+@param pos Voltage Rail Positive Port - This should generally be a
+component port because otherwise the `short-trace` application will fail.
+@param neg Voltage Rail Negative Port - This should generally be a
+component port, but can also be a ground net or module port.
+@param elem-type Instantiable or capacitance value as a `Double`. If an
+`Instantiable`, it should confirm to standard two pin interface definitions.
+As a `Double`, the JITX query API is used to source a capacitor of this many
+farads. By default, this value is set to 100nF. The global default query parameters
+can be used to control the other aspects of the query.
+@param inst-name Optional name for the capacitor instance to be created. If none is
+given, then the Ref name of the `pos` signal will be used to create an instance name
+in the form `<NAME>-byp`.
+@param qb Optional capacitor query builder. This builder will extend the global defaults
+with any customization the user desires. The default value is `CapacitorQuery()` with no
+additional parameters.
+@return Instance for this bypass component
+<DOC>
+public defn insert-bypass (pos:JITXObject, neg:JITXObject -- elem-type:Instantiable|Double = BYPASS_DEF_VAL, inst-name:String|Symbol = ?, qb:CapacitorQuery = ?) :
+  inside pcb-module:
+    insert-bypass(pos, neg, elem-type? = elem-type, inst-name? = inst-name, qb? = qb )
+
+doc: \<DOC>
+Insert a bypass capacitor across a `power` bundle port.
+
+This function expects to be called from within a `pcb-module` context.
+
+@param rail Power Bundle port for the rail to bypass. This port will likely need to
+use the `signal-ends` feature if not a direct `pcb-component` pad.
+@param elem-type Instantiable or capacitance value as a `Double`. If an
+`Instantiable`, it should confirm to standard two pin interface definitions.
+As a `Double`, the JITX query API is used to source a capacitor of this many
+farads. By default, this value is set to 100nF. The global default query parameters
+can be used to control the other aspects of the query.
+@param inst-name Optional name for the capacitor instance to be created. If none is
+given, then the Ref name of the `pos` signal will be used to create an instance name
+in the form `<NAME>-byp`.
+@param qb Optional capacitor query builder. This builder will extend the global defaults
+with any customization the user desires. The default value is `CapacitorQuery()` with no
+additional parameters.
+@return Instance for this bypass component
+<DOC>
+public defn insert-bypass (rail:JITXObject -- elem-type:Instantiable|Double = BYPASS_DEF_VAL, inst-name:String|Symbol = ?, qb:CapacitorQuery = ?) :
+  inside pcb-module:
+    val pos = get-signal-end(rail.V+)
+    val neg = get-signal-end(rail.V-)
+    insert-bypass(pos, neg, elem-type? = elem-type, inst-name? = inst-name, qb? = qb )
+

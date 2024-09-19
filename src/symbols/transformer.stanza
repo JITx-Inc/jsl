@@ -42,7 +42,7 @@ transformer.
 
 TODO - Diagram that shows the tap locations and other parameters.
 <DOC>
-public defstruct CoilParams <: Equalable :
+public defstruct CoilParams <: SymbolParams :
   doc: \<DOC>
   Inductor Parameters for the coil.
   Note that the `core-style` parameter will be ignored
@@ -62,17 +62,19 @@ public defstruct CoilParams <: Equalable :
   doc: \<DOC>
   Set the direction for this coil - either Left or Right.
   <DOC>
-  direction:Dir with: (
+  direction:Dir with:
     ensure => ensure-left-right!
-  )
   doc: \<DOC>
   Optional polarization marker - This adds a dot near either the top or bottom pin.
   This value expects either an `Up` (top) or `Down` (bottom) to indicate where to
   place the polarized marker if not `None`.
   <DOC>
-  polarized:Maybe<Dir> with: (
+  polarized:Maybe<Dir> with:
     ensure => ensure-up-down!
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   constructor => #CoilParams
   equalable => true
@@ -84,12 +86,13 @@ public defn CoilParams (
   direction:Dir
   taps:Tuple<Int> = []
   polarized:Dir = ?
+  label-params?:SymbolLabelParams = ?
   ) -> CoilParams :
   val max-taps = periods(params) - 1
   for tap in taps do:
     if not (tap < max-taps) :
       throw $ ValueError("Invalid Tap Offset: %_ is Invalid" % [tap])
-  #CoilParams(params, taps, direction, polarized)
+  #CoilParams(params, taps, direction, polarized, label-params?)
 
 public defn get-pin-count (p:CoilParams) -> Int :
   2 + length(taps(p))
@@ -111,7 +114,7 @@ public val DEF_TFR_TAP_LEN = 1.0
 doc: \<DOC>
 Parameters that define a Transformer Symbol
 <DOC>
-public defstruct TransformerSymbolParams <: Equalable :
+public defstruct TransformerSymbolParams <: SymbolParams :
   doc: \<DOC>
   The coils are an ordered list of Coil Number and Coil Parameters
   The coils are separated into left and right coils while maintaining
@@ -126,41 +129,40 @@ public defstruct TransformerSymbolParams <: Equalable :
   This is typically used to indicate features like "Air Core",
   "Iron Core", "Ferrite Core", etc.
   <DOC>
-  core-style:InductorCoreStyle with: (
+  core-style:InductorCoreStyle with:
     updater => sub-core-style
-  )
   doc: \<DOC>
   The tap length is the extra line added in the X direction to extend the connection points away from the winding.
   This value is optional but can be useful for clearer symbols when using windings with one or more taps.
   This extends the tap position line either to the left or right depending on the coil parameters.
   Integral values are highly suggested to maintain the schematic grid.
   <DOC>
-  tap-length:Double with: (
+  tap-length:Double with:
     ensure => ensure-non-negative!,
     default => DEF_TFR_TAP_LEN
-  )
   doc: \<DOC>
   Pin pitch defines the size of the winding half-circle shapes
   <DOC>
-  pin-pitch:Double with: (
+  pin-pitch:Double with:
     ensure => ensure-positive!
     default => DEF_TFR_PITCH
-  )
   doc: \<DOC>
   Pin Length is used in defining the pins used for the ends and taps of the transformer windings.
   <DOC>
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_TFR_PIN_LEN
-  )
   doc: \<DOC>
   Pad Reference Size defines the Text size for the pad id/reference as shown above the pin.
   <DOC>
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   constructor => #TransformerSymbolParams
   equalable => true
@@ -174,11 +176,12 @@ public defn TransformerSymbolParams (
   pin-pitch:Double = DEF_TFR_PITCH
   pin-length:Double = DEF_TFR_PIN_LEN
   pad-ref-size:Double = DEF_TFR_REF_SIZE
+  label-params?:SymbolLabelParams = ?
   ) -> TransformerSymbolParams :
   if not (length(coils) > 1):
     throw $ ValueError("TransformerSymbolParams Requires at least 2 Coil Parameters to construct a transformer symbol")
 
-  val ret = #TransformerSymbolParams(coils, core-style, tap-length, pin-pitch, pin-length, pad-ref-size)
+  val ret = #TransformerSymbolParams(coils, core-style, tap-length, pin-pitch, pin-length, pad-ref-size, label-params?)
 
   val left = get-coils(ret, Left)
   val right = get-coils(ret, Right)
@@ -318,6 +321,8 @@ The pins for the generated coils will come in the form:
 public defmethod name (x:TransformerSymbol) -> String :
   "Transformer"
 
+defmethod get-params (x:TransformerSymbol) -> TransformerSymbolParams:
+  params(x)
 
 public val TFR_GRP_REF = Ref("N")
 
@@ -477,8 +482,12 @@ public defmethod build-artwork (x:TransformerSymbol, sn:SymbolNode) :
       line(sn, [Point((- x-off), max-start), Point((- x-off), min-end)], width = lw)
 
 public defmethod build-params (x:TransformerSymbol, sn:SymbolNode) :
-  val tp = params(x)
-  val overall = glyph-bounds(sn)
-  text(sn, [left(overall), up(overall) + 0.5], ">REF", anchor = W, font-size = 8)
-  val ref-size = pad-ref-size(tp) * (130 %)
-  text(sn, [left(overall), down(overall) - ref-size], ">VALUE", anchor = NW, font-size = 8)
+  val b = glyph-bounds(sn)
+  val p = get-params(x) as TransformerSymbolParams
+  val ref-size = pad-ref-size(p) * (130 %)
+  build-labels(
+    get-label-params(p),
+    sn,
+    LabelPosition([left(b), up(b) + 0.5], W)
+    LabelPosition([left(b), down(b) - ref-size], NW)
+    )

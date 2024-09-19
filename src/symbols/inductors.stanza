@@ -13,43 +13,38 @@ public defenum InductorCoreStyle:
   SingleBarCore
   DoubleBarCore
 
-public defstruct InductorSymbolParams <: Equalable:
-  core-style:InductorCoreStyle with: (
-    updater => sub-core-style
-  )
-  porch-width:Double with: (
-    ensure => ensure-non-negative!,
-    updater => sub-porch-width
-  )
-  doc: \<DOC>
-  Number of half-circles in the inductor winding shape.
-  <DOC>
-  periods:Int with: (
-    ensure => ensure-positive!
-    updater => sub-periods
-  )
-  line-width:Double with: (
-    ensure => ensure-positive!
-    updater => sub-line-width
-  )
-with:
-  constructor => #InductorSymbolParams
-  printer => true
-  equalable => true
-
 val DEF_CORE_STYLE = NoBarCore
 val DEF_PORCH_WIDTH = 0.25
 val DEF_PERIODS = 3
 val DEF_LINE_WIDTH = 0.05
 
-public defn InductorSymbolParams (
-  --
-  core-style:InductorCoreStyle = DEF_CORE_STYLE
-  porch-width:Double = DEF_PORCH_WIDTH
-  periods:Int = DEF_PERIODS
-  line-width:Double = DEF_LINE_WIDTH
-  ) -> InductorSymbolParams :
-  #InductorSymbolParams(core-style, porch-width, periods, line-width)
+public defstruct InductorSymbolParams <: SymbolParams:
+  core-style:InductorCoreStyle with:
+    updater => sub-core-style
+    default => DEF_CORE_STYLE
+  porch-width:Double with:
+    ensure => ensure-non-negative!,
+    updater => sub-porch-width
+    default => DEF_PORCH_WIDTH
+  doc: \<DOC>
+  Number of half-circles in the inductor winding shape.
+  <DOC>
+  periods:Int with:
+    ensure => ensure-positive!
+    updater => sub-periods
+    default => DEF_PERIODS
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_LINE_WIDTH
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  printer => true
+  equalable => true
 
 public defn to-tuple (p:InductorSymbolParams) -> [InductorCoreStyle, Double, Int, Double] :
   [core-style(p), porch-width(p), periods(p), line-width(p)]
@@ -180,34 +175,39 @@ public defn construct-inductor-shape (
 
 
 public defstruct InductorSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
-  params:Maybe<InductorSymbolParams> with: (
+  polarized?:True|False with:
+    as-method => true
+    default => false
+  params:Maybe<InductorSymbolParams> with:
+    as-method => true
     default => None()
-  )
 with:
+  printer => true
   constructor => #InductorSymbol
 
 public defn InductorSymbol (
   --
   pitch:Double = TWO_PIN_DEF_PITCH
-  params:InductorSymbolParams = ?
+  params:InductorSymbolParams = ?,
+  polarized?:True|False = false
   ) -> InductorSymbol:
-  #InductorSymbol(pitch, params)
+  #InductorSymbol(pitch, polarized?, params)
 
 public defmethod name (x:InductorSymbol) -> String :
   "Inductor"
 
-public defmethod build-artwork (
-  x:InductorSymbol, sn:SymbolNode
-  ):
-
-  val p = match(params(x)):
+defmethod get-params (x:InductorSymbol) -> InductorSymbolParams:
+  match(params(x)):
     (_:None): get-default-inductor-symbol-params()
     (prm:One<InductorSymbolParams>): value(prm)
 
+public defmethod build-artwork (
+  x:InductorSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x) as InductorSymbolParams
   build-inductor-glyphs(sn, pitch(x), p)
 
 

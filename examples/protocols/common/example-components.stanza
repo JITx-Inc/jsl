@@ -4,6 +4,7 @@ defpackage jsl/examples/protocols/common/example-components:
   import collections
   import jitx
   import jitx/commands
+  import jitx/emodels
 
   import jsl/design/settings
   import jsl/symbols

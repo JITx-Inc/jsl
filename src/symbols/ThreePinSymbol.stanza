@@ -39,11 +39,9 @@ that control their general layout:
   requirement (see SCR symbols)
 <DOC>
 public defstruct ThreePinSymbol <: SymbolDefn :
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!,
     default => THREE_PIN_DEF_PITCH
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!
     default => THREE_PIN_DEF_WIDTH
-  )

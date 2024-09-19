@@ -15,7 +15,7 @@ Parameters for building a Diode Bridge Schematic Symbol
 This parameterization re-uses the `DiodeSymbolParams` for
 constructing the individual elements.
 <DOC>
-public defstruct DiodeBridgeSymbolParams <: Equalable :
+public defstruct DiodeBridgeSymbolParams <: SymbolParams :
   doc: \<DOC>
   Parameters applied to the Diode glyphs that make up the bridge.
   <DOC>
@@ -37,6 +37,10 @@ public defstruct DiodeBridgeSymbolParams <: Equalable :
   By default the pin names are not shown.
   <DOC>
   pad-ref-size:Double
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
   constructor => #DiodeBridgeSymbolParams
   equalable => true
@@ -62,10 +66,11 @@ public defn DiodeBridgeSymbolParams (
   --
   params:DiodeSymbolParams = get-default-diode-symbol-params()
   side-length:Double = get-default-side-length(params),
-  pin-length:Double = DEF_DB_PIN_LEN
-  pad-ref-size:Double = DEF_DB_PAD_REF
+  pin-length:Double = DEF_DB_PIN_LEN,
+  pad-ref-size:Double = DEF_DB_PAD_REF,
+  label-params?:Maybe<SymbolLabelParams> = None()
   ) -> DiodeBridgeSymbolParams :
-  #DiodeBridgeSymbolParams(params, side-length, pin-length, pad-ref-size)
+  #DiodeBridgeSymbolParams(params, side-length, pin-length, pad-ref-size, label-params?)
 
 public defn to-tuple (p:DiodeBridgeSymbolParams) -> [DiodeSymbolParams, Double, Double, Double] :
   [params(p), side-length(p), pin-length(p), pad-ref-size(p)]
@@ -90,17 +95,24 @@ V-dc.p[1]   ; Positive
 V-dc.p[2]   ; Negative
 ```
 <DOC>
-public defstruct DiodeBridgeSymbol <: SymbolDefn
+public defstruct DiodeBridgeSymbol <: SymbolDefn:
+  params:Maybe<DiodeBridgeSymbolParams> with:
+    default => None()
 
 public defmethod name (x:DiodeBridgeSymbol) -> String :
   "DiodeBridge"
+
+defmethod get-params (x:DiodeBridgeSymbol) -> DiodeBridgeSymbolParams:
+  match(params(x)):
+    (_:None): get-default-diode-bridge-symbol-params()
+    (given:One<DiodeBridgeSymbolParams>): value(given)
 
 val V-ac = Ref("V-ac")
 val V-dc = Ref("V-dc")
 val P = Ref("p")
 
 public defmethod build-pins (x:DiodeBridgeSymbol, node:SymbolNode) :
-  val params = get-default-diode-bridge-symbol-params()
+  val params = get-params(x) as DiodeBridgeSymbolParams
   val [_, side, pin-len, pad-ref-size] = to-tuple(params)
 
   val r = side * cos(to-radians(45.0))
@@ -126,7 +138,7 @@ public defmethod build-pins (x:DiodeBridgeSymbol, node:SymbolNode) :
     add-pin(node, pin-ref, pos, params = pin-params, name = name)
 
 public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
-  val params = get-default-diode-bridge-symbol-params()
+  val params = get-params(x) as DiodeBridgeSymbolParams
   val [dp, side, pin-len, _] = to-tuple(params)
 
   ; The diode bridge consists of 4 of the `diode` shapes
@@ -134,10 +146,10 @@ public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
   val xy = (side / 2.0) * cos(to-radians(45.0))
 
   val poses = [
-    loc(xy, xy) * loc(0.0, 0.0, -135.0),
-    loc((- xy), xy) * loc(0.0, 0.0, -45.0)
-    loc((- xy), (- xy)) * loc(0.0, 0.0, -135.0)
-    loc(xy, (- xy)) * loc(0.0, 0.0, -45.0)
+    loc(xy, xy) * loc(0.0, 0.0, 45.0),
+    loc((- xy), xy) * loc(0.0, 0.0, 135.0)
+    loc((- xy), (- xy)) * loc(0.0, 0.0, 45.0)
+    loc(xy, (- xy)) * loc(0.0, 0.0, 135.0)
   ]
   for p1 in poses do:
     val child = create-child(node, pose = p1, class = "diode")
@@ -155,6 +167,11 @@ public defmethod build-artwork (x:DiodeBridgeSymbol, node:SymbolNode) :
   text(node, [0.0, (- (r - inset))], "~", font-size = fs)
 
 public defmethod build-params (x:DiodeBridgeSymbol, node:SymbolNode) :
-  val overall = glyph-bounds(node)
-  text(node, [right(overall), up(overall)], ">REF", anchor = W, font-size = 8)
-  text(node, [right(overall), down(overall)], ">VALUE", anchor = W, font-size = 8)
+  val b = glyph-bounds(node)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    node,
+    LabelPosition([right(b), up(b)], W)
+    LabelPosition([right(b), down(b)], W)
+    )

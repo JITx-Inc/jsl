@@ -43,7 +43,7 @@ pcb-component this-is-a-cap :
     [ c      | c           | Right ]
 
 
-  val symb = PolarizedCapacitorSymbol(use-AC? = true)
+  val symb = PolarizedCapacitorSymbol()
   assign-symbol $ create-symbol(symb)
 
   val pkg = Molded-2pin(

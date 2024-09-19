@@ -28,4 +28,5 @@ defpackage jsl/symbols/generators:
   forward jsl/symbols/logic/generators
   forward jsl/symbols/ferrite
   forward jsl/symbols/crystal
+  forward jsl/symbols/switches
 

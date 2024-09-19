@@ -37,8 +37,8 @@ pcb-component test-pol-cap:
 
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
-    [p[1] | p[1] | Up |  0]
-    [p[2] | p[2] | Down | 0]
+    [a | p[1] | Up |  0]
+    [c | p[2] | Down | 0]
 
   val symb = PolarizedCapacitorSymbol()
   assign-symbol(create-symbol(symb))
@@ -60,7 +60,7 @@ pcb-component test-pol-cap-2:
     [p[2] | p[2] | Down | 0]
 
   val params = PolarizedCapacitorSymbolParams(style = Polarized-Curved-Style)
-  val symb = PolarizedCapacitorSymbol(params = params)
+  val symb = PolarizedCapacitorSymbol(params = params, polarized? = false)
   assign-symbol(create-symbol(symb))
 
   val chip-def = chips["1206"]
