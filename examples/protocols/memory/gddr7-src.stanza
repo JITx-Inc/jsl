@@ -429,7 +429,6 @@ public pcb-component mem-component :
 
   val box-params = BoxSymbolParams(
     show-grid = false
-    col-width = 1
   )
 
   val box = BoxSymbol(self, params = box-params)
@@ -593,7 +592,6 @@ public pcb-component ic-component :
 
   val box-params = BoxSymbolParams(
     show-grid = false
-    col-width = 1
   )
 
   val box = BoxSymbol(self, params = box-params)
