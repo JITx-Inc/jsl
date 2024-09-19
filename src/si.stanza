@@ -3,6 +3,7 @@ defpackage jsl/si:
   import core
   import jitx
 
+  forward jsl/si/bus
   forward jsl/si/constraints
   forward jsl/si/couplers
   forward jsl/si/helpers

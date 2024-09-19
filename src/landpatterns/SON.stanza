@@ -33,18 +33,15 @@ This type defines the parameters of each of the individual leads
 of the IC package. It is typically used with {@link Lead-Profile}
 <DOC>
 public defstruct SON-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
+  lead-type:LeadProtrusion with:
       as-method => true,
       default => SmallOutlineNoLeads(),
-    )
-  length:Toleranced with: (
+  length:Toleranced with:
     as-method => true,
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
+  width:Toleranced with:
     as-method => true,
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -77,28 +74,30 @@ public defstruct SON <: Dual-Package :
   doc: \<DOC>
   Total Number of Leads - excluding the thermal pad.
   <DOC>
-  num-leads: Int with: (
+  num-leads: Int with:
     ensure => ensure-even-positive!,
     as-method => true
-  )
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SON package.
   By default the {@link SON-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
-  lead-profile:Lead-Profile with: (as-method => true)
+  lead-profile:Lead-Profile with:
+    as-method => true
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape with: (as-method => true)
+  thermal-lead?:False|Shape with:
+    as-method => true
   doc: \<DOC>
   Package Body for the SON.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the SON package
@@ -108,20 +107,23 @@ public defstruct SON <: Dual-Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
-  Lead Numbering Scheme for the SOIC Package
+  Lead Numbering Scheme for the SON Package
 
   This provides a numbering scheme for the leads of the SON
   package. By default, it uses {@link Std-IC-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   hashable => true
   printer => true
@@ -173,53 +175,6 @@ public defmethod courtyard-excess (pkg:SON) -> Double :
   val fillets = lead-fillets(protrusion, density-level = density-level(pkg))
   courtyard-excess(fillets)
 
-public defn SON-overall-outline (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
-  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
-
-  val overall = union(pkg-outline, pad-outline*)
-  LineRectangle(overall, line-width = line-width)
-
-
-public defn SON-pkg-outline (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val pkg-body = package-body(pkg)
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
-  LineRectangle(pkg-outline*, line-width = line-width)
-  ; TODO - Here is where I want to use `Difference` to substract out
-  ;  the combined soldermask on all sides.
-
-public defn SON-outline (
-  pkg:SON,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-  val outline-geom = switch(density-level(pkg)):
-    DensityLevelA: SON-overall-outline(pkg, vp)
-    DensityLevelB: SON-overall-outline(pkg, vp)
-    DensityLevelC: SON-pkg-outline(pkg, vp)
-
-  add-artwork(vp, Silkscreen("outline", side), outline-geom, class = "outline")
-
 defn extra-dot-margin (dl:DensityLevel) -> Double:
   val line-width = default-silk-width(),
   val mask-clearance = default-mask-clearance(),
@@ -233,14 +188,15 @@ public defmethod build-silkscreen (
   pkg:SON,
   vp:VirtualLP
   ) -> False:
-  SON-outline(pkg, vp)
+  create-silkscreen-pkg-extrema-outline(
+    vp, package-body(pkg),
+    density-level = density-level(pkg)
+  )
   build-smd-pin-1-dot(
     vp,
     dir = Left,
     margin = extra-dot-margin(density-level(pkg)),
     )
-  if density-level(pkg) == DensityLevelA :
-    build-outline-pin-1-triangle(vp)
   add-reference-designator(vp)
 
 

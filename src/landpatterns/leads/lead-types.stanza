@@ -21,37 +21,35 @@ These come in a variety of styles:
 -  For surface mount components, the leads are typically embedded into
    the body of the package.
 <DOC>
-public defstruct Lead <: Equalable & Hashable:
-  doc: \<DOC>
-  Dimension of the lead that is normal to the edge of the package body
+public deftype Lead <: Equalable & Hashable
 
-  Examples:
-  -  For through-hole components, the lead length is the overall length
-    of the cylindrical copper.
-  -  For SOP/SOIC/QFP, the lead length is typically the length of
-    mate-able surface between the lead contact and the PCB. It typically
-    does not include any bends in the lead to reach the mating surface.
-  -  For SMT chip resistors (0603, etc), the length is the termination
-    (typically labeled `b` in drawings)
-    TODO - need a figure here.
-  <DOC>
-  length:Toleranced
-  doc: \<DOC>
-  Dimension of the lead that is parallel to the edge of the package body.
+doc: \<DOC>
+Dimension of the lead that is normal to the edge of the package body
 
-  Examples:
-  -  For through-hole components, the lead width is typically the
-    diameter of the cylindrical lead.
-  -  For SOP/SOIC/QFP, the lead width is measured parallel to the body
-    and must be strictly smaller than the pitch of the pins.
-  -  For SMT chip resistors, the lead width is typically the entire width
-    of the package body.
-  <DOC>
-  width:Toleranced
-with:
-  equalable => true
-  hashable => true
-  printer => true
+Examples:
+-  For through-hole components, the lead length is the overall length
+  of the cylindrical copper.
+-  For SOP/SOIC/QFP, the lead length is typically the length of
+  mate-able surface between the lead contact and the PCB. It typically
+  does not include any bends in the lead to reach the mating surface.
+-  For SMT chip resistors (0603, etc), the length is the termination
+  (typically labeled `b` in drawings)
+  TODO - need a figure here.
+<DOC>
+public defmulti length (lead:Lead) -> Toleranced
+
+doc: \<DOC>
+Dimension of the lead that is parallel to the edge of the package body.
+
+Examples:
+-  For through-hole components, the lead width is typically the
+  diameter of the cylindrical lead.
+-  For SOP/SOIC/QFP, the lead width is measured parallel to the body
+  and must be strictly smaller than the pitch of the pins.
+-  For SMT chip resistors, the lead width is typically the entire width
+  of the package body.
+<DOC>
+public defmulti width (lead:Lead) -> Toleranced
 
 doc: \<DOC>
 Surface Mount Component Lead
@@ -76,7 +74,8 @@ public defstruct SMT-Lead <: Lead :
 
   TODO - add figure here.
   <DOC>
-  length:Toleranced with: (as-method => true)
+  length:Toleranced with:
+    as-method => true
   doc: \<DOC>
   Width of the electrical lead of an SMT package.
 
@@ -85,7 +84,9 @@ public defstruct SMT-Lead <: Lead :
 
   TODO - add figure here.
   <DOC>
-  width:Toleranced with: (as-method => true)
+  width:Toleranced with:
+    as-method => true
+
 with:
   equalable => true
   hashable => true

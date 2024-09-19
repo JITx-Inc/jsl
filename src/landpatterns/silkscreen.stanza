@@ -263,8 +263,51 @@ public defn build-smd-pin-1-dot (
   ; TODO - Check that the marker will not overlap with any existing silkscreen
   ;   that will prevent it from being easily visible.
 
-  add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(marker-pos, line-width), name = "pin-1-dot", class = "pin-1-marker")
+  add-pin-1-dot(vp, marker-pos, line-width = line-width, side = side)
 
+
+doc: \<DOC>
+Construct the Pin-1 Dot Marker at a particular location.
+
+This function draws a `Circle` shaped dot at the provided
+location. This function is used to provide a visual pin 1
+indicator in the silkscreen.
+
+@param vp Virtual Landpattern scene graph node.
+@param pos Location in the current scene graph node where this dot will be drawn.
+
+@param line-width silkscreen line width defines the radius of the circle.
+@param side Top or Bottom side silkscreen.
+<DOC>
+public defn add-pin-1-dot (
+  vp:VirtualLP,
+  pos:Point,
+  --
+  line-width:Double = default-silk-width(),
+  side:Side = Top
+  ):
+  add-artwork(vp, Silkscreen("pin-1-marker", side), Circle(pos, line-width), name = "pin-1-dot", class = "pin-1-marker")
+
+
+doc: \<DOC>
+Construct the projected shape of the package body on the board.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+<DOC>
+public defn construct-pkg-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  ) -> Shape:
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+  LineRectangle(pkg-outline*, line-width = line-width)
 
 doc: \<DOC>
 Construct a silkscreen outline of a component based on the Package Body
@@ -274,6 +317,7 @@ Construct a silkscreen outline of a component based on the Package Body
 @param density-level Indicates whether we will use MMC, NMC, or LMC
 @param line-width width of the line to draw.
 @param mask-clearance clearance between soldermask openings and the outline.
+@param side Side of the board. Default is `Top`.
 <DOC>
 public defn create-silkscreen-outline (
   vp:VirtualLP, pkg-body:PackageBody
@@ -281,15 +325,286 @@ public defn create-silkscreen-outline (
   density-level:DensityLevel = DENSITY-LEVEL
   line-width:Double = default-silk-width(),
   mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
   ) -> False :
 
-  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
-  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
-  val outline-geom = LineRectangle(pkg-outline*, line-width = line-width)
-
+  val outline-geom = construct-pkg-outline(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+  )
   ; TODO - I want to use `Difference` here will all of the soldermask openings
   ;  defined by the pads.
 
-  add-artwork(vp, Silkscreen("outline", Top), outline-geom, class = "outline")
+  add-silkscreen-outline(vp, outline-geom, side = side)
 
 
+doc: \<DOC>
+Construct the projected shape of the Package Body and Soldermask Pad Openings
+
+The user must create all of the pads associated with this landpattern before
+invoking this function.
+
+This function takes the union of the pads and the package body outline
+and constructs and overall outline encompassing this shape.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+@return `LineRectangle` Shape for the union of the package body and the
+pad openings.
+<DOC>
+
+public defn construct-overall-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> Shape:
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+
+  val overall = union(pkg-outline, pad-outline)
+  val overall* = fatten(mask-clearance + (line-width / 2.0), overall)
+
+  LineRectangle(overall*, line-width = line-width)
+
+
+doc: \<DOC>
+Construct a silkscreen outline based on the Package Body and Soldermask Pad Openings
+
+The user must create all of the pads associated with this landpattern before
+invoking this function.
+
+@param vp Virtual LP scene graph node - outline will be created here.
+@param pkg-body 3D body model for the component
+@param density-level Indicates whether we will use MMC, NMC, or LMC
+@param line-width width of the line to draw.
+@param mask-clearance clearance between soldermask openings and the outline.
+<DOC>
+public defn create-silkscreen-overall-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> False :
+
+  val outline-geom = construct-overall-outline(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+    side = side
+    )
+
+  add-silkscreen-outline(vp, outline-geom, side = side)
+
+doc: \<DOC>
+Selector for whether the edge lines are
+drawn on the Top / Bottom sides (N/S) or the Left/Right sides (E/W)
+<DOC>
+public defenum SilkscreenEdge :
+  NS-Edge
+  EW-Edge
+
+doc: \<DOC>
+Determine the dimensions of the package body with Y extension
+
+This function is used to create the minimal package body
+outline that we will use to create the horizontal lines
+at the extremes on the package body.
+
+This function attempts to make a conservative size box
+by accounting for both the package body length and the
+location of the soldermask opening of the pads.
+
+This function is typically only useful for dual-row
+packages like SOP, SON, SOT, etc.
+
+@param vp Virtual Land Pattern Scene Graph
+@param pkg-body Package Body for the IC
+@param density-level Density Level for the Package
+@param line-width Silkscreen min line width as defined by pcb-rules.
+@param mask-clearance Minimum soldermask clearance to silkscreen as defined
+by the pcb-rules.
+@param side Which side of the board this outline will be created on. It
+filters for which pads of the landpattern to inspect.
+<DOC>
+public defn get-extended-pkg-outline (
+  vp:VirtualLP
+  pkg-body:PackageBody
+  density-level:DensityLevel
+  line-width:Double
+  mask-clearance:Double
+  side:Side,
+  edge:SilkscreenEdge = NS-Edge
+  ) -> Box :
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
+
+  ; Check to make sure that the pads aren't going to be
+  ;  too close to the outline. If so - we adjust them out a
+  ;  bit so that we don't violate the minimum clearance rules.
+  val pad-outline = bounds(get-pads(vp), layer-spec = SolderMask(side))
+  val pad-outline* = fatten(mask-clearance + (line-width / 2.0), pad-outline)
+
+  val diff = dims(pad-outline*) - dims(pkg-outline*)
+
+  ; If we find that the pad outline is larger in Y
+  ;   then we expand the box, but only on the dimension
+  ;   so that the line is still only the width of the body.
+  if edge == NS-Edge and y(diff) > 0.0:
+    fatten(Point(0.0, y(diff) / 2.0), pkg-outline*)
+  else if edge == EW-Edge and x(diff) > 0.0:
+    fatten(Point(x(diff) / 2.0, 0.0), pkg-outline*)
+  else:
+    pkg-outline*
+
+
+doc: \<DOC>
+Construct the shapes for the package extrema lines
+
+@param vp Virtual Land Pattern Scene Graph node
+@param pkg-body Package dimensional body for sizing the lines.
+@param density-level Package density level. Default is `DENSITY-LEVEL`
+from design settings.
+@param line-width Line width in mm. Default is silkscreen width from
+the design's `pcb-rules`.
+@param mask-clearance Clearance distance between soldermask and silkscreen
+Default is the clearance rule from the design's `pcb-rules`.
+@param side Top or Bottom side of the board where silkscreen will be drawn.
+We use this to determine which pads to include in the outline calculation.
+@param edge N/S or E/W side of the component to creates lines for.
+
+<DOC>
+public defn construct-pkg-extrema-lines (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  edge:SilkscreenEdge = NS-Edge
+  ) -> Shape:
+  val pkg-outline = get-extended-pkg-outline(vp, pkg-body, density-level, line-width, mask-clearance, side, edge)
+  ; Just take the top and bottom lines - not the sides
+  val [sw, se, ne, nw] = corners(pkg-outline)
+
+  val line-eps = switch(edge):
+    NS-Edge:
+      [[nw, ne], [sw, se]]
+    EW-Edge:
+      [[nw, sw], [ne, se]]
+
+  Union $ to-tuple $ for line-ep in line-eps seq:
+    Line(line-width, line-ep)
+
+doc: \<DOC>
+Construct and instantiate the package extrema lines in the scene graph
+
+@param vp Virtual Land Pattern Scene Graph node
+@param pkg-body Package dimensional body for sizing the lines.
+@param density-level Package density level. Default is `DENSITY-LEVEL`
+from design settings.
+@param line-width Line width in mm. Default is silkscreen width from
+the design's `pcb-rules`.
+@param mask-clearance Clearance distance between soldermask and silkscreen
+Default is the clearance rule from the design's `pcb-rules`.
+@param side Top or Bottom side of the board where silkscreen will be drawn.
+We use this to determine which pads to include in the outline calculation.
+@param edge N/S or E/W side of the component to creates lines for.
+
+<DOC>
+public defn create-silkscreen-pkg-extrema-outline (
+  vp:VirtualLP, pkg-body:PackageBody
+  --
+  edge:SilkscreenEdge = NS-Edge
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance()
+  side:Side = Top
+  ) -> Shape :
+  val outline-geom = construct-pkg-extrema-lines(
+    vp, pkg-body,
+    density-level = density-level
+    line-width = line-width
+    mask-clearance = mask-clearance
+    side = side,
+    edge = edge
+    )
+  add-silkscreen-outline(vp, outline-geom, side = side)
+  outline-geom
+
+
+doc: \<DOC>
+Construct an outline shape of the package body by avoiding overlaps with pads
+
+This function takes an outline (like the outline of the package body)
+and computes the set of shapes that can maximally fill that outline
+but not overlap with any of the pads in a package.
+
+This function will also obey clearance requirements to prevent DRC
+issues.
+
+This function is primarily for supporting dual-row land patterns
+like SON, SOP, etc.
+
+@param vp Virtual Land Pattern Scene Graph
+@param pkg-body Package Body for the IC
+@param density-level Density Level for the Package
+@param line-width Silkscreen min line width as defined by pcb-rules.
+@param mask-clearance Minimum soldermask clearance to silkscreen as defined
+by the pcb-rules.
+@param side Which side of the board this outline will be created on. It
+filters for which pads of the landpattern to inspect.
+@return LineRectangle shape that could be drawn in the silkscreen.
+<DOC>
+public defn compute-pkg-internal-box (
+  vp:VirtualLP,
+  pkg-body:PackageBody,
+  --
+  density-level:DensityLevel = DENSITY-LEVEL
+  line-width:Double = default-silk-width(),
+  mask-clearance:Double = default-mask-clearance(),
+  side:Side = Top
+  ) -> Shape :
+
+  val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level)
+  val courtyard? = get-courtyard-boundary(vp, side = side)
+
+  ; Check for overlap between the pad soldermask and the
+  ;  current proposed outline. We will then shrink the
+  ;  proposed outline until there is at least `mask-clearance`
+  ;  on either side.
+  val h-shrink = let:
+    val col-0-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-0")
+    val col-1-pads = seq{as-VirtualPad, _} $ find-by-class(vp, "col-1")
+
+    val col-0-outline = bounds(col-0-pads, layer-spec = SolderMask(side))
+    val col-1-outline = bounds(col-1-pads, layer-spec = SolderMask(side))
+
+    val interstitial = Box(
+      Point(right(col-0-outline), down(col-0-outline)),
+      Point(left(col-1-outline), up(col-1-outline))
+    )
+
+    val iW = x(dims(interstitial)) - ((2.0 * mask-clearance) + line-width)
+    val iP = x(dims(pkg-outline))
+
+    ; Compute the shrinkage that will be applid to
+    ;   both sides (if any)
+    val diff = (iW - iP) / 2.0
+    if diff < 0.0 :
+      ; We need to shrink the package outline
+      fatten(Point(diff, 0.0), pkg-outline)
+    else:
+      pkg-outline
+
+  LineRectangle(h-shrink, line-width = line-width)

@@ -5,6 +5,8 @@ defpackage jsl/symbols/capacitors:
   import math
   import jitx
 
+  import maybe-utils
+
   import jsl/ensure
   import jsl/design/Classable
   import jsl/symbols/framework
@@ -13,29 +15,6 @@ val DEF_PORCH_WIDTH = (80 %)
 val DEF_WIDTH = 1.5
 val DEF_LINE_WIDTH = 0.05
 
-public defstruct CapacitorSymbolParams <: Equalable :
-  doc: \<DOC>
-  The porch width is the length of line from the pin to the capacitor plate lines
-  This value can be either an absolute value in symbol grid units or it
-  can be a percentage of the `pitch / 2.0`.
-  <DOC>
-  porch-width:Double|Percentage with: (
-    ensure => ensure-positive!,
-    updater => sub-porch-width
-  )
-  width:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-width,
-  )
-  line-width:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-line-width
-  )
-with:
-  constructor => #CapacitorSymbolParams
-  equalable => true
-  printer => true
-
 doc: \<DOC>
 Construct Parameter Set for a Non-Polarized Capacitor Symbol
 
@@ -43,13 +22,32 @@ Each keyword argument for this function has a default value
 that can be overriden. These parameters are all of the
 configurable aspects of the symbol.
 <DOC>
-public defn CapacitorSymbolParams (
-  --
-  porch-width:Double|Percentage = DEF_PORCH_WIDTH
-  width:Double = DEF_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  ) -> CapacitorSymbolParams :
-  #CapacitorSymbolParams(porch-width, width, line-width)
+public defstruct CapacitorSymbolParams <: SymbolParams :
+  doc: \<DOC>
+  The porch width is the length of line from the pin to the capacitor plate lines
+  This value can be either an absolute value in symbol grid units or it
+  can be a percentage of the `pitch / 2.0`.
+  <DOC>
+  porch-width:Double|Percentage with:
+    ensure => ensure-positive!
+    updater => sub-porch-width
+    default => DEF_PORCH_WIDTH
+  width:Double with:
+    ensure => ensure-positive!
+    updater => sub-width
+    default => DEF_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_LINE_WIDTH
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
 
 public defn to-tuple (p:CapacitorSymbolParams) -> [Double|Percentage, Double, Double] :
   [porch-width(p), width(p), line-width(p)]
@@ -70,42 +68,6 @@ val DEF_POL_STYLE = Polarized-Straight-Style
 val DEF_POL_RADIUS = 5.0
 val DEF_PLUS_SIZE = (20 %)
 
-public defstruct PolarizedCapacitorSymbolParams <: CapacitorSymbolParams :
-  style:PolarizedStyle
-  doc: \<DOC>
-  The porch width is the length of line from the pin to the capacitor plate lines
-  This value can be either an absolute value in symbol grid units or it
-  can be a percentage of the `pitch / 2.0`.
-  <DOC>
-  porch-width:Double|Percentage with: (
-    ensure => ensure-positive!,
-    updater => sub-porch-width,
-    as-method => true
-  )
-  width:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-width,
-    as-method => true
-  )
-  line-width:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-line-width
-    as-method => true
-  )
-  pol-radius:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-pol-radius,
-  )
-  plus-size:Double|Percentage with: (
-    ensure => ensure-positive!,
-    updater => sub-plus-size
-  )
-
-with:
-  constructor => #PolarizedCapacitorSymbolParams
-  equalable => true
-  printer => true
-
 doc: \<DOC>
 Construct Parameter Set for PolCap Symbol Shape
 
@@ -113,16 +75,45 @@ The parameters of this function are the configurable
 features of a Polarized Capacitor's default symbol shape.
 Each argument has a default value that can be overriden.
 <DOC>
-public defn PolarizedCapacitorSymbolParams (
-  --
-  style:PolarizedStyle = DEF_POL_STYLE
-  porch-width:Double|Percentage = DEF_PORCH_WIDTH
-  width:Double = DEF_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  pol-radius:Double = DEF_POL_RADIUS
-  plus-size:Double|Percentage = DEF_PLUS_SIZE
-  ) -> PolarizedCapacitorSymbolParams :
-  #PolarizedCapacitorSymbolParams(style, porch-width, width, line-width, pol-radius, plus-size)
+public defstruct PolarizedCapacitorSymbolParams <: CapacitorSymbolParams :
+  style:PolarizedStyle with:
+    default => DEF_POL_STYLE
+  doc: \<DOC>
+  The porch width is the length of line from the pin to the capacitor plate lines
+  This value can be either an absolute value in symbol grid units or it
+  can be a percentage of the `pitch / 2.0`.
+  <DOC>
+  porch-width:Double|Percentage with:
+    ensure => ensure-positive!
+    updater => sub-porch-width
+    as-method => true
+    default => DEF_PORCH_WIDTH
+  width:Double with:
+    ensure => ensure-positive!
+    updater => sub-width
+    as-method => true
+    default => DEF_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    as-method => true
+    default => DEF_LINE_WIDTH
+  pol-radius:Double with:
+    ensure => ensure-positive!
+    updater => sub-pol-radius
+    default => DEF_POL_RADIUS
+  plus-size:Double|Percentage with:
+    ensure => ensure-positive!
+    updater => sub-plus-size
+    default => DEF_PLUS_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
 
 public defn sub-base-params (p:PolarizedCapacitorSymbolParams, b:CapacitorSymbolParams) -> PolarizedCapacitorSymbolParams :
   p $> sub-porch-width{_, porch-width(b)}
@@ -237,14 +228,16 @@ public defn build-pol-cap-glyphs (
       val pol-r = pol-radius(params)
       val half-angle = to-degrees $ atan( w2 / pol-r )
 
+      val porch-line = Line(line-width, [Point(0.0, (- h)), Point(0.0, (- cross-y))])
+      val pol-r-center = Point(0.0, (- (cross-y + pol-r)))
       val pline = Polyline(line-width,[
         [
-          Point(0.0, (- h)), Point(0.0, (- cross-y)), ; Shaft
-          Arc(Point(0.0, (- pol-r)), pol-r, 90.0 + half-angle, (- 2.0 * half-angle))
-          Arc(Point(0.0, (- pol-r)), pol-r, 90.0 - half-angle, (2.0 * half-angle))
+          Arc(pol-r-center, pol-r, 90.0 + half-angle, (- 2.0 * half-angle))
+          Arc(pol-r-center, pol-r, 90.0 - half-angle, (2.0 * half-angle))
           ]
       ] )
-      pline
+      ; pline
+      Union([porch-line, pline])
   add-glyph(node, bot-plate, name? = One("bot-plate"))
 
   val plus-len = match(plus-size(params)):
@@ -267,41 +260,47 @@ This type is used to generate the two-pin electrical
 symbol for standard capacitors
 <DOC>
 public defstruct CapacitorSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
+  doc: \<DOC>
+  Indicates whether the symbol will use c/a style pins
+
+  This is typically not used for non-polarized capacitors
+  but it is part of the TwoPinSymbol definition. The default
+  is `false`.
+  <DOC>
+  polarized?:True|False with:
+    as-method => true
+    default => false
   doc: \<DOC>
   Optional Capacitor Symbol Parameters Override
-  If this value is not None, then we will use these
-  parameters to construct the capacitor symbol instead
-  of `get-default-cap-symbol-params()`
+  If this value is None, then this function will
+  consult {@link get-default-cap-symbol-params}
+  when constructing the capacitor symbol. Otherwise,
+  this value will override the existing defaults.
   <DOC>
-  params:Maybe<CapacitorSymbolParams> with: (
+  params:Maybe<CapacitorSymbolParams> with:
     ; NOTE: I'm not using `get-default-cap-symbol-params()` here
     ;  because it would prevent the user from overriding the defaults
     ;  because `CURR-CAPACITOR-SYMBOL` gets instantiate on run.
+    as-method => true
     default => None()
-  )
 with:
-  constructor => #CapacitorSymbol
+  keyword-constructor => true
+  printer => true
 
-public defn CapacitorSymbol (
-  --
-  pitch:Double = TWO_PIN_DEF_PITCH
-  params:CapacitorSymbolParams = ?
-  ) -> CapacitorSymbol:
-  #CapacitorSymbol(pitch, params)
 
 public defmethod name (x:CapacitorSymbol) -> String :
   "Capacitor"
 
+defmethod get-params (x:CapacitorSymbol) -> CapacitorSymbolParams :
+  value-or-else(params(x) as Maybe<CapacitorSymbolParams>, get-default-cap-symbol-params)
+
 public defmethod build-artwork (
   x:CapacitorSymbol, sn:SymbolNode
   ):
-  val p = match(params(x)):
-    (_:None): get-default-cap-symbol-params()
-    (y:One<CapacitorSymbolParams>): value(y)
+  val p = get-params(x) as CapacitorSymbolParams
   build-capacitor-glyphs(sn, pitch(x), p)
 
 var CURR-CAPACITOR-SYMBOL:TwoPinSymbol = CapacitorSymbol()
@@ -311,32 +310,54 @@ public defn set-default-capacitor-symbol (symb:TwoPinSymbol) :
 
 
 public defstruct PolarizedCapacitorSymbol <: TwoPinSymbol :
-  pitch:Double with: (
+  pitch:Double with:
     as-method => true
     default => TWO_PIN_DEF_PITCH
-  )
-  params:Maybe<PolarizedCapacitorSymbolParams> with: (
+  doc: \<DOC>
+  Indicates whether the symbol will use c/a style pins
+
+  This is value defaults to `true` for the Polarized
+  capacitor symbol.
+  <DOC>
+  polarized?:True|False with:
+    as-method => true
+    default => true
+  doc: \<DOC>
+  Optional Override Parameters for Polarized Capacitor Glyph
+
+  This value can be used to override the capacitor glyph
+  parameters and replace them with custom parameters.
+  This value is by default `None()` which will cause
+  {@link get-default-polarized-cap-symbol-params} to be
+  consulted for parameters when the symbol is built.
+  <DOC>
+  params:Maybe<PolarizedCapacitorSymbolParams> with:
+    as-method => true
     default => None()
-  )
 with:
   constructor => #PolarizedCapacitorSymbol
 
 public defn PolarizedCapacitorSymbol (
   --
   pitch:Double = TWO_PIN_DEF_PITCH
+  polarized?:True|False = true
   params:PolarizedCapacitorSymbolParams = ?
   ) -> PolarizedCapacitorSymbol:
-  #PolarizedCapacitorSymbol(pitch, params)
+  #PolarizedCapacitorSymbol(pitch, polarized?, params)
 
 public defmethod name (x:PolarizedCapacitorSymbol) -> String :
   "Polarized Capacitor"
 
+defmethod get-params (x:PolarizedCapacitorSymbol) -> PolarizedCapacitorSymbolParams:
+  value-or-else(
+    params(x) as Maybe<PolarizedCapacitorSymbolParams>,
+    get-default-polarized-cap-symbol-params
+    )
+
 public defmethod build-artwork (
   x:PolarizedCapacitorSymbol, sn:SymbolNode
   ):
-  val p = match(params(x)):
-    (_:None): get-default-polarized-cap-symbol-params()
-    (y:One<PolarizedCapacitorSymbolParams>): value(y)
+  val p = get-params(x) as PolarizedCapacitorSymbolParams
   build-pol-cap-glyphs(sn, pitch(x), p)
 
 var CURR-POL-CAP-SYMBOL:TwoPinSymbol = PolarizedCapacitorSymbol()

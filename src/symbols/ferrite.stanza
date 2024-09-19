@@ -5,13 +5,14 @@ defpackage jsl/symbols/ferrite:
 
   import jsl/ensure
   import jsl/symbols/framework
+  import jsl/geometry/box
 
 val DEF_LINE_WIDTH = 0.05
 val DEF_SYMB_BODY = Dims(0.9, 0.4)
 val DEF_BODY_ANGLE = -30.0
 
 
-public defstruct FerriteSymbolParams <: Equalable:
+public defstruct FerriteSymbolParams <: SymbolParams:
   doc: \<DOC>
   Line width for the shapes drawn.
   Default value is 0.05 in symbol grid units.
@@ -37,6 +38,11 @@ public defstruct FerriteSymbolParams <: Equalable:
   body-angle:Double with:
     default => DEF_BODY_ANGLE
     updater => sub-body-angle
+
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 
 with:
   keyword-constructor => true
@@ -81,18 +87,21 @@ public defstruct FerriteSymbol <: TwoPinSymbol :
     ensure => ensure-positive!
     default => TWO_PIN_DEF_PITCH
     as-method => true
-
+  polarized?:True|False with:
+    as-method => true
+    default => false
   params:Maybe<FerriteSymbolParams> with:
+    as-method => true
     default => None()
 
 with:
   keyword-constructor => true
-
+  printer => true
 
 public defmethod name (x:FerriteSymbol) -> String :
   "Ferrite"
 
-defn get-params (x:FerriteSymbol) -> FerriteSymbolParams :
+defmethod get-params (x:FerriteSymbol) -> FerriteSymbolParams :
   match(params(x)):
     (_:None): get-default-ferrite-symbol-params()
     (v:One<FerriteSymbolParams>): value(v)
@@ -100,8 +109,28 @@ defn get-params (x:FerriteSymbol) -> FerriteSymbolParams :
 public defmethod build-artwork (
   x:FerriteSymbol, sn:SymbolNode
   ):
-  val p = get-params(x)
+  val p = get-params(x) as FerriteSymbolParams
   build-ferrite-glyphs(sn, pitch(x), p)
 
 public defmethod build-orientation (x:FerriteSymbol, sn:SymbolNode):
   set-preferred-orientation(sn, PreferRotation([1]))
+
+public defmethod build-params (x:FerriteSymbol, sn:SymbolNode) :
+  val overall = glyph-bounds(sn)
+  val p = get-params(x) as FerriteSymbolParams
+
+  val offset = Point(left(overall), 0.0)
+
+  val r-P = loc(offset, 90.0)
+
+  val lp = get-label-params(p)
+  val r-H = ref-label-size(lp)
+  val v-P = loc(offset + Point((- r-H), 0.0), 90.0)
+
+  build-labels(
+    get-label-params(p),
+    sn,
+    LabelPosition(r-P, SE)
+    LabelPosition(v-P, SE)
+    )
+

@@ -337,6 +337,36 @@ public defmethod shape-generator (x:Corner-PadPlanner, row:Int, column:Int) -> (
   else:
     shaper(x)
 
+public defn is-omit? (omits:Tuple<[Int, Int]>, row:Int, column:Int) -> True|False :
+  for omit in omits any?:
+    val [o-row, o-col] = omit
+    o-row == row and o-col == column
+
+public defstruct StaggerPadPlanner <: ShapePadPlanner :
+  shaper:(Dims -> Shape) with:
+    as-method => true
+
+  doc: \<DOC>
+  Set the stagger phase for the planner
+  <DOC>
+  phase:StaggerPhase with:
+    default => Odd-Phase
+
+  doc: \<DOC>
+  List of [row, col] combinations that will be non-stuffed
+  <DOC>
+  omits:Tuple<[Int, Int]> with:
+    default => []
+with:
+  printer => true
+  keyword-constructor => true
+
+public defmethod active? (x:StaggerPadPlanner, row:Int, column:Int) -> True|False :
+  if not is-omit?(omits(x), row, column):
+    stagger-pattern(phase(x), row, column)
+  else:
+    false
+
 doc: \<DOC>
 Plated Through-Hole Pad Planner
 
@@ -370,6 +400,27 @@ public defn to-CircleOrCapsule (d:Dims) -> Shape :
 
 public defmethod hole-generator (x:PthPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
   to-CircleOrCapsule
+
+
+public defstruct Pin1-PthPadPlanner <: PthPadPlanner :
+  doc: \<DOC>
+  Pin 1 Pad Shapper
+  This function is called for `col=0, row=0` to construct
+  the copper pad shape.
+  <DOC>
+  pin1-shaper:(Dims -> Shape)
+  doc: \<DOC>
+  Copper pad shape
+  Both top and bottom copper for the PTH will
+  have the same shape.
+  <DOC>
+  shaper:(Dims -> Shape) with:
+    as-method => true
+    default => to-CircleOrCapsule
+
+public defmethod shape-generator (x:Pin1-PthPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
+  if column == 0 and row == 0: pin1-shaper(x)
+  else: shaper(x)
 
 
 public defstruct StaggerPthPlanner <: PthPadPlanner :

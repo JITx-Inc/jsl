@@ -4,6 +4,8 @@ defpackage jsl/symbols/potentiometer:
   import collections
   import jitx
 
+  import maybe-utils
+
   import jsl/design/Classable
   import jsl/symbols/framework
   import jsl/symbols/resistors
@@ -34,9 +36,21 @@ public defstruct PotentiometerSymbol <: ResistorSymbol :
     as-method => true
     default => TWO_PIN_DEF_PITCH
   )
+  polarized?:True|False with:
+    as-method => true
+    default => false
+  params:Maybe<ResistorSymbolParams> with:
+    as-method => true
+    default => None()
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod name (x:PotentiometerSymbol) -> String :
   "Potentiometer"
+
+defmethod get-params (x:PotentiometerSymbol) -> ResistorSymbolParams:
+  value-or-else(params(x) as Maybe<ResistorSymbolParams>, get-default-resistor-symbol-params)
 
 public defmethod build-pins (
   x:PotentiometerSymbol,

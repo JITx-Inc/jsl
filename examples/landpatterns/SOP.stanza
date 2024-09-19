@@ -1,0 +1,80 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/SOP:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns
+  import jsl/symbols
+
+  import jsl/examples/landpatterns/board
+
+
+defn create-PWP0014A ():
+  SOP(
+    num-leads = 14,
+    lead-profile = Lead-Profile(
+      span = min-max(6.2, 6.6),
+      pitch = 0.65,
+      lead = SOP-Lead(
+        length = min-max(0.5, 0.75),
+        width = min-max(0.19, 0.3)
+      )
+    ),
+    thermal-lead? = Rectangle(3.155, 3.255),
+    package-body = PackageBody(
+      width = min-max(4.3, 4.5)
+      length = min-max(4.9, 5.1)
+      height = min-max(1.0, 1.2)
+    ),
+    density-level = DensityLevelC
+  )
+
+pcb-component test-LM2852:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+
+    [AVIN | p[1] | Left ]
+    [EN | p[2] | Left ]
+    [SGND | p[3] | Left ]
+    [SS | p[4] | Left ]
+    [NC[1] | p[5] | Left ]
+
+    [PVIN[1] | p[6] | Right ]
+    [PVIN[2] | p[7] | Right ]
+    [SW[1] | p[8] | Right ]
+    [SW[2] | p[9] | Right ]
+    [PGND[1] | p[10] | Right ]
+    [PGND[2] | p[11] | Right ]
+    [NC[2] | p[12] | Left ]
+    [NC[3] | p[13] | Left ]
+    [SNS | p[14] | Left ]
+
+
+  val b = create-symbol $ BoxSymbol(self)
+  assign-symbol(b)
+
+  val pkg = create-PWP0014A()
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+pcb-module test-design:
+  inst c : test-LM2852
+  place(c) at loc(0.0, 0.0) on Top
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("SOP-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

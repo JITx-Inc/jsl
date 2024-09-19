@@ -1,0 +1,72 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/symbols/switches:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/landpatterns
+  import jsl/symbols
+
+
+  import jsl/examples/landpatterns/board
+
+val SOIC-pkg = SOIC-N(
+  num-leads = 4,
+  lead-span = min-max(5.8, 6.2),
+  package-length = 4.5 +/- 0.10,
+  density-level = DensityLevelC
+)
+
+pcb-component test-MomSwitch:
+  mpn = "XXXXX"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = MomentarySPSTSymbol()
+  assign-symbol $ create-symbol(symb)
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
+pcb-component test-ToggleSwitch:
+  mpn = "YYYYYYY"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [p[1] | p[1] | Up |  0]
+    [p[2] | p[2] | Down | 0]
+
+  val symb = ToggleSPSTSymbol()
+  assign-symbol $ create-symbol(symb)
+
+  val lp = create-landpattern(SOIC-pkg)
+  assign-landpattern(lp)
+
+
+
+pcb-module test-design:
+  inst U1 : test-MomSwitch
+  inst U2 : test-ToggleSwitch
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("Mom-Switch-Symb-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()
+view-schematic()
+

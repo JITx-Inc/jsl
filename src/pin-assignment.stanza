@@ -5,7 +5,7 @@ defpackage jsl/pin-assignment:
   import jitx/commands
 
   forward jsl/pin-assignment/checks
-  forward jsl/pin-assignment/generators
   forward jsl/pin-assignment/circuit-pool
+  forward jsl/pin-assignment/generators
 
 

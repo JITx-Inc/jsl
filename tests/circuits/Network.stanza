@@ -1,0 +1,132 @@
+#use-added-syntax(jitx, tests)
+defpackage jsl/tests/circuits/Network :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/circuits/Network
+  import jsl/symbols
+  import jsl/landpatterns
+
+public pcb-component res :
+
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "R"
+  mpn = "asdf"
+
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [p[1]    | 1]
+    [p[2]    | 2]
+
+  assign-symbol $ create-symbol(ResistorSymbol())
+  assign-landpattern $ create-landpattern(get-resistor-pkg("0603"))
+
+public pcb-component cap :
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "C"
+  mpn = "asdf"
+
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [p[1]    | 1]
+    [p[2]    | 2]
+
+  assign-symbol $ create-symbol(CapacitorSymbol())
+  assign-landpattern $ create-landpattern(get-capacitor-pkg("0603"))
+
+
+public pcb-component diode :
+
+  manufacturer     = "Test"
+  description      = "test resistor"
+  reference-prefix = "D"
+  mpn = "asdf"
+
+  pin-properties:
+    [pin:Ref | pads:Int ... ]
+    [a    | 1]
+    [c    | 2]
+
+  assign-symbol $ create-symbol(DiodeSymbol())
+  assign-landpattern $ create-landpattern(get-chip-pkg("0603"))
+
+
+deftest(network) test-basic :
+
+  val a = CircuitElement(elem-type = res)
+  val b = CircuitElement(elem-type = diode)
+  val series = Series([a,b])
+
+  pcb-module test:
+    val circuit = create-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+deftest(network) test-operators :
+
+  val a = CircuitElement(elem-type = res)
+  val b = CircuitElement(elem-type = diode)
+  val series = a + b + (a|b|cap)
+
+  pcb-module test:
+    val circuit = create-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+deftest(network) test-invert :
+
+  pcb-module test:
+    val a = CircuitElement(elem-type = res)
+    val b = CircuitElement(elem-type = diode)
+    val series = a + Invert(b) + a + (~ b)
+
+    val circuit = create-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+  print-def(test)
+  println("Done")
+
+
+deftest(network) test-shunt :
+
+  pcb-module test:
+    port asdf : pin
+    val a = CircuitElement(elem-type = res)
+    val b = CircuitElement(elem-type = diode)
+    val series = a + (b | ShuntTo(cap, `COMMON))
+
+    val circuit = create-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+
+    net (c.COMMON, asdf)
+
+  print-def(test)
+  println("Done")
+
+
+deftest(network) test-taps :
+
+  val a = Elem(res)
+  val b = Elem(diode, name = `scrubber)
+  val series = a + b + Tap(`divOut, (a|b|cap))
+
+  pcb-module test:
+    val circuit = create-circuit(series)
+    inst c : circuit
+    println("Circuit: %~" % [circuit])
+    net (c.p[2], c.divOut)
+
+  print-def(test)
+  println("Done")

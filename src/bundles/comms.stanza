@@ -236,6 +236,20 @@ Octal SPI Bundle Generator
 public defn octal-spi (pins:SPIPins ...):
   wide-spi(8, pins)
 
+doc: \<DOC>
+Octal SPI Bundle with Chip Select and Data Strobe
+
+@member sck Synchronous Clock Line
+@member cs Chip Select
+@member dqs Data Strobe
+@member data Data Bus of width=8
+<DOC>
+public pcb-bundle octal-spi-with-cs-dqs :
+  port sck
+  port cs
+  port dqs
+  port data : pin[8]
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; UART - Univeral Asynchronous Receiver/Transmitter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -245,7 +259,7 @@ public pcb-enum jsl/bundles/comms/UARTPins :
   UART-CTS
   UART-DCD
   UART-RI
-  UART-DST
+  UART-DSR
   UART-RTS
   UART-CK
   UART-DE
@@ -260,7 +274,7 @@ pcb-bundle uart-b (pins:Collection<UARTPins>):
       UART-CTS : make-pin(`cts)
       UART-DCD : make-pin(`dcd)
       UART-RI  : make-pin(`ri)
-      UART-DST : make-pin(`dst)
+      UART-DSR : make-pin(`dsr)
       UART-RTS : make-pin(`rts)
       UART-CK : make-pin(`ck)
       UART-DE : make-pin(`de)
@@ -278,8 +292,11 @@ Constructs a bundle with the passed pin configuration
 @member cts Clear to Send Line
 @member rts Ready to Send Line
 @member dtr Data Terminal Ready Line
+@member dsr Data Set Ready Line
+@member dcd Data Carrier Detect Line
 @member ri Ring Indicator Line
 @member ck Clock Line
+@member de Driver Enable Line
 <DOC>
 public defn uart (pins:UARTPins ...):
   uart-b(pins)
@@ -295,6 +312,16 @@ This generator constructs a UART bundle consisting of:
 public defn minimal-uart () :
   uart(UART-RX, UART-TX)
 
+doc: \<DOC>
+Uart with RTS/CTS Flow Control
+
+@member tx Transmit Data Line
+@member rx Receive Data Line
+@member rts Ready to Send
+@member cts Clear to Send
+<DOC>
+public defn uart-fc () :
+  uart(UART-RX, UART-TX, UART-RTS, UART-CTS)
 
 doc: \<DOC>
 Inter-Integrated Sound - I2S Protocol

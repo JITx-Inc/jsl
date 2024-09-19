@@ -178,21 +178,15 @@ deftest(SOIC) test-fine-pitch:
 
     val outline = dims $ silk[0]
     val silk-width = clearance(current-rules(), MinSilkscreenWidth)
-    #EXPECT(almost-equal?(outline, Dims(7.4 + silk-width, 10.9 + silk-width)))
+    #EXPECT(almost-equal?(outline, Dims(7.4762 + silk-width, 10.9762 + silk-width)))
 
     val pin-1-silk  = layer(W-lp, Silkscreen("pin-1-marker", Top))
 
-    ; Expect to see the Dot and the Triangle
-    #EXPECT(length(pin-1-silk) == 2)
+    #EXPECT(length(pin-1-silk) == 1)
     for sh in pin-1-silk do:
       match(sh):
         (x:Circle):
           #EXPECT(almost-equal?(center(x), Point(-5.8462, 4.875)))
-        (x:Polygon):
-          val pts = points(x)
-          val b = Box(Point(-3.8, 4.1), Point(-2.4, 5.5))
-          for pt in pts do:
-            #EXPECT(contains?(b, pt))
 
 deftest(SOIC) test-thermal-lead:
   val num-pins = 8

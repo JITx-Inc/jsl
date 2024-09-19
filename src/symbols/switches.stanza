@@ -1,0 +1,245 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/switches:
+  import core
+  import jitx
+
+  import jsl/ensure
+  import jsl/geometry/box
+  import jsl/symbols/framework
+
+val DEF_PORCH_WIDTH = 2.0
+val DEF_LINE_WIDTH = 0.05
+val DEF_PAD_REF_SIZE = 0.75
+val DEF_NODE_RADIUS = 0.25
+
+doc: \<DOC>
+Switch Schematic Symbol Parameterizations
+<DOC>
+public defstruct SwitchSymbolParams <: SymbolParams :
+  doc: \<DOC>
+  Porch Width is the "pin" length of the symbol
+  Units are in symbol grid units.
+  <DOC>
+  porch-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-porch-width
+    default => DEF_PORCH_WIDTH
+  doc: \<DOC>
+  Line width for lines drawn in the symbol
+  Units are in symbol grid units.
+  <DOC>
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_LINE_WIDTH
+  doc: \<DOC>
+  Radius for the switch end nodes (Drawn as Circles)
+  Units are in symbol grid units.
+  <DOC>
+  node-radius:Double with:
+    ensure => ensure-positive!
+    updater => sub-node-radius
+    default => DEF_NODE_RADIUS
+  doc: \<DOC>
+  Pad Ref Identifier Text Size
+  <DOC>
+  pad-ref-size:Double with:
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_PAD_REF_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  printer => true
+  equalable => true
+  keyword-constructor => true
+
+var DEF_SWITCH_PARAMS = SwitchSymbolParams()
+public defn get-default-switch-symbol-params () -> SwitchSymbolParams :
+  DEF_SWITCH_PARAMS
+
+public defn set-default-switch-symbol-params (v:SwitchSymbolParams) -> False :
+  DEF_SWITCH_PARAMS = v
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Single Pull Single Throw (SPST) Switch
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+val DEF_SPST_PITCH = 2.0
+val DEF_SPST_PIN_REFS = [#R(p[1]), #R(p[2])]
+
+doc: \<DOC>
+Single-Pull Single-Throw (SPST) Switch Schematic Symbol
+
+This is a general purpose type for supporting different
+types of switch symbols. The user can provide the
+`glyph-func` to draw the switch symbol.
+<DOC>
+public defstruct SPSTSymbol <: SymbolDefn :
+  doc: \<DOC>
+  Name for this Schematic Symbol
+  <DOC>
+  name:String with:
+    as-method => true
+  doc: \<DOC>
+  Pitch defines the distance between the switch nodes (circles)
+  Units are in symbol grid units.
+  <DOC>
+  pitch:Double with:
+    ensure => ensure-positive!
+    default => DEF_SPST_PITCH
+
+  doc: \<DOC>
+  Pin Ref Identifiers
+  This allows the user to tune how the symbol pins will be identified.
+  <DOC>
+  pin-refs:[Ref, Ref] with:
+    default => DEF_SPST_PIN_REFS
+
+  doc: \<DOC>
+  Switch Glyph Customization Function
+  This user must provide a function that will draw the
+  features of the switch including the circle nodes and
+  the toggle, plunger, etc.
+  <DOC>
+  glyph-func:(SymbolNode, Double, SwitchSymbolParams) -> ?
+
+  doc: \<DOC>
+  Optional Overriding Parameterization for the Switch.
+  <DOC>
+  params:Maybe<SwitchSymbolParams> with:
+    default => None()
+
+with:
+  printer => true
+  keyword-constructor => true
+
+defmethod get-params (x:SPSTSymbol) -> SwitchSymbolParams :
+  match(params(x)):
+    (_:None): get-default-switch-symbol-params()
+    (v:One<SwitchSymbolParams>): value(v)
+
+defmethod build-pins (
+  x:SPSTSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x) as SwitchSymbolParams
+
+  val w = pitch(x) / 2.0
+  val [P1-R, P2-R] = pin-refs(x)
+
+  val p1-params = VirtualPinParams(
+    direction = Up,
+    pin-length = porch-width(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+
+  add-pin(sn, P1-R, [0.0,    w  ], params = p1-params, name = "pin-1")
+
+  val p2-params = VirtualPinParams(
+    direction = Down,
+    pin-length = porch-width(p),
+    pad-ref-size = pad-ref-size(p)
+  )
+  add-pin(sn, P2-R, [0.0, (- w) ], params = p2-params, name = "pin-2")
+
+
+defmethod build-artwork (
+  x:SPSTSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x) as SwitchSymbolParams
+  glyph-func(x)(sn, pitch(x), p)
+
+defmethod build-params (x:SPSTSymbol, sn:SymbolNode) :
+  val b = glyph-bounds(sn)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.1, 0.0], SW)
+    LabelPosition([right(b) + 0.1, (- 0.5)], NW)
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Momentary SPST Switch
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+public defn build-SPST-nodes (node:SymbolNode, pitch:Double, params:SwitchSymbolParams) :
+  val porch-start = pitch / 2.0
+  val r = node-radius(params)
+  circle(node, r, Point(0.0, porch-start), name = "front-node")
+  circle(node, r, Point(0.0, (- porch-start)), name = "back-node")
+
+
+public defn build-mom-SP-ST-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:SwitchSymbolParams
+  ):
+
+  build-SPST-nodes(node, pitch, params)
+
+  val porch-start = pitch / 2.0
+  val lw = line-width(params)
+  val r = node-radius(params)
+
+  val plunge-x = (- (r + 0.2))
+  val plunge-y = porch-start + r
+  line(node, [Point(plunge-x, plunge-y), Point(plunge-x, (- plunge-y))], width = lw)
+  line(node, [Point(plunge-x, 0.0), Point(plunge-x - 0.7, 0.0)], width = lw)
+
+doc: \<DOC>
+Create a Momentary SPST Switch Symbol Generator
+See {@link SPSTSymbol} for more info.
+<DOC>
+public defn MomentarySPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Ref, Ref] = DEF_SPST_PIN_REFS, params:SwitchSymbolParams = ?) -> SPSTSymbol :
+  SPSTSymbol(
+    name = "Momentary SPST Switch"
+    pitch = pitch,
+    pin-refs = pin-refs,
+    glyph-func = build-mom-SP-ST-glyphs
+    params = params,
+  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Toggle Switch
+
+public defn build-toggle-SP-ST-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:SwitchSymbolParams,
+  --
+  is-open?:True|False = true
+  ):
+
+  val lw = line-width(params)
+  val r = node-radius(params)
+
+  val toggle-x = if is-open?:
+    (- (r + 0.5))
+  else:
+    (- r)
+
+  val toggle-y = pitch / 2.0
+  line(node, [Point(0.0, (- toggle-y)), Point(toggle-x, toggle-y)], width = lw)
+
+  build-SPST-nodes(node, pitch, params)
+
+doc: \<DOC>
+Create a Toggle SPST Switch Symbol Generator
+See {@link SPSTSymbol} for more info.
+<DOC>
+public defn ToggleSPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Ref, Ref] = DEF_SPST_PIN_REFS, params:SwitchSymbolParams = ?) -> SPSTSymbol :
+  SPSTSymbol(
+    name = "Toggle SPST Switch"
+    pitch = pitch,
+    pin-refs = pin-refs,
+    glyph-func = build-toggle-SP-ST-glyphs
+    params = params,
+  )
