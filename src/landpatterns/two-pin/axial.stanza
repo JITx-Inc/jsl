@@ -226,6 +226,7 @@ public defmethod build-pads (
         (_:False): None()
         (th-pad-gen:((Dims, Dims) -> Pad)):
           val pad-def = make-pad-def(lead(pkg), th-pad-gen, density-level(pkg))
-          One $ VirtualPad(pad-id, pad-def, pos)
+          val cls = build-vpad-classes(r, 0)
+          One $ VirtualPad(pad-id, pad-def, pos, class = cls)
 
   append-all(vp, gen-pad-info())

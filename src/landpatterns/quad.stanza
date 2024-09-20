@@ -315,11 +315,7 @@ public defmethod build-pads (
       match(pad-gen?):
         (_:False): None()
         (pad-gen):
-          val cls = [
-            "pad",
-            to-string("col-%_" % [c]),
-            to-string("row-%_" % [r])
-          ]
+          val cls = build-vpad-classes(r, c)
           One $ VirtualPad(pad-id, pad-gen(pad-size), pose(pos), class = cls)
 
   append-all(vp, gen-pad-info())
