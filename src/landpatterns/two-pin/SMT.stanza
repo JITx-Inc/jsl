@@ -36,18 +36,14 @@ public defstruct SMT-Chip-Def :
   name: String
   aliases: Tuple<String>
 
-  length:Toleranced with: (
+  length:Toleranced with:
     ensure => ensure-positive!
-  )
-  width:Toleranced with: (
+  width:Toleranced with:
     ensure => ensure-positive!
-  )
-  lead-length:Toleranced with: (
+  lead-length:Toleranced with:
     ensure => ensure-positive!
-  )
-  lead-width:Toleranced with: (
+  lead-width:Toleranced with:
     ensure => ensure-positive!
-  )
 
 doc: \<DOC>
 Internal Constructor to create Definitions from Tuples
@@ -161,17 +157,21 @@ public defstruct SMT-Chip <: Package :
   doc: \<DOC>
   Z-dimension Height of the Chip Package.
   <DOC>
-  height:Toleranced with: (ensure => ensure-positive! )
+  height:Toleranced with:
+    ensure => ensure-positive!
   doc: \<DOC>
   Protrusion Type
   <DOC>
   protrusion:LeadProtrusion
-  pad-planner:PadPlanner with: (as-method => true)
-  lead-numbering:Numbering with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
+  lead-numbering:Numbering with:
+    as-method => true
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   constructor => #SMT-Chip
 
