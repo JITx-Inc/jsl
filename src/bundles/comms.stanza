@@ -120,6 +120,7 @@ objects to be connected.
 
 public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CS
+  SPI-DQS
   SPI-COPI
   SPI-CIPO
 
@@ -205,6 +206,7 @@ public pcb-bundle wide-spi (width:Int, pins:Collection<SPIPins>):
   for p in pins do :
     switch(p):
       SPI-CS : make-pin(`cs)
+      SPI-DQS : make-pin(`dqs)
       else:
         throw $ ValueError("Wide-SPI does not support pin type: %_" % [p])
 
