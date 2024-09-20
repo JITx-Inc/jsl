@@ -71,15 +71,38 @@ with:
   printer => true
   keyword-constructor => true
 
+doc: \<DOC>
+Create Paste SubDivision Shape
+
+This is the interface definition for the PasteSubdivision types.
+The user can override the default behavior of the subdivision
+generator by overriding this method in a derived class.
+
+@param p The `PasteSubdivision` object
+@return A Shape that will be applied to the thermal pad at the origin
+of the thermal pad. To create multiple non-contiguous shapes, use the
+`Union` shape type.
+<DOC>
+public defmulti create-paste-subdivision (p:PasteSubdivision) -> Shape
 
 doc: \<DOC>
-Create the paste application shape for the thermal pad
+Default paste application shape for the thermal pad
+
+The default implementation constructs a grid of elements
+based on the `PasteSubdivision` parameters.
+
+The `GridPlanner` is used to construct the grid shape.
+This implementation uses a limited subset of `PadPlanner` to
+provide:
+
+1.  Which grid locations are active.
+2.  The shape at each of those grid locations.
 
 @param p Parameters for the paste subdivider
 @return A `Union` shape of multiple elements. It is possible
 that these elements overlap.
 <DOC>
-public defn create-paste-subdivision (p:PasteSubdivision) -> Shape :
+public defmethod create-paste-subdivision (p:PasteSubdivision) -> Shape :
   val ep = elem-planner(p)
   val G = paste-grid(p)
   val elem-gen = match(elem-dims(p)):
