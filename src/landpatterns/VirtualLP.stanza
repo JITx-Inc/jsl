@@ -6,6 +6,7 @@ defpackage jsl/landpatterns/VirtualLP:
   import jitx/commands
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/Classable
   import jsl/geometry/box
   import jsl/landpatterns/courtyard
@@ -735,6 +736,68 @@ public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> 
   val kid-elems = for child in children(vp) seq-cat:
     find-by-class(child, cls)
   cat(local-elems, kid-elems)
+
+defn identify-pad-row-col (vp:VirtualLP, prefix:String) -> Tuple<Int> :
+  val pad-elems = find-by-class(vp, "pad")
+  val found-indices = for pad-elem in pad-elems seq?:
+    val row-cls = for cls in class(pad-elem) first:
+      if prefix?(cls, prefix):
+        One(cls)
+      else:
+        None()
+    match(row-cls):
+      (_:None):
+        throw $ ValueError("Pad '%_' does not have a '%_*' class" % [pad-elem, prefix])
+        None()
+      (given:One<String>):
+        val index = last $ to-list $ split(value(given), "-")
+        match(to-int(index)):
+          (_:False): None()
+          (x:Int): One(x)
+
+  to-tuple $ unique(found-indices)
+
+doc: \<DOC>
+Identify the unique rows of pads in this land pattern
+@param vp VirtualLP SceneGraph
+@return Tuple of row indices. For example, a dual
+with 16 pins (2 x 8) will have 8 rows and 2 columns. This
+function will return 8.
+<DOC>
+public defn identify-pad-rows (vp:VirtualLP) -> Tuple<Int> :
+  identify-pad-row-col(vp, "row-")
+
+doc: \<DOC>
+Identify the unique columns of pads in this land pattern
+@param vp VirtualLP SceneGraph
+@return Tuple of row indices. For example, a square quad
+with 8 x 8 will have 8 rows and 4 columns. This function
+will return 4.
+<DOC>
+public defn identify-pad-columns (vp:VirtualLP) -> Tuple<Int> :
+  identify-pad-row-col(vp, "col-")
+
+doc: \<DOC>
+Retrieve the pads in the specified row
+@param vp VirtualLP SceneGraph
+@param row Identifies the row of pads to retrieve. Must be >= 0.
+@return Sequence of `VirtualPad` objects. If no row with
+index `row` is present, then an empty sequence will be provided.
+<DOC>
+public defn get-pads-by-row (vp:VirtualLP, row:Int) -> Seq<VirtualPad> :
+  ensure-non-negative!("row", row)
+  seq{as-VirtualPad, _} $ find-by-class(vp, to-string $ "row-%_" % [row])
+
+doc: \<DOC>
+Retrieve the pads in the specified column
+@param vp VirtualLP SceneGraph
+@param row Identifies the column of pads to retrieve. Must be >= 0.
+@return Sequence of `VirtualPad` objects. If no column with
+index `column` is present, then an empty sequence will be provided.
+<DOC>
+public defn get-pads-by-column (vp:VirtualLP, column:Int) -> Seq<VirtualPad> :
+  ensure-non-negative!("column", column)
+  seq{as-VirtualPad, _} $ find-by-class(vp, to-string $ "col-%_" % [column])
 
 doc: \<DOC>
 Find a virtual pad with the given reference
