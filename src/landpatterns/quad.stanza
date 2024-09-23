@@ -31,6 +31,7 @@ defpackage jsl/landpatterns/quad:
   import jsl/landpatterns/numbering
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/grid-planner
+  import jsl/landpatterns/thermal-pads
 
 public val QUAD-NUM-COLUMNS = 4
 
@@ -51,9 +52,11 @@ See {@link select-quad-numbering} for more information.
 <DOC>
 public defstruct Quad-Lead-Profile <: Equalable & Hashable:
   x-leads : Lead-Profile
-  x-count : Maybe<Int> with: (ensure => ensure-positive!)
+  x-count : Maybe<Int> with:
+    ensure => ensure-positive!
   y-leads : Lead-Profile
-  y-count : Maybe<Int> with: (ensure => ensure-positive!)
+  y-count : Maybe<Int> with:
+    ensure => ensure-positive!
 with:
   equalable => true
   printer => true
@@ -200,7 +203,9 @@ public defstruct Quad-Package <: Package :
   doc: \<DOC>
   Number of leads ignoring any depopulated leads and thermal leads
   <DOC>
-  num-leads:Int with: (ensure => ensure-even-positive!, as-method => true)
+  num-leads:Int with:
+    ensure => ensure-even-positive!
+    as-method => true
 
   doc: \<DOC>
   Lead Profiles for All Edges of the Quad Package
@@ -209,12 +214,13 @@ public defstruct Quad-Package <: Package :
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape
+  thermal-lead?:False|Shape|ThermalPad
 
   doc: \<DOC>
   Package Body for the Quad-based Package.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the Quad package
@@ -224,7 +230,8 @@ public defstruct Quad-Package <: Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the Quad Package
@@ -232,12 +239,14 @@ public defstruct Quad-Package <: Package :
   This provides a numbering scheme for the leads of the Quad
   package. By default, it uses {@link Column-Major-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 
 with:
   printer => true
@@ -247,7 +256,7 @@ public defn Quad-Package (
   --
   num-leads:Int,
   lead-profile:Quad-Lead-Profile,
-  thermal-lead?:False|Shape,
+  thermal-lead?:False|Shape|ThermalPad,
   package-body:PackageBody,
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
@@ -315,11 +324,9 @@ public defmethod build-pads (
 
   append-all(vp, gen-pad-info())
 
-  match(thermal-lead?(pkg)):
-    (lead-shape:Shape):
-      val cls = ["pad", "thermal"]
-      append(vp, VirtualPad(num-leads(pkg) + 1, smd-pad(lead-shape), loc(0.0, 0.0), class = cls))
-    (x:False): false
+  if thermal-lead?(pkg) is-not False:
+      add-thermal-pad(vp, num-leads(pkg) + 1, thermal-lead?(pkg))
+
 
 
 doc: \<DOC>

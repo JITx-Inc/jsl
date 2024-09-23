@@ -118,7 +118,7 @@ public defn make-soldermask (mask-shape:Shape) :
     if pad-type(self) == TH:
       layer(SolderMask(Bottom)) = mask-shape
 
-defn get-default-soldermask-amount () -> Double :
+public defn get-default-soldermask-amount () -> Double :
   clearance(current-rules(), SolderMaskRegistration)
 
 doc: \<DOC>
@@ -627,14 +627,6 @@ public defn circle-smd-pad (
       to-shape-func(mask, pad-r, m, anchor),
       to-shape-func(paste, pad-r, m, anchor),
     )
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; TODO - Add paste mask subdivision to
-;   keep paste mask coverage below some threshold.
-
 
 doc: \<DOC>
 Generate a Thermal Pad for a Package

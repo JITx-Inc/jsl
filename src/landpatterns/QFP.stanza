@@ -24,18 +24,15 @@ public defstruct QFP-Lead <: SMT-Lead:
   the lead-type {@link SmallGullWingLeads} should be
   considered.
   <DOC>
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => BigGullWingLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => BigGullWingLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -121,7 +118,7 @@ public defstruct QFP <: Quad-Package :
   doc: \<DOC>
   Optional thermal lead for the package.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
 
   doc: \<DOC>
@@ -170,7 +167,7 @@ public defn QFP (
   --
   num-leads:Int,
   lead-profile:Quad-Lead-Profile,
-  thermal-lead?:False|Shape,
+  thermal-lead?:False|Shape|ThermalPad,
   package-body:PackageBody,
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-quad-numbering(num-leads, lead-profile),
