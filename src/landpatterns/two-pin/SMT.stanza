@@ -294,11 +294,19 @@ public defmethod build-silkscreen (
   pkg:SMT-Chip,
   vp:VirtualLP
   ):
+
   val outline = InteriorEdgesOutline(
     pkg-body = package-body(pkg),
     edge = EW-Edge
   )
-  build-outline(outline, vp)
+  if has-enough-interior-space?(outline, vp):
+    build-outline(outline, vp)
+  else:
+    val sl = SingleLineOutline(
+      pkg-body = package-body(pkg),
+      edge = EW-Edge
+    )
+    build-outline(sl, vp)
 
   if polarized?(pkg):
     build-smd-pin-1-dot(vp, pin-1-id = #R(c), dir = Down)

@@ -77,7 +77,16 @@ pcb-module test-design:
   place(C2) at loc(2.5, 0.0) on Top
 
   inst C3 : test-SMT("0402")
+  ; place(C3) at loc(0.0, 0.0) on Top
   inst C4 : test-SMT-pol("0402")
+
+  inst C5 : test-SMT("0603")
+  inst C6 : test-SMT-pol("0603")
+
+  inst C7 : test-SMT("0805")
+  inst C8 : test-SMT-pol("0805")
+
+
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("SMT-TEST")
