@@ -481,6 +481,58 @@ public defn get-connected-net (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JI
         None()
 
 doc: \<DOC>
+Get all net statements associated with a module or component port
+
+This function must be called from within a `pcb-module` context.
+
+Note that this function will fail to find a net if the passed `pt`
+port is not part of a component or module in the local context.
+For example, if the design contains:
+
+```stanza
+pcb-module wrapper:
+  port GND
+  inst C : some-component
+
+  ; `INT` is defined only in the `wrapper`
+  ;   context.
+  net INT (C.internal-port, ...)
+
+pcb-module top-level:
+
+  port pwr : power
+  inst W : wrapper
+  net GND (W.GND)
+  net (GND, pwr.V-)
+
+  ; This will return two nets: one for each statement above
+  val n1 = get-connected-nets(W.GND)
+
+  ; This will return an empty tuple 
+  val n2 = get-connected-nets(W.C.internal-port)
+```
+
+`n1` will be a tuple of two `net` objects, since
+there are two `net` statements defined in the `pcb-module` context.
+
+The `n2` invocation will fail to find `INT` as the net
+for `W.C.internal-port` and return an empty tuple 
+
+@param pt Port of a component or module in this module context.
+@param cxt Optional context to search. The default value is `self`.
+@return If a connection is found - this function returns the Net as
+a JITXObject. If no connection is found - then None().
+<DOC>
+public defn get-connected-nets (pt:JITXObject, cxt:JITXObject = self) -> Tuple<JITXObject>:
+  inside pcb-module:
+    to-tuple $
+      for n in nets(cxt) seq? :
+        if connected?([pt, n]):
+          One(n)
+        else:
+          None()
+
+doc: \<DOC>
 Get the net associated with a module or component port
 
 This function must be called from within a `pcb-module` context.
@@ -520,8 +572,14 @@ public pcb-struct jsl/design/introspection/PortInfo :
   ; Ideally - this is a `Maybe` but that isn't supported
   ;   yet.
   ; TODO - consider shifting to `Maybe` in the future.
-  connected-net:JITXObject|False
+  connected-nets:Tuple<JITXObject>
   pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
+
+; Support `connected-net`, as the field changed from an optional
+; value to a Tuple
+public defn connected-net (p:PortInfo) -> JITXObject|False :
+  if empty?(connected-nets(p)) : false
+  else : connected-nets(p)[0]
 
 doc: \<DOC>
 Extract Port Info from a port `JITXObject`
@@ -538,7 +596,5 @@ public defn get-port-info (pt:JITXObject) -> PortInfo:
         val lp-pds = value(given)
         to-tuple $ for lp-pd in lp-pds seq:
           get-pad-info(lp-pd)
-    val con-net = match(get-connected-net(pt)):
-      (_:None): false
-      (given:One<JITXObject>): value(given)
-    PortInfo(con-net, pd-info)
+    val con-nets = get-connected-nets(pt)
+    PortInfo(con-nets, pd-info)
