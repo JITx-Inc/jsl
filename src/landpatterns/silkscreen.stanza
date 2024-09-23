@@ -404,16 +404,16 @@ public defmethod build-shape (s:InteriorEdgesOutline, vp:VirtualLP -- side:Side 
   val pkg-outline = bounds $ envelope(pkg-body(s), density-level = density-level(s))
   ; Interior outline of pads; shrunk by soldermask-clearance
   val lw = line-width(s)
-  val pad-interior = pad-interior-bounds(vp, side)
-  val pad-interior* = try:
-     shrink(mask-clearance(s) + lw / 2.0, pad-interior)
+  val pad-interior = try:
+    compute-interior-pad-space(s, vp, side = side)
   catch (e:ValueError):
-    pad-interior
+    println("Not enough interior space for Edge Outline - Try SingleLineOutline")
+    throw(e)
 
   ; Select smaller box
   val pkg-outline* =
     if area(pkg-outline) < area(pad-interior) : pkg-outline
-    else : pad-interior*
+    else : pad-interior
 
   val [sw, se, ne, nw] = corners(pkg-outline*)
 
@@ -427,6 +427,67 @@ public defmethod build-shape (s:InteriorEdgesOutline, vp:VirtualLP -- side:Side 
 
   Union $ to-tuple $ for line-ep in line-eps seq:
     Line(lw, line-ep)
+
+defn compute-interior-pad-space (s:InteriorEdgesOutline, vp:VirtualLP -- side:Side = Top) -> Box :
+  val lw = line-width(s)
+  val pad-interior = pad-interior-bounds(vp, side)
+  shrink(mask-clearance(s) + lw / 2.0, pad-interior)
+
+public defn has-enough-interior-space? (s:InteriorEdgesOutline, vp:VirtualLP -- side:Side = Top) -> True|False:
+  try:
+    compute-interior-pad-space(s, vp, side = side)
+    true
+  catch (e:ValueError):
+    false
+
+public defstruct SingleLineOutline <: SilkscreenOutline :
+  doc: \<DOC>
+  Package Body Dimensions
+  These dimensions will be projected on to the board
+  to construct the outline.
+  <DOC>
+  pkg-body:PackageBody
+  edge:SilkscreenEdge with:
+    default => EW-Edge
+  doc: \<DOC>
+  Line Width for the constructed silkscreen outline
+  By default we use the `MinSilkscreenWidth` from the design rules.
+  <DOC>
+  line-width:Double with:
+    ensure => ensure-positive!
+    default => default-silk-width()
+  doc: \<DOC>
+  Clearance from silkscreen to the soldermask
+  By default we use the `MinSilkSolderMaskSpace` from the
+  design rules.
+  <DOC>
+  mask-clearance:Double with:
+    ensure => ensure-non-negative!
+    default => default-mask-clearance()
+  doc: \<DOC>
+  Density Level Specification
+  This determines whether we use:
+  *  Maximum Material Condition
+  *  Nominal Material Condition
+  *  Least Material Condition
+
+  of the package body to construct the outline.
+  <DOC>
+  density-level:DensityLevel with:
+    default => DENSITY-LEVEL
+with:
+  printer => true
+  keyword-constructor => true
+
+
+public defmethod build-shape (s:SingleLineOutline, vp:VirtualLP -- side:Side = Top) -> Shape :
+  val pkg-outline = bounds $ envelope(pkg-body(s), density-level = density-level(s))
+
+  switch(edge(s)):
+    NS-Edge:
+      Line(line-width(s), [Point(0.0, up(pkg-outline)), Point(0.0, down(pkg-outline))])
+    EW-Edge:
+      Line(line-width(s), [Point(left(pkg-outline), 0.0), Point(right(pkg-outline), 0.0)])
 
 doc: \<DOC>
 Compute the closest corner of the passed Box to the Pin1 position.
