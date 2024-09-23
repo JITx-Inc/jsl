@@ -952,4 +952,4 @@ public defn create-silkscreen-pkg-extrema-outline (
     mask-clearance = mask-clearance
     density-level = density-level
   )
-  build-outline(eo, vp, side = side)
+  build-shape(eo, vp, side = side)
