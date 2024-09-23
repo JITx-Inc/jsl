@@ -135,7 +135,15 @@ public defmethod build-silkscreen (
   pkg:Molded-2pin,
   vp:VirtualLP
   ):
-  val outline = create-silkscreen-pkg-extrema-outline(vp, package-body(pkg), edge = EW-Edge)
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
+    edge = EW-Edge
+    density-level = density-level(pkg)
+  )
+  build-outline(eo, vp)
+
+  val outline-art = get-silkscreen-outline!(vp)
+  val outline = shape(outline-art)
 
   match(pin-1-id?(pkg)):
     (_:None):false
