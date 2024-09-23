@@ -606,8 +606,10 @@ public defn build-outline-pin-1-triangle (
 doc: \<DOC>
 Create a Pin 1 indicator as a round dot next to the pad
 
-This creates a small circle in the silkscreen directly
-above (+Y) the "pin 1" pad of a land pattern.
+By default This creates a small circle in the silkscreen directly
+above (+Y) the "pin 1" pad of a land pattern. You can use the
+`dir` option to place the marker in a different cardinal
+direction.
 
 This function assumes that the space directly above the
 pin 1 pad is available to place this circle.
