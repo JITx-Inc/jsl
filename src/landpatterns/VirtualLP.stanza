@@ -413,6 +413,25 @@ public defn get-silkscreen-outline! (vp:VirtualLP) -> VirtualArtwork :
 
   outlines[0]
 
+doc: \<DOC>
+Retrieve the Silkscreen outline if present
+
+This function looks for a `VirtualArtwork` object with class `outline`.
+
+@param vp Virtual Landpattern SceneGraph
+@return  If no `outline` present, then this function returns `None()`
+If an artwork of class `outline` is present, we return one.
+@throws ValueError if multiple `outline` elements are found.
+<DOC>
+public defn get-silkscreen-outline (vp:VirtualLP) -> Maybe<VirtualArtwork> :
+  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
+  if length(outlines) == 0:
+    None()
+  else if length(outlines) > 1:
+    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+  else:
+    One $ outlines[0]
+
 public defn add-artwork (
   vp:VirtualLP,
   ls:LayerSpecifier,
