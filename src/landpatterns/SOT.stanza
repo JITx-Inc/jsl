@@ -207,10 +207,11 @@ public defmethod build-silkscreen (
   pkg:SOT,
   vp:VirtualLP
   ) -> False:
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(
     vp,
     dir = Left,
