@@ -10,6 +10,7 @@ defpackage jsl/via-structures:
   import jsl/ensure
   import jsl/bundles
   import jsl/symbols/arrows
+  import jsl/symbols
 
 var debug-mode = false
 val debug-layer = CustomLayer("vs-debug", Top)
@@ -423,6 +424,12 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
 
     port COMMON
 
+    ; Wrapper instance
+    inst via-pin : topo-via-pin
+    place(via-pin) at pose * loc(0.0, 0.0) on Top
+    geom(via-pin.p) :
+      via(via-def(v)) at pose * Point(0.0, 0.0)
+
     net cage (COMMON)
 
     net via-net (sig-in, sig-out)
@@ -547,6 +554,23 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
 
     port COMMON
 
+    val [via-def-P, via-def-N] = match(via-def(v)):
+      (obj1:Via): [obj1, obj1]
+      (obj2:[Via, Via]): obj2
+    val via-pitch = pitch(v) / 2.0
+
+    ; First wrapper instance
+    inst via-pin-P : topo-via-pin
+    place(via-pin-P) at pose * loc(via-pitch, 0.0) on Top
+    geom(via-pin-P.p) :
+      via(via-def-P) at pose * Point(via-pitch, 0.0)
+
+    ; Second wrapper instance
+    inst via-pin-N : topo-via-pin
+    place(via-pin-N) at pose * loc((- via-pitch), 0.0) on Top
+    geom(via-pin-N.p) :
+      via(via-def-N) at pose * Point((- via-pitch), 0.0)
+
     net via-net-P (sig-in.P, sig-out.P)
     topology-segment(sig-in.P, sig-out.P)
     net via-net-N (sig-in.N, sig-out.N)
@@ -578,6 +602,44 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
 
+
+; Private topology helpers:
+; In order for vias to be used in topologies we need to instantiate phantom pins
+
+val topo-via-sym =
+  new SymbolDefn :
+    defmethod name (this) : "Via Pin"
+    defmethod build-pins (this, sn:SymbolNode) :
+      add-pin(sn, Ref(`p), Point(0.0, 0.0), name = "pin-1")
+    defmethod build-artwork (this, sn:SymbolNode) :
+      add-glyph(sn, Circle(-0.5, 0., 0.25))
+    defmethod build-params (this, sn:SymbolNode) :
+      false
+
+pcb-pad topo-via-pad :
+  type  = SMD
+  name  = "'Empty' Pad"
+  ; Using an EmptyShape for a pad is not fully supported. Use with caution!
+  ; Support is sufficient that it can be used if all instances of that pad have at least one associated via
+  shape = Rectangle(0.0001, 0.0001)
+  ; shape = EmptyShape()
+
+pcb-landpattern topo-via-landpattern :
+  pad p : topo-via-pad at loc(0.0, 0.0)
+
+; The wrapper component
+public pcb-component topo-via-pin :
+  description = "Wrapper object for injecting via in topology"
+  reference-prefix = "V"
+  port p
+  val lp = topo-via-landpattern
+  landpattern = lp(p => lp.p)
+  assign-symbol(create-symbol(topo-via-sym))
+
+
+
+
+; Printers
 
 doc: \<DOC>
 Exception for Invalid LayerIndex Configurations
