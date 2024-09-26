@@ -22,6 +22,7 @@ defpackage jsl/landpatterns/framework:
   forward jsl/landpatterns/helpers
   forward jsl/landpatterns/silkscreen
   forward jsl/landpatterns/courtyard
+  forward jsl/landpatterns/keep-outs
   forward jsl/landpatterns/introspection
   forward jsl/landpatterns/pad-grid
   forward jsl/landpatterns/thermal-pads
