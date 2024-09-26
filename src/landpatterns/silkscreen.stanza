@@ -11,7 +11,10 @@ defpackage jsl/landpatterns/silkscreen:
   import jsl/errors
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/framework
+  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/package-body
 
 public defn default-silk-width () -> Double :
   clearance(current-rules(), MinSilkscreenWidth)

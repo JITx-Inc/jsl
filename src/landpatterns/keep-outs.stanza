@@ -25,8 +25,6 @@ in the virtual LP scene graph.
 <DOC>
 public defmulti build-keep-out (kc:KeepoutCreator, vp:VirtualLP -- side:Side = Top) -> False
 
-
-
 doc: \<DOC>
 Keepout Creator for Intra-pad Keepouts
 
@@ -41,8 +39,18 @@ This type is used to contruct these keepouts on any layer
 of the board design.
 <DOC>
 public defstruct IntraPadKeepOut <: KeepoutCreator :
+  doc: \<DOC>
+  Set of copper layers where the keepout will be placed.
+  The most obvious layer would be the top layer underneath
+  the component. But for some applications, we might want
+  to add keepouts in the reference plane underneath the
+  component as well.
+
+  The default value is the top layer `LayerIndex(0)`
+  <DOC>
   layer-set:Tuple<LayerIndex> with:
     ensure => ensure-not-empty!
+    default => [LayerIndex(0)]
 
   doc: \<DOC>
   Shrink the created keepout
