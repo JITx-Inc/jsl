@@ -10,6 +10,7 @@ defpackage jsl/landpatterns/VirtualLP:
   import jsl/design/Classable
   import jsl/geometry/box
   import jsl/landpatterns/courtyard
+  import jsl/landpatterns/leads
   import jsl/landpatterns/thermal-pads
 
 doc: \<DOC>
