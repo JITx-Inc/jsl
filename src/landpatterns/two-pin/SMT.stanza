@@ -23,6 +23,7 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jsl/landpatterns/VirtualLP
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;          SMT Size Table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -36,18 +37,14 @@ public defstruct SMT-Chip-Def :
   name: String
   aliases: Tuple<String>
 
-  length:Toleranced with: (
+  length:Toleranced with:
     ensure => ensure-positive!
-  )
-  width:Toleranced with: (
+  width:Toleranced with:
     ensure => ensure-positive!
-  )
-  lead-length:Toleranced with: (
+  lead-length:Toleranced with:
     ensure => ensure-positive!
-  )
-  lead-width:Toleranced with: (
+  lead-width:Toleranced with:
     ensure => ensure-positive!
-  )
 
 doc: \<DOC>
 Internal Constructor to create Definitions from Tuples
@@ -99,13 +96,28 @@ Check if the passed string is a known chip size - like "0603", "0805", etc
 public defn is-known-chip-pkg (k:String) -> True|False :
   key?(chips, k)
 
+
+val UnknownCaseSizeError = ValueError{"Unknown Case Size '%_'" % [_]}
+
+doc: \<DOC>
+Get the SMT Chip definition from a case size
+@param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
+@return SMT Chip Definition for this chip size if it exists.
+@throws ValueError if no chip definition with that name can be found.
+<DOC>
+public defn get-chip-def (k:String) -> SMT-Chip-Def :
+  if not is-known-chip-pkg(k):
+    throw $ UnknownCaseSizeError(k)
+  chips[k]
+
 doc: \<DOC>
 Create a SMT-Chip Package given a chip size string.
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return SMT Chip Package with all default configurations
+@throws ValueError if no chip definition with that name can be found.
 <DOC>
 public defn get-chip-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Chip :
-  val chip-def = chips[k]
+  val chip-def = get-chip-def(k)
   SMT-Chip(chip-def, density-level = density-level)
 
 doc: \<DOC>
@@ -161,17 +173,21 @@ public defstruct SMT-Chip <: Package :
   doc: \<DOC>
   Z-dimension Height of the Chip Package.
   <DOC>
-  height:Toleranced with: (ensure => ensure-positive! )
+  height:Toleranced with:
+    ensure => ensure-positive!
   doc: \<DOC>
   Protrusion Type
   <DOC>
   protrusion:LeadProtrusion
-  pad-planner:PadPlanner with: (as-method => true)
-  lead-numbering:Numbering with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
+  lead-numbering:Numbering with:
+    as-method => true
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   constructor => #SMT-Chip
 
@@ -268,82 +284,33 @@ public defmethod build-pads (
       match(pad-gen?):
         (_:False): None()
         (pad-gen):
-          val cls = ["pad"]
+          val cls = build-vpad-classes(r, 0)
           One $ VirtualPad(pad-id, pad-gen(pad-sz), pos, class = cls)
 
   append-all(vp, gen-pad-info())
 
-public defn build-SMT-outline (
-  pkg:SMT-Chip,
-  vp:VirtualLP
-  --
-  line-width:Double = default-silk-width(),
-  mask-clearance:Double = default-mask-clearance(),
-  side:Side = Top
-  ):
-
-  val [p1, p2] = get-two-pin-pads(vp)
-  val s1 = bounds([p1], layer-spec = SolderMask(side))
-  val s2 = bounds([p2], layer-spec = SolderMask(side))
-
-  ; I'm assuming that the pads in this LP container
-  ;  are oriented with the length in the Y axis.
-  val interstitial = Box(
-    Point(left(s2), up(s2)),
-    Point(right(s1), down(s1))
-  )
-  val h = y(dims(interstitial))
-  ; Minimum box height is mask clearance and  linewidth on either side
-  ;  and then I'm arbitrarily requiring at least mask-clearance between
-  ;  the top and bottom lines for them to be visible. For polarized chips
-  ;  I need an additional line width
-  val add-clearance = if polarized?(pkg):
-    mask-clearance + line-width
-  else:
-    mask-clearance
-  val free-space = h - ((2.0 * (mask-clearance + line-width)) + add-clearance)
-
-  defn create-line (v:Double, width:Double = line-width) -> Line :
-    val shrink = (width / 2.0)
-    Line(width, [
-      Point(left(interstitial) + shrink , v),
-      Point(right(interstitial) - shrink, v)
-      ])
-
-  val outline = if free-space < 0.0 :
-    ; We will draw a Line instead of a LineRectangle because there is
-    ;  not enough space.
-    val c = center(interstitial)
-    create-line(y(c))
-  else:
-    val shrink = Point((- line-width / 2.0), (- ((line-width / 2.0) + mask-clearance)))
-    val o-box = fatten(shrink, interstitial)
-    LineRectangle(o-box, line-width = line-width),
-
-  add-artwork(vp, Silkscreen("outline", side), outline, class = "outline")
-
-  ; Add Polarized Marker
-  if polarized?(pkg):
-    val pol-line = if free-space < 0.0 :
-      ; We will put an additional line on the other side of the 'c' pad
-      val v = up(s1) + mask-clearance + (line-width / 2.0)
-      create-line(v)
-    else:
-      ; We will put an additional line inside the rect on the 'c' side.
-      val pol-size = (15 %)
-      val pol-h = h * pol-size
-      val pol-width = max(pol-h, line-width)
-
-      val v = up(interstitial) - (mask-clearance) - line-width - (0.5 * pol-width)
-
-      create-line(v, pol-width)
-    add-artwork(vp, Silkscreen("polarized", side), pol-line, class = "pol-marker")
 
 public defmethod build-silkscreen (
   pkg:SMT-Chip,
   vp:VirtualLP
   ):
-  build-SMT-outline(pkg, vp)
+
+  val outline = InteriorEdgesOutline(
+    pkg-body = package-body(pkg),
+    edge = EW-Edge
+  )
+  if has-enough-interior-space?(outline, vp):
+    build-outline(outline, vp)
+  else:
+    val sl = SingleLineOutline(
+      pkg-body = package-body(pkg),
+      edge = EW-Edge
+    )
+    build-outline(sl, vp)
+
+  if polarized?(pkg):
+    build-smd-pin-1-dot(vp, pin-1-id = #R(c), dir = Down)
+
   add-reference-designator(vp)
 
 
