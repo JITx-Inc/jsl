@@ -848,6 +848,67 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
     throw(Exception("Virtual landpattern has no pads"))
   reduce(earlier-pad, pads)
 
+doc: \<DOC>
+Construct the interior bounds for the pads of a component
+
+This function only makes sense for things like QFPs, SOICs,
+SSOPs, or 2-pin components.
+
+This function assumes that you have used the function
+{@link build-vpad-classes} when constructing the rows and
+columns of pads for your footprint.
+
+This function attempts to extract out the pads by row
+or column and then use the bounding box of the soldermask
+to determine the interior bounds between the pads.
+
+Note - there is another way to do this that I decided against
+which was to try and find lines and intersections of those lines.
+This seemed like it might be a bit more robust but at the cost
+of being more complex code wise.
+
+@throws ValueError if it encounter a number of columns that it can't
+handle. Specifically, this function can handle [1, 2, 4] columns of pads.
+This corresponds to 2-pin, dual-row, and quad land patterns, respectively.
+<DOC>
+public defn pad-interior-bounds (vp:VirtualLP, side:Side) -> Box:
+
+  val get-bounds = bounds{_, layer-spec = SolderMask(side)}
+  val cols = identify-pad-columns(vp)
+  val num-cols = length(cols)
+  if num-cols == 1:
+    ; This is a 2-pin component - ie a SMT, Radial or Axial
+    val row0 = get-bounds $ get-pads-by-row(vp, 0)
+    val row1 = get-bounds $ get-pads-by-row(vp, 1)
+
+    Box(
+      Point(left(row1), up(row1))
+      Point(right(row0), down(row0))
+    )
+
+  else if num-cols == 2 :
+    val col0 = get-bounds $ get-pads-by-column(vp, 0)
+    val col1 = get-bounds $ get-pads-by-column(vp, 1)
+
+    Box(
+      Point(right(col0), down(col0))
+      Point(left(col1), up(col1))
+      )
+  else if num-cols == 4 :
+
+    val col-W = get-bounds $ get-pads-by-column(vp, 0)
+    val col-S = get-bounds $ get-pads-by-column(vp, 1)
+    val col-E = get-bounds $ get-pads-by-column(vp, 2)
+    val col-N = get-bounds $ get-pads-by-column(vp, 3)
+
+    Box(
+      Point(right(col-W), up(col-S)),
+      Point(left(col-E), down(col-N))
+    )
+  else:
+    throw $ ValueError("Unhandled Number of Columns '%_' - Expected 1, 2, or 4" % [num-cols])
+
+
 ; Converters
 #for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]
   funcName in [as-VirtualPad, as-VirtualArtwork, as-VirtualCopper ,as-VirtualLP]) :
