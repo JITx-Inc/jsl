@@ -134,3 +134,7 @@ public defn ensure-in-set! (accepted:Tuple<Int>):
     if not contains?(accepted, value):
       throw $ ValueError("Value '%_' not in Accepted Value Set: [%,]" % [value, accepted])
   ensure-func
+
+public defn ensure-not-empty! (field:String, value:Collection) :
+  if count(value) == 0:
+    throw $ ValueError("Expected Non-Empty Collection - Found: %_" % [value])
