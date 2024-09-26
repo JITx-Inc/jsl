@@ -250,7 +250,7 @@ public defmethod constrain (cst:LPDDR4-Constraint, src:JITXObject, dst:JITXObjec
         val guide-dmi = src.ch[i].d[j].dmi => dst.ch[i].d[j].dmi
         for k in 1 to 8 do :
           val target = src.ch[i].d[j].dq[k] => dst.ch[i].d[j].dq[k]
-          timing-window(skew-dq-dq(cst), guide-dmi, target)
+          timing-window(0.5 * skew-dq-dq(cst), guide-dmi, target)
 
 doc: \<DOC>
 Connect and constrain a LPDDR4 link
