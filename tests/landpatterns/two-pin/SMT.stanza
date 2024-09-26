@@ -147,7 +147,7 @@ deftest(two-pin) test-chip-table :
 
 deftest(two-pin) test-resistor-smt :
 
-  val pkg = get-resistor-pkg("0402", DensityLevelC)
+  val pkg = get-resistor-pkg("0402", density-level = DensityLevelC)
 
   val lp = create-landpattern(pkg)
   val grid = PadGrid(lp)
