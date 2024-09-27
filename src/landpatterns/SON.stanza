@@ -91,7 +91,7 @@ public defstruct SON <: Dual-Package :
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
   doc: \<DOC>
   Package Body for the SON.
@@ -148,7 +148,7 @@ public defn SON (
   --
   num-leads:Int,
   lead-profile:Lead-Profile,
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   package-body:PackageBody,
   pad-planner:PadPlanner         = SON-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SON-DEF-NUM-SCHEME(num-leads),
@@ -188,10 +188,11 @@ public defmethod build-silkscreen (
   pkg:SON,
   vp:VirtualLP
   ) -> False:
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(
     vp,
     dir = Left,

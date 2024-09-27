@@ -45,18 +45,15 @@ This type defines the parameters of each of the individual leads
 of the IC package. It is typically used with {@link Lead-Profile}
 <DOC>
 public defstruct SOT-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => SmallGullWingLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => SmallGullWingLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -75,18 +72,15 @@ This supports packages like `SOT-23F` or `SOT538` which use a
 flat lead style instead of the Gull-Wing Lead style.
 <DOC>
 public defstruct SOTFL-Lead <: SMT-Lead:
-  lead-type:LeadProtrusion with: (
+  lead-type:LeadProtrusion with:
       as-method => true,
-      default => SmallOutlineFlatLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
+      default => SmallOutlineFlatLeads()
+  length:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
+  width:Toleranced with:
+    as-method => true
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -113,7 +107,7 @@ public defstruct SOT <: Dual-Package :
   Total Number of Leads - excluding the thermal pad.
   <DOC>
   num-leads: Int with:
-    ensure => ensure-even-positive!,
+    ensure => ensure-even-positive!
     as-method => true
 
   doc: \<DOC>
@@ -129,7 +123,7 @@ public defstruct SOT <: Dual-Package :
   Thisi lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
     default => false
 
@@ -175,7 +169,7 @@ public defn SOT (
   --
   num-leads:Int,
   lead-profile:Lead-Profile,
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   package-body:PackageBody,
   pad-planner:PadPlanner         = SOT-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOT-DEF-NUM-SCHEME(num-leads),
@@ -213,10 +207,11 @@ public defmethod build-silkscreen (
   pkg:SOT,
   vp:VirtualLP
   ) -> False:
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(
     vp,
     dir = Left,
@@ -276,7 +271,7 @@ public defstruct SOT-23-3 <: SOT :
   Thisi lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
-  thermal-lead?:False|Shape with:
+  thermal-lead?:False|Shape|ThermalPad with:
     as-method => true
     default => false
 

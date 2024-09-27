@@ -83,7 +83,7 @@ deftest(BGA) test-full-simple :
     for lp-pad in lp-pads do:
       ; Here I'm checking that the created pads are
       ;  the right shape and size.
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
 
       ; Copper
       val shape = pad-shape(pd) as Circle
@@ -278,7 +278,7 @@ deftest(BGA) test-perimeter-simple :
 
       ; Here I'm checking that the created pads are
       ;  the right shape and size.
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
 
       ; Copper
       val shape = pad-shape(pd) as Circle
@@ -370,7 +370,7 @@ deftest(BGA) test-simple-with-pose:
     for lp-pad in lp-pads do:
       ; Here I'm checking that the created pads are
       ;  the right shape and size.
-      val pd = pad(lp-pad)
+      val pd = pad-def(lp-pad)
 
       ; Copper
       val shape = pad-shape(pd) as Circle

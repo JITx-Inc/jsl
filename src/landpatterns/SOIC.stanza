@@ -52,20 +52,17 @@ public defstruct SOIC-Lead <: SMT-Lead:
   the lead-type {@link SmallGullWingLeads} should be
   considered.
   <DOC>
-  lead-type:LeadProtrusion with: (
-      as-method => true,
-      default => BigGullWingLeads(),
-    )
-  length:Toleranced with: (
-    as-method => true,
-    default => min-max(0.4, 1.27),
+  lead-type:LeadProtrusion with:
+      as-method => true
+      default => BigGullWingLeads()
+  length:Toleranced with:
+    as-method => true
+    default => min-max(0.4, 1.27)
     ensure => ensure-positive!
-    )
-  width:Toleranced with: (
-    as-method => true,
-    default => min-max(0.31, 0.51),
+  width:Toleranced with:
+    as-method => true
+    default => min-max(0.31, 0.51)
     ensure => ensure-positive!
-    )
 with:
   equalable => true
   hashable => true
@@ -125,28 +122,31 @@ public defstruct SOIC <: Dual-Package :
   doc: \<DOC>
   Total Number of Leads - excluding the thermal pad.
   <DOC>
-  num-leads: Int with: (
-    ensure => ensure-even-positive!,
+  num-leads: Int with:
+    ensure => ensure-even-positive!
     as-method => true
-  )
+
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SOIC package.
   By default the {@link SOIC-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
-  lead-profile:Lead-Profile with: (as-method => true)
+  lead-profile:Lead-Profile with:
+    as-method => true
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
   on the bottom side of the package body.
   If `false` - then no thermal pad is created.
   <DOC>
-  thermal-lead?:False|Shape with: (as-method => true)
+  thermal-lead?:False|Shape|ThermalPad with:
+    as-method => true
 
   doc: \<DOC>
   Package Body for the SOIC.
   <DOC>
-  package-body:PackageBody with: (as-method => true)
+  package-body:PackageBody with:
+    as-method => true
 
   doc: \<DOC>
   Pad Planner for the SOIC package
@@ -156,7 +156,8 @@ public defstruct SOIC <: Dual-Package :
   all positions. The user can override this with their preferred
   shape as desired.
   <DOC>
-  pad-planner:PadPlanner with: (as-method => true)
+  pad-planner:PadPlanner with:
+    as-method => true
 
   doc: \<DOC>
   Lead Numbering Scheme for the SOIC Package
@@ -164,12 +165,14 @@ public defstruct SOIC <: Dual-Package :
   This provides a numbering scheme for the leads of the SOIC
   package. By default, it uses {@link Std-IC-Numbering}.
   <DOC>
-  lead-numbering:Numbering with: (as-method => true)
+  lead-numbering:Numbering with:
+    as-method => true
 
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   hashable => true
   printer => true
@@ -189,7 +192,7 @@ public defn SOIC (
   package-body:PackageBody,
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SMT-Lead,                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
@@ -216,7 +219,7 @@ public defn SOIC-N (
   package-body:PackageBody       = make-SOIC-narrow-body(package-length),
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
@@ -243,7 +246,7 @@ public defn SOIC-W (
   package-body:PackageBody       = make-SOIC-wide-body(package-length)
   pitch:Double                   = SOIC-DEF-PITCH,
   lead:SOIC-Lead                 = SOIC-Lead(),
-  thermal-lead?:False|Shape      = false,
+  thermal-lead?:False|Shape|ThermalPad = false,
   pad-planner:PadPlanner         = SOIC-DEF-PAD-PLANNER,
   num-scheme:Numbering           = SOIC-DEF-NUM-SCHEME(num-leads),
   density-level:DensityLevel     = DENSITY-LEVEL
@@ -279,9 +282,10 @@ public defmethod build-silkscreen (
   pkg:SOIC,
   vp:VirtualLP,
   ) -> False :
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(vp, dir = Left)
   add-reference-designator(vp)
