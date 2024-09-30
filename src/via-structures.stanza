@@ -425,15 +425,16 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
     port COMMON
 
     ; Wrapper instance
-    inst via-pin : topo-via-pin
+    inst via-pin : topo-via-pin(`p)
     place(via-pin) at pose * loc(0.0, 0.0) on Top
     geom(via-pin.p) :
       via(via-def(v)) at pose * Point(0.0, 0.0)
 
     net cage (COMMON)
 
-    net via-net (sig-in, sig-out)
-    topology-segment(sig-in, sig-out)
+    net via-net (sig-in, via-pin.p, sig-out)
+    topology-segment(sig-in, via-pin.p)
+    topology-segment(via-pin.p, sig-out)
 
     supports pass-through:
       pass-through.A => sig-in
@@ -560,21 +561,23 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     val via-pitch = pitch(v) / 2.0
 
     ; First wrapper instance
-    inst via-pin-P : topo-via-pin
+    inst via-pin-P : topo-via-pin(`p)
     place(via-pin-P) at pose * loc(via-pitch, 0.0) on Top
     geom(via-pin-P.p) :
       via(via-def-P) at pose * Point(via-pitch, 0.0)
 
     ; Second wrapper instance
-    inst via-pin-N : topo-via-pin
+    inst via-pin-N : topo-via-pin(`n)
     place(via-pin-N) at pose * loc((- via-pitch), 0.0) on Top
-    geom(via-pin-N.p) :
+    geom(via-pin-N.n) :
       via(via-def-N) at pose * Point((- via-pitch), 0.0)
 
-    net via-net-P (sig-in.P, sig-out.P)
-    topology-segment(sig-in.P, sig-out.P)
-    net via-net-N (sig-in.N, sig-out.N)
-    topology-segment(sig-in.N, sig-out.N)
+    net via-net-P (sig-in.P, via-pin-P.p, sig-out.P)
+    topology-segment(sig-in.P, via-pin-P.p)
+    topology-segment(via-pin-P.p, sig-out.P)
+    net via-net-N (sig-in.N, via-pin-N.n, sig-out.N)
+    topology-segment(sig-in.N, via-pin-N.n)
+    topology-segment(via-pin-N.n, sig-out.N)
 
     net cage (COMMON)
 
@@ -606,11 +609,11 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
 ; Private topology helpers:
 ; In order for vias to be used in topologies we need to instantiate phantom pins
 
-val topo-via-sym =
+defn topo-via-sym (name:Symbol) :
   new SymbolDefn :
     defmethod name (this) : "Via Pin"
     defmethod build-pins (this, sn:SymbolNode) :
-      add-pin(sn, Ref(`p), Point(0.0, 0.0), name = "pin-1")
+      add-pin(sn, Ref(name), Point(0.0, 0.0), name = "pin-1")
     defmethod build-artwork (this, sn:SymbolNode) :
       add-glyph(sn, Circle(-0.5, 0., 0.25))
     defmethod build-params (this, sn:SymbolNode) :
@@ -628,13 +631,13 @@ pcb-landpattern topo-via-landpattern :
   pad p : topo-via-pad at loc(0.0, 0.0)
 
 ; The wrapper component
-public pcb-component topo-via-pin :
+public pcb-component topo-via-pin (name:Symbol) :
   description = "Wrapper object for injecting via in topology"
   reference-prefix = "V"
-  port p
+  val p = make-port(name)
   val lp = topo-via-landpattern
   landpattern = lp(p => lp.p)
-  assign-symbol(create-symbol(topo-via-sym))
+  assign-symbol(create-symbol(topo-via-sym(name)))
 
 
 
