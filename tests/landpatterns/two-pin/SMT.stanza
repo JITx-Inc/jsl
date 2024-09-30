@@ -168,7 +168,7 @@ deftest(two-pin) test-resistor-smt :
 
 deftest(two-pin) test-capacitor-smt :
 
-  val pkg = get-capacitor-pkg("1206", DensityLevelB)
+  val pkg = get-capacitor-pkg("1206", density-level = DensityLevelB)
 
   val lp = create-landpattern(pkg)
   val grid = PadGrid(lp)
@@ -189,7 +189,7 @@ deftest(two-pin) test-capacitor-smt :
 
 deftest(two-pin) test-capacitor-smt-with-pose:
 
-  val pkg = get-capacitor-pkg("1206", DensityLevelB)
+  val pkg = get-capacitor-pkg("1206", density-level = DensityLevelB)
 
   val lp = create-landpattern(pkg, pose = loc(-0.5, 0.0))
   val grid = PadGrid(lp)
