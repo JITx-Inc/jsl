@@ -34,7 +34,7 @@ pcb-bundle swd-b (pins:Collection<SWDPins>):
   port swdclk
   for p in pins do:
     switch(p):
-      SWD-SWO: make-pin(`swo)
+      SWD-SWO: make-port(`swo)
 
 doc: \<DOC>
 Serial Wire Debug Bundle Generator
