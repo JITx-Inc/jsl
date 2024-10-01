@@ -622,10 +622,7 @@ defn topo-via-sym (name:Symbol) :
 pcb-pad topo-via-pad :
   type  = SMD
   name  = "'Empty' Pad"
-  ; Using an EmptyShape for a pad is not fully supported. Use with caution!
-  ; Support is sufficient that it can be used if all instances of that pad have at least one associated via
-  shape = Rectangle(0.0001, 0.0001)
-  ; shape = EmptyShape()
+  shape = EmptyShape()
 
 pcb-landpattern topo-via-landpattern :
   pad p : topo-via-pad at loc(0.0, 0.0)

@@ -1,0 +1,28 @@
+{
+  "squiggle-setup": {
+    "envelope-shape": {
+      "width": "Bh3zqAcPX8s",
+      "elements": [
+        {"x":"BiktRSqZCVs","y":"BiWa31wYLJx"},
+        {"center":{"x":"BihTHhCjzid","y":"BidLxjYNZXq"},"radius":"Bh7JsV2RqYN","start-angle":"Z76ZUU1jjXF","sweep-angle":"Z6dMUKkfsCB"},
+        {"x":"BhAzjtxF3oD","y":"BidNd6D6zHa"}
+      ]
+    },
+    "trace-width": "BetBfwgQCx3",
+    "orig-heading": "11111111",
+    "dest-heading": "BiAhJPXJ5yP",
+    "min-radius": "BebawSAkgGh",
+    "max-radius": "Bh7JsV2RqYN",
+    "min-pitch": "BfVMMsMcsQP",
+    "diff-pair-setup?": null
+  },
+  "length-target": "MinimumSquiggle",
+  "known-parms?": {
+    "radius": "BexpuoDnzPo",
+    "pitch": "BfZzbiu1er9",
+    "semiwidth": "BgNBuPPn5Em",
+    "override-semiwidth": "BgNBuPPn5Em",
+    "minimum-squiggle?": true,
+    "coupled": null
+  }
+}
