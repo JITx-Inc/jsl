@@ -100,13 +100,14 @@ encapsulates all of these expanded features. This rectangle forms
 the courtyard boundary.
 
 @param pkg-body Package Body of the component
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 @param excess Additional space to pad the boundary of the
 pads for this component when making the courtyard boundary.
 The default value is 0.5mm
 @param side Which side of the board to draw the courtyard on. By
 default we use the `Top` side as per convention.
 @param pose Pose offset for this group of features. Default is no transform.
-@param density-level
 <DOC>
 public defn make-courtyard-boundary (
   pkg-body:PackageBody
@@ -114,10 +115,10 @@ public defn make-courtyard-boundary (
   --
   excess:Double = 0.5
   side:Side = Top
-  pos:Pose = loc(0.0, 0.0),
+  pose:Pose = loc(0.0, 0.0),
   ) -> Rectangle:
   inside pcb-landpattern:
-    val outline = compute-courtyard-boundary(pads(self), pkg-body, density-level, excess, side, pos)
+    val outline = compute-courtyard-boundary(pads(self), pkg-body, density-level, excess, side, pose)
     layer(Courtyard(side)) = outline
     outline
 
@@ -126,7 +127,14 @@ Create a courtyard boundary in a Virtual Landpattern
 
 @param vp Virtual Landpattern Container
 @param pkg-body Package Body for the Component
-@param density-level
+@param density-level Density Level for this LandPattern definition.
+See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+@param excess Additional space to pad the boundary of the
+pads for this component when making the courtyard boundary.
+The default value is 0.5mm
+@param pose Pose offset for this group of features. Default is no transform.
+@param side Which side of the board to draw the courtyard on. By
+default we use the `Top` side as per convention.
 <DOC>
 public defn build-courtyard-boundary (
   vp:VirtualLP,
@@ -134,10 +142,10 @@ public defn build-courtyard-boundary (
   density-level:DensityLevel
   --
   excess:Double = 0.5
-  pos:Pose = loc(0.0, 0.0)
+  pose:Pose = loc(0.0, 0.0)
   side:Side = Top,
   ) -> Rectangle:
-  val outline = compute-courtyard-boundary(get-pads(vp), pkg-body, density-level, excess, side, pos)
+  val outline = compute-courtyard-boundary(get-pads(vp), pkg-body, density-level, excess, side, pose)
   add-artwork(vp, Courtyard(side), outline, class = "courtyard")
   outline
 

@@ -374,8 +374,7 @@ This function is recursive.
 
 @param a Circuit network to elaborate
 @param taps Accumulator for the external ports of the network.
-@param Tuple of `[p1, p2]` that are the ports of the endpoints of
-the network.
+@return Tuple of `[p1, p2]` that are the ports of the endpoints of the network.
 <DOC>
 public defn elaborate (a:ANT, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module :

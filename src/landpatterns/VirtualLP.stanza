@@ -361,7 +361,7 @@ This function is recursive over all of the nodes of the
 virtual landpattern scene graph.
 
 @param vp Virtual LP scene graph
-@param pose Offset position to apply to the created LayerShape objects.
+@param offset Offset position to apply to the created LayerShape objects.
 This will cause all created objects to be in the same root frame of reference
 for the VirtualLP `vp`.
 @return A Tuple of LayerShape object
@@ -811,7 +811,7 @@ public defn get-pads-by-row (vp:VirtualLP, row:Int) -> Seq<VirtualPad> :
 doc: \<DOC>
 Retrieve the pads in the specified column
 @param vp VirtualLP SceneGraph
-@param row Identifies the column of pads to retrieve. Must be >= 0.
+@param column Identifies the column of pads to retrieve. Must be >= 0.
 @return Sequence of `VirtualPad` objects. If no column with
 index `column` is present, then an empty sequence will be provided.
 <DOC>

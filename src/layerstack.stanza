@@ -487,11 +487,11 @@ layers if any.
 @param index Conductor layer to inspect. This is a zero-based index
 where the top layer is 0, the first inner layer is 1, etc.
 <DOC>
-public defn get-conductor (ls:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
+public defn get-conductor (stack:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
   if index < 0:
     throw $ ValueError("Invalid Copper Layer Index: %_" % [index])
   var cnt = 0
-  val l-set = layers(ls)
+  val l-set = layers(stack)
   val cu-index? = for l in l-set index-when:
     if material(l) is ConductorMaterial:
       val cu-match = cnt == index
@@ -580,14 +580,13 @@ doc:\<DOC>
   @param top-layers The pairs of mechanical and dielectric layers, from outer to inner layers.
   @param description The description of the LayerStack
 <DOC>
-public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
+public defn make-layer-stack (name:String, top-layers:Tuple<[LayerSpec, LayerSpec]>
       -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
   val ls = #LayerStack(One(name), description)
   ;Access pairs of outer-layers in reverse order
-  for outer in in-reverse(outers) do:
+  for outer in in-reverse(top-layers) do:
     val [metal, insul] = outer
     add-symmetric(metal, insul, ls)
   if value?(soldermask) is LayerSpec :
     add-soldermask(value!(soldermask), ls)
   ls
-

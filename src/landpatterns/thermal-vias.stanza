@@ -192,7 +192,7 @@ convenient way to lock the via grid relative to a component position without
 needing to use `place` on the component instance.
 
 @param tv Thermal Via definition
-@param pt PortInfo for a port of the component that contains the pad that the via grid will
+@param pt-info PortInfo for a port of the component that contains the pad that the via grid will
 be applied to. Note that, we explicitly do not pass the `JITXObject` here to prevent a
 misuse of the `pcb-module` construction.
 @return `pcb-module` definition with a single port `via-conn` that
@@ -213,8 +213,6 @@ Generate the Via Grid Instance and place it relative to the Component
 
 @param tv Thermal Via Definition
 @param pt Port on a component whose pad the thermal via grid will live on.
-@param via-net Net that the via grid will connect to. This must be the same net
-as connected to `pt`.
 @param offset Optional offset to place the grid with respect to the component
 <DOC>
 public defn make-via-grid (tv:ThermalVias, pt:JITXObject -- offset:Pose = loc(0.0, 0.0)) :
@@ -229,4 +227,3 @@ public defn make-via-grid (tv:ThermalVias, pt:JITXObject -- offset:Pose = loc(0.
     inst vg : via-grid
     net (vg.via-conn, pt)
     place(vg) at offset on Top (relative-to comp)
-
