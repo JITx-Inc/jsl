@@ -82,7 +82,7 @@ deftest(SOIC) test-SOIC-N:
     for row in values(rows(grid)) do:
       #EXPECT(length(row) == 2)
       for lp-pad in row do:
-        val pd = pad(lp-pad)
+        val pd = pad-def(lp-pad)
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
 
@@ -120,7 +120,7 @@ deftest(SOIC) test-SOIC-W:
     for row in values(rows(grid)) do:
       #EXPECT(length(row) == 2)
       for lp-pad in row do:
-        val pd = pad(lp-pad)
+        val pd = pad-def(lp-pad)
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
 
@@ -159,7 +159,7 @@ deftest(SOIC) test-fine-pitch:
     for row in values(rows(grid)) do:
       #EXPECT(length(row) == 2)
       for lp-pad in row do:
-        val pd = pad(lp-pad)
+        val pd = pad-def(lp-pad)
         val shape = pad-shape(pd)
         #EXPECT(shape is Rectangle)
 
@@ -210,7 +210,7 @@ deftest(SOIC) test-thermal-lead:
     val thermPad? = find-pad-by-ref(W-lp, 9)
     #EXPECT(thermPad? is-not False)
     val thermPad = thermPad? as LandPatternPad
-    #EXPECT(pad-shape(pad(thermPad)) is RoundedRectangle)
+    #EXPECT(pad-shape(pad-def(thermPad)) is RoundedRectangle)
 
 deftest(SOIC) test-pad-numbering:
   val num-pins = 8
@@ -395,7 +395,7 @@ deftest(SOIC) test-thermal-lead-with-pose:
     val thermPad? = find-pad-by-ref(W-lp, 9)
     #EXPECT(thermPad? is-not False)
     val thermPad = thermPad? as LandPatternPad
-    #EXPECT(pad-shape(pad(thermPad)) is RoundedRectangle)
+    #EXPECT(pad-shape(pad-def(thermPad)) is RoundedRectangle)
 
     val pos = center $ pose(thermPad)
     #EXPECT(almost-equal?(pos, Point(1.0, 0.0)))
