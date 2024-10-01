@@ -18,7 +18,7 @@ Retrieve the default styling parameters for the ground symbol
 
 This is where the user can get the default net symbol styling
 for the `GroundSymbol()` type. By default it is a
-{@link /jsl/symbols/net-symbols/bar-ground/BarGroundSymbol}.
+{@link jsl/symbols/net-symbols/bar-ground/BarGroundSymbol}.
 
 <DOC>
 public defn get-default-gnd-symbol-builder () -> SymbolBuilder :
