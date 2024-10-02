@@ -5,6 +5,8 @@ defpackage jsl/design/introspection:
   import jitx
   import jitx/commands
 
+  import maybe-utils
+
   import jsl/errors
   import jsl/landpatterns/introspection
 
@@ -270,6 +272,21 @@ public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<T
         get-pads-from-port(p2p-map, pt)
 
 doc: \<DOC>
+Get pads for each port and combine them into a single list
+<DOC>
+public defn get-pads-from-ports (pts:Seqable<JITXObject>, cxt:JITXObject = self) -> Seq<JITXObject>:
+  for pt in pts seq-cat:
+    val pds? = get-pads-from-port(pt, cxt)
+    value-or(pds?, [])
+
+doc: \<DOC>
+Convert a Sequence of JITXObjects to LandPatternPad objects.
+<DOC>
+public defn to-lp-pad-seq (objs:Seq<JITXObject>) -> Seq<LandPatternPad> :
+  for obj in objs seq:
+    obj as LandPatternPad
+
+doc: \<DOC>
 Retrieve the parent instance (component or module) for a port.
 
 This function expects the caller to pass a port `comp.GND` and then
@@ -508,7 +525,7 @@ pcb-module top-level:
   ; This will return two nets: one for each statement above
   val n1 = get-connected-nets(W.GND)
 
-  ; This will return an empty tuple 
+  ; This will return an empty tuple
   val n2 = get-connected-nets(W.C.internal-port)
 ```
 
@@ -516,7 +533,7 @@ pcb-module top-level:
 there are two `net` statements defined in the `pcb-module` context.
 
 The `n2` invocation will fail to find `INT` as the net
-for `W.C.internal-port` and return an empty tuple 
+for `W.C.internal-port` and return an empty tuple
 
 @param pt Port of a component or module in this module context.
 @param cxt Optional context to search. The default value is `self`.
