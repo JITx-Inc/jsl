@@ -483,15 +483,15 @@ When calculating trace widths, etc it is often useful to know the
 features of the copper layers those traces will be placed on. This function
 helps extract the copper layer data as well as the adjacent dielectric
 layers if any.
-@param stack LayerStack object to interrogate
+@param ls LayerStack object to interrogate
 @param index Conductor layer to inspect. This is a zero-based index
 where the top layer is 0, the first inner layer is 1, etc.
 <DOC>
-public defn get-conductor (stack:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
+public defn get-conductor (ls:LayerStack, index:Int) -> [Maybe<LayerSpec>, LayerSpec, Maybe<LayerSpec>] :
   if index < 0:
     throw $ ValueError("Invalid Copper Layer Index: %_" % [index])
   var cnt = 0
-  val l-set = layers(stack)
+  val l-set = layers(ls)
   val cu-index? = for l in l-set index-when:
     if material(l) is ConductorMaterial:
       val cu-match = cnt == index
