@@ -15,7 +15,6 @@ protocol
 @member scl Synchronous Clock Line
 <DOC>
 public pcb-bundle i2c:
-  name = "I2C"
   description = "Inter-Integrated Circuit (I2C) - Serial Communication Protocol"
   port sda
   port scl
@@ -31,7 +30,6 @@ public pcb-enum jsl/bundles/comms/SMBUSPins :
   SMBSUS#
 
 pcb-bundle smbus-b (pins:Collection<SMBUSPins>):
-  name = "SMBus"
   description = "System Management Bus (SMBus) - Serial Communication Protocol"
   port smbclk
   port smbdat
@@ -88,7 +86,6 @@ which consists of a differential pair `H` / `L`
 
 <DOC>
 public pcb-bundle can-phy :
-  name = "CAN Physical Interface"
   port H
   port L
 
@@ -124,7 +121,6 @@ public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CIPO
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
-  name = "SPI"
   port sck
   for p in pins do :
     switch(p) :
@@ -267,7 +263,6 @@ public pcb-enum jsl/bundles/comms/UARTPins :
   UART-TX
 
 pcb-bundle uart-b (pins:Collection<UARTPins>):
-  name = "UART"
   for p in pins do :
     switch(p) :
       UART-DTR : make-port(`dtr)
