@@ -483,7 +483,7 @@ When calculating trace widths, etc it is often useful to know the
 features of the copper layers those traces will be placed on. This function
 helps extract the copper layer data as well as the adjacent dielectric
 layers if any.
-@param stack LayerStack object to interrogate
+@param ls LayerStack object to interrogate
 @param index Conductor layer to inspect. This is a zero-based index
 where the top layer is 0, the first inner layer is 1, etc.
 <DOC>
@@ -580,14 +580,13 @@ doc:\<DOC>
   @param top-layers The pairs of mechanical and dielectric layers, from outer to inner layers.
   @param description The description of the LayerStack
 <DOC>
-public defn make-layer-stack (name:String, outers:Tuple<[LayerSpec, LayerSpec]>
+public defn make-layer-stack (name:String, top-layers:Tuple<[LayerSpec, LayerSpec]>
       -- description:String = ?, soldermask:LayerSpec = ?) -> LayerStack :
   val ls = #LayerStack(One(name), description)
   ;Access pairs of outer-layers in reverse order
-  for outer in in-reverse(outers) do:
+  for outer in in-reverse(top-layers) do:
     val [metal, insul] = outer
     add-symmetric(metal, insul, ls)
   if value?(soldermask) is LayerSpec :
     add-soldermask(value!(soldermask), ls)
   ls
-

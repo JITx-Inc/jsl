@@ -90,7 +90,7 @@ public defn get-symbpin-by-name (obj:SchematicSymbol, name:String) -> Maybe<JITX
 
 doc: \<DOC>
 Get the Cathode / Anode Ports of a device if they exist
-@param obj Two-pin component/module instance or SchematicSymbol that may or
+@param obj-symb Two-pin component/module instance or SchematicSymbol that may or
 may not be a polarized device with cathode (`c`) and anode (`a`) ports.
 @return If the passed object is a polarized device, then this returns
 One<Tuple> of the ports in the order `[c, a]`. If not a polarized device,

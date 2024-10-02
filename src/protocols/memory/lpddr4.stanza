@@ -185,12 +185,10 @@ public defn LPDDR4-Constraint (width:LPDDR4-Width, rank:LPDDR4-Rank,
 doc: \<DOC>
 Add constraints to a LPDDR4 link
 
-Width and rank of 'src' and 'dst' must match width and rank of 'cst'
-@param cst Constraint Object
-@param width Channel Bit Width
-@param rank Channel Rank
-@param src Source End Point - must be of `lpddr4` type with width 'width' and rank 'rank'
-@param dst Destination End Point - must be of `lpddr4` type  with width 'width' and rank 'rank'
+Channel bit width and channel rank of 'src' and 'dst' must match width and rank of 'cst'
+@param cst Constraint Object.
+@param src Source End Point - must be of `lpddr4` type and meet the constraints
+@param dst Destination End Point - must be of `lpddr4` type and meet the constraints
 <DOC>
 public defmethod constrain (cst:LPDDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   val n16 = num-x16-lanes(width(cst))

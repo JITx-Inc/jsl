@@ -142,8 +142,6 @@ This method must be implemented by the derived grid type to generate
 this sequence.
 
 @param g This Grid Planner
-@param rows Number of rows for the grid (Y)
-@param columns Number of columns for the grid (X)
 @return The generated grid consists of `GridPosition` objects which provide
 the row index, column index, and a `Pose` object for identifying the location
 of that grid position.

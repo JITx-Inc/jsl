@@ -1003,8 +1003,7 @@ doc: \<DOC>
 Set the grid for a component
 
 @param b Box Symbol object
-@param grid Tuple of [row,column] where row & column must be greater than zero.
-@param bank bank ID for multi-symbol unit BoxSymbols.
+@param dims Tuple of [row,column] where row & column must be greater than zero.
 <DOC>
 public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
   if not has-grid?(b) :
@@ -1027,7 +1026,6 @@ Get the total number of rows in the pin grid.
 This function is for components with only one symbol unit.
 
 @param b Box Symbol object
-@param bank Selects for a particular symbol unit.
 @return number of rows in the pin grid of the given `bank`. If no
 pin grid is active for this bank, this function returns 0.
 <DOC>
@@ -1083,14 +1081,14 @@ should throw an exception.
 There are only a limited set of valid row/column combinations based on the
 edges of the box symbol.
 
-@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a group.
 @param row Row index into the pin grid.
 @param column Column index into the pin grid.
+@param pins One Pin or a Tuple of Pins present on `obj` that will be added to a group.
 @throws IndexError If either the `row` or `column` are outside the active grid cells
 <DOC>
-public defn set-grid-edge (row:Int, col:Int, pins: JITXObject ...) :
+public defn set-grid-edge (row:Int, column:Int, pins: JITXObject ...) :
   set-row(row, pins)
-  set-column(col, pins)
+  set-column(column, pins)
 
 doc: \<DOC>
 Set the Row assignment for these pins
@@ -1167,8 +1165,8 @@ side pins would move to column index 2. The `Top` side pins would be in row inde
 NOTE: If this is too complex - we can add the constraint that the user must add the `grid` first, but in order to
 match the existing functionality, I think we would need to support this.
 
-@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a side.
 @param side Selects the edge of a box symbol on to which the pins will be drawn
+@param pins One Pin or a Tuple of Pins present on `obj` that will be added to a side.
 <DOC>
 public defn set-side (side:Dir, pins: JITXObject ...)  :
   set-side(side, pins)
