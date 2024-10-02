@@ -17,7 +17,8 @@ doc: \<DOC>
 Generate the Bounding Dims of a sequence of pads
 @param lp-pads the pads that we want to create a bounding
 rectangle of. These pads should be in the same component for
-this function to make sense.
+this function to make sense. It should be either a
+LandPatternPad or a VirtualPad.
 @param layer-spec Optional layer specifier that will compute
   the bounds based on the geometry in a particular layer.
   If this value is false - we compute the boundary based on the
@@ -27,7 +28,7 @@ this function to make sense.
 that this box is in the frame of reference of the associated component.
 <DOC>
 public defn bounds (
-  lp-pads:Seqable<LandPatternPad|VirtualPad>
+  lp-pads:Seqable<JITXObject|VirtualPad>
   --
   layer-spec:LayerSpecifier|False = false
   expand-by:Double = 0.0
