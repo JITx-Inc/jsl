@@ -176,8 +176,8 @@ public defmethod make-thermal-vias (tv:GridThermalVias, pt:PortInfo -- via-net?:
     ;  arrangement so that the target pad is associated with a single port.
     val pd-info = get-largest-pad( pad-set(pt) )
     val pad-origin = pose(pd-info)
-
-    geom(n):
+    net via-net (n)
+    geom(via-net):
       for pos in grid(grid-def(tv)) do:
         val [r, c] = [row(pos), column(pos)]
         if active?(tv, r, c):
