@@ -275,7 +275,13 @@ doc: \<DOC>
 Get pads for each port and combine them into a single list
 <DOC>
 public defn get-pads-from-ports (pts:Seqable<JITXObject>, cxt:JITXObject = self) -> Seq<JITXObject>:
-  for pt in pts seq-cat:
+  ; Expand port arrays
+  val single-pts = for pt in pts seq-cat:
+    match(port-type(pt)):
+      (pa:PortArray): ports(pt)
+      (x): [pt]
+
+  for pt in single-pts seq-cat:
     val pds? = get-pads-from-port(pt, cxt)
     value-or(pds?, [])
 
