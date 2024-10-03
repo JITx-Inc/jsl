@@ -21,46 +21,90 @@ defpackage jsl/protocols/memory/ddr4:
   import jsl/pin-assignment
 
 doc: \<DOC>
-@brief DDR4 Width enums
-This is a fixed list of possible lane widths for DDR4 memory channels
+@brief ddr4 width enums
+This is a fixed list of possible lane widths for ddr4 memory channels
 <DOC>
-public pcb-enum jsl/protocols/memory/DDR4Width:
+public pcb-enum jsl/protocols/memory/ddr4-width:
   DDR4-x4
   DDR4-x8
   DDR4-x16
 
-public defn DDR4-enum-to-int (en:jsl/protocols/memory/DDR4Width) -> Int:
+doc: \<DOC>
+@brief ddr4 Width enum conversion to integers
+This converts possible lane widths for ddr4 memory channels into the corresponding integer
+<DOC>
+public defn ddr4-width-enum-to-int (en:jsl/protocols/memory/ddr4-width) -> Int:
   switch(en) :
     DDR4-x4  :  4
     DDR4-x8  :  8
     DDR4-x16 : 16
 
 doc: \<DOC>
-@brief DDR4 Bundle
-One DDR4 bundle consists of the connections between an integrated memory controller and 
-one DDR4 memory chip. The overall memory connections consists of 4 separate channels.
-@member control Control channel for DDR4
-@member data Four data channels for DDR4
+@brief ddr4 topology
+This is a fixed list of possible topologies for ddr4 memories
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr4-topology:
+  FlyBy
+  ClamShell
+
+doc: \<DOC>
+@brief ddr4 rank Options
+This is a fixed list of possible rank options for ddr4 implementations
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr4-rank:
+  SingleRank
+  DualRank
+  QuadRank
+
+doc: \<DOC>
+@brief ddr4 rank enum conversion to integers
+This converts possible rank options for ddr4 memory channels into the corresponding integer
+<DOC>
+public defn ddr4-rank-enum-to-int (en:jsl/protocols/memory/ddr4-rank) -> Int:
+  switch(en) :
+    SingleRank : 1
+    DualRank   : 2
+    QuadRank   : 4
+
+doc: \<DOC>
+@brief ddr4 Bundle
+One ddr4 bundle consists of the connections between an integrated memory controller and
+one or more ddr4 memory chips/DIMMs.
+@member control Control channel for ddr4
+@member data Data channels for ddr4 depending on the width
+@member topology Topology of the DDR4 connection (FlyBy or ClamShell)
+@member rank Rank configuration of the DDR4 memory (SingleRank, DualRank, or QuadRank)
 <DOC>
 
-public defn ddr4 (width:jsl/protocols/memory/DDR4Width) :
-  val r-width = DDR4-enum-to-int(width)
-  ddr4-b(r-width)
+public defn ddr4 (width:jsl/protocols/memory/ddr4-width -- topology:jsl/protocols/memory/ddr4-topology = FlyBy rank:jsl/protocols/memory/ddr4-rank = SingleRank) :
+  ; Ensure the width is valid
+  ensure-enum-value(width, [DDR4-x4, DDR4-x8, DDR4-x16])
+  ; Ensure the topology is valid
+  ensure-enum-value(topology, [FlyBy, ClamShell])
+  ; Ensure the rank is valid
+  ensure-enum-value(rank, [SingleRank, DualRank, QuadRank])
+  ; Ensure the width matches the rank
+  if width == DDR4-x4 and rank != SingleRank:
+    fatal("DDR4-x4 is only supported in SingleRank configuration")
+  if width == DDR4-x16 and rank == QuadRank:
+    fatal("DDR4-x16 is not supported in QuadRank configuration")
+  ddr4-b(ddr4-width-enum-to-int(width), topology, ddr4-rank-enum-to-int(rank))
 
-public pcb-bundle ddr4-b (width:Int) :
+
+public pcb-bundle ddr4-b (width:Int topology:jsl/protocols/memory/ddr4-topology, rank:Int) :
   name = "DDR4"
   description = "Double Data Rate 4 Dynamic Random-Access Memory protocol"
-  port data    : ddr4-data-channel(width) ; 
-  port control : ddr4-control-channel ; covers all A,B,C,D
+  port data    : ddr4-data-channel(width) ;
+  port control : ddr4-control-channel(rank) ; covers all CMD/CTRL/ADDR
 
 public pcb-bundle ddr4-data-channel (width:Int):
-  port DQ  : pin[width]; 
-  port DQS : diff-pair ; 
+  port DQ  : pin[width];
+  port DQS : diff-pair ;
 
-public pcb-bundle ddr4-control-channel :
+public pcb-bundle ddr4-control-channel (rank:Int):
   port CK      : diff-pair
   port CKE     : pin
-  port A       : pin[[0 1 2 3 4 5 6 7 8 9 10 11 12 13 17]]
+  port A       : pin[[0 to 14, 17]]
   port ACT_n   : pin
   port BG      : pin[2]
   port BA      : pin[2]
@@ -88,19 +132,91 @@ table are derived from the references listed below.
 5. Skew match between CMD/ADDR/CTRL within a channel is 0.0 +/- 20e-12 (20 ps) Intel
 6. Skew match of CK is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
 7. Skew match of DQS is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
-8. Skew match between DQ and DQS.P is 0.0 +/- 3.5e-12 (3.5 ps) Intel or 0.0 +/- 100.0e-12 (100 ps) AMD
+8. Skew match between DQ and DQS.P within a byte lane is 0.0 +/- 3.5e-12 (3.5 ps) Intel or 0.0 +/- 100.0e-12 (100 ps) AMD 
 9. Skew match between CK.P and DQS.P is -85 ps to 935 ps Intel or -149 ps to +1796 ps AMD
 
-Intel derived from https://www.intel.com/content/www/us/en/docs/programmable/683216/23-2-2-7-1/skew-matching-guidelines-for-ddr4-discrete.html
-AMD derived from https://docs.amd.com/r/en-US/ug863-versal-pcb-design/Timing-Constraint-Rules-for-DDR4-Signals
-for the DDR4 component table 
+Intel specs derived from:
+https://www.intel.com/content/www/us/en/docs/programmable/683216/23-2-2-7-1/skew-matching-guidelines-for-ddr4-discrete.html
+AMD specs derived from:
+https://docs.amd.com/r/en-US/ug863-versal-pcb-design/Timing-Constraint-Rules-for-DDR4-Signals
+for the DDR4 component table
 
 Calculating the distance to time correspondence depends on the board material.
 Example:
   tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
-  @  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
-  @ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+  @  5 mils spec'ed that is a intra-pair skew of 735 fs to 850 fs depending on the material characteristics
+  @ 10 mils spec'ed that is a intra-pair skew of 1.47 ps to 1.70 ps depending on the material characteristics
 <DOC>
+
+doc: \<DOC>
+@brief Returns address mapping depending on the topology for each address pin that can be permuted
+Memory Controller Pin	| DRAM Pin (Non-Mirrored)	| DRAM Pin (Mirrored)
+A3	| A3	| A4
+A4	| A4	| A3
+A5	| A5	| A6
+A6	| A6	| A5
+A7	| A7	| A8
+A8	| A8	| A7
+A11	| A11 | A13
+A13	| A13 | A11
+BA0	| BA0 | BA1
+BA1	| BA1 | BA0 ; this is optional depending on the memory size/rank
+BG0 | BG0 | BG1
+BG1 | BG1 | BG0 ; this is optional depending on the memory size/rank
+<DOC>
+public defn DDR4-Topology-address-map (a:JITXObject topo:jsl/protocols/memory/DDR4-Topology) -> JITXObject:
+  switch(a) :
+    A[3] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[4]
+            else :
+              A[3]
+    A[4] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[3]
+            else :
+              A[4]
+    A[5] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[6]
+            else :
+              A[5]
+    A[6] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[5]
+            else :
+              A[6]
+    A[7] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[8]
+            else :
+              A[7]
+    A[8] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[7]
+            else :
+              A[8]
+    A[11] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[13]
+            else :
+              A[11]
+    A[13] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              A[11]
+            else :
+              A[13]
+    BA[0] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              BA[1]
+            else :
+              BA[0]
+    BA[1] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              BA[0]
+            else :
+              BA[1]
+    BG[0] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              BG[1]
+            else :
+              BG[0]
+    BG[1] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
+              BG[0]
+            else :
+              BG[1]
+    else :
+      println("Attempting to use unknown address (%_) for mapping" % [a])
+      false
 
 
 doc: \<DOC>
@@ -110,81 +226,80 @@ trace impedance for the standard.
 
 @return Upper/lower limits for the impedance.
 <DOC>
-public defn ddr4-get-trace-impedance () -> [Toleranced, Toleranced] :
-  [100.0 +/- (5 %) 50.0 +/- (5 %)]
+public defn ddr4-get-trace-impedance () -> [Toleranced, Toleranced, Toleranced, Toleranced] :
+  [ 90.0 +/- (5 %) ; CLK
+   100.0 +/- (5 %) ; DQS
+    50.0 +/- (5 %) ; DQ
+    45.0 +/- (5 %)]; CMD/CTRL/ALERT
 
 
 doc: \<DOC>
 DDR4 SI Constraint Type
 
-This derives from the whole data lane constraint
-as most of the controlled signals are single-ended but referenced to the 
-read and write clock lane pairs (tx/rx). All of these constraints
-will be applied to the full lane.
-    0.0 +/- 10.0e-15, ; Skew match for RCK_P RCK_N is 0.0 +/- 10.0e-15 (10 fs)
-    0.0 +/- 10.0e-15, ; Skew match for WCK_P WCK_N is 0.0 +/- 10.0e-15 (10 fs)
-    0.0 +/- 20.0e-12, ; Skew match between RCK and WCK is 0.0 +/- 20.0e-12 (20 ps)
-    0.0 +/- 20.0e-12, ; Skew match between WCK and CA (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
-    0.0 +/- 20.0e-12, ; Skew match between RCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 p
-    0.0 +/- 20.0e-12, ; Skew match between WCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 p
-    0.0 +/- 5.0e-12,  ; Skew match between DQ and DQE (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5 ps)
-    0.0 +/- 100.0e-12,; Skew match between Reset and CA (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100ps)
-    0.0 +/- 100.0e-12,; Skew match between ERR and WCK (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100 ps)
-    0.0 +/- 5.0e-12,  ; Skew match between CA (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5ps)
+This derives from the whole data lane constraint as most of the dq signals 
+are single-ended but referenced to the dqs pairs. The remainder of the signals are
+constrained to the CK pair. The constraints are:
+
+    0.0 +/-  1.0e-12   ; Intrapair skew match of CK is +/- 1 ps
+    0.0 +/-  1.0e-12   ; Intrapair skew match of DQS is +/- 1 ps
+  -85.0e-12 +935.0e-12 ; Skew match between CK.P and DQS.P -85 ps to 935 ps
+    0.0 +/-  3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps
+    0.0 +/- 20.0e-12   ; Skew match between A[17] A[13:0] and CK.P +/- 20 ps
+    0.0 +/- 20.0e-12   ; Skew match between RAS_n, CAS_n, WE_n, and CK.P is +/- 20 ps
+    0.0 +/- 20.0e-12   ; Skew match between BA[1:0], BG[1:0] and CK.P is +/- 20 ps
+    0.0 +/- 20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
+    0.0 +/- 20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
+
 
 The `constrain` function for this type expects two compatible `ddr4-b` types.
 <DOC>
 public defstruct DDR4-Constraint <: SI-Constraint :
   doc: \<DOC>
-  RCK Intra-pair Timing Skew Constraint in Seconds
+  CK Intra-pair Timing Skew Constraint in Seconds
   <DOC>
-  skew-rck:Toleranced with :
-    default => 0.0 +/- 10.0e-15
+  skew-ck:Toleranced with :
+    default => 0.0 +/- 1.00e-12
   doc: \<DOC>
-  WCK Intra-pair Timing Skew Constraint in Seconds
+  DQS Intra-pair Timing Skew Constraint in Seconds
   <DOC>
-  skew-wck:Toleranced with :
-    default => 0.0 +/- 10.0e-15
+  skew-dqs:Toleranced with :
+    default => 0.0 +/- 1.00e-12
   doc: \<DOC>
-  RCK to WCK Inter-pair Timing Skew Constraint in Seconds
+  CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
-  skew-rck-wck:Toleranced with :
+  skew-ck-dqs:Toleranced with :
+    default => min-max(-85.0e-12 935.0e-12)
+  doc: \<DOC>
+  DQ to DQS Inter-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-dq-dqs:Toleranced with :
+    default => 0.0 +/- 3.50e-12
+  doc: \<DOC>
+  ADDR to CK Inter-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-addr-ck:Toleranced with :
     default => 0.0 +/- 20.0e-12
   doc: \<DOC>
-  WCK to CA Inter-signal Timing Skew Constraint in Seconds
+  RAS_n, CAS_n, WE_n to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
-  skew-wck-ca:Toleranced with :
-    default => 0.0 +/- 20.0e-12
-  doc: \<DOC>
-  RCK to DQ/DQE Inter-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-rck-dq:Toleranced with :
-    default => 0.0 +/- 20.0e-12
-  doc: \<DOC>
-  WCK to DQ/DQE Inter-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-wck-dq:Toleranced  with:
+  skew-ras-cas-we-ck:Toleranced  with:
     default =>  0.0 +/- 20.0e-12
   doc: \<DOC>
-  DQ and DQE Inter-pair Timing Skew Constraint in Seconds
+  BA[1:0], BG[1:0] to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
-  skew-dq:Toleranced  with:
-    default =>  0.0 +/- 5.0e-12
+  skew-ba-bg-ck:Toleranced  with:
+    default =>  0.0 +/- 20.0e-12
   doc: \<DOC>
-  Reset to CA Inter-pair Timing Skew Constraint in Seconds
+  ACT_n, CKE, CS_n, ODT, PAR to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
-  skew-rst-ca:Toleranced  with:
+  skew-misc-ck:Toleranced  with:
+    default =>  0.0 +/- 20.0e-12
+  doc: \<DOC>
+  CMD, ADDR, CTRL Inter-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-cmd-addr-ctrl:Toleranced  with:
     default =>  0.0 +/- 100.0e-12
   doc: \<DOC>
-  ERR and WCK Inter-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-err-wck:Toleranced  with:
-    default =>  0.0 +/- 100.0e-12
-  doc: \<DOC>
-  CA Inter-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-ca:Toleranced  with:
-    default =>  0.0 +/- 5.0e-12
   doc: \<DOC>
   Diff-Pair Max Loss Limit Constraint in dB
   <DOC>
@@ -192,32 +307,47 @@ public defstruct DDR4-Constraint <: SI-Constraint :
     ensure => ensure-positive!,
     default => 5.0
   doc: \<DOC>
-  Differential Routing Structure for each Diff-Pair
+  Differential Routing Structure for CK  [90.0 +/- (5 %)]
   <DOC>
-  diff-route-struct:DifferentialRoutingStructure 
+  diff-ck-route-struct:DifferentialRoutingStructure
   doc: \<DOC>
-  Single-Ended Routing Structure for each SE signal
+  Differential Routing Structure for DQS [100.0 +/- (5 %)]
+  <DOC>
+  diff-dqs-route-struct:DifferentialRoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
+  <DOC>
+  se-dq-route-struct:RoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for all other SE signal [45.0 +/- (5 %)]
   <DOC>
   se-route-struct:RoutingStructure
 with:
   keyword-constructor => true
   constructor => #DDR4-Constraint
 
+
 doc: \<DOC>
 Constructor for the DDR4 Link Constraint
-
-@param rs Differential Routing Structure constraints for all
-data lane signals, command/address, and the differential write and read clocks. 
-This is not applied to the control signals.
+@param diff-ck-rs Differential Routing Structure constraints for CK signals
+@param diff-dqs-rs Differential Routing Structure constraints for DQS signals
+@param dq-rs Routing Structure constraints for DQ signals
+@param rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
 <DOC>
-public defn DDR4-Constraint (diff-rs:DifferentialRoutingStructure rs:RoutingStructure) -> DDR4-Constraint:
+public defn DDR4-Constraint (
+    diff-ck-rs:DifferentialRoutingStructure
+    diff-dqs-rs:DifferentialRoutingStructure
+    dq-rs:RoutingStructure
+    rs:RoutingStructure ) -> DDR4-Constraint:
   DDR4-Constraint(
-    diff-route-struct = diff-rs
+    diff-ck-route-struct = diff-ck-rs
+    diff-dqs-route-struct = diff-dqs-rs
+    se-dq-route-struct = dq-rs
     se-route-struct = rs
   )
 
 doc: \<DOC>
-Constrain a DDR4 Link
+Constrain a DDR4 Link assuming that it is a discrete link (not DIMM)
 
 @param cst Constraint Object
 @param src Source End Point - must be of `ddr4-b` type
