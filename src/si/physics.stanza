@@ -67,8 +67,8 @@ medium. This function assumes that the medium of propagation is homogenous.
 For non-homogenous medium, the user should compute the effective relative permittivity
 and then pass it to this function.
 
-@param Eps-r Relative Permittivity of the Medium. This value is usually greater than or equal to 1.0
-@param Mu-r Relative Magnetic Permeability of the Medium. This value is usually greater than or equal to 1.0.
+@param eps-r Relative Permittivity of the Medium. This value is usually greater than or equal to 1.0
+@param mu-r Relative Magnetic Permeability of the Medium. This value is usually greater than or equal to 1.0.
   The default value for this parameter is 1.0 - this is a typical default for non-magnetic materials.
 @return The signal propagation velocity in mm / s.
 <DOC>
@@ -93,4 +93,3 @@ public defn guide-wavelength (f:Double, eps-r:Double, mu-r:Double = 1.0) -> Doub
   val w0 = 1.0 / f
   val phase-v = phase-velocity(eps-r, mu-r)
   phase-v * w0
-

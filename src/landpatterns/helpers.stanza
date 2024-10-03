@@ -50,7 +50,7 @@ doc: \<DOC>
 Create a plus symbol shape
 @param line-length Length of the horizontal or vertical segments
 @param line-width
-@param center Center coordinate for the plus symbol
+@param pose Pose for the plus symbol
   Default is 1.0mm
 <DOC>
 public defn PlusSymbol (

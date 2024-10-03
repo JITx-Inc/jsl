@@ -222,7 +222,7 @@ Assign a differential routing structure to a `diff-pair` topology.
 This function is expected to be used in a `pcb-module` context.
 
 @param route-struct DifferentialRoutingStructure type
-@param dp-pair KeyValue of two terminal ports of a `diff-pair` topology. Both
+@param dp-pairs KeyValue of two terminal ports of a `diff-pair` topology. Both
 the `key` and `value` of this KVP must be Bundle Ports of type `diff-pair
 <DOC>
 public defn diff-structure (route-struct:DifferentialRoutingStructure, dp-pairs:KeyValue<JITXObject, JITXObject> ...) :
@@ -374,7 +374,7 @@ doc: \<DOC>
 Add a max skew timing constraint for a differential pair.
 @param window Tolerance window in seconds. This would typically be a Toleranced around zero
 such as `0.0 +/- 10.0e-12`.
-@param pair Terminal Points for either two diff-pair bundles or two port-arrays.
+@param pairs Terminal Points for either two diff-pair bundles or two port-arrays.
   For Diff-Pair bundles, this function adds a skew timing diff constraint between A.P => B.P / A.N => B.N
   For Port Arrays, this function adds a skew timing diff between the first terminal pair and each of the remaining
   pins.

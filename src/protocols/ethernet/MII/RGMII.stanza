@@ -60,7 +60,7 @@ public pcb-enum jsl/protocols/ethernet/RGMII/RGMIIVersion:
 doc: \<DOC>
 RGMII Delay and Loss Spec
 
-@param gen RGMII version spec
+@param version RGMII version spec
 @return Tuple of `[delay, max-loss]` where:
 *  `delay` - This is the expected delay between data to clock.
 *  `max-loss` - This is the max loss in dB for all signals.
@@ -119,7 +119,7 @@ public defstruct RGMII-Constraint <: SI-Constraint :
 doc: \<DOC>
 Construct a RGMII Constraint object
 
-@param proto USB Protocol Version to construct a constraint object for
+@param version USB Protocol Version to construct a constraint object for
 @param route-struct Differential Pair Routing Structure - Use
 `pcb-differential-routing-structure` to create.
 @return Diff-Pair Constraint Object

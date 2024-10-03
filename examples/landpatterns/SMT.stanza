@@ -46,7 +46,7 @@ pcb-component test-SMT (case:String):
     [p[2] | p[2] | Down | 0]
 
   assign-symbol(test-sym)
-  val pkg = get-resistor-pkg(case, DensityLevelC)
+  val pkg = get-resistor-pkg(case, density-level = DensityLevelC)
 
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
