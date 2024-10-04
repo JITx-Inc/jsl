@@ -82,9 +82,9 @@ Axial Mounting Style
 There are generally two ways to mount an axial component
 on a PCB.
 
-1.  Horizontally - this is the typical method where the
+@member Horz-Mount-Axial Horizontally: this is the typical method where the
   lead axis is parallel with the board surface.
-2.  Vertically - In this configuration, the lead axis is
+@member Vert-Mount-Axial Vertically: In this configuration, the lead axis is
   perpendicular with the board surface, and the lead pointing
   away from the board surface is bent 180 degrees to mate with
   the board surface.

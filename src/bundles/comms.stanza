@@ -24,6 +24,8 @@ doc: \<DOC>
 SMBus Bundle
 System Management Bus (SMBus) is a two wire serial communication protocol
 @see http://smbus.org/specs/
+@member SMBALERT#
+@member SMBSUS#
 <DOC>
 public pcb-enum jsl/bundles/comms/SMBUSPins :
   SMBALERT#
@@ -113,6 +115,9 @@ SPI Bundle Pin Names
 A list of possible names for the SPI interface. Note that in order to connect
 SPI interfaces automatically, the constituent pins need to be present on all
 objects to be connected.
+@member SPI-CS
+@member SPI-COPI
+@member SPI-CIPO
 <DOC>
 
 public pcb-enum jsl/bundles/comms/SPIPins :
@@ -250,6 +255,18 @@ public pcb-bundle octal-spi-with-cs-dqs :
 ; UART - Univeral Asynchronous Receiver/Transmitter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+doc: \<DOC>
+@member UART-DTR
+@member UART-CTS
+@member UART-DCD
+@member UART-RI
+@member UART-DSR
+@member UART-RTS
+@member UART-CK
+@member UART-DE
+@member UART-RX
+@member UART-TX
+<DOC>
 public pcb-enum jsl/bundles/comms/UARTPins :
   UART-DTR
   UART-CTS

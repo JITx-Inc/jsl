@@ -33,6 +33,13 @@ defpackage jsl/protocols/sata:
 doc: \<DOC>
 @brief SATA Generation enums
 This is a fixed list of possible generation definitions for SATA
+@member SATA1p0
+@member SATA2p0
+@member SATA3p0
+@member SATA3p1
+@member SATA3p2
+@member SATA3p3
+@member SATA3p4
 <DOC>
 
 public pcb-enum jsl/protocols/sata/SATAGen:

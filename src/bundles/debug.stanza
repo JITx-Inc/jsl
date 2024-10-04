@@ -24,6 +24,9 @@ public pcb-bundle jtag :
   port tdo
   port tms
 
+doc: \<DOC>
+@member SWD-SWO
+<DOC>
 public pcb-enum jsl/bundles/debug/SWDPins :
   SWD-SWO ; Trace Output for Serial Wire Debug
 
