@@ -236,6 +236,8 @@ public defmethod build-shape (s:InterstitialOutline, vp:VirtualLP -- side:Side =
 doc: \<DOC>
 Selector for whether the edge lines are
 drawn on the Top / Bottom sides (N/S) or the Left/Right sides (E/W)
+@member NS-Edge
+@member EW-Edge
 <DOC>
 public defenum SilkscreenEdge :
   NS-Edge

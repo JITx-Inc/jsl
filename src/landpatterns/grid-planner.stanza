@@ -194,6 +194,8 @@ is populated.
     X | O | X  ...
     ...
   ```
+@member Even-Phase
+@member Odd-Phase
 <DOC>
 public defenum StaggerPhase :
   Even-Phase

@@ -60,6 +60,10 @@ public defn set-default-cap-symbol-params (v:CapacitorSymbolParams) -> False :
   DEF_NON_POL_PARAMS = v
 
 
+doc: \<DOC>
+@member Polarized-Straight-Style
+@member Polarized-Curved-Style
+<DOC>
 public defenum PolarizedStyle:
   Polarized-Straight-Style
   Polarized-Curved-Style

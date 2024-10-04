@@ -163,7 +163,11 @@ public pcb-bundle usb-c-connector :
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Constraints
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-
+doc: \<DOC>
+@member USB2
+@member USB3
+@member USB4
+<DOC>
 public pcb-enum jsl/protocols/usb/USBVersion:
   USB2
   USB3

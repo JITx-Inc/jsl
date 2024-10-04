@@ -35,8 +35,17 @@ public val DISPLAYPORT_NUM_CONFIGS = 2
 doc: \<DOC>
 @brief DisplayPort Generation enums
 This is a fixed list of possible generation definitions for DisplayPort
+@member DP1p0
+@member DP1p1
+@member DP1p2
+@member DP1p2a
+@member DP1p3
+@member DP1p4
+@member DP1p4a
+@member DP2p0
+@member DP2p1
+@member DP2p1a
 <DOC>
-
 public pcb-enum jsl/protocols/displayport/DPVersion:
   DP1p0  ; 10.80 Gbit/s / 4 lanes =>  2.7 Gbit/s / 10 UI =>  270 MHz clk
   DP1p1  ; 10.80 Gbit/s / 4 lanes =>  2.7 Gbit/s / 10 UI =>  270 MHz clk

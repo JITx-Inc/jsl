@@ -157,6 +157,8 @@ This enum provides flags that can indicate the style of
 pastemask to generate. This can often be useful for
 generating a pastemask layer that conforms to certain
 norms.
+@member NominalPasteMask
+@member NoPasteMask
 <DOC>
 public defenum PasteMaskStyle:
   NominalPasteMask

@@ -221,6 +221,8 @@ Via Signal Identifier Enum
 
 This type distinguishes between single-ended and differential
 via structures.
+@member Via-Single-Ended
+@member Via-Differential
 <DOC>
 public defenum ViaSignalType:
   Via-Single-Ended

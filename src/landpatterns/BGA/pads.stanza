@@ -25,6 +25,8 @@ to distinguish between the typical pad types used in BGA.
 These are sometimes referred to as `Non-Collapsible` and `Collapsible`,
 respectively.
 
+@member SolderMaskDefined
+@member NonSolderMaskDefined
 <DOC>
 public defenum BGAPadType:
   SolderMaskDefined

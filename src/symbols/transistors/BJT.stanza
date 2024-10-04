@@ -9,6 +9,10 @@ defpackage jsl/symbols/transistors/BJT:
   import jsl/geometry/basics
   import jsl/symbols/framework
 
+doc: \<DOC>
+@member NPN
+@member PNP
+<DOC>
 public defenum BJT-Junction :
   NPN
   PNP

@@ -10,10 +10,18 @@ defpackage jsl/symbols/transistors/FET:
   import jsl/geometry/basics
   import jsl/symbols/framework
 
+doc: \<DOC>
+@member N-Channel
+@member P-Channel
+<DOC>
 public defenum FET-Junction :
   N-Channel
   P-Channel
 
+doc: \<DOC>
+@member Enhancement
+@member Depletion
+<DOC>
 public defenum FET-Mode :
   Enhancement
   Depletion
