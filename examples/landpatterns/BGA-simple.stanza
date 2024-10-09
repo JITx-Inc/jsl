@@ -45,6 +45,9 @@ pcb-component test-BGA:
   val planner = Perimeter-Matrix-Planner(
     ; Pad A2 is not present
     inactive = to-pad-island(grid, "A[2]"),
+    ; To get a full grid, set inactive to empty set
+    ; it is a required argument and can't be left out entirely:
+    ;inactive = []
     pad-config = PadConfig-D(
       copper-D-adj = ipc-bga-copper(
         NonSolderMaskDefined,
