@@ -91,7 +91,7 @@ doc: \<DOC>
 RGMII Lane Constraint
 
 This constraint is used to constrain a lane of the RGMII
-interface. This type would typically be used with a {@link LaneConstraint}
+interface. This type would typically be used with a {@link type:LaneConstraint}
 type for constructing a full-duplex RGMII interface.
 
 This constraint expects to be passed `rgmii-lane` bundle

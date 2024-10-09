@@ -144,7 +144,7 @@ public defmulti name (x:LeadProtrusion) -> String
 doc: \<DOC>
 Lead Fillets Accessor
 This method will return the lead fillet specifications for this
-land protrusion based on the current {@link DensityLevel} specification
+land protrusion based on the current {@link type:DensityLevel} specification
 of the design.
 <DOC>
 public defmulti lead-fillets (x:LeadProtrusion -- density-level:DensityLevel = ?) -> LeadFillets

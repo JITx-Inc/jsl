@@ -47,9 +47,9 @@ public defstruct SOIC-Lead <: SMT-Lead:
   doc: \<DOC>
   Style of lead protrusion.
 
-  Default style is {@link BigGullWingLeads}. This is
+  Default style is {@link type:BigGullWingLeads}. This is
   suitable for pitches > 0.625mm. Below 0.625mm,
-  the lead-type {@link SmallGullWingLeads} should be
+  the lead-type {@link type:SmallGullWingLeads} should be
   considered.
   <DOC>
   lead-type:LeadProtrusion with:
@@ -128,7 +128,7 @@ public defstruct SOIC <: Dual-Package :
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SOIC package.
-  By default the {@link SOIC-Lead} type is used for the `lead` and
+  By default the {@link type:SOIC-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -163,7 +163,7 @@ public defstruct SOIC <: Dual-Package :
   Lead Numbering Scheme for the SOIC Package
 
   This provides a numbering scheme for the leads of the SOIC
-  package. By default, it uses {@link Std-IC-Numbering}.
+  package. By default, it uses {@link type:Std-IC-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -209,7 +209,7 @@ public defn SOIC (
 
 doc: \<DOC>
 Create a Narrow Body SOIC Package
-@see {@link SOIC}
+@see {@link type:SOIC}
 <DOC>
 public defn SOIC-N (
   --
@@ -236,7 +236,7 @@ public defn SOIC-N (
 
 doc: \<DOC>
 Create a Wide Body SOIC Package
-@see {@link SOIC}
+@see {@link type:SOIC}
 <DOC>
 public defn SOIC-W (
   --
@@ -270,7 +270,7 @@ public defmethod name (x:SOIC) -> String :
 doc: \<DOC>
 Courtyard Excess Expectation for SOIC
 
-The user can override by providing a custom {@link LeadProtrusion} type.
+The user can override by providing a custom {@link type:LeadProtrusion} type.
 <DOC>
 public defmethod courtyard-excess (pkg:SOIC) -> Double :
   val protrusion = lead-type $ lead $ lead-profile $ pkg
