@@ -161,7 +161,7 @@ with:
 doc: \<DOC>
 Constructor for the QFP package generator
 
-@param pad-planner Default value is {@link type:RectanglePadPlanner}
+@param pad-planner Default value is {@link var:RectanglePadPlanner}
 <DOC>
 public defn QFP (
   --

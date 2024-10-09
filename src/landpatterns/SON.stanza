@@ -140,7 +140,7 @@ Constructor for SON Packages
 @param thermal-lead? Optional thermal lead. This shape will be placed at (0.0, 0.0)
 in the land pattern's reference frame.
 @param package-body 3D component body descriptor.
-@param pad-planner Pad shape planner - default is {@link type:RectanglePadPlanner}
+@param pad-planner Pad shape planner - default is {@link var:RectanglePadPlanner}
 @param num-scheme Numbering scheme for pads - default is {@link type:Column-Major-Numbering}
 @param density-level Density Level of Generated Package
 <DOC>

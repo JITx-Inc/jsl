@@ -99,7 +99,7 @@ Small Outline Transistor (SOT) type of package.
 
 Note that the base implementation is targeted towards the full
 SOT. To implement non-symmetric SOT packages see {@link type:SOT-23-3}
-and {@link type:SOT-23-5}
+and {@link func:SOT-23-5}
 
 <DOC>
 public defstruct SOT <: Dual-Package :
