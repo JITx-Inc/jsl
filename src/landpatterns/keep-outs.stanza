@@ -108,9 +108,9 @@ doc: \<DOC>
 Retrieve the Keepout Shape for a particular Copper Layer
 @param k KeepoutOverlay object
 @param lyId Optionally create custom shapes based on the desired layer.
-See {@link KeepoutOverlay} for a constant shape variant.
+See {@link type:KeepoutOverlay} for a constant shape variant.
 @return geometry for the constructed keepout region. This shape
-can be offset with a {@link Pose} for offset keepouts.
+can be offset with a {@link type:Pose} for offset keepouts.
 <DOC>
 public defmulti shape (k:IKeepoutOverlay, lyId:LayerIndex) -> Shape
 

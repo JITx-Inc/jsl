@@ -238,7 +238,7 @@ p[1] -> O--A--O--B--O -> p[2]
 ```
 
 Note that `p[2]` of C is connected to `named-shunt-port`. To
-flip the component see {@link Invert}
+flip the component see {@link type:Invert}
 
 <DOC>
 public defstruct ShuntTo <: ANT:

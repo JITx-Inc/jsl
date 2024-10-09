@@ -21,9 +21,9 @@ modify the construction of each pad including the soldermask
 and pastemask openings.
 
 This type is derived from two parent implementations:
-1.  {@link PadPlanner} which manages selection of which pads to populate
+1.  {@link type:PadPlanner} which manages selection of which pads to populate
 and how they should be constructed
-2.  {@link GridPlanner} which manages the placement of the created pads
+2.  {@link type:GridPlanner} which manages the placement of the created pads
 at particular grid locations.
 <DOC>
 public defstruct BGA-PadPlanner <: PadPlanner & GridPlanner:

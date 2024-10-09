@@ -78,7 +78,7 @@ BGA pad based on the desired physical characteristics
 of the land pattern.
 
 The parameters of this type are applied to an arbitrary shape
-via the {@link BGA-PadPlanner} interface. This configuration can
+via the {@link type:BGA-PadPlanner} interface. This configuration can
 apply to any shape - but it is most typically applied to circular pads.
 
 The copper, soldermask, and paste layers can be modulated
@@ -243,7 +243,7 @@ BGA Pad Builder
 
 This function uses a closure to define a `pcb-pad` for a BGA pad.
 
-The adjustment parameters from {@link PadConfig} are designed to
+The adjustment parameters from {@link type:PadConfig} are designed to
 modulate the size of those features from the `ball` shape baseline.
 
 @param ball Originating Shape for the pad. This is typically a circular
