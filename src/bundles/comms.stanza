@@ -120,9 +120,9 @@ objects to be connected.
 
 public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-CS
-  SPI-DQS
   SPI-COPI
   SPI-CIPO
+  SPI-DQS
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
   name = "SPI"
@@ -132,6 +132,7 @@ pcb-bundle spi-b (pins:Collection<SPIPins>):
       SPI-CS  : make-pin(`cs)
       SPI-COPI : make-pin(`copi)
       SPI-CIPO : make-pin(`cipo)
+      SPI-DQS : make-pin(`dqs)
 
 doc: \<DOC>
 SPI Bundle Generator
@@ -325,6 +326,10 @@ Uart with RTS/CTS Flow Control
 public defn uart-fc () :
   uart(UART-RX, UART-TX, UART-RTS, UART-CTS)
 
+public pcb-enum jsl/bundles/comms/I2SPins :
+  I2S-MCK
+  I2S-SDMI
+
 doc: \<DOC>
 Inter-Integrated Sound - I2S Protocol
 
@@ -340,7 +345,13 @@ specification is present in NXP's references
 @member ws Word Select - typically for left vs right differentiation
 @member sd Data Signal
 <DOC>
-public pcb-bundle i2s :
-  port sck
+public pcb-bundle i2s  (pins:Collection<I2SPins>) :
+  port ck
   port ws
-  port sd
+  port sdmo
+  for p in pins do :
+    switch(p) :
+      I2S-MCK : make-pin(`mck)
+      I2S-SDMI : make-pin(`sdmi)
+      else:
+        throw $ ValueError("I2S does not support pin type: %_" % [p])
