@@ -443,9 +443,6 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
     for cv in ground-cages(v) do:
       make-ground-cage(cv, cage, pose = pose)
 
-    geom(via-net):
-      via(via-def(v)) at pose * Point(0.0, 0.0)
-
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
 
@@ -555,6 +552,8 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
 
     port COMMON
 
+    ;layer(Courtyard(Top)) = Rectangle(0.01, 0.01)
+
     val [via-def-P, via-def-N] = match(via-def(v)):
       (obj1:Via): [obj1, obj1]
       (obj2:[Via, Via]): obj2
@@ -590,18 +589,6 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     for cv in ground-cages(v) do:
       make-ground-cage(cv, cage, pose = pose)
 
-    val vp = pitch(v) / 2.0
-
-    val [vd-P, vd-N] = match(via-def(v)):
-      (obj1:Via): [obj1, obj1]
-      (obj2:[Via, Via]): obj2
-
-    geom(via-net-P):
-      via(vd-P) at pose * Point(vp, 0.0)
-
-    geom(via-net-N):
-      via(vd-N) at pose * Point((- vp), 0.0)
-
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
 
@@ -622,13 +609,14 @@ defn topo-via-sym (name:Symbol) :
 pcb-pad topo-via-pad :
   type  = SMD
   name  = "'Empty' Pad"
-  shape = EmptyShape()
+  shape = EmptyShape() ; Rectangle(0.01, 0.01)
 
 pcb-landpattern topo-via-landpattern :
   pad p : topo-via-pad at loc(0.0, 0.0)
 
 ; The wrapper component
 public pcb-component topo-via-pin (name:Symbol) :
+  ;layer(Courtyard(Top)) = Rectangle(0.05, 0.05)
   description = "Wrapper object for injecting via in topology"
   reference-prefix = "V"
   val p = make-port(name)
