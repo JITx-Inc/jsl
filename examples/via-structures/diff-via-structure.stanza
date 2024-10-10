@@ -60,7 +60,3 @@ set-main-module(top-level)
 
 ; View the results
 view-board()
-
-
-
-export-cad()
