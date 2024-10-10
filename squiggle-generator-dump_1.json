@@ -1,0 +1,28 @@
+{
+  "squiggle-setup": {
+    "envelope-shape": {
+      "width": "BgDASNTzshy",
+      "elements": [
+        {"x":"BiipS7iV5mf","y":"Z77wsjBhLcK"},
+        {"center":{"x":"BihanzTeN1P","y":"Z6qK4934rJ9"},"radius":"BgGtKM68Rcj","start-angle":"Z77y3k9A5dK","sweep-angle":"Z5hCEsAq5f5"},
+        {"x":"BhdQfkd14bq","y":"Z7dK43cG5BZ"}
+      ]
+    },
+    "trace-width": "BetBfwgQCx3",
+    "orig-heading": "BibUqqQjg4h",
+    "dest-heading": "BiHjnsWv2NU",
+    "min-radius": "BebawSAkgGh",
+    "max-radius": "BgGtKM68Rcj",
+    "min-pitch": "BfVMMsMcsQP",
+    "diff-pair-setup?": null
+  },
+  "length-target": "MinimumSquiggle",
+  "known-parms?": {
+    "radius": "BexpuoDnzPo",
+    "pitch": "BfZzbiu1er9",
+    "semiwidth": "BfS3QWiJ2RX",
+    "override-semiwidth": "BfS3QWiJ2RX",
+    "minimum-squiggle?": true,
+    "coupled": null
+  }
+}
