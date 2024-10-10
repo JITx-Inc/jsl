@@ -62,8 +62,7 @@ doc: \<DOC>
 This function constructs the SATA topology and applies constraints
 to the channel for intra-pair skew and channel loss.
 
-@param sw The intra-pair skew value for the differential signals being connected.
-@param ml The maximum loss for all differential signals being connected.
+@param cons The signal integrity contraints for the differential signals being connected.
 @param src This is expected to be a port of `Bundle` type `SATA`
 @param dst This is expected to be a port of `Bundle` type `SATA`
 

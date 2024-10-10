@@ -400,7 +400,6 @@ Given a Row Letter, convert to an Int offset in 0-index form
 
 @param g Grid Numbering Scheme
 @param row identifies which row we are attempting to convert
-@param Offset which will take into a account the omitted
 <DOC>
 public defn to-row-index (g:Grid-Numbering, row:Ref|String) -> Int :
   val raw-letters = compute-letters(omit-rows(g))

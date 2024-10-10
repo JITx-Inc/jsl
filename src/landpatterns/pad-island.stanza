@@ -37,7 +37,7 @@ use 1-indexed values because that is more consistent
 with the rest of JITX.
 
 @param rows 1-Index'd rows
-@param columsn 1-index'd columns
+@param columns 1-index'd columns
 <DOC>
 public defn PadIsland (rows:Range, columns:Range) -> PadIsland :
   #PadIsland(

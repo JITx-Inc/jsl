@@ -1,0 +1,269 @@
+doc: \<DOC>
+@brief LPDDR4
+
+LPDDR4 is a point-to-point high speed memory protocol
+@see https://en.wikipedia.org/wiki/LPDDR
+
+This file contains functions and definitions for supporting LPDDR4
+connections between microprocessors and memories in a board design.
+<DOC>
+
+#use-added-syntax(jitx)
+defpackage jsl/protocols/memory/lpddr4 :
+  import core
+  import collections
+
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+;============================================================
+;========================= Bundles ==========================
+;============================================================
+
+doc: \<DOC>
+@brief LPDDR4 Width enums
+This is a fixed list of possible channel widths for LPDDR4
+<DOC>
+public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Width:
+  LPDDR4-x16
+  LPDDR4-x32
+  LPDDR4-x64
+
+public defn width-to-int (width:LPDDR4-Width) -> Int :
+  switch(width) :
+    LPDDR4-x16 : 16
+    LPDDR4-x32 : 32
+    LPDDR4-x64 : 64
+
+public defn num-x16-lanes (width:LPDDR4-Width) -> Int :
+  switch(width) :
+    LPDDR4-x16 : 1
+    LPDDR4-x32 : 2
+    LPDDR4-x64 : 4
+
+doc: \<DOC>
+@brief LPDDR4 Rank enums
+This is a fixed list of possible ranks for LPDDR4
+<DOC>
+public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Rank:
+  LPDDR4-Rank1
+  LPDDR4-Rank2
+  LPDDR4-Rank3
+
+public defn rank-to-int (rank:LPDDR4-Rank) -> Int :
+  switch(rank) :
+    LPDDR4-Rank1 : 1
+    LPDDR4-Rank2 : 2
+    LPDDR4-Rank3 : 3
+
+public pcb-bundle lpddr4-lane :
+  port dq : pin[8]
+  port dqs : diff-pair
+  port dmi : pin
+
+public pcb-bundle lpddr4-x16 (rank:LPDDR4-Rank) :
+  port d : lpddr4-lane[2]
+  port ck : diff-pair
+  port cke : pin[rank-to-int(rank)]
+  port cs : pin[rank-to-int(rank)]
+  port ca : pin[6]
+
+public pcb-bundle lpddr4 (width:LPDDR4-Width, rank:LPDDR4-Rank) :
+  port ch : lpddr4-x16(rank)[num-x16-lanes(width)]
+
+;============================================================
+;===================== Signal Integrity =====================
+;============================================================
+
+doc: \<DOC>
+LPDDR4 SI Constraint Type
+
+Values based on the LPDDR4 section of chapter 2 of
+https://docs.amd.com/v/u/en-US/ug583-ultrascale-pcb-design
+
+Constraints:
+  CK Intra-pair Skew => 0.0 +/- 2.0e-12 seconds
+  CK to CKE Skew => 0.0 +/- 8.0e-12 seconds
+  CK to CS Skew => 0.0 +/- 8.0e-12 seconds
+  CK to CA Skew => 0.0 +/- 8.0e-12 seconds
+  CK to DQS Skew => -500.0e-12 to 2500.0e-12 seconds
+  DQS Intra-pair Skew => 0.0 +/- 2.0e-12 seconds
+  DQS to DQ/DMI Skew => 0.0 +/- 5.0e-12 seconds
+  DQ/DMI to DQ/DMI Skew => 0.0 +/- 5.0e-12 seconds
+  Maximum Signal Loss => 5.0 dB
+<DOC>
+public defstruct LPDDR4-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  CK Intra-pair Skew Limit
+  <DOC>
+  skew-ck:Toleranced with :
+    default => 0.0 +/- 2.0e-12
+
+  doc: \<DOC>
+  CK to CKE Skew Limit
+  <DOC>
+  skew-ck-cke:Toleranced with :
+    default => 0.0 +/- 8.0e-12
+
+  doc: \<DOC>
+  CK to CS Skew Limit
+  <DOC>
+  skew-ck-cs:Toleranced with :
+    default => 0.0 +/- 8.0e-12
+
+  doc: \<DOC>
+  CK to CA Skew Limit
+  <DOC>
+  skew-ck-ca:Toleranced with :
+    default => 0.0 +/- 8.0e-12
+
+  doc: \<DOC>
+  CK to DQS Skew Limit
+  <DOC>
+  skew-ck-dqs:Toleranced with :
+    default => min-max(-500.0e-12, 2500.0e-12)
+
+  doc: \<DOC>
+  DQS Intra-pair Skew Limit
+  <DOC>
+  skew-dqs:Toleranced with :
+    default => 0.0 +/- 2.0e-12
+
+  doc: \<DOC>
+  DQS to DQ/DMI Skew Limit
+  <DOC>
+  skew-dqs-dq:Toleranced with :
+    default => 0.0 +/- 5.0e-12
+
+  doc: \<DOC>
+  DQ/DMI to DQ/DMI Skew Limit
+  <DOC>
+  skew-dq-dq:Toleranced with :
+    default => 0.0 +/- 5.0e-12
+
+  doc: \<DOC>
+  Maximum Signal Loss
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    default => 5.0
+
+  doc: \<DOC>
+  Channel Bit Width
+  <DOC>
+  width:LPDDR4-Width
+
+  doc: \<DOC>
+  Channel Rank
+  <DOC>
+  rank:LPDDR4-Rank
+
+  doc: \<DOC>
+  Differential Pair Routing Structure
+  <DOC>
+  diff-route-struct:DifferentialRoutingStructure
+
+  doc: \<DOC>
+  Single-Ended Routing Structure
+  <DOC>
+  se-route-struct:RoutingStructure
+with:
+  keyword-constructor => true
+
+public defn LPDDR4-Constraint (width:LPDDR4-Width, rank:LPDDR4-Rank,
+                               diff-st:DifferentialRoutingStructure,
+                               se-st:RoutingStructure) -> LPDDR4-Constraint :
+  LPDDR4-Constraint(width = width, rank = rank,
+    diff-route-struct = diff-st, se-route-struct = se-st)
+
+doc: \<DOC>
+Add constraints to a LPDDR4 link
+
+Channel bit width and channel rank of 'src' and 'dst' must match width and rank of 'cst'
+@param cst Constraint Object.
+@param src Source End Point - must be of `lpddr4` type and meet the constraints
+@param dst Destination End Point - must be of `lpddr4` type and meet the constraints
+<DOC>
+public defmethod constrain (cst:LPDDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  val n16 = num-x16-lanes(width(cst))
+  val nr = rank-to-int(rank(cst))
+  inside pcb-module :
+    val ck-const = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-route-struct(cst))
+    val dqs-const = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-route-struct(cst))
+
+    for i in 0 to n16 do :
+      ;CK intra-pair
+      diffpair-constrain(ck-const, src.ch[i].ck, dst.ch[i].ck)
+
+      val guide-ck = src.ch[i].ck.P => dst.ch[i].ck.P
+      for j in 0 to nr do :
+        ;CK to CKE
+        val target-cke = src.ch[i].cke[j] => dst.ch[i].cke[j]
+        timing-window(skew-ck-cke(cst), guide-ck, target-cke)
+        structure(target-cke) = se-route-struct(cst)
+        max-loss(loss(cst), target-cke)
+
+        ;CK to CS
+        val target-cs = src.ch[i].cs[j] => dst.ch[i].cs[j]
+        timing-window(skew-ck-cs(cst), guide-ck, target-cs)
+        structure(target-cs) = se-route-struct(cst)
+        max-loss(loss(cst), target-cs)
+
+      for j in 0 to 6 do :
+        ;CK to CA
+        val target-ca = src.ch[i].ca[j] => dst.ch[i].ca[j]
+        timing-window(skew-ck-ca(cst), guide-ck, target-ca)
+        structure(target-ca) = se-route-struct(cst)
+        max-loss(loss(cst), target-ca)
+
+      for j in 0 to 2 do :
+        ;DQS intra-pair
+        diffpair-constrain(dqs-const, src.ch[i].d[j].dqs, dst.ch[i].d[j].dqs)
+
+        ;CK to DQS
+        val guide-dqs = src.ch[i].d[j].dqs.P => dst.ch[i].d[j].dqs.P
+        timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
+
+        for k in 0 to 8 do :
+          ;DQS to DQ
+          val target-dq = src.ch[i].d[j].dq[k] => dst.ch[i].d[j].dq[k]
+          timing-window(skew-dqs-dq(cst), guide-dqs, target-dq)
+          structure(target-dq) = se-route-struct(cst)
+          max-loss(loss(cst), target-dq)
+
+        ;DQS to DMI
+        val target-dmi = src.ch[i].d[j].dmi => dst.ch[i].d[j].dmi
+        timing-window(skew-dqs-dq(cst), guide-dqs, target-dmi)
+        structure(target-dmi) = se-route-struct(cst)
+        max-loss(loss(cst), target-dmi)
+
+        ;DQ/DMI to DQ/DMI
+        ;Emulate pair-wise skew between all pairs with +/- 2.5e-12 to DMI
+        val guide-dmi = src.ch[i].d[j].dmi => dst.ch[i].d[j].dmi
+        for k in 1 to 8 do :
+          val target = src.ch[i].d[j].dq[k] => dst.ch[i].d[j].dq[k]
+          timing-window(0.5 * skew-dq-dq(cst), guide-dmi, target)
+
+doc: \<DOC>
+Connect and constrain a LPDDR4 link
+
+@param src Source End Point - must be of `lpddr4` type with width 'width' and rank 'rank'
+@param dst Destination End Point - must be of `lpddr4` type  with width 'width' and rank 'rank'
+@param width Channel Bit Width
+@param rank Channel Rank
+@param diff-rs Differential Routing Structure
+@param rs Single-ended Routing Structure
+<DOC>
+public defn connect-LPDDR4 (src:JITXObject, dst:JITXObject,
+                            width:LPDDR4-Width, rank:LPDDR4-Rank,
+                            diff-rs:DifferentialRoutingStructure,
+                            rs:RoutingStructure) :
+  inside pcb-module :
+    val cst = LPDDR4-Constraint(width, rank, diff-rs, rs)
+    constrain-topology(src, dst, cst)
