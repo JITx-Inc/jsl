@@ -354,3 +354,94 @@ public pcb-bundle i2s :
   port sck
   port ws
   port sd
+
+
+doc: \<DOC>
+Optional Pins in the Microwire Bundle Construction
+<DOC>
+public pcb-enum jsl/bundles/comms/MicrowirePins :
+  Microwire-CS
+  Microwire-DO
+  Microwire-DI
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements. It often comes
+in a 3-wire variant.
+
+
+
+@member clk Synchronous clock - Required Port
+@member cs Chip Select - Optional Port
+@member do Data Output - Optional Port
+@member di Data Input - Optional Port
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public pcb-bundle microwire-b (opts:Collection<MicrowirePins>) :
+  port clk
+  for p in opts do :
+    switch(p) :
+      Microwire-CS: make-port(`cs)
+      Microwire-DO: make-port(`do)
+      Microwire-DI: make-port(`di)
+
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements. It often comes
+in a 3-wire variant.
+
+@member clk Synchronous clock - Required Port
+@member cs Chip Select - Optional Port
+@member do Data Output - Optional Port
+@member di Data Input - Optional Port
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public defn microwire (opts:MicrowirePins ...) :
+  microwire-b(opts)
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements.
+
+This implementation provides the full 4-wire
+interface.
+
+@member clk Synchronous clock
+@member cs Chip Select
+@member do Data Output
+@member di Data Input
+
+<DOC>
+public defn microwire ():
+  microwire(Microwire-CS, Microwire-DO, Microwire-DI)
+
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements.
+
+This is a 3-wire variant where `do` is is typically
+a bidirectional data wire.
+
+@member clk Synchronous clock
+@member cs Chip Select
+@member do Data Output/Input
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public defn microwire-3wire ():
+  microwire(Microwire-CS, Microwire-DO)
