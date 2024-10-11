@@ -102,6 +102,7 @@ public pcb-bundle ddr4-data-channel (width:Int):
   port DQS : diff-pair ;
 
 public pcb-bundle ddr4-control-channel (rank:Int):
+  ; how do I use rank here? Needs some work...
   port CK      : diff-pair
   port CKE     : pin
   port A       : pin[[0 to 14, 17]]
@@ -240,15 +241,15 @@ This derives from the whole data lane constraint as most of the dq signals
 are single-ended but referenced to the dqs pairs. The remainder of the signals are
 constrained to the CK pair. The constraints are:
 
-    0.0 +/-  1.0e-12   ; Intrapair skew match of CK is +/- 1 ps
-    0.0 +/-  1.0e-12   ; Intrapair skew match of DQS is +/- 1 ps
-  -85.0e-12 +935.0e-12 ; Skew match between CK.P and DQS.P -85 ps to 935 ps
-    0.0 +/-  3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps
-    0.0 +/- 20.0e-12   ; Skew match between A[17] A[13:0] and CK.P +/- 20 ps
-    0.0 +/- 20.0e-12   ; Skew match between RAS_n, CAS_n, WE_n, and CK.P is +/- 20 ps
-    0.0 +/- 20.0e-12   ; Skew match between BA[1:0], BG[1:0] and CK.P is +/- 20 ps
-    0.0 +/- 20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
-    0.0 +/- 20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
+    0.0 +/-    1.0e-12   ; Intrapair skew match of CK is +/- 1 ps
+    0.0 +/-    1.0e-12   ; Intrapair skew match of DQS is +/- 1 ps
+  -85.0e-12 +935.0e-12   ; Skew match between CK.P and DQS.P -85 ps to 935 ps
+    0.0 +/-    3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps
+    0.0 +/-   20.0e-12   ; Skew match between A[17] A[13:0] and CK.P +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between RAS_n, CAS_n, WE_n, and CK.P is +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between BA[1:0], BG[1:0] and CK.P is +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
 
 
 The `constrain` function for this type expects two compatible `ddr4-b` types.
@@ -300,7 +301,6 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   skew-cmd-addr-ctrl:Toleranced  with:
     default =>  0.0 +/- 100.0e-12
   doc: \<DOC>
-  doc: \<DOC>
   Diff-Pair Max Loss Limit Constraint in dB
   <DOC>
   loss:Double with:
@@ -309,19 +309,19 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   doc: \<DOC>
   Differential Routing Structure for CK  [90.0 +/- (5 %)]
   <DOC>
-  diff-ck-route-struct:DifferentialRoutingStructure
+  diff-ck-rs:DifferentialRoutingStructure
   doc: \<DOC>
   Differential Routing Structure for DQS [100.0 +/- (5 %)]
   <DOC>
-  diff-dqs-route-struct:DifferentialRoutingStructure
+  diff-dqs-rs:DifferentialRoutingStructure
   doc: \<DOC>
   Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
   <DOC>
-  se-dq-route-struct:RoutingStructure
+  se-dq-rs:RoutingStructure
   doc: \<DOC>
   Single-Ended Routing Structure for all other SE signal [45.0 +/- (5 %)]
   <DOC>
-  se-route-struct:RoutingStructure
+  se-rs:RoutingStructure
 with:
   keyword-constructor => true
   constructor => #DDR4-Constraint
@@ -329,21 +329,21 @@ with:
 
 doc: \<DOC>
 Constructor for the DDR4 Link Constraint
-@param diff-ck-rs Differential Routing Structure constraints for CK signals
-@param diff-dqs-rs Differential Routing Structure constraints for DQS signals
+@param ck-rs Differential Routing Structure constraints for CK signals
+@param dqs-rs Differential Routing Structure constraints for DQS signals
 @param dq-rs Routing Structure constraints for DQ signals
 @param rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
 <DOC>
 public defn DDR4-Constraint (
-    diff-ck-rs:DifferentialRoutingStructure
-    diff-dqs-rs:DifferentialRoutingStructure
+    ck-rs:DifferentialRoutingStructure
+    dqs-rs:DifferentialRoutingStructure
     dq-rs:RoutingStructure
     rs:RoutingStructure ) -> DDR4-Constraint:
   DDR4-Constraint(
-    diff-ck-route-struct = diff-ck-rs
-    diff-dqs-route-struct = diff-dqs-rs
-    se-dq-route-struct = dq-rs
-    se-route-struct = rs
+    diff-ck-rs = ck-rs
+    diff-dqs-rs = dqs-rs
+    se-dq-rs = dq-rs
+    se-rs = rs
   )
 
 doc: \<DOC>
@@ -352,15 +352,18 @@ Constrain a DDR4 Link assuming that it is a discrete link (not DIMM)
 @param cst Constraint Object
 @param src Source End Point - must be of `ddr4-b` type
 @param dst Destination End Point - must be of `ddr4-b` type and match
-the parameterization of `src`, including lane counts.
+the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-    val cst-rck = DiffPair-Constraint(skew = skew-rck(cst) loss = loss(cst) route-struct = diff-route-struct(cst))
-    val cst-wck = DiffPair-Constraint(skew = skew-wck(cst) loss = loss(cst) route-struct = diff-route-struct(cst))
-    val guide-rck = src.data[0].RCK.P => dst.data[0].RCK.P
-    val guide-reset = src.control.RESET_n => dst.control.RESET_n
-    structure(guide-reset) = se-route-struct(cst)
+    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst) loss = loss(cst) route-struct = diff-ck-rs(cst))
+    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst) loss = loss(cst) route-struct = diff-dqs-rs(cst))
+
+    val guide-ck  = src.control.CK.P => dst.control.CK.P
+    val guide-dqs = src.data.DQS.P => dst.data.DQS.P
+
+    ; val guide-reset = src.control.RESET_n => dst.control.RESET_n
+    ; structure(guide-reset) = se-route-struct(cst)
 
     for i in 0 to 4 do :
       diffpair-constrain(cst-rck, src.data[i].RCK  dst.data[i].RCK)
