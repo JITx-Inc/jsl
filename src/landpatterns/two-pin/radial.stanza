@@ -275,7 +275,7 @@ public defn build-polarity-marker (
       build-polarity-cylinder-marker(pkg, vp, line-width, mask-clearance, side)
     (x:PackageBody):
       build-polarity-rectilinear-marker(pkg, vp, line-width, mask-clearance, side)
-    (x): throw $ ValueError("Unhandle Package Body Type: %_" % [x])
+    (x): throw $ ValueError("Unhandled Package Body Type: %_" % [x])
 
   add-artwork(vp, Silkscreen("polarity", side), shape, class = "polarity-marker" )
 

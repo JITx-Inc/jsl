@@ -45,7 +45,7 @@ This type is primarily a helper function for working around
 limitations in the `pcb-module` and `pcb-component` hierarchy.
 
 This type consolidates much of the meta-data associated with a
-particular pad so that it can be transmitted accross `pcb-module`
+particular pad so that it can be transmitted across `pcb-module`
 definition boundaries.
 
 It includes data from the following API calls:

@@ -112,7 +112,7 @@ Polar Via Ground Cage Constructor
 @param count Number of via placements
 @param radius Radius in mm of the via placement arc.
 @param theta-deg Initial angle in degrees. Default value is 0.0
-@param skips Collection of via placement indicies to skip. Default value is `[]`
+@param skips Collection of via placement indices to skip. Default value is `[]`
 which implies no placements are skipped.
 <DOC>
 public defn PolarViaGroundCage (
@@ -408,7 +408,7 @@ This function will construct the ports, nets, topology segments, etc
 for a functional via structure.
 
 1.  Creates two ports, `sig-in` and `sig-out` for the explicit signal via connections.
-2.  Createa a `COMMON` pin for the ground connection of the cage vias.
+2.  Creates a `COMMON` pin for the ground connection of the cage vias.
 3.  Constructs a `pass-through` support for working with Pin Assignment.
 4.  Constructs the ground cage vias via the {@link make-ground-cage} method.
 5.  Constructs the signal via with a `geom` statement.

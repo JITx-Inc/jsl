@@ -585,7 +585,7 @@ public defn append (vp:VirtualLP, va:VirtualArtwork) -> False :
     add{_, va} $ artwork(vp)
 
 doc: \<DOC>
-Add multipple `VirtualArtwork` instances to the landpattern.
+Add multiple `VirtualArtwork` instances to the landpattern.
 <DOC>
 public defn append-all (vp:VirtualLP, vas:Seqable<VirtualArtwork>) -> False :
     add-all{_, vas} $ artwork(vp)

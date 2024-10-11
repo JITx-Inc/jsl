@@ -120,7 +120,7 @@ public defstruct SOT <: Dual-Package :
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
-  Thisi lead is generally on the bottom side of the package body.
+  This lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
   thermal-lead?:False|Shape|ThermalPad with:
@@ -268,7 +268,7 @@ public defstruct SOT-23-3 <: SOT :
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
-  Thisi lead is generally on the bottom side of the package body.
+  This lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
   thermal-lead?:False|Shape|ThermalPad with:

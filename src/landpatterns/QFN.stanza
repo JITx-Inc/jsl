@@ -180,7 +180,7 @@ public defn QFN-pkg-outline (
   val pkg-outline = bounds $ envelope(pkg-body, density-level = density-level(pkg))
   val pkg-outline* = fatten(line-width / 2.0, pkg-outline)
   LineRectangle(pkg-outline*, line-width = line-width)
-  ; TODO - Here is where I want to use `Difference` to substract out
+  ; TODO - Here is where I want to use `Difference` to subtract out
   ;  the combined soldermask on all sides.
 
 public defn QFN-outline (

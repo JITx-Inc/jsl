@@ -8,7 +8,7 @@ QFP style package with a thermal lead on the bottom that
 typically ties to ground. Many times the datasheet may
 suggest a particular grid pattern or you want need to
 specify your own pattern to meet your application's
-requirments.
+requirements.
 
 @snippet Grid Example
 

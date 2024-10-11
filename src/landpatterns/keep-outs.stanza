@@ -38,7 +38,7 @@ This can be for SI reasons, manufacturing reasons, etc.
 Sometimes we want to restrict the ground plane on an internal
 layer underneath these components.
 
-This type is used to contruct these keepouts on any layer
+This type is used to construct these keepouts on any layer
 of the board design.
 <DOC>
 public defstruct IntraPadKeepOut <: KeepoutCreator :
@@ -58,7 +58,7 @@ public defstruct IntraPadKeepOut <: KeepoutCreator :
   doc: \<DOC>
   Shrink the created keepout
   By default, this type will create a keepout that is
-  the same size as the interstitual region between the
+  the same size as the interstitial region between the
   pads of the SMT component.
   This parameter can be used to make this keepout region
   smaller (or larger if negative).

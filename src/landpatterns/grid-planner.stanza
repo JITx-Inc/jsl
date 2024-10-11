@@ -28,7 +28,7 @@ pattern grids even within BGAs.
 In JSL, the land pattern framework assumes that all land patterns have a
 grid. Some of those grids may be quite trivial - ie a single row or column
 with N pins. Others can be quite complex with Uneven sides, unpopulated grid
-locations, among other idiosyncracies.
+locations, among other idiosyncrasies.
 
 The Grid Planner type allows us to define typical grid patterns in a common
 reusable way so that we don't have to copy and paste the same implementations

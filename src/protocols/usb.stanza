@@ -32,8 +32,8 @@ the definitions of the transport bundles.
 The `usb-data` bundle defines the USB2.0 interface with port `data`. This same interface
 gets reused in `usb-superspeed` and `usb-c` later on.
 
-Similarly, `usb-superspeed` defines the pattern for the `lane` array of `superspeed-lane`
-bundles. This same pattern gets used in `usb-c`.
+Similarly, we use `lane` to define an array of `lane-pair`
+bundles (RX + TX differential pairs). This same pattern gets used in `usb-c`.
 
 This is not by accident. The reason we structure the bundles this way is:
 
@@ -83,20 +83,6 @@ public pcb-bundle usb-2-connector :
   port id
 
 doc: \<DOC>
-USB SuperSpeed Lane Bundle
-
-This is intended to be a `lane-pair` type - hence the use of
-`TX` and `RX`. See {@link lane-pair} for more information.
-@member TX transmit differential pair
-@member RX receive differential pair
-<DOC>
-public pcb-bundle superspeed-lane:
-  name = "USB Superspeed Transport Lane Bundle"
-  port TX : diff-pair
-  port RX : diff-pair
-
-
-doc: \<DOC>
 Transport Bundle for Superspeed USB
 
 This bundle supports USB 3/4 transport signals. These are the signals
@@ -108,12 +94,12 @@ ESD devices, Muxes, etc in the USB 3/4 applications.
 
 @param lane-cnt Number of superspeed lanes in this bundle. Default is 1.
 @member data Differential pair for USB2.0 data
-@member lane A configurable number of superspeed-lanes for data transfer
+@member lane A configurable number of lane-pairs for data transfer
 <DOC>
 public pcb-bundle usb-superspeed (lane-cnt:Int = 1) :
   name = "USB Superspeed Transport"
   port data : diff-pair
-  port lane : superspeed-lane[lane-cnt]
+  port lane : lane-pair[lane-cnt]
 
 
 doc: \<DOC>
@@ -140,7 +126,7 @@ Transport Bundle for USB3/4
 public pcb-bundle usb-c (lane-cnt:Int = 2):
   name = "USB Type-C Transport"
   port data : diff-pair
-  port lane : superspeed-lane[lane-cnt]
+  port lane : lane-pair[lane-cnt]
   port cc : pin[2]
   port sbu : pin[2]
 

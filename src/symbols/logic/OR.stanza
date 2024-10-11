@@ -96,7 +96,7 @@ defn compute-rear-arc-end-point (h:Double) -> Point :
 
   val rear-R = compute-rear-arc-radius(h)
   val rear-center = compute-rear-arc-center(h)
-  ; Use Pythogorean Algo to compute the X offset of
+  ; Use Pythagorean Algo to compute the X offset of
   ;   the rear arc endpoint.
   val c = rear-R
   val a = h / 2.0
