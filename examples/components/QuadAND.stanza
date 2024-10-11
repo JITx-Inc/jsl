@@ -4,11 +4,7 @@ defpackage jsl/examples/components/QuadAND:
   import jitx
   import jitx/commands
 
-  import jsl/bundles
-  import jsl/design/settings
-  import jsl/symbols
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 pcb-component QuadAND:

@@ -5,14 +5,7 @@ defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src :
   import jitx/commands
   import math
 
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/design/settings
-  import jsl/si/helpers
-  import jsl/pin-assignment
-  import jsl/bundles
-  import jsl/protocols/ethernet/MDI/e10GBASE-KR
+  import jsl
 
 doc: \<DOC>
 @brief e10GBASE-KR dummy component

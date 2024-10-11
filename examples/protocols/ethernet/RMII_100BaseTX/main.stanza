@@ -5,16 +5,7 @@ defpackage jsl/examples/protocols/ethernet/RMII_100BaseT:
   import jitx/commands
   import jitx/parts/query-api
 
-  import jsl/design/settings
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/si
-  import jsl/bundles
-  import jsl/pin-assignment
-  import jsl/protocols/ethernet/MDI/MDI-100Base-TX
-  import jsl/protocols/ethernet/MII/RMII
-
+  import jsl
   import jsl/examples/protocols/common/example-board
 
 

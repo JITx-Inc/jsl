@@ -4,8 +4,7 @@ defpackage jsl/examples/symbols/ferrite:
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
+  import jsl
   import jsl/examples/landpatterns/board
 
 

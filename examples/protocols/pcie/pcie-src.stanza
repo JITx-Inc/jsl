@@ -4,15 +4,7 @@ defpackage jsl/examples/protocols/pcie/pcie-src :
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/design/settings
-  import jsl/si/helpers
-  import jsl/pin-assignment
-  import jsl/bundles
-  import jsl/protocols/pcie
-
+  import jsl
 
 val BGA-pkg = BGA(
   num-leads = 64,
