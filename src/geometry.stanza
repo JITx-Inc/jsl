@@ -1,0 +1,6 @@
+; Forwarding Package for JSL Geometry
+defpackage jsl/geometry:
+  forward jsl/geometry/basics
+  forward jsl/geometry/box
+  forward jsl/geometry/LineRectangle
+  forward jsl/geometry/NotchedShapes
