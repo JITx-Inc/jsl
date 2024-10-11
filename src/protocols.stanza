@@ -8,5 +8,5 @@ defpackage jsl/protocols:
   forward jsl/protocols/pcie
   forward jsl/protocols/sata
   forward jsl/protocols/usb
-  
-  
+  forward jsl/protocols/memory/lpddr4
+
