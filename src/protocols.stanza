@@ -1,12 +1,9 @@
-#use-added-syntax(jitx)
+; Forwarding Package for the Protocol Constraint Definitions
 defpackage jsl/protocols:
-  import core
-  import jitx
-
   forward jsl/protocols/displayport
   forward jsl/protocols/ethernet
   forward jsl/protocols/pcie
   forward jsl/protocols/sata
   forward jsl/protocols/usb
-  forward jsl/protocols/memory/lpddr4
+  forward jsl/protocols/memory
 
