@@ -4,9 +4,7 @@ defpackage jsl/examples/symbols/crystal:
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
-  import jsl/design/settings
+  import jsl
   import jsl/examples/landpatterns/board
 
 

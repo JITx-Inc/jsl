@@ -19,11 +19,7 @@ defpackage jsl/examples/pin-assignment/swizzle:
   import jitx
   import jitx/commands
 
-  import jsl/pin-assignment
-  import jsl/layerstack
-  import jsl/symbols
-  import jsl/landpatterns
-  import jsl/si/helpers
+  import jsl
 
 pcb-bundle header (w:Int):
   port D : pin[w]

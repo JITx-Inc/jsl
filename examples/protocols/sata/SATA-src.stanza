@@ -5,14 +5,7 @@ defpackage jsl/examples/protocols/sata/SATA-src :
   import jitx/commands
   import math
 
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/design/settings
-  import jsl/si/helpers
-  import jsl/pin-assignment
-  import jsl/bundles
-  import jsl/protocols/sata
+  import jsl
 
 doc: \<DOC>
 @brief SATA dummy component
