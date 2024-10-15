@@ -888,10 +888,22 @@ public defn pad-interior-bounds (vp:VirtualLP, side:Side -- layer-spec:LayerSpec
     val row0 = get-bounds $ get-pads-by-row(vp, 0)
     val row1 = get-bounds $ get-pads-by-row(vp, 1)
 
-    Box(
-      Point(left(row1), up(row1))
-      Point(right(row0), down(row0))
-    )
+    try:
+      Box(
+        Point(left(row1), up(row1))
+        Point(right(row0), down(row0))
+      )
+    catch (e:NegativeBoxError):
+      println("Failed to determine the pad interior bounds.")
+      match(layer-spec):
+        (_:SolderMask):
+          println("This might mean that the soldermask openings of the two pads overlap resulting in a negative area box.")
+        (f:False):
+          println("This suggests that the copper pads for the component overlap.")
+        (f):
+          println("LayerSpec: %_" % [layer-spec])
+      throw $ ValueError("Invalid Pad Interior: %_" % [e])
+      ; throw(e)
 
   else if num-cols == 2 :
     val col0 = get-bounds $ get-pads-by-column(vp, 0)
