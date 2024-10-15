@@ -32,7 +32,7 @@ val DEF_BJT_PAD_REF_SIZE = 0.75
 
 public defstruct BJTSymbolParams <: SymbolParams :
   doc: \<DOC>
-  Length of the vertical line on the Emmiter and collector pins
+  Length of the vertical line on the emitter and collector pins
   The emitter and collector pins have a angled line that
   extends from the base. The `porch-width` then inserts a
   vertical line from the end of these angled lines to where the

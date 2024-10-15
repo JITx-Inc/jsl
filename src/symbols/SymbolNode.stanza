@@ -74,7 +74,7 @@ doc: \<DOC>
 Pin Statement Optional Parameters
 
 The `pin` statement in a `pcb-symbol` can be a standalone
-point or it can have some parameterizations. This
+point or it can have some parameterization. This
 struct defines the parameterization so that the user can
 optionally include this in pin definitions.
 <DOC>
@@ -487,7 +487,7 @@ public defn elements (sn:SymbolNode) -> Seq<SymbolElement> :
 ; Generators
 
 doc: \<DOC>
-Create a full pin statement with pararmeters
+Create a full pin statement with parameters
 
 This allows the creation of pins with parameterization
 for length, direction, and text size.
@@ -527,7 +527,7 @@ public defn make-vpin-symbol (vp:VirtualPin, scale:Double, pose:Pose = DEF_SYMNO
   inside pcb-symbol:
     match(params(vp)):
       (_:None):
-        ; This is the simplfied single-point pin representation
+        ; This is the simplified single-point pin representation
         ;   useful for two-pin components
         pin (pin-r) at pose * pt
         ; This isn't optimal - without the parameters - I don't know

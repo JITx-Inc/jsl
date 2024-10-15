@@ -50,7 +50,7 @@ Number of Total Lead Mounts on this Package
 This number should include all possible standard lead
 locations on this package.
 
-1.  The user should not substract the pins that are marked absent.
+1.  The user should not subtract the pins that are marked absent.
 2.  The user should not include the thermal lead if any.
 <DOC>
 public defmulti num-leads (x:Package) -> Int
@@ -91,7 +91,7 @@ public defmethod density-level (x:Package) -> DensityLevel :
 doc: \<DOC>
 Default Landpattern Generator Pose
 This value should be the default value used for the
-`pose` argument in all `make-landpattern` invokations.
+`pose` argument in all `make-landpattern` invocations.
 <DOC>
 public val DEF_LP_POSE = loc(0.0, 0.0)
 

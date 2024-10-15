@@ -132,11 +132,11 @@ public defn compute-label-positions (p:SymbolParams, anchor:Anchor, margin:Perce
 
 
 doc: \<DOC>
-Base type for Symbol Parameterizations
+Base type for Symbol Parameterization
 
 Each symbol can create a derived type that defines
 the unique parameters for that symbol. This type
-defines the base parameterizations that all symbols
+defines the base parameterization that all symbols
 must have.
 <DOC>
 public defstruct SymbolParams <: Equalable:

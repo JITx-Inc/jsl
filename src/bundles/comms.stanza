@@ -252,7 +252,7 @@ public pcb-bundle octal-spi-with-cs-dqs :
   port data : pin[8]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; UART - Univeral Asynchronous Receiver/Transmitter
+; UART - Universal Asynchronous Receiver/Transmitter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 doc: \<DOC>

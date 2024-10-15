@@ -104,7 +104,7 @@ public defstruct Axial-2pin <: Package :
   <DOC>
   lead:TH-Lead-WeldBead
   doc: \<DOC>
-  Mount Horz or Vertical
+  Mount Horizontal or Vertical
   <DOC>
   mounting:AxialMounting
   doc: \<DOC>

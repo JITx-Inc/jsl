@@ -51,8 +51,8 @@ public defmulti build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = 
 doc: \<DOC>
 Default Implementation for Build Component Outline
 
-This method uses the `build-shape` method to contruct the
-silkscreen content and then applies it to the VirtaulLP scene graph.
+This method uses the `build-shape` method to construct the
+silkscreen content and then applies it to the VirtualLP scene graph.
 <DOC>
 public defmethod build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = Top) :
   val sh = build-shape(s, vp, side = side)
@@ -497,7 +497,7 @@ the pin-1 indication in one of the corners of the outline.
 
 This function creates a shape that is a solid, isosceles right triangle (polygon)
 in the lower right quadrant of the XY plane. It is then offset
-from the X and Y axis (toward the lower right quandrant) by
+from the X and Y axis (toward the lower right quadrant) by
 half the line-width
 <DOC>
 public defn create-corner-marker-shape (line-width:Double, marker-height:Double) -> Shape :
