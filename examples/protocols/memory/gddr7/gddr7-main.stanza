@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/memory/gddr7-main:
+defpackage jsl/examples/protocols/memory/gddr7/gddr7-main:
   import core
   import collections
   import jitx
@@ -15,7 +15,7 @@ defpackage jsl/examples/protocols/memory/gddr7-main:
   import jsl/bundles
   import jsl/si
 
-  import jsl/examples/protocols/memory/gddr7-board
+  import jsl/examples/protocols/memory/gddr7/gddr7-board
 
 pcb-module gddr7-example :
   port vdd
@@ -24,8 +24,8 @@ pcb-module gddr7-example :
   net GND (gnd)
   net VDD (vdd)
 
-  inst dut1 : jsl/examples/protocols/memory/gddr7-src/mem-device
-  inst dut2 : jsl/examples/protocols/memory/gddr7-src/ic-device
+  inst dut1 : jsl/examples/protocols/memory/gddr7/gddr7-src/mem-device
+  inst dut2 : jsl/examples/protocols/memory/gddr7/gddr7-src/ic-device
 
   require ic-gddr7 : gddr7() from dut2
 

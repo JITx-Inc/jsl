@@ -1,5 +1,5 @@
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/memory/gddr7-board :
+defpackage jsl/examples/protocols/memory/gddr7/gddr7-board :
   import core
   import jitx
   import jitx/commands

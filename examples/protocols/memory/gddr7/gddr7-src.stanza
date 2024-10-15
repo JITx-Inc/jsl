@@ -8,7 +8,7 @@ This functions and definitions in this example support defining GDDR7
 interfaces on controllers and memories.
 <DOC>
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/memory/gddr7-src :
+defpackage jsl/examples/protocols/memory/gddr7/gddr7-src :
   import core
   import jitx
   import jitx/commands
@@ -470,7 +470,7 @@ public pcb-module mem-device :
   port io : gddr7()
   port pwr : power
 
-  public inst mem : jsl/examples/protocols/memory/gddr7-src/mem-component
+  public inst mem : jsl/examples/protocols/memory/gddr7/gddr7-src/mem-component
 
   for i in 0 to 4 do :
     for j in 0 to 10 do :
@@ -611,7 +611,7 @@ public pcb-component ic-component :
 public pcb-module ic-device :
   port pwr : power
 
-  public inst ic : jsl/examples/protocols/memory/gddr7-src/ic-component
+  public inst ic : jsl/examples/protocols/memory/gddr7/gddr7-src/ic-component
 
   pcb-bundle gen-io :
     port p
