@@ -382,7 +382,7 @@ public defn has-enough-interior-space? (s:InteriorEdgesOutline, vp:VirtualLP -- 
   try:
     compute-interior-pad-space(s, vp, side = side)
     true
-  catch (e:ValueError):
+  catch (e:NegativeBoxError):
     false
 
 public defstruct SingleLineOutline <: SilkscreenOutline :

@@ -8,19 +8,42 @@ defpackage jsl/geometry/box :
 
   import jsl/errors
 
+public defstruct NegativeBoxError <: Exception :
+  lo:Point
+  hi:Point
+
+defmethod print (o:OutputStream, e:NegativeBoxError):
+  print(o, "Negative Box: lo=%_ hi=%_" % [lo(e), hi(e)])
+
 ;============================================================
 ;========================== Box =============================
 ;============================================================
 
+doc: \<DOC>
+Axis-Aligned Box
+<DOC>
 public defstruct Box <: Equalable :
   lo: Point
   hi: Point
 with :
   constructor => #Box
+  printer => true
 
+doc: \<DOC>
+Constructor for Box Type
+
+The `lo` point must be less than or equal to the `hi`
+point for both X and Y axises.
+
+@param lo Point for the down/left position
+@param hi Point for the up/right position
+
+@throws NegativeBoxError If the `hi` point is
+not greater than or equal to the `lo` point.
+<DOC>
 public defn Box (lo:Point, hi:Point) :
   if x(hi) < x(lo) or y(hi) < y(lo) :
-    throw $ ValueError("Negative Box: lo=%_ hi=%_" % [lo, hi])
+    throw $ NegativeBoxError(lo, hi)
   #Box(lo, hi)
 
 public defn up (b:Box) : y(hi(b))
