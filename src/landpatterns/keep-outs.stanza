@@ -73,7 +73,7 @@ with:
 
 public defmethod build-keep-out (k:IntraPadKeepOut, vp:VirtualLP -- side:Side = Top) :
 
-  val b = pad-interior-bounds(vp, side)
+  val b = pad-interior-bounds(vp, side, layer-spec = false)
   val sh-by = match(shrink-by(k)):
     (s:Double): Point(s, s)
     (s:Dims): Point(x(s), y(s))
