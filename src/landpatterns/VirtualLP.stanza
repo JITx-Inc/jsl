@@ -868,13 +868,19 @@ which was to try and find lines and intersections of those lines.
 This seemed like it might be a bit more robust but at the cost
 of being more complex code wise.
 
+@param vp VirtualLP Scene Graph - we will search for pads here.
+@param side Board side to collect pads from.
+@param layer-spec Specify which layer is used to collect the shapes.
+By default, this function uses the `SolderMask(side)` layer.
+To select the copper on this side - use `false`. See {@link bounds}
+
 @throws ValueError if it encounter a number of columns that it can't
 handle. Specifically, this function can handle [1, 2, 4] columns of pads.
 This corresponds to 2-pin, dual-row, and quad land patterns, respectively.
 <DOC>
-public defn pad-interior-bounds (vp:VirtualLP, side:Side) -> Box:
+public defn pad-interior-bounds (vp:VirtualLP, side:Side -- layer-spec:LayerSpecifier|False = SolderMask(side)) -> Box:
 
-  val get-bounds = bounds{_, layer-spec = SolderMask(side)}
+  val get-bounds = bounds{_, layer-spec = layer-spec}
   val cols = identify-pad-columns(vp)
   val num-cols = length(cols)
   if num-cols == 1:
