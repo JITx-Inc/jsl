@@ -46,7 +46,7 @@ Helper for Creating QFN Lead Profiles
 
 For most QFN packages, the lead profile on the
 NS vs EW edges is the same. This function makes that
-assumption and constructions a {@link Quad-Lead-Profile}
+assumption and constructions a {@link type:Quad-Lead-Profile}
 that
 <DOC>
 public defn QFN-Lead-Profile (
@@ -72,7 +72,7 @@ public defstruct QFN <: Quad-Package :
   doc: \<DOC>
   Lead Profiles for all of the QFN's edges
 
-  By default the QFN uses the {@link QuadFlatNoLeads} protrusion
+  By default the QFN uses the {@link type:QuadFlatNoLeads} protrusion
   type by default.
   <DOC>
   lead-profile:Quad-Lead-Profile with:
@@ -104,7 +104,7 @@ public defstruct QFN <: Quad-Package :
   Lead Numbering Scheme for the Quad Package
 
   This provides a numbering scheme for the leads of the Quad
-  package. By default, it uses {@link Column-Major-Numbering}.
+  package. By default, it uses {@link type:Column-Major-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true

@@ -8,6 +8,11 @@ defpackage jsl/symbols/inductors:
   import jsl/symbols/framework
   import jsl/geometry/basics
 
+doc: \<DOC>
+@member NoBarCore
+@member SingleBarCore
+@member DoubleBarCore
+<DOC>
 public defenum InductorCoreStyle:
   NoBarCore
   SingleBarCore

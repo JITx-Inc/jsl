@@ -8,8 +8,6 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jsl/ensure
   import jsl/design/settings
   import jsl/design/Classable
-  import jsl/geometry/box
-  import jsl/geometry/LineRectangle
 
   import jsl/landpatterns/two-pin/SMT-table with:
     prefix => #SMT-
@@ -21,6 +19,7 @@ defpackage jsl/landpatterns/two-pin/SMT:
   import jsl/landpatterns/pad-planner
   import jsl/landpatterns/numbering
   import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/keep-outs
 
 
 
@@ -125,18 +124,28 @@ Create a Resistor SMT Chip Package of a given size
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return Package with all default configurations
 <DOC>
-public defn get-resistor-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Resistor :
+public defn get-resistor-pkg (
+  k:String
+  --
+  keep-out:KeepoutCreator|False = false,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> SMT-Resistor :
   val chip-def = chips[k]
-  SMT-Resistor(chip-def, density-level = density-level)
+  SMT-Resistor(chip-def, keep-out = keep-out, density-level = density-level)
 
 doc: \<DOC>
 Create a Capacitor SMT Chip Package of a given size
 @param k Standard Package size (eg "0805") or Metric Alias (eg, "2012m")
 @return Package with all default configurations
 <DOC>
-public defn get-capacitor-pkg (k:String, density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Capacitor :
+public defn get-capacitor-pkg (
+  k:String
+  --
+  polarized?:True|False = false,
+  keep-out:KeepoutCreator|False = false,
+  density-level:DensityLevel = DENSITY-LEVEL) -> SMT-Capacitor :
   val chip-def = chips[k]
-  SMT-Capacitor(chip-def, density-level = density-level)
+  SMT-Capacitor(chip-def, polarized? = polarized?, keep-out = keep-out, density-level = density-level)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -175,6 +184,13 @@ public defstruct SMT-Chip <: Package :
   <DOC>
   height:Toleranced with:
     ensure => ensure-positive!
+
+  doc: \<DOC>
+  Construct a Keepout underneath the component.
+  Default is `false` indicating no keepout is created.
+  <DOC>
+  keep-out:KeepoutCreator|False with:
+    default => false
   doc: \<DOC>
   Protrusion Type
   <DOC>
@@ -235,13 +251,14 @@ public defn SMT-Chip (
   side-fillet:Double|False = false,
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
+  keep-out:KeepoutCreator|False = false
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-numbering(polarized?),
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Chip(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering, density-level)
+  #SMT-Chip(chip-def, polarized?, side-fillet, height, keep-out, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod build-pads (
   pkg:SMT-Chip,
@@ -289,7 +306,6 @@ public defmethod build-pads (
 
   append-all(vp, gen-pad-info())
 
-
 public defmethod build-silkscreen (
   pkg:SMT-Chip,
   vp:VirtualLP
@@ -313,6 +329,14 @@ public defmethod build-silkscreen (
 
   add-reference-designator(vp)
 
+public defmethod build-keep-out (
+  pkg:SMT-Chip,
+  vp:VirtualLP
+  ):
+  match(keep-out(pkg)):
+    (_:False): false
+    (x:KeepoutCreator):
+      build-keep-out(x, vp)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   Resistor
@@ -320,18 +344,25 @@ public defmethod build-silkscreen (
 
 
 public defstruct SMT-Resistor <: SMT-Chip :
-  def:SMT-Chip-Def with: (as-method => true)
-  height:Toleranced with: (
+  def:SMT-Chip-Def with:
+    as-method => true
+  height:Toleranced with:
     as-method => true
     ensure => ensure-positive!
-    )
-  protrusion:LeadProtrusion with: ( as-method => true )
-  pad-planner:PadPlanner with: (as-method => true)
-  lead-numbering:Numbering with: (as-method => true)
+  keep-out:KeepoutCreator|False with:
+    as-method => true
+    default => false
+  protrusion:LeadProtrusion with:
+    as-method => true
+  pad-planner:PadPlanner with:
+    as-method => true
+  lead-numbering:Numbering with:
+    as-method => true
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   constructor => #SMT-Resistor
 
@@ -343,13 +374,14 @@ public defn SMT-Resistor (
   --
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
+  keep-out:KeepoutCreator|False = false,
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = STD-SMT-CHIP-NUMBERING,
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Resistor(chip-def, height, protrusion, pad-planner, lead-numbering, density-level)
+  #SMT-Resistor(chip-def, height, keep-out, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod name (pkg:SMT-Resistor) -> String :
   defn to-deci (v:Double) -> String:
@@ -367,20 +399,29 @@ public defmethod name (pkg:SMT-Resistor) -> String :
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 public defstruct SMT-Capacitor <: SMT-Chip :
-  def:SMT-Chip-Def with: (as-method => true)
-  polarized?:True|False with: ( as-method => true)
-  side-fillet:Double|False with: ( as-method => true)
-  height:Toleranced with: (
+  def:SMT-Chip-Def with:
+    as-method => true
+  polarized?:True|False with:
+    as-method => true
+  side-fillet:Double|False with:
+    as-method => true
+  height:Toleranced with:
     as-method => true
     ensure => ensure-positive!
-    )
-  protrusion:LeadProtrusion with: ( as-method => true )
-  pad-planner:PadPlanner with: (as-method => true)
-  lead-numbering:Numbering with: (as-method => true)
+  keep-out:KeepoutCreator|False with:
+    as-method => true
+    default => false
+  protrusion:LeadProtrusion with:
+    as-method => true
+  pad-planner:PadPlanner with:
+    as-method => true
+  lead-numbering:Numbering with:
+    as-method => true
   doc: \<DOC>
   Density Level for the Generated Package
   <DOC>
-  density-level:DensityLevel with: (as-method => true)
+  density-level:DensityLevel with:
+    as-method => true
 with:
   constructor => #SMT-Capacitor
 
@@ -391,13 +432,14 @@ public defn SMT-Capacitor (
   side-fillet:Double|False = 0.04,
   ; TODO - this is still broken.
   height:Toleranced = 0.4 +/- 0.1,
+  keep-out:KeepoutCreator|False = false,
   ; TODO - refactor for `LeadProtrusion` type
   protrusion:LeadProtrusion = select-protrusion(chip-def),
   pad-planner:PadPlanner = RectanglePadPlanner,
   lead-numbering:Numbering = select-numbering(polarized?),
   density-level:DensityLevel = DENSITY-LEVEL
   ):
-  #SMT-Capacitor(chip-def, polarized?, side-fillet, height, protrusion, pad-planner, lead-numbering, density-level)
+  #SMT-Capacitor(chip-def, polarized?, side-fillet, height, keep-out, protrusion, pad-planner, lead-numbering, density-level)
 
 public defmethod name (pkg:SMT-Capacitor) -> String :
   defn to-deci (v:Double) -> String:

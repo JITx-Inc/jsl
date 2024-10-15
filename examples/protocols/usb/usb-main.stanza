@@ -4,14 +4,7 @@ defpackage jsl/examples/usb/usb-main:
   import jitx
   import jitx/commands
 
-  import jsl/bundles
-  import jsl/protocols/usb
-  import jsl/si/constraints
-  import jsl/si/pairs
-  import jsl/si/helpers
-  import jsl/si/couplers
-  import jsl/symbols
-  import jsl/landpatterns
+  import jsl
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components

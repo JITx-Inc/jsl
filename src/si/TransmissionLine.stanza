@@ -13,7 +13,10 @@ defpackage jsl/si/TransmissionLine:
   import core
   import jitx
 
-
+doc: \<DOC>
+@member Single-Ended
+@member Differential
+<DOC>
 public defenum TransmissionStructure:
   Single-Ended
   Differential

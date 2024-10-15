@@ -106,8 +106,6 @@ That virtual environment can then be written out to a
 
 @param pkg Package definition to build
 @param vp Virtual Landpattern Container
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti build-pads (
   pkg:Package,
@@ -125,8 +123,6 @@ with that component's landpattern.
 @param pkg IC Package for which we are creating a landpattern
 @param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-pads (
   pkg:Package
@@ -158,8 +154,6 @@ That virtual environment can then be written out to a
 
 @param pkg Package definition to build
 @param vp Virtual Landpattern Container
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti build-silkscreen (
   pkg:Package,
@@ -183,10 +177,8 @@ definition to create the silkscreen outline, pin-1 indicator, or
 any other silkscreen artwork.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-silkscreen (
   pkg:Package
@@ -219,8 +211,6 @@ That virtual environment can then be written out to a
 
 @param pkg Package definition to build
 @param vp Virtual Landpattern Container
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti build-courtyard (
   pkg:Package,
@@ -251,10 +241,8 @@ This generator is typically called within a `pcb-landpattern`
 definition to create the courtyard outline for this component.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-courtyard (
   pkg:Package
@@ -284,8 +272,6 @@ That virtual environment can then be written out to a
 
 @param pkg Package definition to build
 @param vp Virtual Landpattern Container
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti build-keep-out (
   pkg:Package,
@@ -308,10 +294,8 @@ This generator is typically called within a `pcb-landpattern`
 definition to create the keep-out regions for this component.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-keep-out (
   pkg:Package
@@ -371,7 +355,7 @@ This generator is typically called within a `pcb-landpattern`
 definition to create the `Cutout()` layer regions for this component.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
 <DOC>
 public defmulti make-cut-out (
@@ -405,8 +389,6 @@ That virtual environment can then be written out to a
 
 @param pkg Package definition to build
 @param vp Virtual Landpattern Container
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti build-conformal-mask (
   pkg:Package,
@@ -430,10 +412,8 @@ definition to create the conformal coat mask regions. This is
 typically useful for connectors or thermal interfaces.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmulti make-conformal-mask (
   pkg:Package
@@ -462,13 +442,11 @@ This function applies all of the `build-*` functions
 associated with the `Package` type to a virtual landpattern container.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param virt Virtual Landpattern to which content will be written
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+@param vp Virtual Landpattern Container to which content will be written
 <DOC>
 public defmulti build-all (
   pkg:Package,
-  virt:VirtualLP
+  vp:VirtualLP
   ) -> False
 
 doc: \<DOC>
@@ -514,10 +492,8 @@ This function applies all of the `make-*` generators
 associated with the `Package` type.
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 
 <DOC>
 public defmulti make-all (
@@ -530,10 +506,8 @@ doc: \<DOC>
 Default `make-all` generator implementation
 
 @param pkg IC Package for which we are creating silkscreen artwork
-@param pkg pose Offset to apply to all of the geometry generated
+@param pose Offset to apply to all of the geometry generated
 by this generator function. By default, no offset is applied.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
 <DOC>
 public defmethod make-all (
   pkg:Package
@@ -556,8 +530,7 @@ and return it.
 @param pkg Package to create a landpattern for.
 @param pose Geometry gets created with an offset from the origin
 by `pose`.
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+@param description Description of the landpattern.
 
 Example:
 ```
@@ -591,8 +564,7 @@ In more complex packages, you may need to define your own
 @param pkg Package to create a landpattern for.
 @param pose Offset of the geometry in the landpattern. Default
 is no offset, ie `loc(0.0, 0.0)`
-@param density-level Density Level for this LandPattern definition.
-See IPC7351 regarding Maximum, Nominal, and Least Material Conditions.
+@param description Description of the landpattern.
 <DOC>
 public defmethod create-landpattern (
   pkg:Package
@@ -605,7 +577,3 @@ public defmethod create-landpattern (
     description = description
     make-all(pkg, pose = pose)
   lp
-
-
-
-

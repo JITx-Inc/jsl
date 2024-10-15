@@ -146,7 +146,7 @@ public defn check-column-pitch (x:PadGrid, exp-Pitch:Toleranced) -> True|False :
 
 doc: \<DOC>
 Retrieve the ordered column of Pads by column index
-@param x (Self)
+@param pg (Self)
 @param column Which column of pads to extract.
 @return The pads in this column are sorted in ascending ordered by
 the Y coordinate of the pad
@@ -160,7 +160,7 @@ public defn get-column (pg:PadGrid, column:Int) -> Vector<LandPatternPad> :
 
 doc: \<DOC>
 Retrieve the ordered row of Pads by row index
-@param x (Self)
+@param pg (Self)
 @param row Which row of pads to extract.
 @return The pads in this row are sorted in ascending ordered by
 the X coordinate of the pad

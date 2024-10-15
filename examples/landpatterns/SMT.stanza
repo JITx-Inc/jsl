@@ -5,9 +5,7 @@ defpackage jsl/examples/landpatterns/SMT:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
@@ -46,7 +44,7 @@ pcb-component test-SMT (case:String):
     [p[2] | p[2] | Down | 0]
 
   assign-symbol(test-sym)
-  val pkg = get-resistor-pkg(case, DensityLevelC)
+  val pkg = get-resistor-pkg(case, density-level = DensityLevelC)
 
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)

@@ -238,7 +238,7 @@ p[1] -> O--A--O--B--O -> p[2]
 ```
 
 Note that `p[2]` of C is connected to `named-shunt-port`. To
-flip the component see {@link Invert}
+flip the component see {@link type:Invert}
 
 <DOC>
 public defstruct ShuntTo <: ANT:
@@ -374,8 +374,7 @@ This function is recursive.
 
 @param a Circuit network to elaborate
 @param taps Accumulator for the external ports of the network.
-@param Tuple of `[p1, p2]` that are the ports of the endpoints of
-the network.
+@return Tuple of `[p1, p2]` that are the ports of the endpoints of the network.
 <DOC>
 public defn elaborate (a:ANT, taps:Vector<[Symbol,JITXObject]>) -> [JITXObject, JITXObject] :
   inside pcb-module :

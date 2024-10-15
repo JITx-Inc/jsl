@@ -38,6 +38,13 @@ doc: \<DOC>
 @brief PCI-e Generation enums
 This is a fixed list of possible generation definitions for PCIe
 Can be extended if needed to include PCIE-V3.1, for example
+@member PCIE-V1
+@member PCIE-V2
+@member PCIE-V3
+@member PCIE-V4
+@member PCIE-V5
+@member PCIE-V6
+@member PCIE-V7
 <DOC>
 
 public pcb-enum jsl/protocols/pcie/PCIeVersion:
@@ -52,6 +59,12 @@ public pcb-enum jsl/protocols/pcie/PCIeVersion:
 doc: \<DOC>
 @brief PCI-e Width enums
 This is a fixed list of possible lane widths for PCIe
+@member PCIe-x1
+@member PCIe-x2
+@member PCIe-x4
+@member PCIe-x8
+@member PCIe-x16
+@member PCIe-x32
 <DOC>
 public pcb-enum jsl/protocols/pcie/PCIeWidth:
   PCIe-x1
@@ -69,7 +82,9 @@ public defn PCIe-enum-to-int (en:PCIeWidth) -> Int:
     PCIe-x8  :  8
     PCIe-x16 : 16
     PCIe-x32 : 32
-
+doc: \<DOC>
+@member PCIe-PRSNT#
+<DOC>
 public pcb-enum jsl/bundles/pcie/PCIePins :
   PCIe-PRSNT#
 
@@ -120,7 +135,7 @@ pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   port CLKREQ#         ; clock request
   for p in pins do :
     switch(p) :
-      PCIe-PRSNT# : make-pin(`PRSNT#) ; hot plug detection
+      PCIe-PRSNT# : make-port(`PRSNT#) ; hot plug detection
 
 doc: \<DOC>
 @brief PCI-e Control bundle

@@ -13,6 +13,10 @@ defpackage jsl/symbols/resistors:
   import jsl/design/Classable
   import jsl/symbols/framework
 
+doc: \<DOC>
+@member TriangleWaveStyle
+@member OpenRectangle
+<DOC>
 public defenum ResistorStyle:
   TriangleWaveStyle
   OpenRectangle

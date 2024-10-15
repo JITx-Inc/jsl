@@ -5,20 +5,8 @@ defpackage jsl/examples/smbols/box-symbol:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/audio
-  import jsl/symbols/box-symbol
-  import jsl/design/settings
-  import jsl/landpatterns/two-pin/SMT
+  import jsl
   import jsl/examples/landpatterns/board
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-island
-  import jsl/landpatterns/SOIC
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/pad-planner
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/decorators
-  import jsl/bundles/comms
-  import jsl/bundles/general
 
 pcb-component basic:
   pin-properties:

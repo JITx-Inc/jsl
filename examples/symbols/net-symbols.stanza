@@ -4,11 +4,7 @@ defpackage jsl/examples/symbols/net-symbols:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-  import jsl/symbols
-
-  import jsl/symbols/net-symbols
+  import jsl
   import jsl/examples/landpatterns/board
 
 

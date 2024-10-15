@@ -4,6 +4,11 @@ defpackage jsl/protocols/ethernet/utils:
   import jitx
   import jitx/commands
 
+doc: \<DOC>
+@member MII-COL
+@member MII-CS
+@member MII-TXER
+<DOC>
 public pcb-enum jsl/protocols/ethernet/utils/MIIPins :
   MII-COL ; Collision
   MII-CS ; Carrier Sense
@@ -16,6 +21,6 @@ public defn inject-optional-mii-pins (pins:Collection<MIIPins>) :
   inside pcb-bundle:
     for p in pins do :
       switch(p) :
-        MII-COL: make-pin(`col)
-        MII-CS: make-pin(`cs)
-        MII-TXER: make-pin(`tx-er)
+        MII-COL: make-port(`col)
+        MII-CS: make-port(`cs)
+        MII-TXER: make-port(`tx-er)

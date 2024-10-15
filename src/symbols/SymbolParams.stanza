@@ -146,7 +146,7 @@ public defstruct SymbolParams <: Equalable:
   default label parameters will be queried from
   {@link get-default-symbol-label-params}. Alternatively, the
   user may override this default behavior by providing a
-  {@link SymbolLabelParams} instance.
+  {@link type:SymbolLabelParams} instance.
   <DOC>
   label-params?:Maybe<SymbolLabelParams> with:
     default => None()

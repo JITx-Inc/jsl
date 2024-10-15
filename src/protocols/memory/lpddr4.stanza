@@ -29,6 +29,9 @@ defpackage jsl/protocols/memory/lpddr4 :
 doc: \<DOC>
 @brief LPDDR4 Width enums
 This is a fixed list of possible channel widths for LPDDR4
+@member LPDDR4-x16
+@member LPDDR4-x32
+@member LPDDR4-x64
 <DOC>
 public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Width:
   LPDDR4-x16
@@ -50,6 +53,9 @@ public defn num-x16-lanes (width:LPDDR4-Width) -> Int :
 doc: \<DOC>
 @brief LPDDR4 Rank enums
 This is a fixed list of possible ranks for LPDDR4
+@member LPDDR4-Rank1
+@member LPDDR4-Rank2
+@member LPDDR4-Rank3
 <DOC>
 public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Rank:
   LPDDR4-Rank1
@@ -185,12 +191,10 @@ public defn LPDDR4-Constraint (width:LPDDR4-Width, rank:LPDDR4-Rank,
 doc: \<DOC>
 Add constraints to a LPDDR4 link
 
-Width and rank of 'src' and 'dst' must match width and rank of 'cst'
-@param cst Constraint Object
-@param width Channel Bit Width
-@param rank Channel Rank
-@param src Source End Point - must be of `lpddr4` type with width 'width' and rank 'rank'
-@param dst Destination End Point - must be of `lpddr4` type  with width 'width' and rank 'rank'
+Channel bit width and channel rank of 'src' and 'dst' must match width and rank of 'cst'
+@param cst Constraint Object.
+@param src Source End Point - must be of `lpddr4` type and meet the constraints
+@param dst Destination End Point - must be of `lpddr4` type and meet the constraints
 <DOC>
 public defmethod constrain (cst:LPDDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   val n16 = num-x16-lanes(width(cst))

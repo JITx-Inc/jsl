@@ -4,22 +4,8 @@ defpackage jsl/examples/pin-assignment/circuit-pool:
   import jitx
   import jitx/commands
 
-  import jsl/errors
-  import jsl/bundles
-
-  import jsl/design/settings
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/si/pairs
-  import jsl/pin-assignment
-
-  import jsl/protocols/ethernet/MDI/MDI-1000Base-T
-  import jsl/protocols/ethernet/MII/RGMII
-
+  import jsl
   import jsl/examples/landpatterns/board
-
-
 
 pcb-component esd-protector (num-chs:Int = 4):
   if (num-chs % 2) != 0 :

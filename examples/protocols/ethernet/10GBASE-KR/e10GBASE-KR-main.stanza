@@ -6,18 +6,14 @@ defpackage jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-main:
   import jitx/commands
 
 
-  import jsl/design/settings
-
-  import jsl/protocols/ethernet/MDI/e10GBASE-KR
-  import jsl/si/helpers
-
+  import jsl
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
   import jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src
 
 
 pcb-module e10GBASE-KR-example :
-  
+
   inst dut1  : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/module(invert = false)
   inst dut2  : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/module(invert = true)
   inst conn1 : jsl/examples/protocols/ethernet/10GBASE-KR/e10GBASE-KR-src/edge-connector

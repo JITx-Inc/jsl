@@ -196,7 +196,7 @@ public defn build-mom-SP-ST-glyphs (
 
 doc: \<DOC>
 Create a Momentary SPST Switch Symbol Generator
-See {@link SPSTSymbol} for more info.
+See {@link type:SPSTSymbol} for more info.
 <DOC>
 public defn MomentarySPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Ref, Ref] = DEF_SPST_PIN_REFS, params:SwitchSymbolParams = ?) -> SPSTSymbol :
   SPSTSymbol(
@@ -233,7 +233,7 @@ public defn build-toggle-SP-ST-glyphs (
 
 doc: \<DOC>
 Create a Toggle SPST Switch Symbol Generator
-See {@link SPSTSymbol} for more info.
+See {@link type:SPSTSymbol} for more info.
 <DOC>
 public defn ToggleSPSTSymbol ( -- pitch:Double = DEF_SPST_PITCH, pin-refs:[Ref, Ref] = DEF_SPST_PIN_REFS, params:SwitchSymbolParams = ?) -> SPSTSymbol :
   SPSTSymbol(

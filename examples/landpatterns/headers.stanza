@@ -4,9 +4,7 @@ defpackage jsl/examples/landpatterns/headers:
   import jitx
   import jitx/commands
 
-  import jsl/landpatterns
-  import jsl/symbols
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 pcb-bundle header (w:Int):

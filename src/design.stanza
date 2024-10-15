@@ -1,0 +1,7 @@
+; Forwarding Package for the design sub-package
+defpackage jsl/design:
+  forward jsl/design/Classable
+  forward jsl/design/E-Series
+  forward jsl/design/introspection
+  forward jsl/design/settings
+  forward jsl/design/solvers

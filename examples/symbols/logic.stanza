@@ -5,10 +5,7 @@ defpackage jsl/examples/symbols/logic:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-  import jsl/symbols
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 val SOIC-pkg = SOIC-N(

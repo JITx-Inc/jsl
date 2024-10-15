@@ -39,7 +39,7 @@ This tool inserts a reference label into the current landpattern context.
 @param pose Pose in the current landpattern frame of reference. By default,
   the reference label is placed at the origin.
 @param anchor alignment of the text with respect to the pose. By default,
-  the reference label is Center {@link C} aligned.
+  the reference label is Center {@link type:C} aligned.
 <DOC>
 public defn ref-label (pose:Pose = loc(0.0, 0.0) -- anchor:Anchor = C) :
   inside pcb-landpattern:
@@ -50,7 +50,7 @@ doc: \<DOC>
 Create a plus symbol shape
 @param line-length Length of the horizontal or vertical segments
 @param line-width
-@param center Center coordinate for the plus symbol
+@param pose Pose for the plus symbol
   Default is 1.0mm
 <DOC>
 public defn PlusSymbol (

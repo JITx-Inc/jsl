@@ -30,7 +30,7 @@ public defstruct Molded-2pin <: Package :
   lead-span:Toleranced
   doc: \<DOC>
   Lead Specification for this land pattern.
-  Typically this will use {@link Molded-2pin-Lead}.
+  Typically this will use {@link type:Molded-2pin-Lead}.
   <DOC>
   lead:SMT-Lead,
   doc: \<DOC>
@@ -47,10 +47,19 @@ public defstruct Molded-2pin <: Package :
   that the `anode` pin gets a pin-1 marker.
   <DOC>
   pin-1-id?:Maybe<Int|Ref>
+
+  doc: \<DOC>
+  Optional Keepout for the Molded Component Body
+  Typically, the user might use `IntraPadKeepOut` here.
+  Default is `None()`
+  <DOC>
+  keep-out:Maybe<KeepoutCreator> with:
+    default => None()
+
   doc: \<DOC>
   Package Body
-  Typically a rectangular {@link PackageBody} but other
-  shapes like {@link CylindricalBody} work as well.
+  Typically a rectangular {@link type:PackageBody} but other
+  shapes like {@link type:CylindricalBody} work as well.
   <DOC>
   package-body:PackageBody with:
     as-method => true
@@ -86,12 +95,13 @@ public defn Molded-2pin (
   package-body:PackageBody,
   polarized?:True|False = false,
   pin-1-id?:Maybe<Ref|Int> = default-molded-pin-1-id(polarized?),
+  keep-out:Maybe<KeepoutCreator> = None(),
   pad-planner:PadPlanner = RectanglePadPlanner
   lead-numbering:Numbering = select-numbering(polarized?)
   density-level:DensityLevel = DENSITY-LEVEL
   ) -> Molded-2pin :
   #Molded-2pin(
-    lead-span, lead, polarized?, pin-1-id?,
+    lead-span, lead, polarized?, pin-1-id?, keep-out,
     package-body, pad-planner, lead-numbering
     density-level
   )
@@ -160,3 +170,12 @@ public defmethod build-silkscreen (
       add-pin-1-dot(vp, marker-pt)
 
   add-reference-designator(vp)
+
+public defmethod build-keep-out (
+  pkg:Molded-2pin,
+  vp:VirtualLP
+  ):
+  match(keep-out(pkg)):
+    (_:None): false
+    (given:One<KeepoutCreator>):
+      build-keep-out(value(given), vp)

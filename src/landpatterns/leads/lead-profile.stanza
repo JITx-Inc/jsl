@@ -54,7 +54,7 @@ public defn Lead-Profile (
 doc: \<DOC>
 Compute the Lead-Profile parameters
 
-This is a header function for creating the {@link Lead-Profile-Params}
+This is a header function for creating the {@link type:Lead-Profile-Params}
 object from a `Lead-Profile`. These definitions are useful
 for defining the actual pad locations for a footprint from the physical
 dimensions of a package.

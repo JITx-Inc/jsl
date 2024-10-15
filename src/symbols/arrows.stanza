@@ -16,6 +16,8 @@ defpackage jsl/symbols/arrows:
 
 doc: \<DOC>
 Select the style of arrow to construct
+@member ClosedArrow
+@member OpenArrow
 <DOC>
 public defenum ArrowStyle :
   ClosedArrow

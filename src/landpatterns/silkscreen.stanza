@@ -11,7 +11,10 @@ defpackage jsl/landpatterns/silkscreen:
   import jsl/errors
   import jsl/geometry/box
   import jsl/geometry/LineRectangle
-  import jsl/landpatterns/framework
+  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/helpers
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/package-body
 
 public defn default-silk-width () -> Double :
   clearance(current-rules(), MinSilkscreenWidth)
@@ -48,8 +51,8 @@ public defmulti build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = 
 doc: \<DOC>
 Default Implementation for Build Component Outline
 
-This method uses the `build-shape` method to contruct the
-silkscreen content and then applies it to the VirtaulLP scene graph.
+This method uses the `build-shape` method to construct the
+silkscreen content and then applies it to the VirtualLP scene graph.
 <DOC>
 public defmethod build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = Top) :
   val sh = build-shape(s, vp, side = side)
@@ -211,66 +214,6 @@ with:
   printer => true
   keyword-constructor => true
 
-doc: \<DOC>
-Construct the interior bounds for the pads of a component
-
-This function only makes sense for things like QFPs, SOICs,
-SSOPs, or 2-pin components.
-
-This function assumes that you have used the function
-{@link build-vpad-classes} when constructing the rows and
-columns of pads for your footprint.
-
-This function attempts to extract out the pads by row
-or column and then use the bounding box of the soldermask
-to determine the interior bounds between the pads.
-
-Note - there is another way to do this that I decided against
-which was to try and find lines and intersections of those lines.
-This seemed like it might be a bit more robust but at the cost
-of being more complex code wise.
-
-@throws ValueError if it encounter a number of columns that it can't
-handle. Specifically, this function can handle [1, 2, 4] columns of pads.
-This corresponds to 2-pin, dual-row, and quad land patterns, respectively.
-<DOC>
-defn pad-interior-bounds (vp:VirtualLP, side:Side) -> Box:
-
-  val get-bounds = bounds{_, layer-spec = SolderMask(side)}
-  val cols = identify-pad-columns(vp)
-  val num-cols = length(cols)
-  if num-cols == 1:
-    ; This is a 2-pin component - ie a SMT, Radial or Axial
-    val row0 = get-bounds $ get-pads-by-row(vp, 0)
-    val row1 = get-bounds $ get-pads-by-row(vp, 1)
-
-    Box(
-      Point(left(row1), up(row1))
-      Point(right(row0), down(row0))
-    )
-
-  else if num-cols == 2 :
-    val col0 = get-bounds $ get-pads-by-column(vp, 0)
-    val col1 = get-bounds $ get-pads-by-column(vp, 1)
-
-    Box(
-      Point(right(col0), down(col0))
-      Point(left(col1), up(col1))
-      )
-  else if num-cols == 4 :
-
-    val col-W = get-bounds $ get-pads-by-column(vp, 0)
-    val col-S = get-bounds $ get-pads-by-column(vp, 1)
-    val col-E = get-bounds $ get-pads-by-column(vp, 2)
-    val col-N = get-bounds $ get-pads-by-column(vp, 3)
-
-    Box(
-      Point(right(col-W), up(col-S)),
-      Point(left(col-E), down(col-N))
-    )
-  else:
-    throw $ ValueError("Unhandled Number of Columns '%_' - Expected 1, 2, or 4" % [num-cols])
-
 
 public defmethod build-shape (s:InterstitialOutline, vp:VirtualLP -- side:Side = Top) -> Shape :
   ; Package bounding box
@@ -293,6 +236,8 @@ public defmethod build-shape (s:InterstitialOutline, vp:VirtualLP -- side:Side =
 doc: \<DOC>
 Selector for whether the edge lines are
 drawn on the Top / Bottom sides (N/S) or the Left/Right sides (E/W)
+@member NS-Edge
+@member EW-Edge
 <DOC>
 public defenum SilkscreenEdge :
   NS-Edge
@@ -552,7 +497,7 @@ the pin-1 indication in one of the corners of the outline.
 
 This function creates a shape that is a solid, isosceles right triangle (polygon)
 in the lower right quadrant of the XY plane. It is then offset
-from the X and Y axis (toward the lower right quandrant) by
+from the X and Y axis (toward the lower right quadrant) by
 half the line-width
 <DOC>
 public defn create-corner-marker-shape (line-width:Double, marker-height:Double) -> Shape :
@@ -766,7 +711,7 @@ public defn add-pin-1-dot (
 doc: \<DOC>
 Construct the projected shape of the package body on the board.
 
-Legacy - Use {@link PackageOutline}
+Legacy - Use {@link type:PackageOutline}
 
 @param vp Virtual LP scene graph node - outline will be created here.
 @param pkg-body 3D body model for the component
@@ -792,7 +737,7 @@ public defn construct-pkg-outline (
 doc: \<DOC>
 Construct a silkscreen outline of a component based on the Package Body
 
-To be replaced by the {@link PackageOutline} type
+To be replaced by the {@link type:PackageOutline} type
 
 @param vp Virtual LP scene graph node - outline will be created here.
 @param pkg-body 3D body model for the component
@@ -821,7 +766,7 @@ public defn create-silkscreen-outline (
 doc: \<DOC>
 Construct the projected shape of the Package Body and Soldermask Pad Openings
 
-Legacy - Use {@link OverallOutline}
+Legacy - Use {@link type:OverallOutline}
 
 The user must create all of the pads associated with this landpattern before
 invoking this function.
@@ -858,7 +803,7 @@ public defn construct-overall-outline (
 doc: \<DOC>
 Construct a silkscreen outline based on the Package Body and Soldermask Pad Openings
 
-Legacy - To be replaced with {@link OverallOutline}
+Legacy - To be replaced with {@link type:OverallOutline}
 
 The user must create all of the pads associated with this landpattern before
 invoking this function.
@@ -981,7 +926,7 @@ public defn construct-pkg-extrema-lines (
 doc: \<DOC>
 Construct and instantiate the package extrema lines in the scene graph
 
-Legacy - To be replaced by {@link EdgesOutline}
+Legacy - To be replaced by {@link type:EdgesOutline}
 
 @param vp Virtual Land Pattern Scene Graph node
 @param pkg-body Package dimensional body for sizing the lines.
