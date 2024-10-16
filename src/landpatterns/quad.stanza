@@ -151,14 +151,14 @@ public defn Quad-Lead-Profile (
 doc: \<DOC>
 Select Numbering Scheme for QFN lead configuration
 
-For standard square QFN packages, the {@link Column-Major-Numbering}
+For standard square QFN packages, the {@link type:Column-Major-Numbering}
 is sufficient to enumerate the pad ids for a QFN. This gets selected if
 `x-count` and `y-count` are both `None`.
 
 For non-standard QFNs that have uneven numbers of leads of
 each side we must use a different numbering scheme. This function
-will use the configuration in the {@link Quad-Lead-Profile} to
-generate an appropriate {@link Uneven-Column-Major-Numbering} for
+will use the configuration in the {@link type:Quad-Lead-Profile} to
+generate an appropriate {@link type:Uneven-Column-Major-Numbering} for
 the asymmetric pin edges of a non-standard QFN.
 
 If `x-count` is an `Int` and `y-count` is None - then we will attempt to use the
@@ -237,7 +237,7 @@ public defstruct Quad-Package <: Package :
   Lead Numbering Scheme for the Quad Package
 
   This provides a numbering scheme for the leads of the Quad
-  package. By default, it uses {@link Column-Major-Numbering}.
+  package. By default, it uses {@link type:Column-Major-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true

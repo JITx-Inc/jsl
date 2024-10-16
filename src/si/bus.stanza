@@ -20,7 +20,7 @@ a short trace.
 @snippet
 ```stanza
 require p1 from mcu
-inst r1 : my-resitor
+inst r1 : my-resistor
 port p2
 topo-bus(ShortTrace(p1 => r1) => p2)
 ```

@@ -57,7 +57,7 @@ public defn in-range? (p:PadIsland, row:Int, column:Int) -> True|False :
   ;       return(inclusive?(r))
   ;     return(true)
   ;in-range?(row, rows(p)) and in-range?(column, columns(p))
-  ; This seems really inefficent to check this way, especially for
+  ; This seems really inefficient to check this way, especially for
   ; larger BGAs - but the `Range` object is not trivial to check
   ; for `in-range?`
   contains?(rows(p), row) and contains?(columns(p), column)

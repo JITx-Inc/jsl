@@ -155,7 +155,7 @@ and `p[2]`.
 @param lo-comp Optional component for instantiating the low-side of the divider. If `lo` is
 not provided then `comp` is used for both the high and low side of the divider.
 @param pack? Optional Component Array Packing Generator. By default, this value
-is a {@link LongitudinalPacking}. If the user passes `None()` then no `place`
+is a {@link type:LongitudinalPacking}. If the user passes `None()` then no `place`
 statements for the components in the array are created.
 @param name? Optional name for the configuration strap definition
 @return This function creates a `pcb-module` within a closure and then

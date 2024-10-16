@@ -26,3 +26,4 @@ defpackage jsl/landpatterns/framework:
   forward jsl/landpatterns/introspection
   forward jsl/landpatterns/pad-grid
   forward jsl/landpatterns/thermal-pads
+  forward jsl/landpatterns/thermal-vias

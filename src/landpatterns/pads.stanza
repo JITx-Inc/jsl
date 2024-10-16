@@ -131,7 +131,7 @@ different shapes - specifically rectangle and non-convex pad shapes
 
 @param amount The soldermask opening will be created with a shape that
   is an expansion of the current shape in all directions by `amount`.
-  By default, the {@link SolderMaskRegistration} rule setting is used to set
+  By default, the {@link type:SolderMaskRegistration} rule setting is used to set
   the default expansion amount.
 <DOC>
 public defn make-soldermask (amount:Double = get-default-soldermask-amount()) :
@@ -157,6 +157,8 @@ This enum provides flags that can indicate the style of
 pastemask to generate. This can often be useful for
 generating a pastemask layer that conforms to certain
 norms.
+@member NominalPasteMask
+@member NoPasteMask
 <DOC>
 public defenum PasteMaskStyle:
   NominalPasteMask

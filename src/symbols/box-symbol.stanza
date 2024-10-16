@@ -302,7 +302,7 @@ with :
 ; ============== Helper Functions ================
 ;
 ; save all relevant pin property information
-; explicitly since eventuallly we will lose the reference to self.
+; explicitly since eventually we will lose the reference to self.
 ; If no bank is specified, everything in the box symbol is used,
 ; otherwise only the pins and grid for that specific bank are used.
 defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :

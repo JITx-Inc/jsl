@@ -19,7 +19,7 @@ characteristics of the microstrip transmission line.
 @see Wadell, Transmission Line Design Handbook, Section 3.5.1, Microstrip Line
 
 This model is based on the work of Bogatin who recommended Wheeler's equation with
-Schneider's Effective relative permitivitty.
+Schneider's Effective relative permittivity.
 
 <DOC>
 public defstruct Microstrip <: TransmissionLine :

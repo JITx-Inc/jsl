@@ -4,17 +4,7 @@ defpackage jsl/examples/ethernet/RGMII_1000BaseT/main:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/symbols
-
-  import jsl/si
-  import jsl/bundles
-  import jsl/pin-assignment
-  import jsl/protocols/ethernet/MDI/MDI-1000Base-T
-  import jsl/protocols/ethernet/MII/RGMII
-
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/protocols/common/example-board
 
 

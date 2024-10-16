@@ -51,8 +51,8 @@ public defmulti build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = 
 doc: \<DOC>
 Default Implementation for Build Component Outline
 
-This method uses the `build-shape` method to contruct the
-silkscreen content and then applies it to the VirtaulLP scene graph.
+This method uses the `build-shape` method to construct the
+silkscreen content and then applies it to the VirtualLP scene graph.
 <DOC>
 public defmethod build-outline (s:SilkscreenOutline, vp:VirtualLP -- side:Side = Top) :
   val sh = build-shape(s, vp, side = side)
@@ -236,6 +236,8 @@ public defmethod build-shape (s:InterstitialOutline, vp:VirtualLP -- side:Side =
 doc: \<DOC>
 Selector for whether the edge lines are
 drawn on the Top / Bottom sides (N/S) or the Left/Right sides (E/W)
+@member NS-Edge
+@member EW-Edge
 <DOC>
 public defenum SilkscreenEdge :
   NS-Edge
@@ -380,7 +382,7 @@ public defn has-enough-interior-space? (s:InteriorEdgesOutline, vp:VirtualLP -- 
   try:
     compute-interior-pad-space(s, vp, side = side)
     true
-  catch (e:ValueError):
+  catch (e:NegativeBoxError):
     false
 
 public defstruct SingleLineOutline <: SilkscreenOutline :
@@ -495,7 +497,7 @@ the pin-1 indication in one of the corners of the outline.
 
 This function creates a shape that is a solid, isosceles right triangle (polygon)
 in the lower right quadrant of the XY plane. It is then offset
-from the X and Y axis (toward the lower right quandrant) by
+from the X and Y axis (toward the lower right quadrant) by
 half the line-width
 <DOC>
 public defn create-corner-marker-shape (line-width:Double, marker-height:Double) -> Shape :
@@ -709,7 +711,7 @@ public defn add-pin-1-dot (
 doc: \<DOC>
 Construct the projected shape of the package body on the board.
 
-Legacy - Use {@link PackageOutline}
+Legacy - Use {@link type:PackageOutline}
 
 @param vp Virtual LP scene graph node - outline will be created here.
 @param pkg-body 3D body model for the component
@@ -735,7 +737,7 @@ public defn construct-pkg-outline (
 doc: \<DOC>
 Construct a silkscreen outline of a component based on the Package Body
 
-To be replaced by the {@link PackageOutline} type
+To be replaced by the {@link type:PackageOutline} type
 
 @param vp Virtual LP scene graph node - outline will be created here.
 @param pkg-body 3D body model for the component
@@ -764,7 +766,7 @@ public defn create-silkscreen-outline (
 doc: \<DOC>
 Construct the projected shape of the Package Body and Soldermask Pad Openings
 
-Legacy - Use {@link OverallOutline}
+Legacy - Use {@link type:OverallOutline}
 
 The user must create all of the pads associated with this landpattern before
 invoking this function.
@@ -801,7 +803,7 @@ public defn construct-overall-outline (
 doc: \<DOC>
 Construct a silkscreen outline based on the Package Body and Soldermask Pad Openings
 
-Legacy - To be replaced with {@link OverallOutline}
+Legacy - To be replaced with {@link type:OverallOutline}
 
 The user must create all of the pads associated with this landpattern before
 invoking this function.
@@ -924,7 +926,7 @@ public defn construct-pkg-extrema-lines (
 doc: \<DOC>
 Construct and instantiate the package extrema lines in the scene graph
 
-Legacy - To be replaced by {@link EdgesOutline}
+Legacy - To be replaced by {@link type:EdgesOutline}
 
 @param vp Virtual Land Pattern Scene Graph node
 @param pkg-body Package dimensional body for sizing the lines.

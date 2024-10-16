@@ -18,7 +18,7 @@ Retrieve the default styling parameters for the ground symbol
 
 This is where the user can get the default net symbol styling
 for the `GroundSymbol()` type. By default it is a
-{@link jsl/symbols/net-symbols/bar-ground/BarGroundSymbol}.
+{@link type:jsl/symbols/net-symbols/bar-ground/BarGroundSymbol alt:`BarGroundSymbol`}.
 
 <DOC>
 public defn get-default-gnd-symbol-builder () -> SymbolBuilder :
@@ -30,7 +30,7 @@ Set the default styling parameters for the ground symbol
 This is where the user can set a new default styling for
 the `GroundSymbol()` type.
 
-@param v New {@link SymbolBuilder} that will implement the net symbol
+@param v New {@link type:SymbolBuilder} that will implement the net symbol
 styling.
 <DOC>
 public defn set-default-gnd-symbol-builder (v:SymbolBuilder) -> False :
@@ -53,9 +53,9 @@ The text label for the net of the net symbol is drawn with
 `N` anchor (ie, anchor centered and at the top of the text).
 
 Alternate ground symbols may be defined by constructing
-a type that implements the {@link SymbolBuilder} interface.
+a type that implements the {@link type:SymbolBuilder} interface.
 This interface allows the user to define symbol construction
-using a {@link SymbolNode} scene graph and define the net label
+using a {@link type:SymbolNode} scene graph and define the net label
 position.
 <DOC>
 public defstruct GroundSymbol <: NetSymbol :
@@ -69,7 +69,7 @@ public defstruct GroundSymbol <: NetSymbol :
   doc: \<DOC>
   Backend Substitutions if any
 
-  See {@link NetSymbol} for more information.
+  See {@link type:NetSymbol} for more information.
   <DOC>
   backend-subs:Vector<KeyValue<String, SchematicSymbol>> with:
     ; NetSymbol

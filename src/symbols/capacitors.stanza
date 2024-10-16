@@ -19,7 +19,7 @@ doc: \<DOC>
 Construct Parameter Set for a Non-Polarized Capacitor Symbol
 
 Each keyword argument for this function has a default value
-that can be overriden. These parameters are all of the
+that can be overridden. These parameters are all of the
 configurable aspects of the symbol.
 <DOC>
 public defstruct CapacitorSymbolParams <: SymbolParams :
@@ -60,6 +60,10 @@ public defn set-default-cap-symbol-params (v:CapacitorSymbolParams) -> False :
   DEF_NON_POL_PARAMS = v
 
 
+doc: \<DOC>
+@member Polarized-Straight-Style
+@member Polarized-Curved-Style
+<DOC>
 public defenum PolarizedStyle:
   Polarized-Straight-Style
   Polarized-Curved-Style
@@ -73,7 +77,7 @@ Construct Parameter Set for PolCap Symbol Shape
 
 The parameters of this function are the configurable
 features of a Polarized Capacitor's default symbol shape.
-Each argument has a default value that can be overriden.
+Each argument has a default value that can be overridden.
 <DOC>
 public defstruct PolarizedCapacitorSymbolParams <: CapacitorSymbolParams :
   style:PolarizedStyle with:
