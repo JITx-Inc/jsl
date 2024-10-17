@@ -6,7 +6,6 @@ defpackage jsl/examples/via-structures/se-via-structures:
 
   import jsl
   import jsl/examples/protocols/common/example-board
-  import jsl/examples/protocols/common/example-components
 
 
 pcb-module top-level :

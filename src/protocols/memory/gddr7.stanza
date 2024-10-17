@@ -1,12 +1,36 @@
 doc: \<DOC>
-@brief GDDR 7
+@brief Graphics Double Data Rate 7 protocol (GDDR7)
 
-GDDR7 is a high speed memory protocol 
+GDDR7 is a high speed memory protocol
 @see https://en.wikipedia.org/wiki/GDDR7_SDRAM
 
 This functions and definitions in this file support defining GDDR7
 connections between microprocessors and memories in a board design.
 
+The standard defines some of the bounds on the intra-pair
+skew timing and maximum loss. The values in this file are toleranced values with
+upper/lower limits for the intra-pair skew and the maximum loss as a double
+representing dB. Some defaults in this file are derived from the references listed below.
+
+1. Skew match for RCK_P RCK_N is 0.0 +/- 10.0e-15 (10 fs)
+2. Skew match for WCK_P WCK_N is 0.0 +/- 10.0e-15 (10 fs)
+3. Skew match between RCK and WCK is 0.0 +/- 20.0e-12 (20 ps)
+4. Skew match between WCK and CA (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
+5. Skew match between RCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
+6. Skew match between WCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
+7. Skew match between DQ and DQE (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5 ps)
+8. Skew match between Reset and CA (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100ps)
+9. Skew match between ERR and WCK (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100 ps)
+10. Skew match between CA (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5ps)
+11. Maximum loss for all signals is 5.0 dB at Nyquist frequency
+12. Differential impedance for RCK and WCK is 100 ohms +/- 10%
+13. Single-ended impedance for DQ, DQE, CA, and ERR is 50 ohms +/- 10%
+
+Calculating the distance to time correspondence depends on the board material.
+Example:
+  tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+  @  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+  @ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
 <DOC>
 #use-added-syntax(jitx)
 defpackage jsl/protocols/memory/gddr7:
@@ -37,6 +61,18 @@ public pcb-bundle gddr7-b () :
   port data    : gddr7-data-channel[4] ; one for each A B C D channel
   port control : gddr7-control-channel ; covers all A,B,C,D
 
+doc: \<DOC>
+@brief GDDR7 Data Bundle
+One GDDR7 data bundle consists of the data connections between an integrated memory controller and 
+one GDDR7 memory chip.
+@member DQ  Data bit
+@member RCK Read clock
+@member WCK Write clock
+@member CA  Address bit
+@member DQE Data bit error detection
+@member ERR Error flag
+<DOC>
+
 public pcb-bundle gddr7-data-channel :
   port DQ  : pin[10]   ; PAM3 or NRZ
   port RCK : diff-pair ; NRZ
@@ -45,41 +81,19 @@ public pcb-bundle gddr7-data-channel :
   port DQE             ; PAM3 or NRZ
   port ERR
 
+doc: \<DOC>
+@brief GDDR7 Control Bundle
+One GDDR7 control bundle consists of the control connections between an integrated memory controller and 
+one GDDR7 memory chip.
+@member RESET_n  Reset signal
+@member ZQ_AB    Impedance calibration for channels A and B
+@member ZQ_CD    Impedance calibration for channels C and D
+<DOC>
+
 public pcb-bundle gddr7-control-channel :
   port RESET_n         ; NRZ
   port ZQ_AB
   port ZQ_CD
-
-
-doc: \<DOC>
-@brief Curated values for skew and loss of GDDR7 channel
-This is a helper function that returns the bounds on the intra-pair
-skew timing and maximum loss as expected by the particular standard targeted by
-the user. The values returned are a toleranced value with upper/lower limits for the
-intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
-table are derived from the references listed below.
-
-1. Skew match for RCK_P RCK_N is 0.0 +/- 10.0e-15 (10 fs)
-2. Skew match for WCK_P WCK_N is 0.0 +/- 10.0e-15 (10 fs)
-3. Skew match between RCK and WCK is 0.0 +/- 20.0e-12 (20 ps)
-4. Skew match between WCK and CA (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
-5. Skew match between RCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
-6. Skew match between WCK and DQ and DQE (per channel A,B,C,D) is 0.0 +/- 20.0e-12 (20 ps)
-7. Skew match between DQ and DQE (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5 ps)
-8. Skew match between Reset and CA (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100ps)
-9. Skew match between ERR and WCK (per channel A,B,C,D) is 0.0 +/- 100.0e-12 (100 ps)
-10. Skew match between CA (per channel A,B,C,D) is 0.0 +/- 5.0e-12 (5ps)
-11. Question? Maximum loss for all signals is 5.0 dB at Nyquist frequency
-12. Question? Differential impedance for RCK and WCK is 100 ohms +/- 10%
-13. Question? Single-ended impedance for DQ, DQE, CA, and ERR is 50 ohms +/- 10%
-
-Calculating the distance to time correspondence depends on the board material.
-Example:
-  tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
-  @  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
-  @ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
-<DOC>
-
 
 doc: \<DOC>
 @brief Differential impedance specified by the GDDR7 standard
@@ -96,7 +110,7 @@ doc: \<DOC>
 GDDR7 SI Constraint Type
 
 This derives from the whole data lane constraint
-as most of the controlled signals are single-ended but referenced to the 
+as most of the controlled signals are single-ended but referenced to the
 read and write clock lane pairs (tx/rx). All of these constraints
 will be applied to the full lane.
     0.0 +/- 10.0e-15, ; Skew match for RCK_P RCK_N is 0.0 +/- 10.0e-15 (10 fs)
@@ -180,6 +194,7 @@ public defstruct GDDR7-Constraint <: SI-Constraint :
 with:
   keyword-constructor => true
   constructor => #GDDR7-Constraint
+  printer => true
 
 doc: \<DOC>
 Constructor for the GDDR7 Link Constraint
@@ -238,6 +253,10 @@ public defmethod constrain (cst:GDDR7-Constraint, src:JITXObject, dst:JITXObject
       max-loss(loss(cst), src.data[i].CA  => dst.data[i].CA)
       max-loss(loss(cst), src.data[i].ERR => dst.data[i].ERR)
 
+doc: \<DOC>
+Connect a GDDR7 Link
+@brief This function connects a GDDR7 (Graphics Double Data Rate 7) link between two components, 'src' and 'dst', using specified routing structures. It applies the necessary constraints for proper GDDR7 signal integrity, including differential pair constraints, timing windows, and loss limits for various signals such as RCK (Read Clock), WCK (Write Clock), DQ (Data), CA (Command/Address), and ERR (Error) lines.
+<DOC>
 public defn connect-GDDR7 (src:JITXObject dst:JITXObject diff-rs:DifferentialRoutingStructure rs:RoutingStructure) :
   inside pcb-module :
     val gddr7-cst = GDDR7-Constraint(diff-rs, rs)

@@ -8,7 +8,7 @@ This functions and definitions in this example support defining GDDR7
 interfaces on controllers and memories.
 <DOC>
 #use-added-syntax(jitx)
-defpackage jsl/examples/protocols/memory/gddr7-src :
+defpackage jsl/examples/protocols/memory/gddr7/gddr7-src :
   import core
   import jitx
   import jitx/commands
@@ -120,22 +120,6 @@ public defn FBGA266 () -> FBGA266 :
 
       build-pads(second-half-pkg, second-section)
 
-
-; val mem-pkg-body = PackageBody(
-;   width = 12.0 +/- 0.1,
-;   length = 14.0 +/- 0.1,
-;   height = 1.00 +/- [0.06, 0.0]
-; )
-
-; val mem-bga-pkg = BGA(
-;   num-leads = 266,
-;   rows = 19,
-;   columns = 14,
-;   lead-diam = 0.25,
-;   pitch = 0.50,
-;   package-body = mem-pkg-body,
-;   density-level = DensityLevelB
-; )
 
 public pcb-component mem-component :
   reference-prefix = "U"
@@ -486,7 +470,7 @@ public pcb-module mem-device :
   port io : gddr7()
   port pwr : power
 
-  public inst mem : jsl/examples/protocols/memory/gddr7-src/mem-component
+  public inst mem : jsl/examples/protocols/memory/gddr7/gddr7-src/mem-component
 
   for i in 0 to 4 do :
     for j in 0 to 10 do :
@@ -555,7 +539,6 @@ var gnd-pin-cnt = -1
 defn sig-pin-num (a:Int b:Int) -> Int :
   sig-pin-cnt = sig-pin-cnt + 1
   sig-pin-cnt
-  ; to-int(to-double(a * 30 + b) / 2.0)
 
 defn gnd-pin-num (a:Int b:Int) -> Int :
   gnd-pin-cnt = gnd-pin-cnt + 1
@@ -628,7 +611,7 @@ public pcb-component ic-component :
 public pcb-module ic-device :
   port pwr : power
 
-  public inst ic : jsl/examples/protocols/memory/gddr7-src/ic-component
+  public inst ic : jsl/examples/protocols/memory/gddr7/gddr7-src/ic-component
 
   pcb-bundle gen-io :
     port p
