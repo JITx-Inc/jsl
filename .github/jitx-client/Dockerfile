@@ -6,5 +6,5 @@ WORKDIR /app
 COPY ./user.params /root/.jitx/user.params
 COPY ./license /root/.jitx/license
 
-CMD ["/bin/bash", "-c", "apt update ; apt install make build-essential -y ; mkdir -p ~/.ssh/ ; curl -L https://api.github.com/meta | jq -r '.ssh_keys | .[]' | sed -e 's/^/github.com /' > ~/.ssh/known_hosts ; git config --global --replace-all safe.directory '*' ; export STANZA_CONFIG=/root/.jitx/current ; export SLM_ROOT_DIR=${STANZA_CONFIG}/slm ; export SLM_STANZA=jstanza ; export PATH=$PATH:${STANZA_CONFIG}/stanza:${SLM_ROOT_DIR} ; cat $STANZA_CONFIG/scripts/install-info.sh ; cd jsl ; make tests"]
+CMD ["/bin/bash", "-c", "apt update ; apt install make build-essential jq -y ; mkdir -p ~/.ssh/ ; curl -L https://api.github.com/meta | jq -r '.ssh_keys | .[]' | sed -e 's/^/github.com /' > ~/.ssh/known_hosts ; git config --global --replace-all safe.directory '*' ; export STANZA_CONFIG=/root/.jitx/current ; export SLM_ROOT_DIR=${STANZA_CONFIG}/slm ; export SLM_STANZA=jstanza ; export PATH=$PATH:${STANZA_CONFIG}/stanza:${SLM_ROOT_DIR} ; cat $STANZA_CONFIG/scripts/install-info.sh ; cd jsl ; make tests"]
  
