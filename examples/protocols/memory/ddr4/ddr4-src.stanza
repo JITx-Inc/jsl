@@ -1,0 +1,204 @@
+doc: \<DOC>
+@brief GDDR 7
+
+GDDR7 is a high speed memory protocol 
+@see https://en.wikipedia.org/wiki/GDDR7_SDRAM
+
+This functions and definitions in this example support defining GDDR7
+interfaces on controllers and memories.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/gddr7-src :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols
+  import jsl/landpatterns
+
+  import jsl/design/settings
+  import jsl/si
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/memory/ddr4
+
+public pcb-component ddr4-mem-ic :
+  reference-prefix = "U"
+  mpn = "memory-JITX-DDR4"
+  description = "Dummy DDR4 memory following JEDEC spec"
+
+  port ddr4 : ddr4()
+  port vddq : power
+  port vdd : power
+
+  pin-properties :
+    [pin:Ref        | pads:Ref ...  ]
+    [ VDDQ[0]       | A[1]          ]
+    [ VSSQ[0]       | A[2]          ]
+    [ DQ[8]         | A[3]          ]
+    [ UDQS_c        | A[7]          ]
+    [ VSSQ[1]       | A[8]          ]
+    [ VDDQ[1]       | A[9]          ]
+    [ VPP[0]        | B[1]          ]
+    [ VSS[0]        | B[2]          ]
+    [ VDD[0]        | B[3]          ]
+    [ UDQS_t        | B[7]          ]
+    [ DQ[9]         | B[8]          ]
+    [ VDD[1]        | B[9]          ]
+    [ VDDQ[2]       | C[1]          ]
+    [ DQ[12]        | C[2]          ]
+    [ DQ[10]        | C[3]          ]
+    [ DQ[11]        | C[7]          ]
+    [ DQ[13]        | C[8]          ]
+    [ VSSQ[2]       | C[9]          ]
+    [ VDD[2]        | D[1]          ]
+    [ VSS[1]        | D[2]          ]
+    [ DQ[14]        | D[3]          ]
+    [ DQ[15]        | D[7]          ]
+    [ VSS[2]        | D[8]          ]
+    [ VDDQ[3]       | D[9]          ]
+    [ VSS[3]        | E[1]          ]
+    [ VSS[4]        | E[9]          ]
+    [ VSSQ[3]       | F[1]          ]
+    [ VDDQ[4]       | F[2]          ]
+    [ LDQS_c        | F[3]          ]
+    [ DQ[1]         | F[7]          ]
+    [ VDDQ[5]       | F[8]          ]
+    [ ZQ            | F[9]          ]
+    [ VDDQ[6]       | G[1]          ]
+    [ DQ[0]         | G[2]          ]
+    [ LDQS_t        | G[3]          ]
+    [ VDD[3]        | G[7]          ]
+    [ VSS[5]        | G[8]          ]
+    [ VDDQ[7]       | G[9]          ]
+    [ VSSQ[4]       | H[1]          ]
+    [ DQ[4]         | H[2]          ]
+    [ DQ[2]         | H[3]          ]
+    [ DQ[3]         | H[7]          ]
+    [ DQ[5]         | H[8]          ]
+    [ VSSQ[5]       | H[9]          ]
+    [ VDD[4]        | J[1]          ]
+    [ VDDQ[8]       | J[2]          ]
+    [ DQ[6]         | J[3]          ]
+    [ DQ[7]         | J[7]          ]
+    [ VDDQ[9]       | J[8]          ]
+    [ VDD[5]        | J[9]          ]
+    [ VSS[6]        | K[1]          ]
+    [ CKE           | K[2]          ]
+    [ ODT           | K[3]          ]
+    [ CK_t          | K[7]          ]
+    [ CK_c          | K[8]          ]
+    [ VSS[7]        | K[9]          ]
+    [ VDD[6]        | L[1]          ]
+    [ WE_n          | L[2]          ] ; aka A[14]
+    [ ACT_n         | L[3]          ]
+    [ CS_n          | L[7]          ]
+    [ RAS_n         | L[8]          ] ; aka A[16]
+    [ VDD[7]        | L[9]          ]
+    [ VREFCA        | M[1]          ]
+    [ BG[0]         | M[2]          ]
+    [ A[10]         | M[3]          ] ; /AP
+    [ A[12]         | M[7]          ] ; /BC_n
+    [ CAS_n         | M[8]          ] ; aka A[15]
+    [ VSS[8]        | M[9]          ]
+    [ VSS[9]        | N[1]          ]
+    [ BA[0]         | N[2]          ]
+    [ A[4]          | N[3]          ]
+    [ A[3]          | N[7]          ]
+    [ BA[1]         | N[8]          ]
+    [ TEN           | N[9]          ]
+    [ RESET_n       | P[1]          ]
+    [ A[6]          | P[2]          ]
+    [ A[0]          | P[3]          ]
+    [ A[1]          | P[7]          ]
+    [ A[5]          | P[8]          ]
+    [ ALERT_n       | P[9]          ]
+    [ VDD[8]        | R[1]          ]
+    [ A[8]          | R[2]          ]
+    [ A[2]          | R[3]          ]
+    [ A[9]          | R[7]          ]
+    [ A[7]          | R[8]          ]
+    [ VPP[1]        | R[9]          ]
+    [ VSS[10]       | T[1]          ]
+    [ A[11]         | T[2]          ]
+    [ PAR           | T[3]          ]
+    [ NC            | T[7]          ]
+    [ A[13]         | T[8]          ]
+    [ VDD[9]        | T[9]          ]
+
+  val channel-A = Ref("chA")
+  val channel-B = Ref("chB")
+  val channel-C = Ref("chC")
+  val channel-D = Ref("chD")
+  val ctl-r     = Ref("ctl")
+  val pwr       = Ref("pwr")
+
+  val box-params = BoxSymbolParams(
+    show-grid = false
+  )
+
+  val box = BoxSymbol(self, params = box-params)
+
+  for (c in [channel-A channel-B channel-C channel-D], i in 0 to false) do :
+    for j in 0 to 10 do :
+      set-bank(c, DQp[j][i])
+      set-side(Left, DQp[j][i])
+    set-bank(c, RCK_c[i])
+    set-bank(c, RCK_t[i])
+    set-bank(c, WCK_c[i])
+    set-bank(c, WCK_t[i])
+    set-side(Right, RCK_c[i] RCK_t[i] WCK_c[i] WCK_t[i])
+    for j in 0 to 5 do :
+      set-bank(c, CA[j][i])
+      set-side(Right, CA[j][i])
+    set-bank(c, DQE[i])
+    set-side(Right, DQE[i])
+    set-bank(c, ERR[i])
+    set-side(Right, ERR[i])
+
+  set-bank(ctl-r, self.ZQ_AB self.ZQ_CD, self.RESET_n)
+  set-side(Left, self.ZQ_AB self.ZQ_CD, self.RESET_n)
+  set-bank(pwr, self.VSS self.VDD self.VDDQ self.VPP)
+  set-side(Down, self.VSS)
+  set-side(Up, self.VDD self.VDDQ self.VPP)
+
+
+  assign-symbols(
+    ctl-r     => box,
+    pwr       => box,
+    channel-A => box,
+    channel-B => box,
+    channel-C => box,
+    channel-D => box,
+  )
+
+  val pkg = BGA(
+    num-leads = 96,
+    lead-diam = 0.47,
+    lead-numbering = Grid-Numbering(16, 9),
+    package-body = PackageBody(
+      width = 10.0 +/- 0.1
+      length = 13.5 +/- 0.1
+      height = 1.1 +/- 0.1
+      ),
+    pad-planner = Perimeter-Matrix-Planner(
+      rows = 16,
+      columns = 9,
+      pitch = Dims(0.8, 0.8),
+      inactive = [PadIsland(1 to 16, 4 to 7)]
+      )
+  )
+  assign-landpattern(pkg)
+
+  for i in 0 to 4 do :
+    diff-pin-model(self.RCK_c[i], self.RCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
+    diff-pin-model(self.WCK_c[i], self.WCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
+
+  for i in 0 to 4 do :
+    for j in 0 to 10 do :
+      pin-model(self.DQp[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    for j in 0 to 5 do :
+        pin-model(self.CA[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.DQE[i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.ERR[i]) = PinModel(typ(1.0e-15), typ(0.1))
+  pin-model(self.RESET_n) = PinModel(typ(1.0e-15), typ(0.1))
