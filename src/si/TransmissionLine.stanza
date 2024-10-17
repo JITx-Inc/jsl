@@ -13,7 +13,10 @@ defpackage jsl/si/TransmissionLine:
   import core
   import jitx
 
-
+doc: \<DOC>
+@member Single-Ended
+@member Differential
+<DOC>
 public defenum TransmissionStructure:
   Single-Ended
   Differential
@@ -21,7 +24,7 @@ public defenum TransmissionStructure:
 doc: \<DOC>
 Transmission Line Interface
 
-This type is intended to be inherited and overrided to provide
+This type is intended to be inherited and overridden to provide
 the specific constraints for a particular structure.
 
 TODO - Current implementation does not construct a `Toleranced` output
@@ -37,7 +40,7 @@ public defstruct TransmissionLine :
   structure:TransmissionStructure
 
 doc: \<DOC>
-Solve for the effective relative permitivitty for this structure.
+Solve for the effective relative permittivity for this structure.
 
 This is a unitless quantity.
 

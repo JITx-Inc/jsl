@@ -19,9 +19,9 @@ public defstruct QFP-Lead <: SMT-Lead:
   doc: \<DOC>
   Style of lead protrusion.
 
-  Default style is {@link BigGullWingLeads}. This is
+  Default style is {@link type:BigGullWingLeads}. This is
   suitable for pitches > 0.625mm. Below 0.625mm,
-  the lead-type {@link SmallGullWingLeads} should be
+  the lead-type {@link type:SmallGullWingLeads} should be
   considered.
   <DOC>
   lead-type:LeadProtrusion with:
@@ -42,8 +42,8 @@ with:
 doc: \<DOC>
 Constructor for `QFP-Lead` type
 
-Default lead type is {@link BigGullWingLeads}.
-If pitch < 0.625mm, consider {@link SmallGullWingLeads}.
+Default lead type is {@link type:BigGullWingLeads}.
+If pitch < 0.625mm, consider {@link type:SmallGullWingLeads}.
 <DOC>
 public defn QFP-Lead (
   --
@@ -58,7 +58,7 @@ Select the QFP protrusion type depending on pitch
 
 @param pitch Distance between adjacent leads on a
 side of a QFP. This value is in mm.
-@return {@link SmallGullWingLeads} or {@link BigGullWingLeads}
+@return {@link type:SmallGullWingLeads} or {@link type:BigGullWingLeads}
 depending on whether pitch is less than 0.625mm or greater,
 respectively.
 <DOC>
@@ -161,7 +161,7 @@ with:
 doc: \<DOC>
 Constructor for the QFP package generator
 
-@param pad-planner Default value is {@link RectanglePadPlanner}
+@param pad-planner Default value is {@link var:RectanglePadPlanner}
 <DOC>
 public defn QFP (
   --

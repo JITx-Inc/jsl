@@ -27,7 +27,7 @@ Lane-Pair Constraint
 
 This type is used to define the SI-Constraints
 for a `lane-pair` bundle, typically used for
-things like USB3 superspeed lanes, 10G ethernet
+things like USB3 SuperSpeed lanes, 10G ethernet
 lanes, etc.
 <DOC>
 public defstruct LaneConstraint <: SI-Constraint :

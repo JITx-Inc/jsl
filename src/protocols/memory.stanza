@@ -1,0 +1,2 @@
+defpackage jsl/protocols/memory:
+  forward jsl/protocols/memory/lpddr4

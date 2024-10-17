@@ -33,7 +33,7 @@ Media Independent Interface (MII) Bundle Generator
 
 @member txd Transmit Data Bus
 @member rxd Receive Data Bus
-@member tx-clk Transmit Clock for 10/100Mbit
+@member tx-clk Transmit Clock for 10/100 Mbit
 @member tx-en Transmit Enable
 @member tx-er Optional Transmit Error Signal
 

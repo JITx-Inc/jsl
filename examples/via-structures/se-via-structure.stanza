@@ -4,8 +4,7 @@ defpackage jsl/examples/via-structures/se-via-structures:
   import jitx
   import jitx/commands
 
-  import jsl/via-structures
-  import jsl/geometry/NotchedShapes
+  import jsl
   import jsl/examples/protocols/common/example-board
 
 

@@ -585,7 +585,7 @@ public defn append (vp:VirtualLP, va:VirtualArtwork) -> False :
     add{_, va} $ artwork(vp)
 
 doc: \<DOC>
-Add multipple `VirtualArtwork` instances to the landpattern.
+Add multiple `VirtualArtwork` instances to the landpattern.
 <DOC>
 public defn append-all (vp:VirtualLP, vas:Seqable<VirtualArtwork>) -> False :
     add-all{_, vas} $ artwork(vp)
@@ -868,13 +868,19 @@ which was to try and find lines and intersections of those lines.
 This seemed like it might be a bit more robust but at the cost
 of being more complex code wise.
 
+@param vp VirtualLP Scene Graph - we will search for pads here.
+@param side Board side to collect pads from.
+@param layer-spec Specify which layer is used to collect the shapes.
+By default, this function uses the `SolderMask(side)` layer.
+To select the copper on this side - use `false`. See {@link bounds}
+
 @throws ValueError if it encounter a number of columns that it can't
 handle. Specifically, this function can handle [1, 2, 4] columns of pads.
 This corresponds to 2-pin, dual-row, and quad land patterns, respectively.
 <DOC>
-public defn pad-interior-bounds (vp:VirtualLP, side:Side) -> Box:
+public defn pad-interior-bounds (vp:VirtualLP, side:Side -- layer-spec:LayerSpecifier|False = SolderMask(side)) -> Box:
 
-  val get-bounds = bounds{_, layer-spec = SolderMask(side)}
+  val get-bounds = bounds{_, layer-spec = layer-spec}
   val cols = identify-pad-columns(vp)
   val num-cols = length(cols)
   if num-cols == 1:
@@ -882,10 +888,22 @@ public defn pad-interior-bounds (vp:VirtualLP, side:Side) -> Box:
     val row0 = get-bounds $ get-pads-by-row(vp, 0)
     val row1 = get-bounds $ get-pads-by-row(vp, 1)
 
-    Box(
-      Point(left(row1), up(row1))
-      Point(right(row0), down(row0))
-    )
+    try:
+      Box(
+        Point(left(row1), up(row1))
+        Point(right(row0), down(row0))
+      )
+    catch (e:NegativeBoxError):
+      println("Failed to determine the pad interior bounds.")
+      match(layer-spec):
+        (_:SolderMask):
+          println("This might mean that the soldermask openings of the two pads overlap resulting in a negative area box.")
+        (f:False):
+          println("This suggests that the copper pads for the component overlap.")
+        (f):
+          println("LayerSpec: %_" % [layer-spec])
+      throw $ ValueError("Invalid Pad Interior: %_" % [e])
+      ; throw(e)
 
   else if num-cols == 2 :
     val col0 = get-bounds $ get-pads-by-column(vp, 0)

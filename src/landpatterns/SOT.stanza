@@ -42,7 +42,7 @@ doc: \<DOC>
 Small Outline Transistor (SOT) Lead Type
 
 This type defines the parameters of each of the individual leads
-of the IC package. It is typically used with {@link Lead-Profile}
+of the IC package. It is typically used with {@link type:Lead-Profile}
 <DOC>
 public defstruct SOT-Lead <: SMT-Lead:
   lead-type:LeadProtrusion with:
@@ -66,7 +66,7 @@ doc: \<DOC>
 Small Outline Transistor Flat Lead (SOTFL) Type
 
 This type defines the parameters of each of the individual leads
-of the IC package. It is typically used with {@link Lead-Profile}
+of the IC package. It is typically used with {@link type:Lead-Profile}
 
 This supports packages like `SOT-23F` or `SOT538` which use a
 flat lead style instead of the Gull-Wing Lead style.
@@ -98,8 +98,8 @@ This type defines the features of the dual-row
 Small Outline Transistor (SOT) type of package.
 
 Note that the base implementation is targeted towards the full
-SOT. To implement non-symmetric SOT packages see {@link SOT-23-3}
-and {@link SOT-23-5}
+SOT. To implement non-symmetric SOT packages see {@link type:SOT-23-3}
+and {@link func:SOT-23-5}
 
 <DOC>
 public defstruct SOT <: Dual-Package :
@@ -112,7 +112,7 @@ public defstruct SOT <: Dual-Package :
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SON package.
-  By default the {@link SON-Lead} type is used for the `lead` and
+  By default the {@link type:SON-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -120,7 +120,7 @@ public defstruct SOT <: Dual-Package :
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
-  Thisi lead is generally on the bottom side of the package body.
+  This lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
   thermal-lead?:False|Shape|ThermalPad with:
@@ -148,7 +148,7 @@ public defstruct SOT <: Dual-Package :
   Lead Numbering Scheme for the SOT Package
 
   This provides a numbering scheme for the leads of the SOT
-  package. By default this uses {@link Column-Major-Numbering}.
+  package. By default this uses {@link type:Column-Major-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -260,7 +260,7 @@ public defstruct SOT-23-3 <: SOT :
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SON package.
-  By default the {@link SON-Lead} type is used for the `lead` and
+  By default the {@link type:SON-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -268,7 +268,7 @@ public defstruct SOT-23-3 <: SOT :
 
   doc: \<DOC>
   Specify the presence and shape of the exposed thermal lead (pad)
-  Thisi lead is generally on the bottom side of the package body.
+  This lead is generally on the bottom side of the package body.
   The default value for SOT is false as it isn't common in most packages.
   <DOC>
   thermal-lead?:False|Shape|ThermalPad with:
@@ -296,7 +296,7 @@ public defstruct SOT-23-3 <: SOT :
   Lead Numbering Scheme for the SOIC Package
 
   This provides a numbering scheme for the leads of the SON
-  package. By default, it uses {@link Std-IC-Numbering}.
+  package. By default, it uses {@link type:Std-IC-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -375,7 +375,7 @@ public val SOT-23-5-DEF-PLANNER = SOT23-5-PadPlanner(rect-shaper)
 doc: \<DOC>
 5-pin SOT-23 Package
 
-@param lead-profile Typically the user would use a {@link SOT-Lead} instance
+@param lead-profile Typically the user would use a {@link type:SOT-Lead} instance
 here to define the leads for the package.
 @param package-body Dimensions for the body of the package.
 @param density-level Density rating for the landpattern. Default is from

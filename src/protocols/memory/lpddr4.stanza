@@ -29,6 +29,9 @@ defpackage jsl/protocols/memory/lpddr4 :
 doc: \<DOC>
 @brief LPDDR4 Width enums
 This is a fixed list of possible channel widths for LPDDR4
+@member LPDDR4-x16
+@member LPDDR4-x32
+@member LPDDR4-x64
 <DOC>
 public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Width:
   LPDDR4-x16
@@ -50,6 +53,9 @@ public defn num-x16-lanes (width:LPDDR4-Width) -> Int :
 doc: \<DOC>
 @brief LPDDR4 Rank enums
 This is a fixed list of possible ranks for LPDDR4
+@member LPDDR4-Rank1
+@member LPDDR4-Rank2
+@member LPDDR4-Rank3
 <DOC>
 public pcb-enum jsl/protocols/memory/lpddr4/LPDDR4-Rank:
   LPDDR4-Rank1

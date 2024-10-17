@@ -45,7 +45,7 @@ the symbol in the schematic.
 public defmulti build-params (x:SymbolDefn, sn:SymbolNode)
 
 doc: \<DOC>
-Consstruct the preferred orientation statement for the symbol
+Construct the preferred orientation statement for the symbol
 
 This function implements the `preferred-orientation` statement
 which controls at what orientation the symbol will be placed

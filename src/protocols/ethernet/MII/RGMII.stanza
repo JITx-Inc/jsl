@@ -52,6 +52,8 @@ In RGMII v2, the spec introduces an optional "Internal Delay"
 feature. Devices that provide this are labeled "RGMII-ID".
 These devices don't require a PCB board delay because the
 delay can be configured in firmware.
+@member RGMII-STD
+@member RGMII-ID
 <DOC>
 public pcb-enum jsl/protocols/ethernet/RGMII/RGMIIVersion:
   RGMII-STD
@@ -89,7 +91,7 @@ doc: \<DOC>
 RGMII Lane Constraint
 
 This constraint is used to constrain a lane of the RGMII
-interface. This type would typically be used with a {@link LaneConstraint}
+interface. This type would typically be used with a {@link type:LaneConstraint}
 type for constructing a full-duplex RGMII interface.
 
 This constraint expects to be passed `rgmii-lane` bundle

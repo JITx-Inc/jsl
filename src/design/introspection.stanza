@@ -116,7 +116,7 @@ Retrieve the two ports of a 2-pin element device.
 Two-pin lumped circuit element devices (like resistors, capacitors, etc)
 come typically in one of two forms:
 
-1.  The `p[1]` and `p[2]` form for non-polatized devices.
+1.  The `p[1]` and `p[2]` form for non-polarized devices.
 2.  The `c` and `a` form for the cathode / anode of polarized
 devices.
 

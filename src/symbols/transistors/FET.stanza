@@ -10,10 +10,18 @@ defpackage jsl/symbols/transistors/FET:
   import jsl/geometry/basics
   import jsl/symbols/framework
 
+doc: \<DOC>
+@member N-Channel
+@member P-Channel
+<DOC>
 public defenum FET-Junction :
   N-Channel
   P-Channel
 
+doc: \<DOC>
+@member Enhancement
+@member Depletion
+<DOC>
 public defenum FET-Mode :
   Enhancement
   Depletion
@@ -48,7 +56,7 @@ public defstruct FETSymbolParams <: SymbolParams :
   doc: \<DOC>
   Sets the base line length for the channel structure.
   This is the vertical line that the gate, source, and drain
-  connections, all intersect at 90 degreess.
+  connections, all intersect at 90 degrees.
   <DOC>
   base-line:Double with:
     ensure => ensure-positive!,

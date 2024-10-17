@@ -4,10 +4,7 @@ defpackage jsl/examples/landpatterns/SOP:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-  import jsl/symbols
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 
@@ -36,21 +33,20 @@ pcb-component test-LM2852:
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir ]
 
-    [AVIN | p[1] | Left ]
-    [EN | p[2] | Left ]
-    [SGND | p[3] | Left ]
-    [SS | p[4] | Left ]
-    [NC[1] | p[5] | Left ]
-
-    [PVIN[1] | p[6] | Right ]
-    [PVIN[2] | p[7] | Right ]
-    [SW[1] | p[8] | Right ]
-    [SW[2] | p[9] | Right ]
+    [AVIN    | p[1]  | Left  ]
+    [EN      | p[2]  | Left  ]
+    [SGND    | p[3]  | Left  ]
+    [SS      | p[4]  | Left  ]
+    [NC[1]   | p[5]  | Left  ]
+    [PVIN[1] | p[6]  | Right ]
+    [PVIN[2] | p[7]  | Right ]
+    [SW[1]   | p[8]  | Right ]
+    [SW[2]   | p[9]  | Right ]
     [PGND[1] | p[10] | Right ]
     [PGND[2] | p[11] | Right ]
-    [NC[2] | p[12] | Left ]
-    [NC[3] | p[13] | Left ]
-    [SNS | p[14] | Left ]
+    [NC[2]   | p[12] | Left  ]
+    [NC[3]   | p[13] | Left  ]
+    [SNS     | p[14] | Left  ]
 
 
   val b = create-symbol $ BoxSymbol(self)

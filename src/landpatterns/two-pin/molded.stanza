@@ -30,7 +30,7 @@ public defstruct Molded-2pin <: Package :
   lead-span:Toleranced
   doc: \<DOC>
   Lead Specification for this land pattern.
-  Typically this will use {@link Molded-2pin-Lead}.
+  Typically this will use {@link type:Molded-2pin-Lead}.
   <DOC>
   lead:SMT-Lead,
   doc: \<DOC>
@@ -58,8 +58,8 @@ public defstruct Molded-2pin <: Package :
 
   doc: \<DOC>
   Package Body
-  Typically a rectangular {@link PackageBody} but other
-  shapes like {@link CylindricalBody} work as well.
+  Typically a rectangular {@link type:PackageBody} but other
+  shapes like {@link type:CylindricalBody} work as well.
   <DOC>
   package-body:PackageBody with:
     as-method => true

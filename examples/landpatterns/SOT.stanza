@@ -4,10 +4,7 @@ defpackage jsl/examples/landpatterns/SOT:
   import jitx
   import jitx/commands
 
-  import jsl/landpatterns
-  import jsl/symbols
-  import jsl/design/settings
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 

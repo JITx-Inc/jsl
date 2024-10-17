@@ -45,7 +45,7 @@ public defn ensure-even-positive! (
 
 doc: \<DOC>
 Check for multi-sided components to ensure proper number of pins.
-@throws ValueError when the passed value is not divible.
+@throws ValueError when the passed value is not divisible.
 @param value Number to check, typically the number of pins for a particular package.
 @param divisor Typically used for the number of sides of a package. Example: 4 for QFN.
 @param name Name of the package we are checking

@@ -238,7 +238,7 @@ p[1] -> O--A--O--B--O -> p[2]
 ```
 
 Note that `p[2]` of C is connected to `named-shunt-port`. To
-flip the component see {@link Invert}
+flip the component see {@link type:Invert}
 
 <DOC>
 public defstruct ShuntTo <: ANT:
@@ -342,7 +342,7 @@ Instantiate and Connect all parallel elements
 the other element's `p1` and `p2` are netted to the first parallel element, respectively.
 
 `ShuntTo` elements are handled differently. Typically, `p1` port of the shunted sub-network is
-connected to the `p1` of all the other components in paralle. The `p2` port of the shunted
+connected to the `p1` of all the other components in parallel. The `p2` port of the shunted
 sub-network is not connected to the other parallel components, and is instead connected to a
 external port.
 <DOC>

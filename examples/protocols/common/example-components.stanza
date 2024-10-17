@@ -6,11 +6,7 @@ defpackage jsl/examples/protocols/common/example-components:
   import jitx/commands
   import jitx/emodels
 
-  import jsl/design/settings
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/si/helpers
+  import jsl
 
 public pcb-component block-cap (value:Double):
   name = "block-cap"
