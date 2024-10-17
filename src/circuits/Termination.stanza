@@ -1,0 +1,35 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits/Termination:
+  import core
+  import jitx
+  import jitx/parts
+
+
+doc: \<DOC>
+Create a typical shield termination
+
+This type is intended mostly for prototypes where the
+exact termination requirements aren't completely known.
+We're giving ourselves options for testing.
+
+Default is a simple RC parallel circuit.
+
+@member SHIELD Connected to the shield of a connector, etc.
+@member GND Ground plane connection for the termination.
+
+@param R-query Resistor query parameters - default is `ResistorQuery()`.
+@param C-query Capacitor query parameters. Default sets a min rated
+voltage of 50.0V.
+<DOC>
+public defn shield-termination (
+  R-query:ResistorQuery = ResistorQuery(),
+  C-query:CapacitorQuery = CapacitorQuery(rated-voltage = AtLeast(50.0))
+  ) -> Instantiable:
+
+  pcb-module shield-term-t :
+    port SHIELD
+    port GND
+    insert-resistor(SHIELD, GND, R-query, resistance = 0.0, inst-name = "R")
+    insert-capacitor(SHIELD, GND, C-query, capacitance = 4.7e-9, inst-name = "C")
+
+  shield-term-t
