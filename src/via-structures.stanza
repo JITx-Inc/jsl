@@ -11,6 +11,7 @@ defpackage jsl/via-structures:
   import jsl/bundles
   import jsl/symbols/arrows
   import jsl/symbols
+  import jsl/si
 
 var debug-mode = false
 val debug-layer = CustomLayer("vs-debug", Top)
@@ -432,9 +433,7 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
 
     net cage (COMMON)
 
-    net via-net (sig-in, via-pin.p, sig-out)
-    topology-segment(sig-in, via-pin.p)
-    topology-segment(via-pin.p, sig-out)
+    topo-net(sig-in => via-pin.p => sig-out)
 
     supports pass-through:
       pass-through.A => sig-in
@@ -569,12 +568,11 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     geom(via-pin-N.n) :
       via(via-def-N) at pose * Point((- via-pitch), 0.0)
 
-    net via-net-P (sig-in.P, via-pin-P.p, sig-out.P)
-    topology-segment(sig-in.P, via-pin-P.p)
-    topology-segment(via-pin-P.p, sig-out.P)
-    net via-net-N (sig-in.N, via-pin-N.n, sig-out.N)
-    topology-segment(sig-in.N, via-pin-N.n)
-    topology-segment(via-pin-N.n, sig-out.N)
+    ; Connect first wrapper instance
+    topo-net(sig-in.P => via-pin-P.p => sig-out.P)
+
+    ; Connect second wrapper instance
+    topo-net(sig-in.N => via-pin-N.n => sig-out.N)
 
     net cage (COMMON)
 
