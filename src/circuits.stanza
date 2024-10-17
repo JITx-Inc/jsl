@@ -6,5 +6,5 @@ defpackage jsl/circuits:
   forward jsl/circuits/CrystalResonator
   forward jsl/circuits/Network
   forward jsl/circuits/Pullups
+  forward jsl/circuits/Termination
   forward jsl/circuits/utils
-  
