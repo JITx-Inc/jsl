@@ -30,7 +30,7 @@ doc: \<DOC>
 Small Outline Package (SOP) Lead Type
 
 This type defines the parameters of each of the individual leads
-of the IC package. It is typically used with {@link Lead-Profile}
+of the IC package. It is typically used with {@link type:Lead-Profile}
 <DOC>
 public defstruct SOP-Lead <: SMT-Lead:
   lead-type:LeadProtrusion with:
@@ -65,7 +65,7 @@ public defstruct SOP <: Dual-Package :
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SOP package.
-  By default the {@link SOP-Lead} type is used for the `lead` and
+  By default the {@link type:SOP-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -99,7 +99,7 @@ public defstruct SOP <: Dual-Package :
   Lead Numbering Scheme for the SOP Package
 
   This provides a numbering scheme for the leads of the SON
-  package. By default, it uses {@link Column-Major-Numbering}.
+  package. By default, it uses {@link type:Column-Major-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -125,8 +125,8 @@ Constructor for SOP Packages
 @param thermal-lead? Optional thermal lead. This shape will be placed at (0.0, 0.0)
 in the land pattern's reference frame.
 @param package-body 3D component body descriptor.
-@param pad-planner Pad shape planner - default is {@link RectanglePadPlanner}
-@param num-scheme Numbering scheme for pads - default is {@link Column-Major-Numbering}
+@param pad-planner Pad shape planner - default is {@link var:RectanglePadPlanner}
+@param num-scheme Numbering scheme for pads - default is {@link type:Column-Major-Numbering}
 @param density-level Density Level of Generated Package
 <DOC>
 public defn SOP (
@@ -173,10 +173,11 @@ public defmethod build-silkscreen (
   pkg:SOP,
   vp:VirtualLP
   ) -> False:
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(
     vp,
     dir = Left,

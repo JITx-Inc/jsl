@@ -4,7 +4,7 @@ doc: \<DOC>
 
 @description
 
-100Base-TX protocol (also known as Fast Internet) is a 100Mbps media
+100Base-TX protocol (also known as Fast Internet) is a 100 Mbps media
 dependent intended for use on copper or fiber.
 
 This package provides bundles for the implementation copper-based

@@ -138,8 +138,8 @@ deftest(design_introspection) test-get-pads-from-port:
         #EXPECT(ref(pad-set[1]) == #R(p[2]))
 
         #EXPECT(side(pad-set[0]) == Top)
-        #EXPECT(pad-type(pad(pad-set[0])) == SMD)
-        #EXPECT(pad-shape(pad(pad-set[0])) is Rectangle)
+        #EXPECT(pad-type(pad-def(pad-set[0])) == SMD)
+        #EXPECT(pad-shape(pad-def(pad-set[0])) is Rectangle)
 
     val GND-pads? = get-pads-from-port(p2p-map, C.GND)
     match(GND-pads?):

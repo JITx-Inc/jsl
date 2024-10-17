@@ -1,0 +1,62 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/landpatterns/app-specific-keepout:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl
+  import jsl/examples/landpatterns/board
+
+val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
+
+pcb-component test-SOIC:
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir ]
+    [VDD | p[5] | Up ]
+    [VIN+ | p[3] | Left ]
+    [VIN- | p[4] | Left ]
+    [VSS | p[2] | Down ]
+    [VOUT | p[1] | Right ]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val pkg = SOIC-N(
+    num-leads = 8,
+    lead-span = min-max(5.8, 6.2),
+    package-length = 4.5 +/- 0.10,
+    density-level = DensityLevelC
+  )
+
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+doc: \<DOC>
+Application Specific Keepout Overlay Example
+
+This circuit creates two component instances and
+applies an application specific keepout to one of them
+This keepout is on the top layer by default and will
+track the instance as it moves in the layout.
+<DOC>
+pcb-module test-design:
+  inst non-keepout : test-SOIC
+
+  inst app-keepout : test-SOIC
+  val KO = KeepoutOverlay(Rectangle(4.0, 6.0))
+  make-keepout-overlay(KO, app-keepout, name = "D-Overlay")
+
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-current-design("APP-Specific-Keepout-TEST")
+set-rules(default-rules)
+set-board(default-board(board-shape))
+
+set-main-module(test-design)
+
+; Use any helper function from helpers.stanza here. For example:
+; run-check-on-design(my-design)
+
+; View the results
+view-board()

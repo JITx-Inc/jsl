@@ -30,7 +30,7 @@ doc: \<DOC>
 Small Outline No Lead (SON) Lead Type
 
 This type defines the parameters of each of the individual leads
-of the IC package. It is typically used with {@link Lead-Profile}
+of the IC package. It is typically used with {@link type:Lead-Profile}
 <DOC>
 public defstruct SON-Lead <: SMT-Lead:
   lead-type:LeadProtrusion with:
@@ -51,9 +51,9 @@ with:
 doc: \<DOC>
 Constructor for `SON-Lead`
 
-@param lead-type The default lead protrusion type is {@link SmallOutlineNoLeads}
-@param length Length of the lead in mm - see {@link SMT-Lead} for more info
-@param width Width of the lead in mm - see {@link SMT-Lead} for more info
+@param lead-type The default lead protrusion type is {@link type:SmallOutlineNoLeads}
+@param length Length of the lead in mm - see {@link type:SMT-Lead} for more info
+@param width Width of the lead in mm - see {@link type:SMT-Lead} for more info
 <DOC>
 public defn SON-Lead (
   --
@@ -80,7 +80,7 @@ public defstruct SON <: Dual-Package :
 
   doc: \<DOC>
   Lead Profile for the pins on the opposing edges of the SON package.
-  By default the {@link SON-Lead} type is used for the `lead` and
+  By default the {@link type:SON-Lead} type is used for the `lead` and
   `protrusion` definitions.
   <DOC>
   lead-profile:Lead-Profile with:
@@ -114,7 +114,7 @@ public defstruct SON <: Dual-Package :
   Lead Numbering Scheme for the SON Package
 
   This provides a numbering scheme for the leads of the SON
-  package. By default, it uses {@link Std-IC-Numbering}.
+  package. By default, it uses {@link type:Std-IC-Numbering}.
   <DOC>
   lead-numbering:Numbering with:
     as-method => true
@@ -140,8 +140,8 @@ Constructor for SON Packages
 @param thermal-lead? Optional thermal lead. This shape will be placed at (0.0, 0.0)
 in the land pattern's reference frame.
 @param package-body 3D component body descriptor.
-@param pad-planner Pad shape planner - default is {@link RectanglePadPlanner}
-@param num-scheme Numbering scheme for pads - default is {@link Column-Major-Numbering}
+@param pad-planner Pad shape planner - default is {@link var:RectanglePadPlanner}
+@param num-scheme Numbering scheme for pads - default is {@link type:Column-Major-Numbering}
 @param density-level Density Level of Generated Package
 <DOC>
 public defn SON (
@@ -188,10 +188,11 @@ public defmethod build-silkscreen (
   pkg:SON,
   vp:VirtualLP
   ) -> False:
-  create-silkscreen-pkg-extrema-outline(
-    vp, package-body(pkg),
+  val eo = EdgesOutline(
+    pkg-body = package-body(pkg),
     density-level = density-level(pkg)
   )
+  build-outline(eo, vp)
   build-smd-pin-1-dot(
     vp,
     dir = Left,

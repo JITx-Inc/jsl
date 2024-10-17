@@ -5,14 +5,7 @@ defpackage jsl/examples/protocols/displayport/main:
   import jitx
   import jitx/commands
 
-
-  import jsl/design/settings
-  import jsl/symbols/SymbolDefn
-
-  import jsl/protocols/displayport
-  import jsl/bundles
-  import jsl/si
-
+  import jsl
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
 

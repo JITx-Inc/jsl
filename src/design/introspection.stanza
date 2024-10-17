@@ -5,6 +5,8 @@ defpackage jsl/design/introspection:
   import jitx
   import jitx/commands
 
+  import maybe-utils
+
   import jsl/errors
   import jsl/landpatterns/introspection
 
@@ -90,7 +92,7 @@ public defn get-symbpin-by-name (obj:SchematicSymbol, name:String) -> Maybe<JITX
 
 doc: \<DOC>
 Get the Cathode / Anode Ports of a device if they exist
-@param obj Two-pin component/module instance or SchematicSymbol that may or
+@param obj-symb Two-pin component/module instance or SchematicSymbol that may or
 may not be a polarized device with cathode (`c`) and anode (`a`) ports.
 @return If the passed object is a polarized device, then this returns
 One<Tuple> of the ports in the order `[c, a]`. If not a polarized device,
@@ -114,7 +116,7 @@ Retrieve the two ports of a 2-pin element device.
 Two-pin lumped circuit element devices (like resistors, capacitors, etc)
 come typically in one of two forms:
 
-1.  The `p[1]` and `p[2]` form for non-polatized devices.
+1.  The `p[1]` and `p[2]` form for non-polarized devices.
 2.  The `c` and `a` form for the cathode / anode of polarized
 devices.
 
@@ -268,6 +270,20 @@ public defn get-pads-from-port (pt:JITXObject, cxt:JITXObject = self) -> Maybe<T
       (given:One<JITXObject>):
         val p2p-map = port-to-pads(value(given))
         get-pads-from-port(p2p-map, pt)
+
+doc: \<DOC>
+Get pads for each port and combine them into a single list
+<DOC>
+public defn get-pads-from-ports (pts:Seqable<JITXObject>, cxt:JITXObject = self) -> Seq<JITXObject>:
+  ; Expand port arrays
+  val single-pts = for pt in pts seq-cat:
+    match(port-type(pt)):
+      (pa:PortArray): ports(pt)
+      (x): [pt]
+
+  for pt in single-pts seq-cat:
+    val pds? = get-pads-from-port(pt, cxt)
+    value-or(pds?, [])
 
 doc: \<DOC>
 Retrieve the parent instance (component or module) for a port.
@@ -432,7 +448,7 @@ public defn find-instance-by-ref (r:Ref, cxt:JITXObject = self) -> Maybe<JITXObj
     trail-comp?
 
 doc: \<DOC>
-Get the net associated with a module or component port
+Get all net statements associated with a module or component port
 
 This function must be called from within a `pcb-module` context.
 
@@ -451,59 +467,37 @@ pcb-module wrapper:
 
 pcb-module top-level:
 
+  port pwr : power
   inst W : wrapper
   net GND (W.GND)
+  net (GND, pwr.V-)
 
-  ; This will work
-  val n1 = get-connected-net!(W.GND)
+  ; This will return two nets: one for each statement above
+  val n1 = get-connected-nets(W.GND)
 
-  ; This will not work
-  val n2 = get-connected-net!(W.C.internal-port)
+  ; This will return an empty tuple
+  val n2 = get-connected-nets(W.C.internal-port)
 ```
 
-The value for `n1` will be successfully found as the `GND`
-net because it is defined within the `pcb-module` context.
+`n1` will be a tuple of two `net` objects, since
+there are two `net` statements defined in the `pcb-module` context.
 
 The `n2` invocation will fail to find `INT` as the net
-for `W.C.internal-port` and return `None()`.
+for `W.C.internal-port` and return an empty tuple
 
 @param pt Port of a component or module in this module context.
 @param cxt Optional context to search. The default value is `self`.
 @return If a connection is found - this function returns the Net as
 a JITXObject. If no connection is found - then None().
 <DOC>
-public defn get-connected-net (pt:JITXObject, cxt:JITXObject = self) -> Maybe<JITXObject>:
+public defn get-connected-nets (pt:JITXObject, cxt:JITXObject = self) -> Tuple<JITXObject>:
   inside pcb-module:
-    for n in nets(cxt) first :
-      if connected?([pt, n]):
-        One(n)
-      else:
-        None()
-
-doc: \<DOC>
-Get the net associated with a module or component port
-
-This function must be called from within a `pcb-module` context.
-
-This function has similar constraints to @{link get-connected-net}.
-
-@param pt Port of a component or module in this module context.
-@param cxt Optional context to search. The default value is `self`.
-@return A `Net` object as a JITXObject if the port is connected.
-@throws ValueError if no net connections are found or if more than one net
-connection is found.
-<DOC>
-public defn get-connected-net! (pt:JITXObject, cxt:JITXObject = self) -> JITXObject:
-  inside pcb-module:
-    val n-set = to-tuple $ for n in nets(cxt) filter :
-      connected?([pt, n])
-
-    if length(n-set) == 0:
-      throw $ ValueError("Invalid Port - No net connection found")
-    else if length(n-set) > 1 :
-      throw $ ValueError("Invalid Port - Multiple Nets Associated - Expected Singular Net")
-
-    n-set[0]
+    to-tuple $
+      for n in nets(cxt) seq? :
+        if connected?([pt, n]):
+          One(n)
+        else:
+          None()
 
 doc: \<DOC>
 Port Info Object
@@ -520,8 +514,14 @@ public pcb-struct jsl/design/introspection/PortInfo :
   ; Ideally - this is a `Maybe` but that isn't supported
   ;   yet.
   ; TODO - consider shifting to `Maybe` in the future.
-  connected-net:JITXObject|False
+  connected-nets:Tuple<JITXObject>
   pad-set:Tuple<jsl/landpatterns/introspection/PadInfo>
+
+; Support `connected-net`, as the field changed from an optional
+; value to a Tuple
+public defn connected-net (p:PortInfo) -> JITXObject|False :
+  if empty?(connected-nets(p)) : false
+  else : connected-nets(p)[0]
 
 doc: \<DOC>
 Extract Port Info from a port `JITXObject`
@@ -538,7 +538,5 @@ public defn get-port-info (pt:JITXObject) -> PortInfo:
         val lp-pds = value(given)
         to-tuple $ for lp-pd in lp-pds seq:
           get-pad-info(lp-pd)
-    val con-net = match(get-connected-net(pt)):
-      (_:None): false
-      (given:One<JITXObject>): value(given)
-    PortInfo(con-net, pd-info)
+    val con-nets = get-connected-nets(pt)
+    PortInfo(con-nets, pd-info)

@@ -1,6 +1,7 @@
 include? ".slm/stanza.proj"  ; Dependencies
 pkg-cache: ".slm/pkg-cache"
 
+package jsl defined-in "./jsl.stanza"
 packages jsl/* defined-in "./src/"
 
 packages jsl/tests/* defined-in "./tests/"

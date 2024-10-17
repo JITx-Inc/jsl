@@ -45,9 +45,9 @@ This function will create a `supports` statement
 for an N-input gate where `N` is the length of the
 `in-pins` tuple. This will allow the inputs to the
 gate to be connected in any order depending on the
-best layout for the resuting circuit.
+best layout for the resulting circuit.
 
-@param out-pint Output pin to bind to the gate supports statement.
+@param out-pin Output pin to bind to the gate supports statement.
 @param in-pins A set of input pins to bind to the gate supports statement.
 <DOC>
 public defn make-gate-supports (out-pin:JITXObject, in-pins:JITXObject ...):
@@ -68,10 +68,3 @@ public defn make-gate-supports (out-pin:JITXObject, in-pins:JITXObject ...):
       gb.out => out-pin
       for i in 1 through num-inputs do:
         gb.in[i] => in-vec[i - 1].gate-p
-
-
-
-
-
-
-

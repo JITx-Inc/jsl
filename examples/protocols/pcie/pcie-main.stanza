@@ -6,10 +6,7 @@ defpackage jsl/examples/protocols/pcie/main:
   import jitx/commands
 
 
-  import jsl/design/settings
-
-  import jsl/protocols/pcie
-  import jsl/si
+  import jsl
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components

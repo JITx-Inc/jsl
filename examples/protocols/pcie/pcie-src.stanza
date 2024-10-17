@@ -4,20 +4,7 @@ defpackage jsl/examples/protocols/pcie/pcie-src :
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/design/settings
-  import jsl/si/helpers
-  import jsl/pin-assignment
-  import jsl/bundles
-  import jsl/protocols/pcie
-
-val pkg-body = PackageBody(
-  width = 15.0 +/- 0.1,
-  length = 15.0 +/- 0.1,
-  height = 0.71 +/- [0.06, 0.0]
-)
+  import jsl
 
 val BGA-pkg = BGA(
   num-leads = 64,
@@ -25,7 +12,11 @@ val BGA-pkg = BGA(
   columns = 8,
   lead-diam = 0.5,
   pitch = 2.0,
-  package-body = pkg-body,
+  package-body = PackageBody(
+    width = 15.0 +/- 0.1,
+    length = 15.0 +/- 0.1,
+    height = 0.71 +/- [0.06, 0.0]
+  ),
   density-level = DensityLevelB
 )
 
@@ -97,7 +88,7 @@ public pcb-component component :
 
   val box-params = BoxSymbolParams(
     show-grid = false
-    col-width = 1
+    min-col-width = 1
   )
 
   val box = BoxSymbol(self, params = box-params)

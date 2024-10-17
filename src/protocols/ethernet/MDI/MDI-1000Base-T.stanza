@@ -71,9 +71,6 @@ are expected to be passed in the right order - otherwise,
 we may setup the wrong pin assignment constraints.
 <DOC>
 public defn make-1000Base-T-supports (dps:JITXObject ...):
-   make-1000Base-T-supports(dps)
-
-public defn make-1000Base-T-supports (dps:Tuple<JITXObject>):
   val dps-pairs = to-tuple $ for i in 0 to length(dps) seq:
     [dps[i].P, dps[i].N]
 
@@ -91,7 +88,7 @@ public defn MDI-1000Base-T-get-skew-loss () -> [Toleranced, Double]:
   [0.0 +/- (1.6e-12 / 2.0), 12.0]
 
 doc: \<DOC>
-Retrieve the expected differential impedance for the differentiali pairs
+Retrieve the expected differential impedance for the differential pairs
 @return Toleranced in ohms.
 <DOC>
 public defn MDI-1000Base-T-get-trace-impedance () -> Toleranced :

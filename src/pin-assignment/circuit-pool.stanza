@@ -116,7 +116,7 @@ interchangeably in a pin assignment problem.
 each instance possesses. We use this information to construct the consolidated supports
 @param num-insts Number of instances of the template to construct.
 
-@return A `pcb-module` definition that can be instaniated to create a pool
+@return A `pcb-module` definition that can be instantiated to create a pool
 <DOC>
 public defn create-circuit-pool (template:CircuitTemplate, num-insts:Int) -> Instantiable:
   pcb-module circuit-pool:
@@ -125,7 +125,7 @@ public defn create-circuit-pool (template:CircuitTemplate, num-insts:Int) -> Ins
   circuit-pool
 
 doc: \<DOC>
-Create a Circuit Pool Instantiablel from a heterogenous mixture of Templates
+Create a Circuit Pool Instantiable from a heterogenous mixture of Templates
 
 This function will use `make-circuit-pool` to construct an
 instantiable module that will consolidate the supports from a mix of different
@@ -136,7 +136,7 @@ to minimize space and maximize utilization.
 
 @param templates A KeyValue set of Template and Number of Instances of that template to create.
 The user can pass as many of these as they like.
-@return A `pcb-module` definition that can be instaniated to create a pool
+@return A `pcb-module` definition that can be instantiated to create a pool
 
 <DOC>
 public defn create-circuit-pool (templates:KeyValue<CircuitTemplate, Int> ...) -> Instantiable:

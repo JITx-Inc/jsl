@@ -23,7 +23,6 @@ ports/bundles.
 @member N Negative side of the differential pair
 <DOC>
 public pcb-bundle diff-pair :
-  name = "Differential Signal Pair"
   port N
   port P
 
@@ -40,7 +39,6 @@ No directionality is implied by this bundle.
 
 <DOC>
 public pcb-bundle dual-pair :
-  name = "Dual Pair Bundle"
   port A : diff-pair
   port B : diff-pair
 
@@ -55,7 +53,6 @@ The lane pair is a directed differential pair lane
 @member RX Receive Pair
 <DOC>
 public pcb-bundle lane-pair :
-  name = "Lane Pair Bundle"
   port TX : diff-pair
   port RX : diff-pair
 
@@ -89,7 +86,6 @@ of a DC power source.
 @member V- Negative Voltage of the Power Bundle
 <DOC>
 public pcb-bundle power :
-  name = "DC Power"
   port V+
   port V-
 
@@ -128,7 +124,6 @@ Differential Pair ADC Interface Bundle
 @member N Negative side of the ADC differential pair
 <DOC>
 public pcb-bundle adc-diff-pair :
-  name = "ADC Differential Signal Pair"
   port P
   port N
 
@@ -147,7 +142,6 @@ Differential Pair DAC Interface Bundle
 @member N Negative side of the DAC differential pair
 <DOC>
 public pcb-bundle dac-diff-pair :
-  name = "DAC Differential Signal Pair"
   port P
   port N
 
@@ -166,7 +160,6 @@ Clock Differential Pair
 @member N Negative side of the clock differential pair
 <DOC>
 public pcb-bundle clk-diff-pair :
-  name = "Clock Differential Signal Pair"
   port P
   port N
 
@@ -177,7 +170,6 @@ High-Speed Differential Pair
 @member N Negative side of the high-speed differential pair
 <DOC>
 public pcb-bundle hs-diff-pair :
-  name = "High-Speed Differential Signal Pair"
   port P
   port N
 

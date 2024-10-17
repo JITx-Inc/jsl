@@ -4,14 +4,7 @@ defpackage jsl/examples/protocols/displayport/displayport-src :
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
-
-  import jsl/design/settings
-  import jsl/si/helpers
-  import jsl/pin-assignment
-  import jsl/bundles
-  import jsl/protocols/displayport
+  import jsl
 
 doc: \<DOC>
 @brief DisplayPort dummy component
@@ -81,7 +74,7 @@ public pcb-component component :
 
   val box-params = BoxSymbolParams(
     show-grid = false
-    col-width = 1
+    min-col-width = 1
   )
 
   val box = BoxSymbol(self, params = box-params)

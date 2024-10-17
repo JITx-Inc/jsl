@@ -10,6 +10,8 @@ defpackage jsl/via-structures:
   import jsl/ensure
   import jsl/bundles
   import jsl/symbols/arrows
+  import jsl/symbols
+  import jsl/si
 
 var debug-mode = false
 val debug-layer = CustomLayer("vs-debug", Top)
@@ -112,7 +114,7 @@ Polar Via Ground Cage Constructor
 @param count Number of via placements
 @param radius Radius in mm of the via placement arc.
 @param theta-deg Initial angle in degrees. Default value is 0.0
-@param skips Collection of via placement indicies to skip. Default value is `[]`
+@param skips Collection of via placement indices to skip. Default value is `[]`
 which implies no placements are skipped.
 <DOC>
 public defn PolarViaGroundCage (
@@ -221,6 +223,8 @@ Via Signal Identifier Enum
 
 This type distinguishes between single-ended and differential
 via structures.
+@member Via-Single-Ended
+@member Via-Differential
 <DOC>
 public defenum ViaSignalType:
   Via-Single-Ended
@@ -406,7 +410,7 @@ This function will construct the ports, nets, topology segments, etc
 for a functional via structure.
 
 1.  Creates two ports, `sig-in` and `sig-out` for the explicit signal via connections.
-2.  Createa a `COMMON` pin for the ground connection of the cage vias.
+2.  Creates a `COMMON` pin for the ground connection of the cage vias.
 3.  Constructs a `pass-through` support for working with Pin Assignment.
 4.  Constructs the ground cage vias via the {@link make-ground-cage} method.
 5.  Constructs the signal via with a `geom` statement.
@@ -423,10 +427,15 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
 
     port COMMON
 
+    ; Wrapper instance
+    inst via-pin : topo-via-pin(`p)
+    place(via-pin) at pose * loc(0.0, 0.0) on Top
+    geom(via-pin.p) :
+      via(via-def(v)) at pose * Point(0.0, 0.0)
+
     net cage (COMMON)
 
-    net via-net (sig-in, sig-out)
-    topology-segment(sig-in, sig-out)
+    topo-net(sig-in => via-pin.p => sig-out)
 
     supports pass-through:
       pass-through.A => sig-in
@@ -434,9 +443,6 @@ defmethod make-via-structure (v:SingleViaStructure -- pose:Pose = DEF_VS_LOC) ->
 
     for cv in ground-cages(v) do:
       make-ground-cage(cv, cage, pose = pose)
-
-    geom(via-net):
-      via(via-def(v)) at pose * Point(0.0, 0.0)
 
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
@@ -547,10 +553,28 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
 
     port COMMON
 
-    net via-net-P (sig-in.P, sig-out.P)
-    topology-segment(sig-in.P, sig-out.P)
-    net via-net-N (sig-in.N, sig-out.N)
-    topology-segment(sig-in.N, sig-out.N)
+    val [via-def-P, via-def-N] = match(via-def(v)):
+      (obj1:Via): [obj1, obj1]
+      (obj2:[Via, Via]): obj2
+    val via-pitch = pitch(v) / 2.0
+
+    ; First wrapper instance
+    inst via-pin-P : topo-via-pin(`p)
+    place(via-pin-P) at pose * loc(via-pitch, 0.0) on Top
+    geom(via-pin-P.p) :
+      via(via-def-P) at pose * Point(via-pitch, 0.0)
+
+    ; Second wrapper instance
+    inst via-pin-N : topo-via-pin(`n)
+    place(via-pin-N) at pose * loc((- via-pitch), 0.0) on Top
+    geom(via-pin-N.n) :
+      via(via-def-N) at pose * Point((- via-pitch), 0.0)
+
+    ; Connect first wrapper instance
+    topo-net(sig-in.P => via-pin-P.p => sig-out.P)
+
+    ; Connect second wrapper instance
+    topo-net(sig-in.N => via-pin-N.n => sig-out.N)
 
     net cage (COMMON)
 
@@ -563,20 +587,41 @@ defmethod make-via-structure (v:DifferentialViaStructure -- pose:Pose = DEF_VS_L
     for cv in ground-cages(v) do:
       make-ground-cage(cv, cage, pose = pose)
 
-    val vp = pitch(v) / 2.0
-
-    val [vd-P, vd-N] = match(via-def(v)):
-      (obj1:Via): [obj1, obj1]
-      (obj2:[Via, Via]): obj2
-
-    geom(via-net-P):
-      via(vd-P) at pose * Point(vp, 0.0)
-
-    geom(via-net-N):
-      via(vd-N) at pose * Point((- vp), 0.0)
-
     make-anti-pads(v, pose = pose)
     make-insertion-points(v, pose = pose)
+
+
+; Private topology helpers:
+; In order for vias to be used in topologies we need to instantiate phantom pins
+
+defn topo-via-sym (name:Symbol) :
+  new SymbolDefn :
+    defmethod name (this) : "Via Pin"
+    defmethod build-pins (this, sn:SymbolNode) :
+      add-pin(sn, Ref(name), Point(0.0, 0.0), name = "pin-1")
+    defmethod build-artwork (this, sn:SymbolNode) :
+      add-glyph(sn, Circle(-0.5, 0., 0.25))
+    defmethod build-params (this, sn:SymbolNode) :
+      false
+
+pcb-pad topo-via-pad :
+  type  = SMD
+  name  = "'Empty' Pad"
+  shape = EmptyShape()
+
+pcb-landpattern topo-via-landpattern :
+  pad p : topo-via-pad at loc(0.0, 0.0)
+
+; The wrapper component
+public pcb-component topo-via-pin (name:Symbol) :
+  description = "Wrapper object for injecting via in topology"
+  reference-prefix = "V"
+  val p = make-port(name)
+  val lp = topo-via-landpattern
+  landpattern = lp(p => lp.p)
+  assign-symbol(create-symbol(topo-via-sym(name)))
+
+
 
 
 doc: \<DOC>

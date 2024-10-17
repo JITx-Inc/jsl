@@ -34,9 +34,9 @@ public defn ActiveLowDecorator (
   )
 
 doc: \<DOC>
-* `OpenCollectorSink` = Low Side Open Collector Sink. This is the most common version. This
+@member OpenCollectorSink Low Side Open Collector Sink. This is the most common version. This
 is created using a NPN BJT or NMOS FET.
-* `OpenCollectorSource` = High Side Open Collector Source. Less common - this is created using a PNP BJT
+@member OpenCollectorSource High Side Open Collector Source. Less common - this is created using a PNP BJT
 or PMOS FET.
 <DOC>
 public defenum OpenCollectorType:
@@ -146,6 +146,11 @@ public defn ClockDecorator (
   )
 
 
+doc: \<DOC>
+@member InputPin
+@member OutputPin
+@member BidirectionalPin
+<DOC>
 public defenum CardinalityType :
   InputPin
   OutputPin

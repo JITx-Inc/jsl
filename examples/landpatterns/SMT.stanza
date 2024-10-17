@@ -5,9 +5,7 @@ defpackage jsl/examples/landpatterns/SMT:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
@@ -25,7 +23,20 @@ pcb-symbol test-sym:
     number-size = 0.762
     name-size = 0.762
 
-pcb-component test-SMT:
+pcb-symbol test-sym-pol:
+  pin a at Point(-2.54, 2.54) with :
+    direction = Left
+    length = 2.54
+    number-size = 0.762
+    name-size = 0.762
+
+  pin c at Point(-2.54, 0.0) with :
+    direction = Left
+    length = 2.54
+    number-size = 0.762
+    name-size = 0.762
+
+pcb-component test-SMT (case:String):
 
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
@@ -33,20 +44,46 @@ pcb-component test-SMT:
     [p[2] | p[2] | Down | 0]
 
   assign-symbol(test-sym)
-  val chip-def = chips["1206"]
-  val pkg = SMT-Chip(
-    chip-def,
-    density-level = DensityLevelC
-  )
-
-  ; val pkg = get-chip-pkg("1210", DensityLevelB)
+  val pkg = get-resistor-pkg(case, density-level = DensityLevelC)
 
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
+pcb-component test-SMT-pol (case:String):
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
+    [a | a | Up |  0]
+    [c | c | Down | 0]
+
+  assign-symbol(test-sym-pol)
+
+  val chip-def = get-chip-def(case)
+  val pkg = SMT-Capacitor(
+    chip-def,
+    polarized? = true
+    density-level = DensityLevelC
+  )
+  val lp = create-landpattern(pkg)
+  assign-landpattern(lp)
+
+
 pcb-module test-design:
-  inst c : test-SMT
-  place(c) at loc(0.0, 0.0) on Top
+  inst C1 : test-SMT("1206")
+  place(C1) at loc(0.0, 0.0) on Top
+
+  inst C2 : test-SMT-pol("1206")
+  place(C2) at loc(2.5, 0.0) on Top
+
+  inst C3 : test-SMT("0402")
+  ; place(C3) at loc(0.0, 0.0) on Top
+  inst C4 : test-SMT-pol("0402")
+
+  inst C5 : test-SMT("0603")
+  inst C6 : test-SMT-pol("0603")
+
+  inst C7 : test-SMT("0805")
+  inst C8 : test-SMT-pol("0805")
+
 
 
 ; Set the top level module (the module to be compile into a schematic and PCB)

@@ -52,6 +52,8 @@ In RGMII v2, the spec introduces an optional "Internal Delay"
 feature. Devices that provide this are labeled "RGMII-ID".
 These devices don't require a PCB board delay because the
 delay can be configured in firmware.
+@member RGMII-STD
+@member RGMII-ID
 <DOC>
 public pcb-enum jsl/protocols/ethernet/RGMII/RGMIIVersion:
   RGMII-STD
@@ -60,7 +62,7 @@ public pcb-enum jsl/protocols/ethernet/RGMII/RGMIIVersion:
 doc: \<DOC>
 RGMII Delay and Loss Spec
 
-@param gen RGMII version spec
+@param version RGMII version spec
 @return Tuple of `[delay, max-loss]` where:
 *  `delay` - This is the expected delay between data to clock.
 *  `max-loss` - This is the max loss in dB for all signals.
@@ -89,7 +91,7 @@ doc: \<DOC>
 RGMII Lane Constraint
 
 This constraint is used to constrain a lane of the RGMII
-interface. This type would typically be used with a {@link LaneConstraint}
+interface. This type would typically be used with a {@link type:LaneConstraint}
 type for constructing a full-duplex RGMII interface.
 
 This constraint expects to be passed `rgmii-lane` bundle
@@ -119,7 +121,7 @@ public defstruct RGMII-Constraint <: SI-Constraint :
 doc: \<DOC>
 Construct a RGMII Constraint object
 
-@param proto USB Protocol Version to construct a constraint object for
+@param version USB Protocol Version to construct a constraint object for
 @param route-struct Differential Pair Routing Structure - Use
 `pcb-differential-routing-structure` to create.
 @return Diff-Pair Constraint Object

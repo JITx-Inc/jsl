@@ -29,7 +29,7 @@ Symbol Glyphs Generator Function
 This is the function where the user creates the geometry
 of the rendered net symbol. The `node` object provides
 the net symbols scene graph. The user can choose to
-draw shapes and other content via the {@link SymbolNode}
+draw shapes and other content via the {@link type:SymbolNode}
 interface.
 
 @param x This `SymbolBuilder`

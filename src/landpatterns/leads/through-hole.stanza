@@ -14,6 +14,7 @@ Compute the hole size for a through-hole pad.
 @param lead-diameter Size of the lead for this hole. This should be the
 overall diameter of the lead, ie, for a square lead this diameter is the
 diagonal measurement of the square.
+@param density-level IPC defined density levels for board manufacturing (DensityLevelA, DensityLevelB, DensityLevelC)
 <DOC>
 public defn compute-hole-diam (
   lead-diameter:Toleranced,
