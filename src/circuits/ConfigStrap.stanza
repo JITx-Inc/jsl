@@ -10,6 +10,7 @@ defpackage jsl/circuits/ConfigStrap:
 
   import core
   import collections
+  import math
   import jitx
   import jitx/commands
 
@@ -237,7 +238,7 @@ strap object. We will set the high/low components to
 public defn set-straps-config (straps:JITXObject, cfg:Int):
   inside pcb-module:
     val hw-rev-bits = length(straps.configs)
-    val bit-max = ceil-log2(hw-rev-bits)
+    val bit-max = to-int(pow(2.0, to-double(hw-rev-bits))) - 1
     if cfg > bit-max:
       throw $ ValueError("Invalid HW Rev Bits Value '%_' - Greater than bitvector max: '%_'" % [cfg, bit-max])
 
