@@ -349,6 +349,43 @@ public defn conductors (ls:LayerStack) -> Tuple<LayerSpec> :
   to-tuple $ filter({material(_) is ConductorMaterial}, layers(ls))
 
 doc: \<DOC>
+Check if a layer id refers to a valid copper layer in this stackup
+
+@param ls PCB Stackup Generator
+@param l Index into the copper layers. If `Int`, this is a simple
+zero-based index starting from the `Top` layer and working to the
+`Bottom` layer.
+<DOC>
+public defn is-valid-copper-layer? (ls:LayerStack, l:Int|LayerIndex) -> True|False :
+  val ly-id = match(l):
+    (i:Int): i
+    (li:LayerIndex): layer-num(ls, li)
+  ly-id >= 0 and ly-id < get-conductor-count(ls)
+
+
+doc: \<DOC>
+Convert the copper layers into a tuple of `LayerIndex` objects
+@param ln Layer Stack Generator
+@param omits A collection of copper layers that we don't want to
+include in the generated output. Any value in this collection that matches a
+copper layer will cause that `LayerIndex` to be skipped.
+An `Int` value in this list indicates a simple zero-based index into the copper layers
+starting at `Top` and going to `Bottom`
+<DOC>
+public defn conductors-by-index (ls:LayerStack -- omits:Collection<Int|LayerIndex> = []) -> Tuple<LayerIndex> :
+  for o in omits do:
+    if not is-valid-copper-layer?(ls, o):
+      throw $ ValueError("Invalid Omit Layer '%_' - Not Valid in this Stackup: %_" % [o, ls])
+
+  to-tuple $ for (c in conductors(ls), i in 0 to false) seq?:
+    val skip = for o in omits any?:
+      layer-num(ls, o) == i
+    if not skip:
+      One $ LayerIndex(i, Top)
+    else:
+      None()
+
+doc: \<DOC>
 Add one or more layers to the top of the board stackup.
 
 When used on its own, this function is useful for creating asymmetric
@@ -516,6 +553,59 @@ public defn get-conductor (ls:LayerStack, index:Int) -> [Maybe<LayerSpec>, Layer
     (_:False): throw $ ValueError("No Copper Layer with Index: %_" % [index])
     (cu-index:Int):
       [get-pre-dielectric(cu-index), l-set[cu-index], get-post-dielectric(cu-index)]
+
+
+doc: \<DOC>
+Convert a LayerIndex to a Copper Layer Index
+
+@param ls PCB Stackup Generator - This provides the number
+of copper layers in the stackup.
+@param l Which layer in the stackup we are referring to.
+@return A zero-indexed value where `Top` is 0 and `Bottom`
+is `N-1` where `N` is the number of layers in the stackup.
+@throws ValueError If `l` is invalid for this stackup - ie, if the
+layer is outside of the available copper layers of the design.
+<DOC>
+public defn layer-num (ls:LayerStack, l:LayerIndex|Int) -> Int :
+  val cnt = get-conductor-count(ls)
+  is-valid-copper-layer?(ls, l)
+  match(l):
+    (i:Int): i
+    (li:LayerIndex): layer-num(li, cnt)
+
+doc: \<DOC>
+Compare Two LayerIndex given a PCB stackup
+
+@param ls PCB Stackup Generator - This provides the number
+of copper layers in the stackup.
+@return This function returns zero if the layer indices match
+This function returns a value < 0 if `a` is closer to the `Top` than `b`
+This function returns a value > 0 if `a` is closer to the `Bottom` than `b`
+<DOC>
+public defn compare-layer (ls:LayerStack, a:LayerIndex, b:LayerIndex) -> Int :
+  val a-num = layer-num(ls, a)
+  val b-num = layer-num(ls, b)
+  ; I'm mapping +1 to Lower in the stack (ie, Bottom)
+  ; I'm mapping -1 to Higher in the stack (ie, Top)
+  compare(a-num, b-num)
+
+doc: \<DOC>
+Check if a given copper layer is within a range of layers
+
+This is an inclusive check - so if `a` == `start` or `a` == `end` -
+then this check will return True.
+
+@param ls PCB Stackup Generator - This provides the number
+of copper layers in the stackup.
+@param a Copper Layer to compare against the `start` and `end` range.
+@param start Start of the copper layer range.
+@param end End of the copper layer range.
+@return True if `a` is on or between start & end. False if outside that range.
+<DOC>
+public defn in-range? (ls:LayerStack, a:LayerIndex, start:LayerIndex, end:LayerIndex) -> True|False :
+  val sc = compare-layer(ls, a, start)
+  val ec = compare-layer(ls, a, end)
+  sc >= 0 and ec <= 0
 
 defn make-name (x:LayerStack) :
   ; I can't use the `name` string in the pcb-stackup definition
