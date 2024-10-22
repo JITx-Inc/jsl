@@ -5,3 +5,4 @@ defpackage jsl/design:
   forward jsl/design/introspection
   forward jsl/design/settings
   forward jsl/design/solvers
+  forward jsl/design/Substrate

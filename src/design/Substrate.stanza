@@ -1,0 +1,285 @@
+#use-added-syntax(jitx)
+defpackage jsl/design/Substrate:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/layerstack
+
+doc: \<DOC>
+Interface type for Substrate Definitions
+
+The idea behind this type is to provide a consistent
+interface that all fabricator specifc substrates can follow.
+This will allow a design to swap out the current substrate for
+a new substrate with minimal disruption to the design.
+<DOC>
+public deftype ISubstrate
+
+doc: \<DOC>
+Stackup Generator for this Substrate
+<DOC>
+public defmulti stackup (f:ISubstrate) -> LayerStack
+
+doc: \<DOC>
+Get the vias registered with this substrate.
+
+This method is useful for constructing a `pcb-board`
+definition from the substrate.
+<DOC>
+public defmulti vias (f:ISubstrate) -> Tuple<Via>
+
+doc: \<DOC>
+Create a Single-Ended Routing Structure for this Substrate
+
+This method returns a `pcb-routing-structure` instance for
+a given characteristic impedance.
+
+@param f Substrate object
+@param imped Characteristic impedance of desired routing structure
+@param neckdown Specify a custom neckdown property for this
+routing structure to override the default. For example, you
+might need smaller clearance near a component.
+<DOC>
+public defmulti se-routing-struct (
+  f:ISubstrate,
+  imped:Int
+  --
+  neckdown:NeckDown = ?
+  ) -> RoutingStructure
+
+doc: \<DOC>
+Create a Differential Routing Structure for this Substrate
+
+This method returns a `pcb-differential-routing-structure` instance for
+a given characteristic impedance.
+
+@param f Substrate object
+@param imped Characteristic impedance of desired routing structure
+@param uncoupled Specify an optional routing structure for the
+uncoupled region of a differential pair. By default, the uncoupled
+region keeps the same features as the diff-pair. User can override
+that behavior with this value.
+@param neckdown Specify an optional custom differential neckdown property
+for this routing structure to override the default. For example, you
+might need smaller clearance near a component.
+<DOC>
+public defmulti diff-routing-struct (
+  f:ISubstrate,
+  imped:Int
+  --
+  uncoupled:RoutingStructure = ?
+  neckdown:DifferentialNeckDown = ?
+  ) -> DifferentialRoutingStructure
+
+
+
+doc: \<DOC>
+Lookup-based Substrate Type
+
+This type is used to define board specific features that
+are unique to a particular manufacturer, process, etc.
+
+The idea is that some fabricators (like JLC-PCB) define
+standard features like via sizes, trace impedances,
+and stackups to make it easier for users to purchase
+inexpensive boards.
+
+<DOC>
+public defstruct Substrate <: ISubstrate :
+  doc: \<DOC>
+  Layer Stackup for the PCB
+
+  This defines the dielectric and copper stackup
+  for the PCB.
+  <DOC>
+  stackup:LayerStack with:
+    as-method => true
+
+  doc: \<DOC>
+  Via Set Available for this Substrate.
+  This collection contains the defined vias for
+  this design.
+
+  This collection is immutable because it must be
+  passed to the `pcb-board` creation via {@link make-board-def}
+  <DOC>
+  vias:Tuple<Via> with:
+    as-method => true
+  doc: \<DOC>
+  Single-Ended Routing Structure Generators
+  This object is not intended to be accessed directly.
+  User should access this type using {@link se-routing-struct}
+  <DOC>
+  se:HashTable<Int, (Maybe<NeckDown> -> RoutingStructure)>
+  doc: \<DOC>
+  Differential Routing Structure Generators
+  This object is not intended to be accessed directly.
+  User should access this type using {@link diff-routing-struct}
+  <DOC>
+  df:HashTable<Int, ((Maybe<RoutingStructure>, Maybe<DifferentialNeckDown>) -> DifferentialRoutingStructure)>
+with:
+  printer => true
+  keyword-constructor => true
+
+doc: \<DOC>
+Constructor for Substrate
+
+@param stackup PCB Stackup Construction Definition
+@param vias Collection of Vias for the design to use.
+@param single-ended Collection of generator functions categorized
+by characteristic impedance
+@param differential Collection of gneerator functions categorized
+by characteristic impedance
+<DOC>
+public defn Substrate (
+  --
+  stackup:LayerStack,
+  vias:Collection<Via>,
+  single-ended:Collection<KeyValue<Int, (Maybe<NeckDown> -> RoutingStructure)>>,
+  differential:Collection<KeyValue<Int, ((Maybe<RoutingStructure>, Maybe<DifferentialNeckDown>) -> DifferentialRoutingStructure)>>
+  ) -> Substrate:
+  Substrate(
+    stackup = stackup,
+    vias = to-tuple $ vias,
+    se = to-hashtable<Int, (Maybe<NeckDown> -> RoutingStructure)>(single-ended),
+    df = to-hashtable<Int, ((Maybe<RoutingStructure>, Maybe<DifferentialNeckDown>) -> DifferentialRoutingStructure)>(differential)
+  )
+
+doc: \<DOC>
+Single-Ended Routing Structure Creator
+
+User selects a routing structure by characteristic impedance
+that is supported by this substrate. The substrate must have
+been previously initialized with a substrate that supports
+this impedance.
+
+@param f Board Substrate
+@param imped Characteristic impedance in ohms.
+@param neckdown Optional neckdown feature for the
+created routing structure. This allows the user to
+customize the behavior of routes near their endpoints.
+@return Single-Ended Routing Structure for the passed
+characteristic impedance.
+@throws ValueError if no routing structure for that characteristic
+impedance exists.
+<DOC>
+public defmethod se-routing-struct (
+  f:Substrate,
+  imped:Int
+  --
+  neckdown:NeckDown = ?
+  ) -> RoutingStructure:
+  val func? = get?(se(f), imped)
+  val func = match(func?):
+    (_:False):
+      throw $ ValueError("No Single-Ended Impedance Registered for Characteristic Impedance '%_'" % [imped])
+    (x): x
+  func(neckdown)
+
+doc: \<DOC>
+Differential Routing Structure Creator
+
+User selects a differential routing structure
+by characteristic impedance.
+
+@param f Board Substrate
+@param imped Characteristic impedance in ohms.
+@param uncoupled Optional single-ended uncoupled region
+routing structure. Typically, the substrate has a
+sensible default, like the same width at the individual
+trace widths of the differential pair.
+@param neckdown Optional differential neckdown feature for the
+created routing structure. This allows the user to
+customize the behavior of routes near their endpoints.
+@return Differential Routing Structure for the passed
+characteristic impedance.
+@throws ValueError if no routing structure for that characteristic
+impedance exists.
+<DOC>
+public defmethod diff-routing-struct (
+  f:Substrate,
+  imped:Int
+  --
+  uncoupled:RoutingStructure = ?
+  neckdown:DifferentialNeckDown = ?
+  ) -> DifferentialRoutingStructure:
+  val func? = get?(df(f), imped)
+  val func = match(func?):
+    (_:False):
+      throw $ ValueError("No Differential Impedance Registered for Characteristic Impedance '%_'" % [imped])
+    (x): x
+  func(uncoupled, neckdown)
+
+
+doc: \<DOC>
+Retrieve a via from the substrate by name
+@param f Substrate
+@param name Name of the via
+@return Via matching the given name.
+@throws ValueError if no via by that name has been registered
+with the substrate.
+<DOC>
+public defn get-via (f:Substrate, n:String) -> Via :
+  val ret? = for v in vias(f) first:
+    if name(v) == n:
+      One(v)
+    else:
+      None()
+  match(ret?):
+    (_:None):
+      throw $ ValueError("No Via with name '%_' defined"  % [name])
+    (given:One<Via>): value(given)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Utilities
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+doc: \<DOC>
+Generator for the `uncoupled` statement
+
+This function expects to be called from a `pcb-differential-routing-structure`
+context.
+@param default Default uncoupled region value is `uncoupled?` is `None()`
+@param uncoupled? Override for the default routing structure of the uncoupled region.
+<DOC>
+public defn make-uncoupled-region (default:RoutingStructure, uncoupled?:Maybe<RoutingStructure> = None()):
+  inside pcb-differential-routing-structure:
+    val uncoupled-spec = match(uncoupled?):
+      (_:None): default
+      (given:One<RoutingStructure>): value(given)
+
+    uncoupled-region = uncoupled-spec
+
+
+doc: \<DOC>
+Convert a Substrate into a `pcb-board` definition
+@param f Substrate
+@param outline Shape for the resulting `pcb-board`
+@param signal-shrink Optional parameter that defines the
+signal boundary in one of two ways:
+
+1. If a `Double` - then the `outline` parameter is shrunk by this amount in mm. This
+value must be positive.
+2. If a `Shape` - then this shape is applied to the `pcb-board` directly.
+
+@return `pcb-board` definition.
+<DOC>
+public defn make-board-def (f:Substrate, outline:Shape -- signal-shrink:Maybe<Double|Shape> = None()) -> Board:
+  pcb-board board-def-pcb:
+    stackup = create-pcb-stackup $ stackup(f)
+    boundary = outline
+    match(signal-shrink):
+      (_:None): false
+      (given:One<Double>):
+        val shrink = value(given)
+        ensure-positive!("signal-shrink", shrink)
+        signal-boundary = expand(outline, (- shrink))
+      (given:One<Shape>):
+        signal-boundary = value(given)
+    vias = vias(f)
+  board-def-pcb
