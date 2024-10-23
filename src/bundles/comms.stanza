@@ -437,9 +437,6 @@ a bidirectional data wire.
 @member clk Synchronous clock
 @member cs Chip Select
 @member do Data Output/Input
-
-@param opts Set of optional ports to include in this bundle
-definition. Duplicates are not allowed.
 <DOC>
 public defn microwire-3wire ():
   microwire(Microwire-CS, Microwire-DO)
