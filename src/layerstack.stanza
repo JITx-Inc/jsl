@@ -568,7 +568,6 @@ layer is outside of the available copper layers of the design.
 <DOC>
 public defn layer-num (ls:LayerStack, l:LayerIndex|Int) -> Int :
   val cnt = get-conductor-count(ls)
-  is-valid-copper-layer?(ls, l)
   match(l):
     (i:Int): i
     (li:LayerIndex): layer-num(li, cnt)
