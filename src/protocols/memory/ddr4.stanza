@@ -1,128 +1,16 @@
 doc: \<DOC>
-@brief DDR 4
+@brief Double Data Rate 4 Memory Standard (DDR4)
 
-DDR4 is a high speed memory protocol 
+DDR4 is a high speed memory protocol
 @see https://en.wikipedia.org/wiki/DDR4_SDRAM
 
 This functions and definitions in this file support defining DDR4
 connections between microprocessors and memories in a board design.
 
-<DOC>
-#use-added-syntax(jitx)
-defpackage jsl/protocols/memory/ddr4:
-  import core
-  import jitx
-  import jitx/commands
-
-  import jsl/bundles
-  import jsl/errors
-  import jsl/ensure
-  import jsl/si
-  import jsl/pin-assignment
-
-doc: \<DOC>
-@brief ddr4 width enums
-This is a fixed list of possible lane widths for ddr4 memory channels
-<DOC>
-public pcb-enum jsl/protocols/memory/ddr4-width:
-  DDR4-x4
-  DDR4-x8
-  DDR4-x16
-
-doc: \<DOC>
-@brief ddr4 Width enum conversion to integers
-This converts possible lane widths for ddr4 memory channels into the corresponding integer
-<DOC>
-public defn ddr4-width-enum-to-int (en:jsl/protocols/memory/ddr4-width) -> Int:
-  switch(en) :
-    DDR4-x4  :  4
-    DDR4-x8  :  8
-    DDR4-x16 : 16
-
-doc: \<DOC>
-@brief ddr4 topology
-This is a fixed list of possible topologies for ddr4 memories
-<DOC>
-public pcb-enum jsl/protocols/memory/ddr4-topology:
-  FlyBy
-  ClamShell
-
-doc: \<DOC>
-@brief ddr4 rank Options
-This is a fixed list of possible rank options for ddr4 implementations
-<DOC>
-public pcb-enum jsl/protocols/memory/ddr4-rank:
-  SingleRank
-  DualRank
-  QuadRank
-
-doc: \<DOC>
-@brief ddr4 rank enum conversion to integers
-This converts possible rank options for ddr4 memory channels into the corresponding integer
-<DOC>
-public defn ddr4-rank-enum-to-int (en:jsl/protocols/memory/ddr4-rank) -> Int:
-  switch(en) :
-    SingleRank : 1
-    DualRank   : 2
-    QuadRank   : 4
-
-doc: \<DOC>
-@brief ddr4 Bundle
-One ddr4 bundle consists of the connections between an integrated memory controller and
-one or more ddr4 memory chips/DIMMs.
-@member control Control channel for ddr4
-@member data Data channels for ddr4 depending on the width
-@member topology Topology of the DDR4 connection (FlyBy or ClamShell)
-@member rank Rank configuration of the DDR4 memory (SingleRank, DualRank, or QuadRank)
-<DOC>
-
-public defn ddr4 (width:jsl/protocols/memory/ddr4-width -- topology:jsl/protocols/memory/ddr4-topology = FlyBy rank:jsl/protocols/memory/ddr4-rank = SingleRank) :
-  ; Ensure the width is valid
-  ensure-enum-value(width, [DDR4-x4, DDR4-x8, DDR4-x16])
-  ; Ensure the topology is valid
-  ensure-enum-value(topology, [FlyBy, ClamShell])
-  ; Ensure the rank is valid
-  ensure-enum-value(rank, [SingleRank, DualRank, QuadRank])
-  ; Ensure the width matches the rank
-  if width == DDR4-x4 and rank != SingleRank:
-    fatal("DDR4-x4 is only supported in SingleRank configuration")
-  if width == DDR4-x16 and rank == QuadRank:
-    fatal("DDR4-x16 is not supported in QuadRank configuration")
-  ddr4-b(ddr4-width-enum-to-int(width), topology, ddr4-rank-enum-to-int(rank))
-
-
-public pcb-bundle ddr4-b (width:Int topology:jsl/protocols/memory/ddr4-topology, rank:Int) :
-  name = "DDR4"
-  description = "Double Data Rate 4 Dynamic Random-Access Memory protocol"
-  port data    : ddr4-data-channel(width) ;
-  port control : ddr4-control-channel(rank) ; covers all CMD/CTRL/ADDR
-
-public pcb-bundle ddr4-data-channel (width:Int):
-  port DQ  : pin[width];
-  port DQS : diff-pair ;
-
-public pcb-bundle ddr4-control-channel (rank:Int):
-  ; how do I use rank here? Needs some work...
-  port CK      : diff-pair
-  port CKE     : pin
-  port A       : pin[[0 to 14, 17]]
-  port ACT_n   : pin
-  port BG      : pin[2]
-  port BA      : pin[2]
-  port CS_n    : pin
-  port RAS_n   : pin ; aka A[16]
-  port CAS_n   : pin ; aka A[15]
-  port WE_n    : pin ; aka A[14]
-  port RESET_n : pin
-  port ODT     : pin
-  port PAR     : pin
-
-
-doc: \<DOC>
-@brief Curated values for skew and loss of DDR4 channel
-This is a helper function that returns the bounds on the intra-pair
-skew timing and maximum loss as expected by the particular standard targeted by
-the user. The values returned are a toleranced value with upper/lower limits for the
+This file contains curated values for skew and loss of DDR4 channel
+It specifies the bounds on the intra-pair
+skew timing and maximum loss as expected by this particular standard. The values
+returned are a toleranced value with upper/lower limits for the
 intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
 table are derived from the references listed below.
 
@@ -147,6 +35,133 @@ Example:
   tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
   @  5 mils spec'ed that is a intra-pair skew of 735 fs to 850 fs depending on the material characteristics
   @ 10 mils spec'ed that is a intra-pair skew of 1.47 ps to 1.70 ps depending on the material characteristics
+
+<DOC>
+
+#use-added-syntax(jitx)
+defpackage jsl/protocols/memory/ddr4:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+doc: \<DOC>
+@brief DDR4 width enums
+This is a fixed list of possible lane widths for DDR4 memory channels
+@member DDR4-x4   4 bit width
+@member DDR4-x8   8 bit width
+@member DDR4-x16 16 bit width
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr4/DDR4-width:
+  DDR4-x4
+  DDR4-x8
+  DDR4-x16
+
+doc: \<DOC>
+@brief DDR4 Width enum conversion to integers
+This converts possible lane widths for ddr4 memory channels into the corresponding integer
+<DOC>
+public defn width-to-int (en:DDR4-width) -> Int:
+  switch(en) :
+    DDR4-x4  :  4
+    DDR4-x8  :  8
+    DDR4-x16 : 16
+
+doc: \<DOC>
+@brief DDR4 Width enum conversion to lane count
+This converts possible lane widths for ddr4 memory channels
+into the corresponding integer number of 8-bit lanes which
+determines the number of DQS pairs required.
+<DOC>
+public defn width-to-lane (en:DDR4-width) -> Int:
+  switch(en) :
+    DDR4-x4  : 1 ; degenerate case
+    DDR4-x8  : 1
+    DDR4-x16 : 2
+
+doc: \<DOC>
+@brief ddr4 topology
+This is a fixed list of possible topologies for ddr4 memories
+@member FlyBy
+@member ClamShell
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr4/DDR4-topology:
+  FlyBy
+  ClamShell
+
+doc: \<DOC>
+@brief DDR4 rank Options
+This is a fixed list of possible rank options for ddr4 implementations
+@member SingleRank
+@member DualRank
+@member QuadRank
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr4/DDR4-rank:
+  SingleRank
+  DualRank
+  QuadRank
+
+doc: \<DOC>
+@brief DDR4 rank enum conversion to integers
+This converts possible rank options for ddr4 memory channels into a corresponding integer
+which determines the number of CS_n signals needed to control the memories
+<DOC>
+public defn rank-to-int (en:DDR4-rank) -> Int:
+  switch(en) :
+    SingleRank : 1
+    DualRank   : 2
+    QuadRank   : 4
+
+doc: \<DOC>
+@brief ddr4 Bundle
+One ddr4 bundle consists of the connections between an integrated memory controller and
+one or more ddr4 memory chips/DIMMs.
+@member data Data channel(s) for ddr4 depending on the width
+@member ctl Control channel for ddr4
+@member rank Rank configuration of the DDR4 memory (SingleRank, DualRank, or QuadRank)
+@member topology Topology of the DDR4 connection (FlyBy or ClamShell)
+<DOC>
+
+public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = SingleRank topology:DDR4-topology = FlyBy) :
+  if width == DDR4-x4 and rank != SingleRank:
+    fatal("DDR4-x4 is only supported in SingleRank configuration")
+  if width == DDR4-x16 and rank == QuadRank:
+    fatal("DDR4-x16 is not supported in QuadRank configuration")
+  ddr4-b(width, rank, topology)
+
+public pcb-bundle ddr4-b (width:DDR4-width rank:DDR4-rank topology:DDR4-topology) :
+  name = "DDR4"
+  description = "DDR4 Dynamic Random-Access Memory protocol"
+  port data    : ddr4-data-channel(width) ;
+  port ctl     : ddr4-ctl-channel(rank) ; covers all CMD/CTRL/ADDR
+
+public pcb-bundle ddr4-data-channel (width:DDR4-width):
+  port DQ  : pin[width-to-int(width)] ; will vary from 3:0 to 7:0 to 15:0 as appropriate
+  port DQS : pin[width-to-lane(width)] ; will either be 0 or 1:0
+
+public pcb-bundle ddr4-ctl-channel (rank:DDR4-rank):
+  ; how do I use rank here? Needs some work...
+  port CK      : diff-pair
+  port CKE     : pin
+  port A       : pin[[0 to 14, 17]]
+  port ACT_n   : pin
+  port BG      : pin[2] ; not fully present?
+  port BA      : pin[2] ; not fully present?
+  port CS_n    : pin[rank-to-int(rank)]
+  port RAS_n   : pin ; aka A[16]
+  port CAS_n   : pin ; aka A[15]
+  port WE_n    : pin ; aka A[14]
+  port RESET_n : pin
+  port ODT     : pin
+  port PAR     : pin
+
+
+doc: \<DOC>
 <DOC>
 
 doc: \<DOC>
@@ -165,59 +180,23 @@ BA1	| BA1 | BA0 ; this is optional depending on the memory size/rank
 BG0 | BG0 | BG1
 BG1 | BG1 | BG0 ; this is optional depending on the memory size/rank
 <DOC>
-public defn DDR4-Topology-address-map (a:JITXObject topo:jsl/protocols/memory/DDR4-Topology) -> JITXObject:
-  switch(a) :
-    A[3] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[4]
-            else :
-              A[3]
-    A[4] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[3]
-            else :
-              A[4]
-    A[5] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[6]
-            else :
-              A[5]
-    A[6] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[5]
-            else :
-              A[6]
-    A[7] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[8]
-            else :
-              A[7]
-    A[8] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[7]
-            else :
-              A[8]
-    A[11] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[13]
-            else :
-              A[11]
-    A[13] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              A[11]
-            else :
-              A[13]
-    BA[0] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              BA[1]
-            else :
-              BA[0]
-    BA[1] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              BA[0]
-            else :
-              BA[1]
-    BG[0] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              BG[1]
-            else :
-              BG[0]
-    BG[1] : if topo == jsl/protocols/memory/DDR4-Topology:Mirrored :
-              BG[0]
-            else :
-              BG[1]
-    else :
-      println("Attempting to use unknown address (%_) for mapping" % [a])
-      false
+; public defn DDR4-Topology-address-map (a:JITXObject topo:DDR4-topology) -> JITXObject:
+;   switch(a) :
+;     A[3] :  if topo == ClamShell  : A[4] else : A[3]
+;     A[4] :  if topo == ClamShell  : A[3] else : A[4]
+;     A[5] :  if topo == ClamShell  : A[6] else : A[5]
+;     A[6] :  if topo == ClamShell  : A[5] else : A[6]
+;     A[7] :  if topo == ClamShell  : A[8] else : A[7]
+;     A[8] :  if topo == ClamShell  : A[7] else : A[8]
+;     A[11] : if topo == ClamShell : A[13] else : A[11]
+;     A[13] : if topo == ClamShell : A[11] else : A[13]
+;     BA[0] : if topo == ClamShell : BA[1] else : BA[0]
+;     BA[1] : if topo == ClamShell : BA[0] else : BA[1]
+;     BG[0] : if topo == ClamShell : BG[1] else : BG[0]
+;     BG[1] : if topo == ClamShell : BG[0] else : BG[1]
+;     else :
+;       println("Attempting to use unknown address (%_) for mapping" % [a])
+;       false
 
 
 doc: \<DOC>
@@ -241,8 +220,8 @@ This derives from the whole data lane constraint as most of the dq signals
 are single-ended but referenced to the dqs pairs. The remainder of the signals are
 constrained to the CK pair. The constraints are:
 
-    0.0 +/-    1.0e-12   ; Intrapair skew match of CK is +/- 1 ps
-    0.0 +/-    1.0e-12   ; Intrapair skew match of DQS is +/- 1 ps
+    0.0 +/-    1.0e-12   ; Intra-pair skew match of CK is +/- 1 ps
+    0.0 +/-    1.0e-12   ; Intra-pair skew match of DQS is +/- 1 ps
   -85.0e-12 +935.0e-12   ; Skew match between CK.P and DQS.P -85 ps to 935 ps
     0.0 +/-    3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps
     0.0 +/-   20.0e-12   ; Skew match between A[17] A[13:0] and CK.P +/- 20 ps
@@ -251,77 +230,105 @@ constrained to the CK pair. The constraints are:
     0.0 +/-   20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
     0.0 +/-   20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
 
-
 The `constrain` function for this type expects two compatible `ddr4-b` types.
 <DOC>
 public defstruct DDR4-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Channel Bit Width
+  <DOC>
+  width:DDR4-width
+
+  doc: \<DOC>
+  Channel Rank
+  <DOC>
+
+  rank:DDR4-rank
+  doc: \<DOC>
+  Topology of memory channel
+  <DOC>
+  topology:DDR4-topology
+
   doc: \<DOC>
   CK Intra-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-ck:Toleranced with :
     default => 0.0 +/- 1.00e-12
+
   doc: \<DOC>
   DQS Intra-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-dqs:Toleranced with :
     default => 0.0 +/- 1.00e-12
+
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
   skew-ck-dqs:Toleranced with :
     default => min-max(-85.0e-12 935.0e-12)
+
   doc: \<DOC>
   DQ to DQS Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-dq-dqs:Toleranced with :
     default => 0.0 +/- 3.50e-12
+
   doc: \<DOC>
   ADDR to CK Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-addr-ck:Toleranced with :
     default => 0.0 +/- 20.0e-12
+
   doc: \<DOC>
   RAS_n, CAS_n, WE_n to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-ras-cas-we-ck:Toleranced  with:
     default =>  0.0 +/- 20.0e-12
+
   doc: \<DOC>
   BA[1:0], BG[1:0] to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-ba-bg-ck:Toleranced  with:
     default =>  0.0 +/- 20.0e-12
+
   doc: \<DOC>
   ACT_n, CKE, CS_n, ODT, PAR to CK.P Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-misc-ck:Toleranced  with:
     default =>  0.0 +/- 20.0e-12
+
   doc: \<DOC>
   CMD, ADDR, CTRL Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-cmd-addr-ctrl:Toleranced  with:
     default =>  0.0 +/- 100.0e-12
+
   doc: \<DOC>
   Diff-Pair Max Loss Limit Constraint in dB
   <DOC>
   loss:Double with:
     ensure => ensure-positive!,
     default => 5.0
+
   doc: \<DOC>
   Differential Routing Structure for CK  [90.0 +/- (5 %)]
   <DOC>
   diff-ck-rs:DifferentialRoutingStructure
+
   doc: \<DOC>
   Differential Routing Structure for DQS [100.0 +/- (5 %)]
   <DOC>
   diff-dqs-rs:DifferentialRoutingStructure
+
   doc: \<DOC>
   Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
   <DOC>
   se-dq-rs:RoutingStructure
+
   doc: \<DOC>
   Single-Ended Routing Structure for all other SE signal [45.0 +/- (5 %)]
   <DOC>
   se-rs:RoutingStructure
+
 with:
   keyword-constructor => true
   constructor => #DDR4-Constraint
@@ -335,11 +342,17 @@ Constructor for the DDR4 Link Constraint
 @param rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
 <DOC>
 public defn DDR4-Constraint (
+    width:DDR4-width
+    topology:DDR4-topology
+    rank:DDR4-topology
     ck-rs:DifferentialRoutingStructure
     dqs-rs:DifferentialRoutingStructure
     dq-rs:RoutingStructure
     rs:RoutingStructure ) -> DDR4-Constraint:
   DDR4-Constraint(
+    width = width
+    topology = topology
+    rank = rank
     diff-ck-rs = ck-rs
     diff-dqs-rs = dqs-rs
     se-dq-rs = dq-rs
@@ -356,17 +369,30 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst) loss = loss(cst) route-struct = diff-ck-rs(cst))
+    val width = width-to-int(width(cs))
+    val lane  = width-to-lane(width(cs))
+    val rank  = rank-to-int(rank(cst))
+    val topo  = topology(cst) ; not sure how to use this atm
+
+    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst)  loss = loss(cst) route-struct = diff-ck-rs(cst))
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst) loss = loss(cst) route-struct = diff-dqs-rs(cst))
 
-    val guide-ck  = src.control.CK.P => dst.control.CK.P
-    val guide-dqs = src.data.DQS.P => dst.data.DQS.P
+    val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
+    diffpair-constrain(cst-ck,  src.ctl.CK   dst.ctl.CK)
 
-    ; val guide-reset = src.control.RESET_n => dst.control.RESET_n
-    ; structure(guide-reset) = se-route-struct(cst)
+    var guide-dqs[lane]
+    for i in 0 to lane do :
+      guide-dqs[i] = src.data.DQS[i].P => dst.data.DQS[i].P
+      diffpair-constrain(cst-dqs, src.data.DQS[i]  dst.data.DQS[i])
 
-    for i in 0 to 4 do :
-      diffpair-constrain(cst-rck, src.data[i].RCK  dst.data[i].RCK)
+
+      timing-window(skew-ck-dqs(cst), guide-ck, src.ctl.CK.P src.data[i].DQS.P)
+
+    for i in 0 to lane do :
+      val dq-bus = to-tuple $ for j in 0 to width seq : src.data.DQ[j] => dst.data.DQ[j]
+
+
+
       diffpair-constrain(cst-wck, src.data[i].WCK  dst.data[i].WCK)
       timing-window(skew-rck-wck(cst) guide-rck src.data[i].RCK.P => dst.data[i].RCK.P)
       timing-window(skew-rck-wck(cst) guide-rck src.data[i].WCK.P => dst.data[i].WCK.P)
@@ -388,6 +414,8 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
       structure(src.data[i].DQE, dst.data[i].DQE) = se-route-struct(cst)
       structure(src.data[i].CA, dst.data[i].CA) = se-route-struct(cst)
       structure(src.data[i].ERR, dst.data[i].ERR) = se-route-struct(cst)
+
+
       max-loss(loss(cst), src.data[i].DQ  => dst.data[i].DQ)
       max-loss(loss(cst), src.data[i].DQE => dst.data[i].DQE)
       max-loss(loss(cst), src.data[i].CA  => dst.data[i].CA)
