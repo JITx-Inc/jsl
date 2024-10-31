@@ -82,8 +82,19 @@ to `IRQ_N-pu`.
 @param qb? Optional Resistor query builder for the selection of the pullup resistor
 in the case that `elem-type?` is a `Double`. By default, the global query defaults are
 extended with `ResistorQuery(precision = (5 %))`.
+@param make-public Determines if the created resistor instance will be defined
+with the `public` access modifier or not. By default, the component is defined as
+`private`
 <DOC>
-public defn insert-pullup (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?, qb?:ResistorQuery = ?) :
+public defn insert-pullup (
+  sig:JITXObject,
+  rail:JITXObject
+  --
+  elem-type:Instantiable|Double = 10.0e3,
+  inst-name?:String|Symbol = ?,
+  qb?:ResistorQuery = ?,
+  make-public:True|False = false
+  ) -> Instance:
   val inst-name = to-string $ value-or(inst-name?, "%_-pu" % [get-ref-name $ ref(sig)])
   val qb = value-or(qb?, PULLUP_DEF_QB)
 
@@ -93,8 +104,9 @@ public defn insert-pullup (sig:JITXObject, rail:JITXObject -- elem-type:Instanti
       (R-v:Double): ; Resistance Value
         create-resistor(resistance = R-v, precision = (1 %))
 
-    val elem = make-inst(to-symbol(inst-name), et, false)
+    val elem = make-inst(to-symbol(inst-name), et, make-public)
     add-pullup(elem, sig, rail)
+    elem
 
 doc: \<DOC>
 Construct a pulldown instance from an Instantiable
@@ -116,8 +128,19 @@ to `IRQ_N-pu`.
 @param qb? Optional Resistor query builder for the selection of the pullup resistor
 in the case that `elem-type?` is a `Double`. By default, the global query defaults are
 extended with `ResistorQuery(precision = (5 %))`.
+@param make-public Determines if the created resistor instance will be defined
+with the `public` access modifier or not. By default, the component is defined as
+`private`
 <DOC>
-public defn insert-pulldown (sig:JITXObject, rail:JITXObject -- elem-type:Instantiable|Double = 10.0e3, inst-name?:String|Symbol = ?, qb?:ResistorQuery = ?) :
+public defn insert-pulldown (
+  sig:JITXObject,
+  rail:JITXObject
+  --
+  elem-type:Instantiable|Double = 10.0e3,
+  inst-name?:String|Symbol = ?,
+  qb?:ResistorQuery = ?,
+  make-public:True|False = false
+  ) -> Instance:
   val inst-name = to-string $ value-or(inst-name?, "%_-pd" % [get-ref-name $ ref(sig)])
   val qb = value-or(qb?, PULLUP_DEF_QB)
 
@@ -127,6 +150,6 @@ public defn insert-pulldown (sig:JITXObject, rail:JITXObject -- elem-type:Instan
       (R-v:Double): ; Resistance Value
         create-resistor(qb, resistance = R-v)
 
-    val elem = make-inst(to-symbol(inst-name), et, false)
+    val elem = make-inst(to-symbol(inst-name), et, make-public)
     add-pulldown(elem, sig, rail)
-
+    elem

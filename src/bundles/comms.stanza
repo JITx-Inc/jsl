@@ -371,8 +371,6 @@ Microwire is a subset of SPI with slightly
 different latching requirements. It often comes
 in a 3-wire variant.
 
-
-
 @member clk Synchronous clock - Required Port
 @member cs Chip Select - Optional Port
 @member do Data Output - Optional Port
@@ -423,7 +421,7 @@ interface.
 @member di Data Input
 
 <DOC>
-public defn microwire ():
+public defn microwire-4 ():
   microwire(Microwire-CS, Microwire-DO, Microwire-DI)
 
 
