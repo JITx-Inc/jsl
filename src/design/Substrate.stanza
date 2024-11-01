@@ -330,12 +330,6 @@ defn check-tented (v:Via, tented?:Maybe<True|False|Side>) -> True|False :
     (given:One<True|False|Side>):
       value(given) == via-tented(v)
 
-defn check-backdrill (f:Substrate, v:Via, backdrill?:Maybe<True|False>) -> True|False :
-  match(backdrill?):
-    (_:None): true
-    (given:One<True|False>):
-      value(given) == (via-backdrill(v) is-not False)
-
 doc: \<DOC>
 Query for a via defined in this substrate
 
@@ -354,8 +348,6 @@ to `None()` and it will not affect the resulting via set.
 @param filled Selects for filled state
 @param tented Selects for tented state
 @param via-in-pad Selects for Via-in-Pad eligibility
-@param backdrill Selects for any via that is configured
-for a backdrill.
 <DOC>
 public defn query-via (
   f:Substrate --
@@ -365,7 +357,6 @@ public defn query-via (
   filled:True|False = ?,
   tented:Side|True|False = ?,
   via-in-pad:True|False = ?
-  backdrill:True|False = ?
   ) -> Seq<Via> :
 
   val vs = vias(f)
@@ -375,7 +366,6 @@ public defn query-via (
     {check-filled(_0, filled)}
     {check-tented(_0, tented)}
     {check-via-in-pad(_0, via-in-pad)}
-    {check-backdrill(f, _0, backdrill)}
   ]
   for v in vs seq?:
     val ret = for ch-func in checks all?:
