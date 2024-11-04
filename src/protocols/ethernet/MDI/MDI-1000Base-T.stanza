@@ -29,18 +29,40 @@ public pcb-bundle MDI-1000Base-T:
   port TP : diff-pair[NUM_PAIRS_1000Base-T]
 
 doc: \<DOC>
-Construct a 1000Base-T Supports Statement
+Construct `supports` statements for a 1000Base-T connection.
 
-@param dps Tuple of [P, N] ports that make up each of the
-differential pairs that make up the A, B, C, D
-twisted pairs of the MDI. Note that these arguments
-are expected to be passed in the right order - otherwise,
-we may setup the wrong pin assignment constraints.
-This argument is expected to be length 4.
+This constructs a `supports` statement for a 1000Base-T (Gigabit)
+MDI interface. This includes creating the appropriate option
+mappings for each differential pair.
+
+The `b-type` Bundle is present so that the user can customize which
+bundle type to construct a support statement for. This is often useful
+when constructing a "Network Switch" like chip where there are auxiliary
+functions like LED drivers, etc associated with that port.
+
+@param b-type Bundle type for mapping. This bundle must define a port `TP` that
+is a `PortArray` of 4 `diff-pair` Bundle type. See {@link MDI-1000Base-T} as an
+example.
+@param dps Tuple of [P,N] of twisted-pair sets from a component or module. This list
+must be ordered in A, B, C, D pair ordering.
+
+@snippet Example Support Declaration
+
+```
+; From 'JITx-Inc/microchip-networking'
+make-1000Base-T-supports(
+  MDI-1000Base-T,
+  [C.TXRX1P_A, C.TXRX1M_A]
+  [C.TXRX1P_B, C.TXRX1M_B]
+  [C.TXRX1P_C, C.TXRX1M_C]
+  [C.TXRX1P_D, C.TXRX1M_D]
+)
+```
+
 <DOC>
-public defn make-1000Base-T-supports (dps:[JITXObject, JITXObject], ...):
-  if length(dps) != 4:
-    throw $ ValueError("Expected 4 diff-pair objects - Received %_" % [length(dps)])
+public defn make-1000Base-T-supports (b-type:Bundle, dps:[JITXObject, JITXObject], ...):
+  if length(dps) != NUM_PAIRS_1000Base-T:
+    throw $ ValueError("Expected %_ diff-pair objects - Received %_" % [NUM_PAIRS_1000Base-T, length(dps)])
 
   ; We can swap A & B or
   ; We can swap C & D
@@ -53,14 +75,31 @@ public defn make-1000Base-T-supports (dps:[JITXObject, JITXObject], ...):
     [1, 0, 3, 2], ; A/B & C/D swapped
   ]
   inside pcb-module:
-    supports MDI-1000Base-T:
+    supports b-type:
       for pair-map in pair-maps do:
         option:
           for i in 0 to NUM_PAIRS_1000Base-T do:
             val j = pair-map[i]
             val [P, N] = [dps[j][0], dps[j][1]]
-            MDI-1000Base-T.TP[i].P => P
-            MDI-1000Base-T.TP[i].N => N
+            b-type.TP[i].P => P
+            b-type.TP[i].N => N
+
+doc: \<DOC>
+Construct a 1000Base-T Supports Statement
+
+By default - this function uses {@link MDI-1000Base-T} as
+the bundle type for the constructed `supports` statement.
+Otherwise, it is the same as the other implementation.
+
+@param dps Tuple of [P, N] ports that make up each of the
+differential pairs that make up the A, B, C, D
+twisted pairs of the MDI. Note that these arguments
+are expected to be passed in the right order - otherwise,
+we may setup the wrong pin assignment constraints.
+This argument is expected to be length 4.
+<DOC>
+public defn make-1000Base-T-supports (dps:[JITXObject, JITXObject], ...):
+  make-1000Base-T-supports(MDI-1000Base-T, dps = dps)
 
 doc: \<DOC>
 Construct a 1000Base-T Supports Statement
