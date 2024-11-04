@@ -13,7 +13,7 @@ requirements.
 @snippet Grid Example
 
 ```stanza
-  public inst netsw : ethernet_io_lib/components/KSZ9563/module
+  public inst netsw : microchip-networking/components/KSZ9563/module
 
   val tv-g = GridThermalVias(
     via-def = therm-via,
