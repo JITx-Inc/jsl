@@ -365,7 +365,7 @@ public defn is-valid-copper-layer? (ls:LayerStack, l:Int|LayerIndex) -> True|Fal
 
 doc: \<DOC>
 Convert the copper layers into a tuple of `LayerIndex` objects
-@param ln Layer Stack Generator
+@param ls Layer Stack Generator
 @param omits A collection of copper layers that we don't want to
 include in the generated output. Any value in this collection that matches a
 copper layer will cause that `LayerIndex` to be skipped.
