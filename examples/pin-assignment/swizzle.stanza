@@ -71,7 +71,7 @@ pcb-module top-level :
 
   topo-net(h1.p, bus)
 
-val stackup = LayerStack(name = "Swizzle Stack")
+val my-stackup = LayerStack(name = "Swizzle Stack")
 
 val copper-1oz = Copper(1.0)
 val core-FR4 = FR4(1.0 name = "core")
@@ -79,11 +79,11 @@ val prepreg-FR4 = FR4(0.5, name = "prepreg")
 
 add-symmetric(copper-1oz, core-FR4,
   add-symmetric(copper-1oz, prepreg-FR4,
-    add-symmetric(copper-1oz, core-FR4, stackup)
+    add-symmetric(copper-1oz, core-FR4, my-stackup)
   )
 )
 
-val mem-stackup = create-pcb-stackup(stackup)
+val mem-stackup = create-pcb-stackup(my-stackup)
 
 public pcb-via default-via :
   name = "Default TH"
