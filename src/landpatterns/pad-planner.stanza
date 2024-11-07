@@ -245,6 +245,22 @@ public defmethod hole-generator (x:PadPlanner, row:Int, column:Int) -> (Dims -> 
   false
 
 doc: \<DOC>
+Null Pad Planner
+
+This Pad Planner will generate no pads. It is intended for cases where
+a landpattern is created with the `Package` framework that has no
+pads to create.
+<DOC>
+public defstruct NullPadPlanner <: PadPlanner
+defmethod active? (x:NullPadPlanner, row:Int, column:Int) -> True|False :
+  false
+
+defmethod shape-generator (x:NullPadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False:
+  false
+
+
+
+doc: \<DOC>
 Pad Planner that always returns a Shape Converter
 
 This is a default implementation of the PadPlanner interface
