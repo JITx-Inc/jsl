@@ -1,6 +1,7 @@
 #use-added-syntax(jitx)
 defpackage jsl/geometry/basics:
   import core
+  import collections
   import math
   import jitx
   import jitx/commands
@@ -47,6 +48,42 @@ public defn GeneralChamferedRectangle (size:Dims, r:Tuple<Double> -- anchor:Anch
 ; public defn Circle (radius:Double -- anchor:Anchor = C):
 ;   Circle(anchor, radius)
 
+doc: \<DOC>
+Break a `Line` into a sequence of `Segment`
+
+A `Line` can have multiple points. A Segment has
+only a start and end. This deconstructs a line into
+multiple segments.
+<DOC>
+defn to-segments (l:Line) -> Seq<Segment>:
+  val pts = points(l)
+  for (pt in pts, i in 0 to false) seq?:
+    if i < (length(pts) - 1):
+      One $ Segment(pts[i], pts[i + 1])
+    else:
+      None()
+
+defn to-capsule (s:Segment, width:Double, radius:Double) -> Capsule:
+  if radius < 0.0:
+    throw $ ArgumentError("Invalid Radius for new Capsule - radius=%_ > 0" % [radius])
+
+  val L = length(s)
+  val ang = angle-degrees(s)
+  val diam = (2.0 * radius)
+  ; Create the raw capsule as if it starts at 0,0 and goes along
+  ;   the X axis.
+  val raw-cap = Capsule(Dims(L + diam, width + diam), anchor = W)
+  ; The rotate it and translate it to place it where
+  ;   the originating segment was.
+  loc(source(s)) * loc(0.0, 0.0, ang) * raw-cap
+
+
+defn expand-line (x:Line, amount:Double) -> Shape:
+  Union $ to-tuple $ for seg in to-segments(x) seq:
+    to-capsule(seg, width(x), amount)
+
+defn expand-polyline (x:Polyline, amount:Double) -> Shape :
+  Polyline(width(x) + (2.0 * amount), elements(x))
 
 doc: \<DOC>
 Expand for Union shapes
@@ -59,8 +96,145 @@ public defn expand-union (x:Shape|Union, amount:Double) -> Shape:
     (U:Union):
       Union $ for obj in shapes(U) seq:
         expand-union(obj, amount)
+    (l:Line): expand-line(l, amount)
+    (pl:Polyline): expand-polyline(pl, amount)
     (y:Shape):
       expand-or-shrink(y, amount)
+
+public defn to-polygon (x:Shape -- top-level?:True|False, num-points:Int = 32) -> Polygon|Union :
+  match(x):
+    (U:Union):
+      ; I have to use the hidden constructor here because
+      ;  the `Union` function that overrides the constructor returns `Shape` instead of Union
+      #Union $ to-tuple $ for obj in shapes(U) seq:
+        to-polygon(obj, top-level? = false, num-points = num-points)
+    (c:Circle|Arc|PolygonWithArcs|DShape|GeneralRoundedRectangle|RoundedRectangle|Capsule): to-polygon(c, num-points) as Polygon
+    (p:Polyline|GeneralChamferedRectangle|Rectangle): to-polygon(p) as Polygon
+    (p:Polygon): p
+
+defn to-points (poly:Polygon|Union) -> Tuple<Point>:
+  match(poly):
+    (u:Union):
+      to-tuple $ for sh in shapes(u) seq-cat:
+        to-points(sh as Polygon|Union)
+    (p:Polygon): points(p)
+
+
+doc: \<DOC>
+Compute the convex hull of a non-trivial polygon case.
+
+This function uses Jarvis's Gift wrapping algorithm. It is a
+brute-force algorithm that is not optimized for performance.
+
+@see https://en.wikipedia.org/wiki/Gift_wrapping_algorithm
+
+@param sh Non-trivial shape like `Polyline`, `Arc`, `PolygonWithArcs`, `Polygon`,
+and `Union` shape cases. Other cases are handled with `to-polygon`
+@param num-points When Approximating shapes like Arc, PolygonWithArcs, etc, we need to
+use a number of points to create a polygon. This sets that polygonization amount.
+
+@throws ValueError if the shapes passed are degenerate - ie less than 3 points.
+<DOC>
+defn non-trivial-convex-hull (sh:Shape, num-points:Int = 32) -> Polygon:
+  val pt-set = to-vector<Point> $ to-points $ match(sh):
+    (p:Polyline): to-polygon(p)
+    (a:Arc|PolygonWithArcs): to-polygon(a, num-points)
+    (u:Union):
+      to-polygon(u, top-level? = true, num-points = num-points)
+    (p:Polygon): p
+
+  if length(pt-set) == 0:
+    throw $ ValueError("No Points in Polygons to create Convex Hull")
+
+  ; TODO - we should handle the 3 colinear point case
+  ;   here.
+
+  qsort!(pt-set, {x(_0) < x(_1)})
+  ; The farthest left point is guaranteed to be part of the
+  ;   convex hull.
+  val far-left = pt-set[0]
+
+  val hull-pts = to-vector<Point>([far-left])
+
+  ; This function determines the state of q with respect to r
+  ;  in a polar coordinate frame, with an origin a P.
+  ;  This polar coordinate frame is "right-handed".
+  ;  If `q` is more counter-clockwise than `r` - this function returns 2
+  ;  If `q` is more clockwise than `r` - this function returns 1
+  ;  If `p`, `q` and `r are colinear - then this function returns 0
+  defn orientation (p:Point, q:Point, r:Point) -> Int:
+    val ret = (y(q) - y(p)) * (x(r) - x(q)) -
+              (x(q) - x(p)) * (y(r) - y(q))
+    if ret == 0.0:
+      0
+    else if ret > 0.0:
+      1 ; clock wise
+    else:
+      2 ; counterclockwise
+
+  var done = false
+  var i = 0
+  while not done:
+    ; println("Iteration: %_" % [i])
+    ; The inner loop compares all of the points to the point on the hull
+    ;   and finds the one to the farthest left. We keep going around until we
+    ;   come back to the beginning
+
+    val pointOnHull = peek(hull-pts)
+    ; println("Origin: %_" % [pointOnHull])
+
+    defn inner-loop (endpoint:Point, s:Point) -> Point:
+      val is-clockwise = orientation(pointOnHull, s, endpoint) == 2
+      if endpoint == pointOnHull or is-clockwise:
+        ; println("Updated Endpoint: %_" % [s])
+        s
+      else:
+        endpoint
+
+    val newPt = reduce(inner-loop, pt-set[0], pt-set)
+    add(hull-pts, newPt)
+    ; println("New Pt: %_" % [newPt])
+    i = i + 1
+
+    done = newPt == hull-pts[0]
+    ; This is a hedge in case the algorithm has a bug
+    ;   I want to prevent getting trapped in an infinite
+    ;   loop. The typical case should not encounter this.
+    if not (i < (2 * length(pt-set))):
+      ; Break if we have been through all the points.
+      done = true
+
+  Polygon(to-tuple(hull-pts))
+
+
+
+
+doc: \<DOC>
+Compute the Convex Hull of the passed Shape
+
+This function uses Jarvis's Gift wrapping algorithm for
+non-trivial polygon shapes. It is a brute-force algorithm
+that is not optimized for performance.
+
+@see https://en.wikipedia.org/wiki/Gift_wrapping_algorithm
+
+
+@param x Shape object to construct the convex hull of
+@param num-points Some objects need to be polygonized to
+be able to run the convex hull algorithm. This parameter determines
+how many points will be used for each shape. Alternatively, the
+user can pass in pre-polygonized shapes and this value will be ignored.
+<DOC>
+public defn convex-hull (x:Shape -- num-points:Int = 32) -> Polygon:
+  match(x):
+    ; Some shapes are already their own convex hull - so we just convert them
+    ;  to a polygon
+    (c:Circle|DShape|GeneralRoundedRectangle|RoundedRectangle|Capsule): to-polygon(c, num-points)
+    (p:GeneralChamferedRectangle|Rectangle): to-polygon(p)
+    (x): non-trivial-convex-hull(x, num-points)
+
+
+
 
 doc: \<DOC>
 Increase the size of a `Dims` by `amount` on all sides
