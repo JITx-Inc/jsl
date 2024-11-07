@@ -10,6 +10,7 @@ defpackage jsl/landpatterns/silkscreen:
   import jsl/ensure
   import jsl/errors
   import jsl/geometry/box
+  import jsl/geometry/basics
   import jsl/geometry/LineRectangle
   import jsl/landpatterns/VirtualLP
   import jsl/landpatterns/helpers
@@ -117,6 +118,13 @@ public defmethod build-shape (s:PackageOutline, vp:VirtualLP -- side:Side = Top)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Overall Outline
 
+doc: \<DOC>
+Construct an overall outline for the silkscreen
+
+This silkscreen outline generator uses the package body
+and the pads of the landpattern to generate an overall outline
+in a rectangular shape.
+<DOC>
 public defstruct OverallOutline <: SilkscreenOutline :
   doc: \<DOC>
   Package Body Dimensions
@@ -162,6 +170,57 @@ public defmethod build-shape (s:OverallOutline, vp:VirtualLP -- side:Side = Top 
   val lw = line-width(s)
   val overall* = fatten(lw / 2.0, overall)
   LineRectangle(overall*, line-width = lw)
+
+
+public defstruct CylinderBodyOutline <: SilkscreenOutline:
+  doc: \<DOC>
+  Cylinder Package Body Dimensions
+  These dimensions will be projected on to the board
+  to construct the outline.
+  <DOC>
+  pkg-body:CylinderBody
+
+  doc: \<DOC>
+  Line Width for the constructed silkscreen outline
+  By default we use the `MinSilkscreenWidth` from the design rules.
+  Value is in mm.
+  <DOC>
+  line-width:Double with:
+    ensure => ensure-positive!
+    default => default-silk-width()
+  doc: \<DOC>
+  Clearance from silkscreen to the other geometry
+  By default we use the `MinSilkSolderMaskSpace` from the
+  design rules. Value is in mm.
+  <DOC>
+  line-clearance:Double with:
+    ensure => ensure-non-negative!
+    default => default-mask-clearance()
+  doc: \<DOC>
+  Density Level Specification
+  This determines whether we use:
+  *  Maximum Material Condition
+  *  Nominal Material Condition
+  *  Least Material Condition
+
+  of the package body to construct the outline.
+  <DOC>
+  density-level:DensityLevel with:
+    default => DENSITY-LEVEL
+with:
+  printer => true
+  keyword-constructor => true
+
+public defmethod build-shape (s:CylinderBodyOutline, vp:VirtualLP -- side:Side = Top ) -> Shape :
+  val cyl-diam = diameter $ pkg-body(s)
+  val diam = switch(density-level(s)):
+    DensityLevelA: max-value(cyl-diam)
+    DensityLevelB: typ(cyl-diam)
+    DensityLevelC: min-value(cyl-diam)
+
+  val lw = line-width(s)
+  val diam* = diam + 2.0 * line-clearance(s) + lw
+  Polyline(lw, [Arc(Point(0.0, 0.0), to-radius(diam*), 0.0, 360.0)])
 
 
 doc: \<DOC>
