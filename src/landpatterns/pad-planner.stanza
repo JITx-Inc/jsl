@@ -194,9 +194,7 @@ public defmethod th-pad-generator (x:PadPlanner, row:Int, column:Int) -> ( (Dims
     (a:True, f:(Dims -> Shape), h:(Dims -> Shape)):
       pth-pad{h(_0), f(_1)}
     (a:True, f:False, h:(Dims -> Shape)):
-      defn npth-gen (hole:Dims, copper:Dims) -> Pad :
-        npth-pad(h(hole))
-      npth-gen
+      throw $ ValueError("Invalid Shape Generator - Pth-Pad requires Copper Shape")
     (a:True, f, h):
       throw $ NoGeneratorForActivePadError(row, column, "shape- or hole-")
 

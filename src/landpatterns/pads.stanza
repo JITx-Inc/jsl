@@ -1,22 +1,3 @@
-; TODO - we need to rename the pad generators in this file and have a
-;   standard naming convention
-; <shape>-[pth|npth]-<shape>-pad
-;   Example:
-;    oval-pth-oval-pad
-;
-; If there is no hole (ie, just SMD):
-;    oval-smd-pad()
-;    rounded-rect-smd-pad()
-;
-; TODO - Capsule vs Oval
-;    why are we calling this two different things.
-;
-; TODO - I think the methods for creating pads should accept
-;   arguments that are not `Shape` objects because it seems that
-;   all `Shape` objects have a pose. When defining a pad -
-;   there should be no pose unless the anchor gives it something
-;   different.
-
 doc: \<DOC>
 @brief Tools for creating pads of different types.
 @title Pad Generators
@@ -34,13 +15,13 @@ All of the functions in this package use millimeters for units.
 Functions will have names in the following format:
 
 ```
-defn <HOLE>-[pth|npth]-<LAND>-pad (...)
+defn <HOLE>-pth-<LAND>-pad (...)
 ```
 
 Where:
 
 *  `<HOLE>` (String) = The shape of the drilled hole
-*  `[pth|npth]` = User can select either plated or non-plated through hole.
+*  `pth` = Pads must be plated through by default.
 *  `<LAND>` (String) = The shape of the pad (copper)
 
 The `HOLE` string can be one of:
@@ -86,17 +67,14 @@ Each function also accepts a `mask` and `paste` overriding value. This
 value can be either a parameterization of the pad shape for that function or
 a completely different shape.
 
-TODO: I want a function that will create a silkscreen outline of a shape
-but not draw silkscreen over any pads and keep enough clearance around
-the soldermask as to not generate any warnings.
-
 <DOC>
 #use-added-syntax(jitx)
 defpackage jsl/landpatterns/pads:
   import core
   import jitx
   import jitx/commands with:
-    prefix(pad) => def-
+    prefix(pad) => unusued-def-
+    prefix(layer) => get-spec-by-
 
   import jsl/ensure
   import jsl/geometry/basics
@@ -256,7 +234,8 @@ not to the internal layers if any.
 TODO- make the same as smd-pad
 @param mask Defines the shape fo the soldermask opening for this pad.
 If this value is `false` then the soldermask will be created using
-default expansion rules as applied by {@link make-soldermask}.
+default expansion rules as applied by {@link make-soldermask}. If a
+`Shape` is provided
 This soldermask shape will be applied to both the top and bottom
 layers.
 @param paste Defines the shape of the pastemask opening for this pad.
@@ -275,9 +254,11 @@ public pcb-pad pth-pad (
   layer(Cutout()) = hole
   match(mask) :
     (m:False) : false
-    (m:Shape) :
-      layer(SolderMask(Top)) = m
-      layer(SolderMask(Bottom)) = m
+    (m):
+      val mask-sh = match(m):
+        (v:Double) : expand-or-shrink(copper, v)
+        (s:Shape) : s
+      make-soldermask(mask-sh)
   match(paste):
     (m:False): false
     (m:Shape):
@@ -301,7 +282,6 @@ definitions as defined by the {@link pth-pad} generator.
 @param anchor Origin of the pad definition. By default this function
 uses the pad center as its anchor.
 @throws ValueError When the `pad-diam` is smaller than the `hole-diam`.
-In this case, the user should use `npth-pad`.
 <DOC>
 public defn pth-pad (
   hole-diam:Double,
@@ -318,11 +298,12 @@ public defn pth-pad (
     Circle(anchor, to-radius(pad-diam))
   )
 
-
 ; non-plated TH pad
-; TODO - what happens if I make an electrical connections to a pad of
-;   this type?
-;   Does it assume electrical contact with the bottom layer ?
+; This implementation I believe is broken and should not be
+;   used. The issue is that the KICAD export of these pads cause
+;   many errors.
+; See:
+;   https://linear.app/jitx/issue/PROD-682/kicad-export-does-not-create-npth-pads
 doc: \<DOC>
 Create a Non-Plated Through-Hole (NPTH) pad
 
@@ -337,13 +318,13 @@ public pcb-pad npth-pad (
   hole:Shape,
   mask:Shape|False = false
   ) :
+  println("This Pad is Deprecated - Use 'non-plated-hole-landpattern' or similar")
   name = "NPTH-Pad"
   shape = hole
   type = TH
   layer(Cutout()) = hole
   val sm = match(mask) :
     (m:False) :
-      ; @NOTE - this was broken in OCDB
       val amount = get-default-soldermask-amount()
       expand-or-shrink(hole, amount)
     (m:Shape) : m
@@ -362,6 +343,7 @@ public defn circle-npth-pad (hole-diam:Double -- anchor:Anchor = C) :
 
 public defn oval-npth-pad (hole-size:Dims -- anchor:Anchor = C) :
   npth-pad(Capsule(hole-size, anchor = anchor))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Pad Shapes
@@ -651,34 +633,143 @@ public defn make-thermal-pad (
     inside pcb-landpattern:
       pad p[pad-num]: smd-pad(shape?) at location
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; TODO - I don't think this should be here - I think this needs to be
-;   moved somewhere else.
-;   Seems to only be used with the mounting holes - so we probably should
-;   move it there.
 
 ; Create a non-plated hole of arbitrary shape for hole and mask
-public pcb-landpattern non-plated-hole-landpattern (hole:Shape, mask:Shape) :
-  layer(Cutout())           = hole
-  layer(SolderMask(Top))    = mask
-  layer(SolderMask(Bottom)) = mask
-  val d = dims(hole)
-  layer(Courtyard(Top))    = Rectangle(x(d), y(d))
-  layer(Courtyard(Bottom)) = Rectangle(x(d), y(d))
-  name = "NPTH"
 
-; Create a non-plated hole landpattern with a hole shape
-public defn non-plated-hole-landpattern (hole:Shape) :
-  val solder-mask-registration = clearance(current-rules(), SolderMaskRegistration)
-  non-plated-hole-landpattern(hole, offset(hole,  solder-mask-registration))
+val DEF_LP_NAME = "NPTH"
+val DEF_CYARD_EXC = 0.25
 
-; TODO - Fix Radius -> Diameter
-; Create a circular non-plated hole landpattern with given drill radius and mask radius
-public defn non-plated-hole-landpattern (drill-r:Double, mask-r:Double) :
-  non-plated-hole-landpattern(Circle(drill-r), Circle(mask-r))
+doc: \<DOC>
+Construct a Non-Plated Hole via a Landpattern Definition
 
-; TODO - Fix Radius -> Diameter
-; Create a non-plated hole landpattern with a given drill radius.
-public defn non-plated-hole-landpattern (drill-r:Double) :
-  non-plated-hole-landpattern(drill-r, drill-r)
+The `pcb-pad` definition has a restriction where it cannot
+created non-plated through holes. This function allows us to create
+a non-plated through hole and customize its appearance. We must use a
+landpattern to create this non-plated through hole which mandates
+that we have a wrapping `pcb-component` instance.
+
+This function uses constituent generator functions {@link make-non-plated-hole}
+and {@link make-non-plated-courtyard} which can be used to customize the
+creation of a non-plated hole.
+
+
+@param hole Cutout Hole Shape - `Circle` and `Capsule` are suggested but
+any shape can be applied here. If not using `Circle` or `Capsule` - confirm
+that the board fabricator that the hole shape you want is possible in their
+process.
+@param mask? Optional soldermask opening configuration. If not provided, then
+this function uses the default `SolderMaskRegistration` clearance rule to
+determine the opening minimum size. If a `Shape` is provided, we will use that
+shape explicitly. If `Double` is provided, then we will create an opening that
+expands the `hole` shape by `mask?` millimeters radially. This mask is applied
+on both the top and bottom layers.
+@param name-lp Optional name for the landpattern definition. Default is `"NPTH"`
+@param courtyard-excess Optional courtyard excess in millimeters. Default is 0.25mm.
+The courtyard is applied on both top and bottom layers and expands radially from
+the overall size of the landpattern.
+@return LandPattern definition to be used in a `pcb-component`.
+<DOC>
+public defn non-plated-hole-landpattern (hole:Shape, mask?:Shape|Double = ? -- name-lp:String = DEF_LP_NAME, courtyard-excess:Double = DEF_CYARD_EXC) -> LandPattern :
+
+  pcb-landpattern non-plated-hole-landpattern:
+    name = name-lp
+    make-non-plated-hole(hole, mask?)
+    make-non-plated-courtyard(courtyard-excess = courtyard-excess)
+
+  non-plated-hole-landpattern
+
+doc: \<DOC>
+Generator for creating a non-plated hole
+
+This function must be called within a `pcb-landpattern` context. This
+function will construct layer data on `Cutout`, `SolderMask(Top)` and
+`SolderMask(Bottom)` for a non-plated hole.
+
+@param hole Cutout Hole Shape
+@param mask? Optional soldermask opening configuration. If not provided, then
+this function uses the default `SolderMaskRegistration` clearance rule to
+determine the opening minimum size. If a `Shape` is provided, we will use that
+shape explicitly. If `Double` is provided, then we will create an opening that
+expands the `hole` shape by `mask?` millimeters radially. This mask is applied
+on both the top and bottom layers.
+<DOC>
+public defn make-non-plated-hole (hole:Shape, mask?:Maybe<Shape|Double> ):
+  val mask = match(mask?):
+    (_:None):
+      val reg = clearance(current-rules(), SolderMaskRegistration)
+      expand(hole, reg)
+    (given:One<Double>):
+      expand(hole, value(given))
+    (given:One<Shape>):
+      value(given)
+
+  inside pcb-landpattern:
+    layer(Cutout())           = hole
+    layer(SolderMask(Top))    = mask
+    layer(SolderMask(Bottom)) = mask
+
+
+doc: \<DOC>
+Default Observed Layers for NPTH Courtyard Generation
+
+This is the default argument for {@link make-non-plated-courtyard}.
+
+It consists of:
+
+*  `Cutout`
+*  `SolderMask(Top)`
+*  `SolderMask(Bottom)`
+<DOC>
+public val NPTH_DEF_OBS_LAYERS = [
+  Cutout()
+  SolderMask(Top)
+  SolderMask(Bottom)
+]
+
+doc: \<DOC>
+Create the courtyard for a non-plated hole
+
+This is a generator that expects to be called from a `pcb-landpattern` context.
+
+This function constructs a courtyard outline as the union of all of the shapes
+found on `obs-layers` and then expands that definition by `courtyard-excess` mm.
+
+@param obs-layers Set of layers to inspect for shape data when constructing the
+courtyard outline. The union of these shapes is the base shape for the courtyard.
+@param courtyard-excess Expansion amount in mm. Default is 0.25mm
+@throws ArgumentError If `courtyard-excess` is less than zero.
+@throws ValueError If no shape data can be found to create the union.
+<DOC>
+public defn make-non-plated-courtyard (obs-layers:Tuple<LayerSpecifier> = NPTH_DEF_OBS_LAYERS -- courtyard-excess:Double = DEF_CYARD_EXC):
+  if courtyard-excess < 0.0:
+    throw $ ArgumentError("'courtyard-excess' expects a non-negative value: %_ >= 0.0" % [courtyard-excess])
+
+  inside pcb-landpattern:
+    val overall-shs = to-tuple $ cat-all $ map(get-spec-by-layer{self, _}, obs-layers)
+    if length(overall-shs) == 0:
+      throw $ ValueError("Non-Plated Hole - Courtyard Outline Cannot be Created because no layer shapes were found: observed layers = [%,]" % [obs-layers])
+    val overall = Union(overall-shs)
+    val cyard = expand(overall, courtyard-excess)
+    layer(Courtyard(Top)) = cyard
+    layer(Courtyard(Bottom)) = cyard
+
+
+defn def-sm-opening (drill-d:Double):
+  val reg = clearance(current-rules(), SolderMaskRegistration)
+  drill-d + (2.0 * reg)
+
+doc: \<DOC>
+Create a Circular Non-Plated Hole as a LandPattern
+
+@param drill-d Drill Diameter in mm
+@param mask-d Soldermask opening diameter in mm. By default this
+is the drill diameter + the `SolderMaskRegistration` clearance requirement.
+@param name-lp Optional name for the landpattern definition. Default is `"NPTH"`
+@param courtyard-excess Optional courtyard excess in millimeters. Default is 0.25mm.
+The courtyard is applied on both top and bottom layers and expands radially from
+the overall size of the landpattern.
+@return LandPattern definition to be used in a `pcb-component`.
+<DOC>
+public defn non-plated-hole-landpattern (drill-d:Double, mask-d:Double = def-sm-opening(drill-d) -- name-lp:String = DEF_LP_NAME, courtyard-excess:Double = DEF_CYARD_EXC) :
+  non-plated-hole-landpattern(Circle(to-radius(drill-d)), Circle(to-radius(mask-d)), name-lp = name-lp, courtyard-excess = courtyard-excess)
+
