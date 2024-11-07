@@ -22,18 +22,18 @@ public val DEF_COURTYARD_LEN_RATIO = 0.5
 ;   on a separate layer.
 public val DEF_COURTYARD_ORIGIN_LAYER = CustomLayer("origin", Top)
 
-defn compute-origin-size (outline:Rectangle) -> Double :
+defn compute-origin-size (outline:Shape) -> Double :
   ; We look at the outline and use this to determine the
   ;  origin marker's size. We don't want the marker going
   ;  outside the boundary. Otherwise, this will throw off
   ;  other calculations we make with the boundary.
-  val max-dim = min(width(outline), height(outline))
-  val max-2 = max-dim * DEF_COURTYARD_LEN_RATIO
+  val d = dims(outline)
+  val max-dim = min(x(d), y(d))  val max-2 = max-dim * DEF_COURTYARD_LEN_RATIO
   min(max-2, DEF_COURTYARD_LINE_LEN)
 
 public defn build-courtyard-origin (
   vp:VirtualLP,
-  outline:Rectangle,
+  outline:Shape,
   --
   line-width:Double = DEF_COURTYARD_LINE_WIDTH
   pose:Pose = loc(0.0, 0.0)
