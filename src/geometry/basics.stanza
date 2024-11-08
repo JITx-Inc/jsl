@@ -98,6 +98,9 @@ public defn expand-union (x:Shape|Union, amount:Double) -> Shape:
         expand-union(obj, amount)
     (l:Line): expand-line(l, amount)
     (pl:Polyline): expand-polyline(pl, amount)
+    (non-handled:Polygon|PolygonWithArcs):
+      println("Polygons are currently not handled with `expand` - No Expansion on this will be provided")
+      non-handled
     (y:Shape):
       expand-or-shrink(y, amount)
 
