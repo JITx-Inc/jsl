@@ -102,7 +102,7 @@ public defn insert-pullup (
     val et = match(elem-type):
       (given:Instantiable): given
       (R-v:Double): ; Resistance Value
-        create-resistor(resistance = R-v, precision = (1 %))
+        create-resistor(qb, resistance = R-v)
 
     val elem = make-inst(to-symbol(inst-name), et, make-public)
     add-pullup(elem, sig, rail)
