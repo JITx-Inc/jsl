@@ -4,13 +4,12 @@ defpackage jsl/examples/symbols/ferrite:
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
+  import jsl
   import jsl/examples/landpatterns/board
 
 
 pcb-component test-SMT-ferrite:
-
+  mpn = "BLM18KG331SN1D"
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir]
     [p[1] | p[1] | Up ]

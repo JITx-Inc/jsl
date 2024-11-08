@@ -120,7 +120,7 @@ This is used typically for radial capacitors.
 <DOC>
 public defstruct CylinderBody <: PackageBody :
   doc: \<DOC>
-  Diameter of the Cyclindrical body.
+  Diameter of the Cylindrical body.
 
   This dimension of the package body is the radial dimension
   of the cylinder in the X/Y plane.

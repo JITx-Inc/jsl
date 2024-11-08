@@ -11,7 +11,7 @@ This is a typical management interface for PHYs and other
 similar ethernet devices.
 
 This interface is also known as Management Data Input/Output (MDIO)
-or the Serial Management Inteface (SMI).
+or the Serial Management Interface (SMI).
 
 @see https://en.wikipedia.org/wiki/Management_Data_Input/Output
 

@@ -70,14 +70,14 @@ deftest(QFN) test-QFN-basic :
   val col-pads-west = get-column(grid, 0)
   #EXPECT(length(col-pads-west) == 8)
   for lp-pad in col-pads-west do:
-    val pd = pad(lp-pad)
+    val pd = pad-def(lp-pad)
     val shape = pad-shape(pd)
     #EXPECT(shape is Rectangle)
 
   val col-pads-east = get-column(grid, expRowsCols - 1)
   #EXPECT(length(col-pads-east) == 8)
   for lp-pad in col-pads-east do:
-    val pd = pad(lp-pad)
+    val pd = pad-def(lp-pad)
     val shape = pad-shape(pd)
     #EXPECT(shape is Rectangle)
 
@@ -153,14 +153,14 @@ deftest(QFN) test-QFN-non-square :
   val col-pads-west = get-column(grid, 0)
   #EXPECT(length(col-pads-west) == 6)
   for lp-pad in col-pads-west do:
-    val pd = pad(lp-pad)
+    val pd = pad-def(lp-pad)
     val shape = pad-shape(pd)
     #EXPECT(shape is Rectangle)
 
   val col-pads-east = get-column(grid, expColLen - 1)
   #EXPECT(length(col-pads-east) == 6)
   for lp-pad in col-pads-east do:
-    val pd = pad(lp-pad)
+    val pd = pad-def(lp-pad)
     val shape = pad-shape(pd)
     #EXPECT(shape is Rectangle)
 

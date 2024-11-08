@@ -4,11 +4,7 @@ defpackage jsl/examples/via-structures/diff-via-structures:
   import jitx
   import jitx/commands
 
-  import jsl/via-structures
-  import jsl/si/helpers
-  import jsl/si/pairs
-  import jsl/si/couplers
-  import jsl/geometry/NotchedShapes
+  import jsl
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components
 
@@ -60,6 +56,3 @@ set-main-module(top-level)
 
 ; View the results
 view-board()
-
-
-

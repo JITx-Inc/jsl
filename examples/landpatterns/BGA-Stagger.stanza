@@ -4,9 +4,7 @@ defpackage jsl/examples/landpatterns/BGA-stagger:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-  import jsl/symbols
+  import jsl
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)

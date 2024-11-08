@@ -4,9 +4,7 @@ defpackage jsl/examples/landpatterns/Molded-2pin:
   import jitx
   import jitx/commands
 
-  import jsl/symbols
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 pcb-component test-inductor :

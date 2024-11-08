@@ -6,6 +6,8 @@ defpackage jsl/symbols/box-symbol:
   import lang-utils
   import pcre
 
+  import maybe-utils
+
   import jitx
   import jitx/commands
   import jitx/utils/got
@@ -130,49 +132,50 @@ This type contains various parmaeters that we may
 want to apply to all box symbols. We provide default
 values for a sane consistent default look.
 <DOC>
-public defstruct BoxSymbolParams <: Equalable :
-  min-col-width:Int with: (
+public defstruct BoxSymbolParams <: SymbolParams :
+  min-col-width:Int with:
     ensure => ensure-non-negative!
     updater => sub-min-col-width
-  )
-  min-row-width:Int with: (
+    default => DEF_COL_WIDTH
+  min-row-width:Int with:
     ensure => ensure-non-negative!
     updater => sub-min-row-width
-  )
-  line-width:Double with: (
+    default => DEF_ROW_WIDTH
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
-  )
-  pin-length:Double with: (
+    default => DEF_LINE_WIDTH
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
-  )
+    default => DEF_PIN_LEN
   doc: \<DOC>
   Font size for pad names that appear on the symbol.
   <DOC>
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
-  )
+    default => DEF_PAD_REF_SIZE
   doc: \<DOC>
   Spacing between input pins.
   This value is in symbol grid units. The best values are
   whole numbers or half-numbers (0.5, 1.5, etc).
   <DOC>
-  pin-pitch:Double with: (
+  pin-pitch:Double with:
     updater => sub-pin-pitch,
     ensure => ensure-positive!
-  )
+    default => DEF_PIN_PITCH
   doc: \<DOC>
   Font size for pin names that appear on the symbol.
   <DOC>
-  pin-name-size:Double with: (
+  pin-name-size:Double with:
     ensure => ensure-positive!
-  )
+    default => DEF_PIN_NAME_SIZE
   doc: \<DOC>
   Show row/col grid lines for debugging.
   <DOC>
-  show-grid:True|False
+  show-grid:True|False with:
+    default => DEF_SHOW_GRID
   ; Others here like:
   ; Default Head & Foot Padding
   ;    Example: for components that only have pins on the
@@ -182,36 +185,14 @@ public defstruct BoxSymbolParams <: Equalable :
   ; For the future:
   ;  Color - stroke, fill, etc.
   ;
-
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #BoxSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
-
-doc: \<DOC>
-Main Type for building Box Symbols.
-<DOC>
-public defn BoxSymbolParams (
-  --
-  col-width:Int = DEF_COL_WIDTH
-  row-width:Int = DEF_ROW_WIDTH
-  line-width:Double = DEF_LINE_WIDTH
-  pin-length:Double = DEF_PIN_LEN
-  pad-ref-size:Double = DEF_PAD_REF_SIZE
-  pin-pitch:Double = DEF_PIN_PITCH
-  pin-name-size:Double = DEF_PIN_NAME_SIZE
-  show-grid:True|False = DEF_SHOW_GRID
-  ) -> BoxSymbolParams:
-  #BoxSymbolParams(
-    col-width
-    row-width
-    line-width
-    pin-length
-    pad-ref-size
-    pin-pitch
-    pin-name-size
-    show-grid
-  )
 
 ; Stores the default box symbols parameters so that they can
 ;  be overridden by the user.
@@ -242,23 +223,23 @@ public defstruct BoxSymbol <: SymbolDefn :
   This is useful for testing or explicitly overriding the defaults without
   changing them for the rest of the schematic.
   <DOC>
-  params:Maybe<BoxSymbolParams>
-    with: (default => None())
+  params:Maybe<BoxSymbolParams> with:
+    default => None()
 
   ; Maintains the grid information for the overall box symbol
-  grid:GridInfo
-    with: (default => GridInfo())
+  grid:GridInfo with:
+    default => GridInfo()
   ; Maintains the pin decorators for each pin (exclusive of banks)
-  decorator-by-pin:HashTable<Ref, Vector<PinDecorator>>
-    with: (default => HashTable<Ref,Vector<PinDecorator>>())
+  decorator-by-pin:HashTable<Ref, Vector<PinDecorator>> with:
+    default => HashTable<Ref,Vector<PinDecorator>>()
 
   ; tracks group-properties
-  prop-by-group:HashTable<String,HashTable<Symbol,?>>
-    with: (default => HashTable<String,HashTable<Symbol,?>>())
+  prop-by-group:HashTable<String,HashTable<Symbol,?>> with:
+    default => HashTable<String,HashTable<Symbol,?>>()
 
   ; for multi-bank box symbols, empty table for non-banked box symbols
-  banks:HashTable<Int|Ref,GridInfo>
-    with: (default => HashTable<Int|Ref,GridInfo>())
+  banks:HashTable<Int|Ref,GridInfo> with:
+    default => HashTable<Int|Ref,GridInfo>()
 with:
   constructor => #BoxSymbol
   printer => true
@@ -282,14 +263,13 @@ defn only-outside-decorator? (decs: Vector<PinDecorator>) -> True|False :
 
 defstruct GridInfo :
   ; 1-indexed dimensions
-  dims:[Int, Int]
-    with: (
+  dims:[Int, Int] with:
       default => [1,1]
       setter => set-dims
-  )
   ; whether the user has explicitly set a grid or not
-  active-grid?:True|False
-    with: (default => false, setter => set-active-grid?)
+  active-grid?:True|False with:
+    default => false
+    setter => set-active-grid?
   ; since `self` can change when generating the symbol data,
   ; pin-info is all the relevant pin property information
   ; copied out from self before symbol generation
@@ -303,35 +283,26 @@ with :
 defstruct BoxSymbolBank <: SymbolDefn :
   grid:GridInfo
   params:BoxSymbolParams
-  pin-info:Table<Ref,Table<Symbol,?>>
-    with: (
-      default => HashTable<Ref,Table<Symbol,?>>()
-      setter => set-pin-info
-    )
+  pin-info:Table<Ref,Table<Symbol,?>> with:
+    default => HashTable<Ref,Table<Symbol,?>>()
+    setter => set-pin-info
+
   ; maintain the order of pins since copying to a table
   ; will lose that information
-  pin-order:Tuple<Ref>
-    with: (
-      default => [], setter => set-pin-order
-    )
-  rcs-by-pin:HashTable<Ref,RCS>
-    with: (
-      default => HashTable<Ref,RCS>()
-    )
-  dec-info-by-pin:HashTable<Ref, DecoratorInfo>
-    with: (default => HashTable<Ref,DecoratorInfo>())
+  pin-order:Tuple<Ref> with:
+    default => [], setter => set-pin-order
+
+  rcs-by-pin:HashTable<Ref,RCS> with:
+    default => HashTable<Ref,RCS>()
+  dec-info-by-pin:HashTable<Ref, DecoratorInfo> with:
+    default => HashTable<Ref,DecoratorInfo>()
 with :
   printer => true
 
 ; ============== Helper Functions ================
 ;
-defn get-params (x:BoxSymbol) -> BoxSymbolParams :
-  match(params(x)):
-    (_:None): get-default-box-symbol-params()
-    (v:One<BoxSymbolParams>): value(v)
-
 ; save all relevant pin property information
-; explicitly since eventuallly we will lose the reference to self.
+; explicitly since eventually we will lose the reference to self.
 ; If no bank is specified, everything in the box symbol is used,
 ; otherwise only the pins and grid for that specific bank are used.
 defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
@@ -378,7 +349,17 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
         (none: None) :
           false
 
-    rcs-by-pin[ref(p)] = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
+    ; Pin grid checks
+    val pin-rcs = calc-rcs-for-pin(ref(p), props, dims(bank-grid))
+    rcs-by-pin[ref(p)] = pin-rcs
+    val pin-row = row $ pin-rcs
+    val pin-col = col $ pin-rcs
+
+    if pin-row >= dims(bank-grid)[0] :
+      throw $ Exception("row %_ for pin %_ exceeds grid size [%_]" % [pin-row, ref(p), dims(bank-grid)])
+    if pin-col >= dims(bank-grid)[1] :
+      throw $ Exception("col %_ for pin %_ exceeds grid size [%_]" % [pin-col, ref(p), dims(bank-grid)])
+
     pin-infos[ref(p)] = props
     ;println("DEBUG %_ %_" % [ref(p), props])
     add(pin-order, ref(p))
@@ -409,18 +390,18 @@ defn save-pin-info (x:BoxSymbol, bank:Int|Ref|False = false) -> BoxSymbolBank :
       within group-tail-margin = got?(group-props, GROUP_TAIL_MARGIN_PROP) :
         pin-infos[ref(tail-pin)][GROUP_TAIL_MARGIN_PROP] = group-tail-margin
 
-  check-properties(matched-pins)
+  check-properties(matched-pins, bank-grid)
 
   BoxSymbolBank(
     bank-grid
-    get-params(x)
+    get-params(x) as BoxSymbolParams
     pin-infos
     to-tuple $ pin-order
     rcs-by-pin
     decorators
   )
 
-defn check-properties (pins:Seqable<JITXObject>) :
+defn check-properties (pins:Seqable<JITXObject>, gridInfo: GridInfo) :
   for p in pins do :
     val side? = get-property?(p, SIDE_PROP)
     match(side?, get-property?(p, ALIGN_PROP)) :
@@ -430,7 +411,7 @@ defn check-properties (pins:Seqable<JITXObject>) :
           or ((value(o1) == Up or value(o1) == Down)
             and not contains?(UD_ANCHORS, value(o2))) :
           throw $ InvalidAlignProperty("Side %_ and Alignment %_ not compatible \
-            for pin %_" % [value(o1), value(o2), ref(p)])
+            for pin %_ (Grid: %_)" % [value(o1), value(o2), ref(p), dims(gridInfo)])
       (f1, f2) :
         false
 
@@ -452,6 +433,9 @@ defn check-prop (prop: ?, filter: ?) -> True|False :
 
 public defmethod name (x:BoxSymbol) -> String :
   to-string("Box-%_" % [obj(x)])
+
+defmethod get-params (x:BoxSymbol) -> BoxSymbolParams :
+  value-or-else(params(x) as Maybe<BoxSymbolParams>, get-default-box-symbol-params)
 
 ; Need an override here because `self` will get
 ; clobbered inside the nested contexts so
@@ -945,8 +929,13 @@ public defmethod build-artwork (x:BoxSymbolBank, node:SymbolNode) :
 
 public defmethod build-params (x:BoxSymbolBank, sn:SymbolNode) :
   val b = glyph-bounds(sn)
-  text(sn, [left(b), up(b) + DESIGNATOR_MARGIN], ">REF", anchor = SW, font-size = 8)
-  text(sn, [left(b), down(b) - DESIGNATOR_MARGIN], ">VALUE", anchor = NW, font-size = 8)
+  val p = get-label-params $ params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([left(b), up(b) + DESIGNATOR_MARGIN], SW)
+    LabelPosition([left(b), down(b) - DESIGNATOR_MARGIN], NW)
+  )
 
 public defmethod build-orientation (x:BoxSymbolBank, sn:SymbolNode) :
   inside pcb-symbol:
@@ -1014,8 +1003,7 @@ doc: \<DOC>
 Set the grid for a component
 
 @param b Box Symbol object
-@param grid Tuple of [row,column] where row & column must be greater than zero.
-@param bank bank ID for multi-symbol unit BoxSymbols.
+@param dims Tuple of [row,column] where row & column must be greater than zero.
 <DOC>
 public defn set-grid (b:BoxSymbol, dims:[Int, Int]) :
   if not has-grid?(b) :
@@ -1038,7 +1026,6 @@ Get the total number of rows in the pin grid.
 This function is for components with only one symbol unit.
 
 @param b Box Symbol object
-@param bank Selects for a particular symbol unit.
 @return number of rows in the pin grid of the given `bank`. If no
 pin grid is active for this bank, this function returns 0.
 <DOC>
@@ -1094,14 +1081,14 @@ should throw an exception.
 There are only a limited set of valid row/column combinations based on the
 edges of the box symbol.
 
-@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a group.
 @param row Row index into the pin grid.
 @param column Column index into the pin grid.
+@param pins One Pin or a Tuple of Pins present on `obj` that will be added to a group.
 @throws IndexError If either the `row` or `column` are outside the active grid cells
 <DOC>
-public defn set-grid-edge (row:Int, col:Int, pins: JITXObject ...) :
+public defn set-grid-edge (row:Int, column:Int, pins: JITXObject ...) :
   set-row(row, pins)
-  set-column(col, pins)
+  set-column(column, pins)
 
 doc: \<DOC>
 Set the Row assignment for these pins
@@ -1178,8 +1165,8 @@ side pins would move to column index 2. The `Top` side pins would be in row inde
 NOTE: If this is too complex - we can add the constraint that the user must add the `grid` first, but in order to
 match the existing functionality, I think we would need to support this.
 
-@param pin-set One Pin or a Tuple of Pins present on `obj` that will be added to a side.
 @param side Selects the edge of a box symbol on to which the pins will be drawn
+@param pins One Pin or a Tuple of Pins present on `obj` that will be added to a side.
 <DOC>
 public defn set-side (side:Dir, pins: JITXObject ...)  :
   set-side(side, pins)

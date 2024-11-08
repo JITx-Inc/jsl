@@ -1,0 +1,10 @@
+#use-added-syntax(jitx)
+defpackage jsl/circuits:
+
+  forward jsl/circuits/Bypass
+  forward jsl/circuits/ConfigStrap
+  forward jsl/circuits/CrystalResonator
+  forward jsl/circuits/Network
+  forward jsl/circuits/Pullups
+  forward jsl/circuits/Termination
+  forward jsl/circuits/utils

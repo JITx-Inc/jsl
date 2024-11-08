@@ -97,7 +97,7 @@ public defn connect-10GBASE-KR (cons:SI-Constraint, cap-src-dst:Instantiable|Fal
             topo-net(d.RX, s.RX)
         (x, y, z) :
           throw $ Exception("Invalid Configuration - null-modem and/or blocking caps conflict")
-      
+
 doc: \<DOC>
 @brief Curated values for skew and loss of 10GBASE-KR Channel
 This is a helper function that returns the bounds on the intra-pair
@@ -111,7 +111,7 @@ https://www.ieee802.org/3/ba/public/jul08/balasubramanian_01_0708.pdf
 Calculating the intra-pair skew distance to time correspondence depends on the material.
 see @http://pdf.cloud.opensystemsmedia.com/advancedtca-systems.com/Simclar.Feb08.pdf
 Table 3 where the intra-pair skew is set to 0.0625e-12 and the inter-pair skew
-is set to 0.625e-12. This corresponds roughly to 0.01mm skew intra-pair and 
+is set to 0.625e-12. This corresponds roughly to 0.01mm skew intra-pair and
 0.100mm skew inter-pair (or lane).
 <DOC>
 

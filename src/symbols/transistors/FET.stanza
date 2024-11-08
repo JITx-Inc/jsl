@@ -10,10 +10,18 @@ defpackage jsl/symbols/transistors/FET:
   import jsl/geometry/basics
   import jsl/symbols/framework
 
+doc: \<DOC>
+@member N-Channel
+@member P-Channel
+<DOC>
 public defenum FET-Junction :
   N-Channel
   P-Channel
 
+doc: \<DOC>
+@member Enhancement
+@member Depletion
+<DOC>
 public defenum FET-Mode :
   Enhancement
   Depletion
@@ -31,7 +39,7 @@ val DEF_FET_ARROW_PARAMS = ArrowSymbolParams(
 val DEF_FET_OUTLINE = true
 val DEF_FET_PAD_REF_SIZE = 0.75
 
-public defstruct FETSymbolParams <: Equalable :
+public defstruct FETSymbolParams <: SymbolParams :
   doc: \<DOC>
   Length of the vertical line on the source and drain pins
   The source and drain have a leader line between the channel
@@ -40,22 +48,20 @@ public defstruct FETSymbolParams <: Equalable :
   This value can be 0.0 if no porch-width is desired and the pin
   will start immediately from the end of the channel structure.
   <DOC>
-  porch-width:Double with: (
+  porch-width:Double with:
     ensure => ensure-non-negative!
     updater => sub-porch-width
     default => DEF_FET_PORCH_WIDTH
-  )
 
   doc: \<DOC>
   Sets the base line length for the channel structure.
   This is the vertical line that the gate, source, and drain
-  connections, all intersect at 90 degreess.
+  connections, all intersect at 90 degrees.
   <DOC>
-  base-line:Double with: (
+  base-line:Double with:
     ensure => ensure-positive!,
     updater => sub-base-line
     default => DEF_FET_BASE_LINE
-  )
   doc: \<DOC>
   Set the style and parameters of the arrow leg of the channel.
   The arrow leg is the line from the base to the body. It also
@@ -64,58 +70,38 @@ public defstruct FETSymbolParams <: Equalable :
   On N-channel, it points from body to channel
   On P-Channel, it points  from channel to body.
   <DOC>
-  arrow-params:ArrowSymbolParams with: (
+  arrow-params:ArrowSymbolParams with:
     default => DEF_FET_ARROW_PARAMS
     updater => sub-arrow-params
-  )
   doc: \<DOC>
   Add the outline circle around the transistor
   Often for power transistors, the BJT symbol
   will have a circle outline
   <DOC>
-  outline:True|False with: (
+  outline:True|False with:
     updater => sub-outline
     default => DEF_FET_OUTLINE
-  )
-  line-width:Double with: (
+  line-width:Double with:
     ensure => ensure-positive!
     updater => sub-line-width
     default => DEF_FET_LINE_WIDTH
-  )
-  pin-length:Double with: (
+  pin-length:Double with:
     ensure => ensure-positive!
     updater => sub-pin-length
     default => DEF_FET_PIN_LEN
-  )
-  pad-ref-size:Double with: (
+  pad-ref-size:Double with:
     ensure => ensure-positive!
     updater => sub-pad-ref-size
     default => DEF_FET_PAD_REF_SIZE
-  )
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
 with:
-  constructor => #FETSymbolParams
+  keyword-constructor => true
   equalable => true
   printer => true
 
-
-public defn FETSymbolParams (
-  --
-  porch-width:Double = DEF_FET_PORCH_WIDTH
-  base-line:Double = DEF_FET_BASE_LINE
-  arrow-params:ArrowSymbolParams = DEF_FET_ARROW_PARAMS
-  outline-diam:True|False = DEF_FET_OUTLINE
-  line-width:Double = DEF_FET_LINE_WIDTH
-  pin-length:Double = DEF_FET_PIN_LEN
-  pad-ref-size:Double = DEF_FET_PAD_REF_SIZE
-  ) -> FETSymbolParams:
-  #FETSymbolParams(
-    porch-width
-    base-line
-    arrow-params
-    outline-diam
-    line-width
-    pin-length
-  )
 
 public defn build-fet-glyphs (
   node:SymbolNode,
@@ -229,18 +215,19 @@ public defn set-default-fet-symbol-params (v:FETSymbolParams) -> False :
 public defstruct FETSymbol <: ThreePinSymbol :
   junction-type:FET-Junction
   mode-type:FET-Mode
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!,
     default => THREE_PIN_DEF_PITCH
     as-method => true
-  )
-  width:Double with: (
+  width:Double with:
     ensure => ensure-positive!
     default => THREE_PIN_DEF_WIDTH
     as-method => true
-  )
+  params:Maybe<FETSymbolParams> with:
+    default => None()
 with:
-  constructor => #FETSymbol
+  printer => true
+  keyword-constructor => true
 
 public defn FET-pin-positions (junction-type:FET-Junction, pitch:Double, width:Double, porch-width:Double) -> [Point, Point, Point] :
   val p2 = pitch / 2.0
@@ -255,17 +242,13 @@ public defn FET-pin-positions (junction-type:FET-Junction, pitch:Double, width:D
     Point((- width), gate-y) ; Gate
   ]
 
-public defn FETSymbol (
-  --
-  junction-type:FET-Junction
-  mode-type:FET-Mode
-  pitch:Double = THREE_PIN_DEF_PITCH
-  width:Double = THREE_PIN_DEF_WIDTH
-  ) -> FETSymbol :
-  #FETSymbol(junction-type, mode-type, pitch, width)
-
 public defmethod name (x:FETSymbol) -> String :
   "FET"
+
+defmethod get-params (x:FETSymbol) -> FETSymbolParams:
+  match(params(x)):
+    (_:None): get-default-fet-symbol-params()
+    (given:One<FETSymbolParams>): value(given)
 
 public val FET_GATE_REF = Ref("G")
 public val FET_DRAIN_REF = Ref("D")
@@ -274,7 +257,7 @@ public val FET_SOURCE_REF = Ref("S")
 public defmethod build-pins (
   x:FETSymbol, sn:SymbolNode
   ):
-  val p = get-default-fet-symbol-params()
+  val p = get-params(x) as FETSymbolParams
 
   val refs = match(junction-type(x)):
     (_:N-Channel): [FET_DRAIN_REF, FET_SOURCE_REF, FET_GATE_REF]
@@ -295,15 +278,19 @@ public defmethod build-pins (
 public defmethod build-artwork (
   x:FETSymbol, sn:SymbolNode
   ):
-  val params = get-default-fet-symbol-params()
+  val p = get-params(x) as FETSymbolParams
   val child = create-child(sn, name = "FET", class = "transistor")
-  build-fet-glyphs(child, junction-type(x), mode-type(x), pitch(x), width(x), params)
+  build-fet-glyphs(child, junction-type(x), mode-type(x), pitch(x), width(x), p)
 
 public defmethod build-params (
   x:FETSymbol, sn:SymbolNode
   ):
-  val p = get-default-fet-symbol-params()
-  val overall = glyph-bounds(sn)
-  text(sn, [right(overall) + 0.5, 0.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [right(overall) + 0.5, (- 0.5)], ">VALUE", anchor = W, font-size = 8)
+  val b = glyph-bounds(sn)
+  val p = get-label-params $ get-params(x)
+  build-labels(
+    p,
+    sn,
+    LabelPosition([right(b) + 0.5, 0.5], W)
+    LabelPosition([right(b) + 0.5, (- 0.5)], W)
+    )
 

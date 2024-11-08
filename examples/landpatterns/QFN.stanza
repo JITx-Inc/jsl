@@ -5,9 +5,7 @@ defpackage jsl/examples/landpatterns/QFN:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
@@ -74,7 +72,7 @@ pcb-component test-QFN:
       lead-length = 0.4 +/- 0.05,
       lead-width = 0.25 +/- 0.05
     ),
-    thermal-lead? = Rectangle(3.7, 3.7),
+    thermal-lead? = ThermalPad(Rectangle(3.7, 3.7), padding = 0.25),
     package-body = PackageBody(
       width = 5.0 +/- 0.05,
       length = 5.0 +/- 0.05,

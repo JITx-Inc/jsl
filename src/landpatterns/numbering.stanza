@@ -36,7 +36,7 @@ Convert the row and column indices into a pad number or reference
 @param x Self
 @param row Zero-based row offset into the pad grid
 @param column Zero-based column offset into the pad grid.
-@return Either an Int or a {@link Ref} that determines the
+@return Either an Int or a {@link type:Ref} that determines the
   pad identifier or name.
 <DOC>
 public defmulti to-pad-id (x:Numbering, row:Int, column:Int) -> Int|Ref
@@ -302,7 +302,7 @@ public val DEF-ROW-OMITS = "IOQSXZ"
 
 doc: \<DOC>
 Create pad Ref sequence for a 2-axis Grid (eg for BGAs)
-The created references use a {@link IndexRef} consisting of
+The created references use a {@link type:IndexRef} consisting of
 a letter for the row indicator and a number index for the column.
 For example:
   row=1, column=1 =>  `A[1]`
@@ -400,7 +400,6 @@ Given a Row Letter, convert to an Int offset in 0-index form
 
 @param g Grid Numbering Scheme
 @param row identifies which row we are attempting to convert
-@param Offset which will take into a account the omitted
 <DOC>
 public defn to-row-index (g:Grid-Numbering, row:Ref|String) -> Int :
   val raw-letters = compute-letters(omit-rows(g))

@@ -4,10 +4,20 @@ defpackage jsl/symbols/SymbolDefn:
   import jitx
 
   import jsl/symbols/SymbolNode
+  forward jsl/symbols/SymbolParams
 
+
+doc: \<DOC>
+Base Symbol Definition Type
+<DOC>
 public deftype SymbolDefn
 
 public defmulti name (x:SymbolDefn) -> String
+
+doc: \<DOC>
+Retrieve the Symbol Parameter for this symbol Instance
+<DOC>
+public defmulti get-params (x:SymbolDefn) -> SymbolParams
 
 doc: \<DOC>
 Construct the Pin definitions for the symbol
@@ -35,7 +45,7 @@ the symbol in the schematic.
 public defmulti build-params (x:SymbolDefn, sn:SymbolNode)
 
 doc: \<DOC>
-Consstruct the preferred orientation statement for the symbol
+Construct the preferred orientation statement for the symbol
 
 This function implements the `preferred-orientation` statement
 which controls at what orientation the symbol will be placed

@@ -5,10 +5,7 @@ defpackage jsl/examples/symbols/logic:
   import jitx
   import jitx/commands
 
-  import jsl/design/settings
-  import jsl/landpatterns
-  import jsl/symbols
-
+  import jsl
   import jsl/examples/landpatterns/board
 
 val SOIC-pkg = SOIC-N(
@@ -19,6 +16,7 @@ val SOIC-pkg = SOIC-N(
 )
 
 pcb-component test-Buffer:
+  mpn = "74LS24211"
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
     [in | p[1] | Up |  0]
@@ -38,7 +36,7 @@ pcb-component test-Buffer:
 
 
 pcb-component test-Inverter:
-
+  mpn = "74LS24212"
   pin-properties :
     [pin:Ref | pads:Ref ... | side:Dir | bank:Int]
     [in | p[1] | Up |  0]
@@ -47,7 +45,7 @@ pcb-component test-Inverter:
   val oldParams = get-default-buffer-symbol-params()
   val newParams = sub-filled?(oldParams, false)
 
-  val symb = BufferSymbol(inverter? = true, params = newParams)
+  val symb = BufferSymbol(inverter? = true, params = One $ newParams)
   assign-symbol(create-symbol(symb))
 
   val chip-def = chips["1206"]
@@ -61,7 +59,7 @@ pcb-component test-Inverter:
 
 
 pcb-component test-AND:
-
+  mpn = "74LS24213"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -77,7 +75,7 @@ pcb-component test-AND:
 
 
 pcb-component test-NAND:
-
+  mpn = "74LS24214"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -95,7 +93,7 @@ pcb-component test-NAND:
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 
 pcb-component test-Multi-AND:
-
+  mpn = "74LS24215"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in-A[1] | p[1]]
@@ -115,7 +113,7 @@ pcb-component test-Multi-AND:
     unit(1) = symb2( self.in-B[1] => symb2.in-B[1], self.in-B[2] => symb2.in-B[2], self.out-B => symb2.out-B)
 
 pcb-component test-NAND3:
-
+  mpn = "74LS24216"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -132,7 +130,7 @@ pcb-component test-NAND3:
 
 
 pcb-component test-Crazy-AND:
-
+  mpn = "74LS24217"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -149,14 +147,14 @@ pcb-component test-Crazy-AND:
   val h = 7.5
   val newParams = sub-size(oldParams, Dims(DEF_AND_W_OVER_H_RATIO * h, h))
 
-  val symb = ANDGateSymbol(num-inputs = 7, pin-pitch = 1.0, params = newParams)
+  val symb = ANDGateSymbol(num-inputs = 7, pin-pitch = 1.0, params = One $ newParams)
   assign-symbol(create-symbol(symb))
 
   val lp = create-landpattern(SOIC-pkg)
   assign-landpattern(lp)
 
 pcb-component test-OR:
-
+  mpn = "74LS24218"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -171,7 +169,7 @@ pcb-component test-OR:
   assign-landpattern(lp)
 
 pcb-component test-NOR:
-
+  mpn = "74LS24219"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -186,7 +184,7 @@ pcb-component test-NOR:
   assign-landpattern(lp)
 
 pcb-component test-XOR:
-
+  mpn = "74LS24220"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -201,7 +199,7 @@ pcb-component test-XOR:
   assign-landpattern(lp)
 
 pcb-component test-NOR3:
-
+  mpn = "74LS24221"
   pin-properties :
     [pin:Ref | pads:Ref ... ]
     [in[1] | p[1]]
@@ -215,6 +213,10 @@ pcb-component test-NOR3:
 
   val lp = create-landpattern(SOIC-pkg)
   assign-landpattern(lp)
+
+
+set-default-symbol-label-params(SymbolLabelParams(ref-label-size = 0.75,  value-label-size = One $ 0.75))
+; set-default-symbol-label-params(SymbolLabelParams(ref-label-size = 0.75,  value-label-size = None()))
 
 pcb-module test-design:
   inst U1 : test-Buffer

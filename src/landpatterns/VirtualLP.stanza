@@ -6,9 +6,12 @@ defpackage jsl/landpatterns/VirtualLP:
   import jitx/commands
 
   import jsl/errors
+  import jsl/ensure
   import jsl/design/Classable
   import jsl/geometry/box
   import jsl/landpatterns/courtyard
+  import jsl/landpatterns/leads
+  import jsl/landpatterns/thermal-pads
 
 doc: \<DOC>
 Base Type for the Elements of the Virtual Landpattern Tree
@@ -75,6 +78,7 @@ public defn build-vpad-classes (r:Int, c:Int) -> Tuple<String> :
     to-string("col-%_" % [c]),
     to-string("row-%_" % [r])
   ]
+
 
 
 public defn print-pads (o:OutputStream, pds:Seqable<VirtualPad> ) :
@@ -357,7 +361,7 @@ This function is recursive over all of the nodes of the
 virtual landpattern scene graph.
 
 @param vp Virtual LP scene graph
-@param pose Offset position to apply to the created LayerShape objects.
+@param offset Offset position to apply to the created LayerShape objects.
 This will cause all created objects to be in the same root frame of reference
 for the VirtualLP `vp`.
 @return A Tuple of LayerShape object
@@ -409,6 +413,25 @@ public defn get-silkscreen-outline! (vp:VirtualLP) -> VirtualArtwork :
     throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
 
   outlines[0]
+
+doc: \<DOC>
+Retrieve the Silkscreen outline if present
+
+This function looks for a `VirtualArtwork` object with class `outline`.
+
+@param vp Virtual Landpattern SceneGraph
+@return  If no `outline` present, then this function returns `None()`
+If an artwork of class `outline` is present, we return one.
+@throws ValueError if multiple `outline` elements are found.
+<DOC>
+public defn get-silkscreen-outline (vp:VirtualLP) -> Maybe<VirtualArtwork> :
+  val outlines = to-tuple $ seq{as-VirtualArtwork, _} $ find-by-class(vp, "outline")
+  if length(outlines) == 0:
+    None()
+  else if length(outlines) > 1:
+    throw $ ValueError("Expected only one element in class 'outline': %," % [outlines])
+  else:
+    One $ outlines[0]
 
 public defn add-artwork (
   vp:VirtualLP,
@@ -484,6 +507,38 @@ public defn add-keepout (
       VirtualArtwork(ForbidCopper(start, end), s, name? = name, class = class)
   append-all(vp, new-kos)
 
+
+doc: \<DOC>
+Add a Thermal Pad to the Virtual LandPattern Scene Graph
+
+@param vp Scene Graph
+@param pad-id Pad Id for this thermal pad - this is used in the
+`pin-properties` mapping of the `pcb-component` to map symbol pin
+to landpattern pad.
+@param thermal-lead? Thermal Lead Object Definition.
+If `False` - this function does nothing.
+If `Shape` - then we construct a `ThermalPad` with no special
+handling.
+Otherwise, we use the `ThermalPad` to construct a large thermal
+pad with optional paste subdivision etc. and add it to the
+passed scenegraph.
+<DOC>
+public defn add-thermal-pad (
+  vp:VirtualLP, pad-id:Int|Ref, thermal-lead?:False|Shape|ThermalPad,
+  --
+  pose:Pose = loc(0.0, 0.0)
+  ):
+  if thermal-lead? is-not False:
+    val tp = match(thermal-lead?):
+      (lead-shape:Shape):
+        ThermalPad(shape = lead-shape)
+      (tp-obj:ThermalPad): tp-obj
+
+    val cls = ["pad", "thermal"]
+    val pd-def = smd-thermal-pad(tp)
+    append(vp, VirtualPad(pad-id, pd-def, pose, class = cls))
+
+
 doc: \<DOC>
 Create a reference designator in the current virtual landpattern
 
@@ -530,7 +585,7 @@ public defn append (vp:VirtualLP, va:VirtualArtwork) -> False :
     add{_, va} $ artwork(vp)
 
 doc: \<DOC>
-Add multipple `VirtualArtwork` instances to the landpattern.
+Add multiple `VirtualArtwork` instances to the landpattern.
 <DOC>
 public defn append-all (vp:VirtualLP, vas:Seqable<VirtualArtwork>) -> False :
     add-all{_, vas} $ artwork(vp)
@@ -702,6 +757,68 @@ public defn find-by-class (vp:VirtualLP, cls:String) -> Seqable<VirtualElement> 
     find-by-class(child, cls)
   cat(local-elems, kid-elems)
 
+defn identify-pad-row-col (vp:VirtualLP, prefix:String) -> Tuple<Int> :
+  val pad-elems = find-by-class(vp, "pad")
+  val found-indices = for pad-elem in pad-elems seq?:
+    val row-cls = for cls in class(pad-elem) first:
+      if prefix?(cls, prefix):
+        One(cls)
+      else:
+        None()
+    match(row-cls):
+      (_:None):
+        throw $ ValueError("Pad '%_' does not have a '%_*' class" % [pad-elem, prefix])
+        None()
+      (given:One<String>):
+        val index = last $ to-list $ split(value(given), "-")
+        match(to-int(index)):
+          (_:False): None()
+          (x:Int): One(x)
+
+  to-tuple $ unique(found-indices)
+
+doc: \<DOC>
+Identify the unique rows of pads in this land pattern
+@param vp VirtualLP SceneGraph
+@return Tuple of row indices. For example, a dual
+with 16 pins (2 x 8) will have 8 rows and 2 columns. This
+function will return 8.
+<DOC>
+public defn identify-pad-rows (vp:VirtualLP) -> Tuple<Int> :
+  identify-pad-row-col(vp, "row-")
+
+doc: \<DOC>
+Identify the unique columns of pads in this land pattern
+@param vp VirtualLP SceneGraph
+@return Tuple of row indices. For example, a square quad
+with 8 x 8 will have 8 rows and 4 columns. This function
+will return 4.
+<DOC>
+public defn identify-pad-columns (vp:VirtualLP) -> Tuple<Int> :
+  identify-pad-row-col(vp, "col-")
+
+doc: \<DOC>
+Retrieve the pads in the specified row
+@param vp VirtualLP SceneGraph
+@param row Identifies the row of pads to retrieve. Must be >= 0.
+@return Sequence of `VirtualPad` objects. If no row with
+index `row` is present, then an empty sequence will be provided.
+<DOC>
+public defn get-pads-by-row (vp:VirtualLP, row:Int) -> Seq<VirtualPad> :
+  ensure-non-negative!("row", row)
+  seq{as-VirtualPad, _} $ find-by-class(vp, to-string $ "row-%_" % [row])
+
+doc: \<DOC>
+Retrieve the pads in the specified column
+@param vp VirtualLP SceneGraph
+@param column Identifies the column of pads to retrieve. Must be >= 0.
+@return Sequence of `VirtualPad` objects. If no column with
+index `column` is present, then an empty sequence will be provided.
+<DOC>
+public defn get-pads-by-column (vp:VirtualLP, column:Int) -> Seq<VirtualPad> :
+  ensure-non-negative!("column", column)
+  seq{as-VirtualPad, _} $ find-by-class(vp, to-string $ "col-%_" % [column])
+
 doc: \<DOC>
 Find a virtual pad with the given reference
 <DOC>
@@ -731,6 +848,85 @@ public defn get-first-pad (vp:VirtualLP) -> VirtualPad :
   if empty?(pads) :
     throw(Exception("Virtual landpattern has no pads"))
   reduce(earlier-pad, pads)
+
+doc: \<DOC>
+Construct the interior bounds for the pads of a component
+
+This function only makes sense for things like QFPs, SOICs,
+SSOPs, or 2-pin components.
+
+This function assumes that you have used the function
+{@link build-vpad-classes} when constructing the rows and
+columns of pads for your footprint.
+
+This function attempts to extract out the pads by row
+or column and then use the bounding box of the soldermask
+to determine the interior bounds between the pads.
+
+Note - there is another way to do this that I decided against
+which was to try and find lines and intersections of those lines.
+This seemed like it might be a bit more robust but at the cost
+of being more complex code wise.
+
+@param vp VirtualLP Scene Graph - we will search for pads here.
+@param side Board side to collect pads from.
+@param layer-spec Specify which layer is used to collect the shapes.
+By default, this function uses the `SolderMask(side)` layer.
+To select the copper on this side - use `false`. See {@link bounds}
+
+@throws ValueError if it encounter a number of columns that it can't
+handle. Specifically, this function can handle [1, 2, 4] columns of pads.
+This corresponds to 2-pin, dual-row, and quad land patterns, respectively.
+<DOC>
+public defn pad-interior-bounds (vp:VirtualLP, side:Side -- layer-spec:LayerSpecifier|False = SolderMask(side)) -> Box:
+
+  val get-bounds = bounds{_, layer-spec = layer-spec}
+  val cols = identify-pad-columns(vp)
+  val num-cols = length(cols)
+  if num-cols == 1:
+    ; This is a 2-pin component - ie a SMT, Radial or Axial
+    val row0 = get-bounds $ get-pads-by-row(vp, 0)
+    val row1 = get-bounds $ get-pads-by-row(vp, 1)
+
+    try:
+      Box(
+        Point(left(row1), up(row1))
+        Point(right(row0), down(row0))
+      )
+    catch (e:NegativeBoxError):
+      println("Failed to determine the pad interior bounds.")
+      match(layer-spec):
+        (_:SolderMask):
+          println("This might mean that the soldermask openings of the two pads overlap resulting in a negative area box.")
+        (f:False):
+          println("This suggests that the copper pads for the component overlap.")
+        (f):
+          println("LayerSpec: %_" % [layer-spec])
+      throw $ ValueError("Invalid Pad Interior: %_" % [e])
+      ; throw(e)
+
+  else if num-cols == 2 :
+    val col0 = get-bounds $ get-pads-by-column(vp, 0)
+    val col1 = get-bounds $ get-pads-by-column(vp, 1)
+
+    Box(
+      Point(right(col0), down(col0))
+      Point(left(col1), up(col1))
+      )
+  else if num-cols == 4 :
+
+    val col-W = get-bounds $ get-pads-by-column(vp, 0)
+    val col-S = get-bounds $ get-pads-by-column(vp, 1)
+    val col-E = get-bounds $ get-pads-by-column(vp, 2)
+    val col-N = get-bounds $ get-pads-by-column(vp, 3)
+
+    Box(
+      Point(right(col-W), up(col-S)),
+      Point(left(col-E), down(col-N))
+    )
+  else:
+    throw $ ValueError("Unhandled Number of Columns '%_' - Expected 1, 2, or 4" % [num-cols])
+
 
 ; Converters
 #for (vType in [VirtualPad, VirtualArtwork, VirtualCopper, VirtualLP]

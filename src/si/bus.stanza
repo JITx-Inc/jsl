@@ -20,7 +20,7 @@ a short trace.
 @snippet
 ```stanza
 require p1 from mcu
-inst r1 : my-resitor
+inst r1 : my-resistor
 port p2
 topo-bus(ShortTrace(p1 => r1) => p2)
 ```
@@ -125,11 +125,23 @@ defn connect (lhs:Tuple, r:KeyValue|JITXObject|Tuple|Instantiable, acc:Vector, s
     (x:Instantiable) :
       connect-topo-bus(lhs, x, acc, short-trace?)
 
+defn add-pin-model (i:JITXObject, delay:Toleranced = typ(0.0), loss:Toleranced = typ(0.0)) :
+  inside pcb-module:
+    val [p1, p2] = get-element-ports(i)
+    pin-model(p1, p2) = PinModel(delay, loss)
+
 defn connect-topo-bus (lhs:Tuple, rhs:Instantiable, acc, short-trace?:True|False) -> Tuple :
   inside pcb-module :
     to-tuple $
       for l in lhs seq :
         inst i : rhs
+        ; TODO - This is a hack
+        ;  We need to add the ability to insert the pin model into the created
+        ;  component definition instead of into the instance. This requires a change
+        ;  to the query API. This is allows SI constrained topologies to work even
+        ;  without that feature present.
+        ;  Remove this when we have closed PROD-530
+        add-pin-model(i)
         add(acc, i)
         val [p1, p2] = get-element-ports(i)
         topo-net(l, p1)

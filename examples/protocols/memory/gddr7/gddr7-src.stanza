@@ -1,0 +1,649 @@
+doc: \<DOC>
+@brief GDDR 7
+
+GDDR7 is a high speed memory protocol 
+@see https://en.wikipedia.org/wiki/GDDR7_SDRAM
+
+This functions and definitions in this example support defining GDDR7
+interfaces on controllers and memories.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/gddr7/gddr7-src :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols
+  import jsl/landpatterns
+
+  import jsl/design/settings
+  import jsl/si
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/memory/gddr7
+
+val dl = DensityLevelC
+
+public deftype FBGA266 <: BGA
+
+public defn FBGA266 () -> FBGA266 :
+  val pad-conf = PadConfig-D(
+    copper-D-adj = -0.05,
+    mask-D-adj = 0.0,
+  )
+  val rows = 19
+  val cols = 14
+  val pitch = Dims(0.75 0.73)
+
+  new FBGA266:
+    defmethod num-leads (this) : 266
+    defmethod lead-diam (this) : 0.25
+    defmethod density-level (this) : dl
+    defmethod pad-planner (this) :
+      ; Create a carve out in the top-right corner
+      ; val grid = lead-numbering(this) as Grid-Numbering
+
+      Full-Matrix-Planner(
+        pad-config = pad-conf,
+        rows = rows,
+        columns = cols,
+        pitch = pitch
+      )
+
+    defmethod lead-numbering (this) :
+      Grid-Numbering(rows, cols)
+
+    defmethod package-body (this) :
+      PackageBody(
+        width = typ(12.0)
+        length = typ(14.0),
+        height = typ(1.0)
+      )
+
+    defmethod build-pads (
+      this,
+      root:VirtualLP
+      ):
+
+      val all-rows = 19
+      val half-cols = 7
+
+      val ex = 2.000
+      val l = (to-double(half-cols - 1) * x(pitch) + ex) / 2.0 as Double
+      val first-offset  = Point(-1.0 * l, 0.00)
+      val second-offset = Point( l, 0.00)
+
+      val first-section = create-child(root, offset = loc(first-offset))
+      ; build-vpads(this, first-section)
+
+      val second-section = create-child(root, offset = loc(second-offset))
+      ; build-vpads(this, first-section)
+
+
+
+      val first-half-num-scheme = Grid-Numbering(
+        all-rows, half-cols, 0, 0
+      )
+      val second-half-num-scheme = Grid-Numbering(
+        all-rows, half-cols, 0, 7
+      )
+
+      val first-half-pkg = BGA(
+        num-leads = 133,
+        lead-diam = lead-diam(this),
+        package-body = package-body(this),
+        pad-planner = Full-Matrix-Planner(
+          pad-config = pad-conf
+          rows = all-rows,
+          columns = half-cols,
+          pitch = pitch
+          )
+        lead-numbering = first-half-num-scheme,
+        density-level = dl
+      )
+
+      build-pads(first-half-pkg, first-section)
+
+      val second-half-pkg = BGA(
+        num-leads = 133,
+        lead-diam = lead-diam(this),
+        package-body = package-body(this),
+        pad-planner = Full-Matrix-Planner(
+          pad-config = pad-conf
+          rows = all-rows,
+          columns = half-cols,
+          pitch = pitch
+          )
+        lead-numbering = second-half-num-scheme,
+        density-level = dl
+      )
+
+      build-pads(second-half-pkg, second-section)
+
+
+public pcb-component mem-component :
+  reference-prefix = "U"
+  mpn = "memory-JITX-GDDR7"
+  description = "Dummy GDDR7 memory"
+
+  port DQp : pin[10][4]
+  port DQE : pin[4]
+  port CA : pin[5][4]
+  port RCK_t : pin[4]
+  port RCK_c : pin[4]
+  port WCK_t : pin[4]
+  port WCK_c : pin[4]
+  port ERR : pin[4]
+
+  pin-properties :
+    [pin:Ref     | pads:Ref ... ]
+    [ VSS[001]   |     A[1]     ]
+    [ VSS[002]   |     A[2]     ]
+    [ DQp[1][0]  |     A[3]     ]
+    [ VSS[003]   |     A[4]     ]
+    [ DQE[0]     |     A[5]     ]
+    [ VSS[004]   |     A[6]     ]
+    [ DQp[0][0]  |     A[7]     ]
+    [ DQp[0][1]  |     A[8]     ]
+    [ VSS[005]   |     A[9]     ]
+    [ DQE[1]     |     A[10]    ]
+    [ VSS[006]   |     A[11]    ]
+    [ DQp[1][1]  |     A[12]    ]
+    [ VSS[007]   |     A[13]    ]
+    [ VSS[008]   |     A[14]    ]
+    [ DQp[2][0]  |     B[1]     ]
+    [ VSS[009]   |     B[2]     ]
+    [ VSS[010]   |     B[3]     ]
+    [ VDDQ[000]  |     B[4]     ]
+    [ VSS[011]   |     B[5]     ]
+    [ VDD[000]   |     B[6]     ]
+    [ VSS[012]   |     B[7]     ]
+    [ VSS[013]   |     B[8]     ]
+    [ VDD[001]   |     B[9]     ]
+    [ VSS[014]   |     B[10]    ]
+    [ VDDQ[001]  |     B[11]    ]
+    [ VSS[015]   |     B[12]    ]
+    [ VSS[016]   |     B[13]    ]
+    [ DQp[2][1]  |     B[14]    ]
+    [ VSS[017]   |     C[1]     ]
+    [ VSS[018]   |     C[2]     ]
+    [ DQp[3][0]  |     C[3]     ]
+    [ VSS[019]   |     C[4]     ]
+    [ DQp[4][0]  |     C[5]     ]
+    [ VSS[020]   |     C[6]     ]
+    [ DQp[5][0]  |     C[7]     ]
+    [ DQp[5][1]  |     C[8]     ]
+    [ VSS[021]   |     C[9]     ]
+    [ DQp[4][1]  |     C[10]    ]
+    [ VSS[022]   |     C[11]    ]
+    [ DQp[3][1]  |     C[12]    ]
+    [ VSS[023]   |     C[13]    ]
+    [ VSS[024]   |     C[14]    ]
+    [ RCK_c[0]   |     D[1]     ]
+    [ VDDQ[002]  |     D[2]     ]
+    [ VSS[025]   |     D[3]     ]
+    [ VDDQ[003]  |     D[4]     ]
+    [ VSS[026]   |     D[5]     ]
+    [ VDDQ[004]  |     D[6]     ]
+    [ VSS[027]   |     D[7]     ]
+    [ VSS[028]   |     D[8]     ]
+    [ VDDQ[005]  |     D[9]     ]
+    [ VSS[029]   |     D[10]    ]
+    [ VDDQ[006]  |     D[11]    ]
+    [ VSS[030]   |     D[12]    ]
+    [ VDDQ[007]  |     D[13]    ]
+    [ RCK_c[1]   |     D[14]    ]
+    [ RCK_t[0]   |     E[1]     ]
+    [ VSS[031]   |     E[2]     ]
+    [ DQp[7][0]  |     E[3]     ]
+    [ VSS[032]   |     E[4]     ]
+    [ DQp[6][0]  |     E[5]     ]
+    [ VSS[033]   |     E[6]     ]
+    [ WCK_c[0]   |     E[7]     ]
+    [ WCK_c[1]   |     E[8]     ]
+    [ VSS[034]   |     E[9]     ]
+    [ DQp[6][1]  |     E[10]    ]
+    [ VSS[035]   |     E[11]    ]
+    [ DQp[7][1]  |     E[12]    ]
+    [ VSS[036]   |     E[13]    ]
+    [ RCK_t[1]   |     E[14]    ]
+    [ VSS[037]   |     F[1]     ]
+    [ VDDQ[008]  |     F[2]     ]
+    [ VSS[038]   |     F[3]     ]
+    [ VDDQ[009]  |     F[4]     ]
+    [ VSS[039]   |     F[5]     ]
+    [ VSS[040]   |     F[6]     ]
+    [ WCK_t[0]   |     F[7]     ]
+    [ WCK_t[1]   |     F[8]     ]
+    [ VSS[041]   |     F[9]     ]
+    [ VSS[042]   |     F[10]    ]
+    [ VDDQ[010]  |     F[11]    ]
+    [ VSS[043]   |     F[12]    ]
+    [ VDDQ[011]  |     F[13]    ]
+    [ VSS[044]   |     F[14]    ]
+    [ DQp[8][0]  |     G[1]     ]
+    [ VSS[045]   |     G[2]     ]
+    [ DQp[9][0]  |     G[3]     ]
+    [ VSS[046]   |     G[4]     ]
+    [ ERR[0]     |     G[5]     ]
+    [ VDDQ[012]  |     G[6]     ]
+    [ VSS[047]   |     G[7]     ]
+    [ VSS[048]   |     G[8]     ]
+    [ VDDQ[013]  |     G[9]     ]
+    [ ERR[1]     |     G[10]    ]
+    [ VSS[049]   |     G[11]    ]
+    [ DQp[9][1]  |     G[12]    ]
+    [ VSS[050]   |     G[13]    ]
+    [ DQp[8][1]  |     G[14]    ]
+    [ VSS[051]   |     H[1]     ]
+    [ VSS[052]   |     H[2]     ]
+    [ VSS[053]   |     H[3]     ]
+    [ VDD[002]   |     H[4]     ]
+    [ VSS[054]   |     H[5]     ]
+    [ VDD[003]   |     H[6]     ]
+    [ CA[0][0]   |     H[7]     ]
+    [ CA[0][1]   |     H[8]     ]
+    [ VDD[004]   |     H[9]     ]
+    [ VSS[055]   |     H[10]    ]
+    [ VDD[005]   |     H[11]    ]
+    [ VSS[056]   |     H[12]    ]
+    [ VSS[057]   |     H[13]    ]
+    [ VSS[058]   |     H[14]    ]
+    [ VPP[0]     |     J[1]     ]
+    [ CA[4][0]   |     J[2]     ]
+    [ VDD[006]   |     J[3]     ]
+    [ CA[3][0]   |     J[4]     ]
+    [ CA[2][0]   |     J[5]     ]
+    [ VDD[007]   |     J[6]     ]
+    [ CA[1][0]   |     J[7]     ]
+    [ CA[1][1]   |     J[8]     ]
+    [ VDD[008]   |     J[9]     ]
+    [ CA[2][1]   |     J[10]    ]
+    [ CA[3][1]   |     J[11]    ]
+    [ VDD[009]   |     J[12]    ]
+    [ CA[4][1]   |     J[13]    ]
+    [ VPP[1]     |     J[14]    ]
+    [ ZQ_AB      |     K[1]     ]
+    [ RESET_n    |     K[2]     ]
+    [ VSS[059]   |     K[3]     ]
+    [ VSS[060]   |     K[4]     ]
+    [ VDD[010]   |     K[5]     ]
+    [ VSS[061]   |     K[6]     ]
+    [ VSS[062]   |     K[7]     ]
+    [ VSS[063]   |     K[8]     ]
+    [ VSS[064]   |     K[9]     ]
+    [ VDD[011]   |     K[10]    ]
+    [ VSS[065]   |     K[11]    ]
+    [ VSS[066]   |     K[12]    ]
+    [ VSS[067]   |     K[13]    ]
+    [ ZQ_CD      |     K[14]    ]
+    [ VPP[2]     |     L[1]     ]
+    [ CA[4][3]   |     L[2]     ]
+    [ VDD[012]   |     L[3]     ]
+    [ CA[3][3]   |     L[4]     ]
+    [ CA[2][3]   |     L[5]     ]
+    [ VDD[013]   |     L[6]     ]
+    [ CA[1][3]   |     L[7]     ]
+    [ CA[1][2]   |     L[8]     ]
+    [ VDD[014]   |     L[9]     ]
+    [ CA[2][2]   |     L[10]    ]
+    [ CA[3][2]   |     L[11]    ]
+    [ VDD[015]   |     L[12]    ]
+    [ CA[4][2]   |     L[13]    ]
+    [ VPP[3]     |     L[14]    ]
+    [ VSS[068]   |     M[1]     ]
+    [ VSS[069]   |     M[2]     ]
+    [ VSS[070]   |     M[3]     ]
+    [ VDD[016]   |     M[4]     ]
+    [ VSS[071]   |     M[5]     ]
+    [ VDD[017]   |     M[6]     ]
+    [ CA[0][3]   |     M[7]     ]
+    [ CA[0][2]   |     M[8]     ]
+    [ VDD[018]   |     M[9]     ]
+    [ VSS[072]   |     M[10]    ]
+    [ VDD[019]   |     M[11]    ]
+    [ VSS[073]   |     M[12]    ]
+    [ VSS[074]   |     M[13]    ]
+    [ VSS[075]   |     M[14]    ]
+    [ DQp[8][3]  |     N[1]     ]
+    [ VSS[076]   |     N[2]     ]
+    [ DQp[9][3]  |     N[3]     ]
+    [ VSS[077]   |     N[4]     ]
+    [ ERR[3]     |     N[5]     ]
+    [ VDDQ[014]  |     N[6]     ]
+    [ VSS[078]   |     N[7]     ]
+    [ VSS[079]   |     N[8]     ]
+    [ VDDQ[015]  |     N[9]     ]
+    [ ERR[2]     |     N[10]    ]
+    [ VSS[080]   |     N[11]    ]
+    [ DQp[9][2]  |     N[12]    ]
+    [ VSS[081]   |     N[13]    ]
+    [ DQp[8][2]  |     N[14]    ]
+    [ VSS[082]   |     P[1]     ]
+    [ VDDQ[016]  |     P[2]     ]
+    [ VSS[083]   |     P[3]     ]
+    [ VDDQ[017]  |     P[4]     ]
+    [ VSS[084]   |     P[5]     ]
+    [ VSS[085]   |     P[6]     ]
+    [ WCK_t[3]   |     P[7]     ]
+    [ WCK_t[2]   |     P[8]     ]
+    [ VSS[086]   |     P[9]     ]
+    [ VSS[087]   |     P[10]    ]
+    [ VDDQ[018]  |     P[11]    ]
+    [ VSS[088]   |     P[12]    ]
+    [ VDDQ[019]  |     P[13]    ]
+    [ VSS[089]   |     P[14]    ]
+    [ RCK_t[3]   |     R[1]     ]
+    [ VSS[090]   |     R[2]     ]
+    [ DQp[7][3]  |     R[3]     ]
+    [ VSS[091]   |     R[4]     ]
+    [ DQp[6][3]  |     R[5]     ]
+    [ VSS[092]   |     R[6]     ]
+    [ WCK_c[3]   |     R[7]     ]
+    [ WCK_c[2]   |     R[8]     ]
+    [ VSS[093]   |     R[9]     ]
+    [ DQp[6][2]  |     R[10]    ]
+    [ VSS[094]   |     R[11]    ]
+    [ DQp[7][2]  |     R[12]    ]
+    [ VSS[095]   |     R[13]    ]
+    [ RCK_t[2]   |     R[14]    ]
+    [ RCK_c[3]   |     T[1]     ]
+    [ VDDQ[020]  |     T[2]     ]
+    [ VSS[096]   |     T[3]     ]
+    [ VDDQ[021]  |     T[4]     ]
+    [ VSS[097]   |     T[5]     ]
+    [ VDDQ[022]  |     T[6]     ]
+    [ VSS[098]   |     T[7]     ]
+    [ VSS[099]   |     T[8]     ]
+    [ VDDQ[023]  |     T[9]     ]
+    [ VSS[100]   |     T[10]    ]
+    [ VDDQ[024]  |     T[11]    ]
+    [ VSS[101]   |     T[12]    ]
+    [ VDDQ[025]  |     T[13]    ]
+    [ RCK_c[2]   |     T[14]    ]
+    [ VSS[102]   |     U[1]     ]
+    [ VSS[103]   |     U[2]     ]
+    [ DQp[3][3]  |     U[3]     ]
+    [ VSS[104]   |     U[4]     ]
+    [ DQp[4][3]  |     U[5]     ]
+    [ VSS[105]   |     U[6]     ]
+    [ DQp[5][3]  |     U[7]     ]
+    [ DQp[5][2]  |     U[8]     ]
+    [ VSS[106]   |     U[9]     ]
+    [ DQp[4][2]  |     U[10]    ]
+    [ VSS[107]   |     U[11]    ]
+    [ DQp[3][2]  |     U[12]    ]
+    [ VSS[108]   |     U[13]    ]
+    [ VSS[109]   |     U[14]    ]
+    [ DQp[2][3]  |     V[1]     ]
+    [ VSS[110]   |     V[2]     ]
+    [ VSS[111]   |     V[3]     ]
+    [ VDDQ[026]  |     V[4]     ]
+    [ VSS[112]   |     V[5]     ]
+    [ VDD[020]   |     V[6]     ]
+    [ VSS[113]   |     V[7]     ]
+    [ VSS[114]   |     V[8]     ]
+    [ VDD[021]   |     V[9]     ]
+    [ VSS[115]   |     V[10]    ]
+    [ VDDQ[027]  |     V[11]    ]
+    [ VSS[116]   |     V[12]    ]
+    [ VSS[117]   |     V[13]    ]
+    [ DQp[2][2]  |     V[14]    ]
+    [ VSS[118]   |     W[1]     ]
+    [ VSS[119]   |     W[2]     ]
+    [ DQp[1][3]  |     W[3]     ]
+    [ VSS[120]   |     W[4]     ]
+    [ DQE[3]     |     W[5]     ]
+    [ VSS[121]   |     W[6]     ]
+    [ DQp[0][3]  |     W[7]     ]
+    [ DQp[0][2]  |     W[8]     ]
+    [ VSS[122]   |     W[9]     ]
+    [ DQE[2]     |     W[10]    ]
+    [ VSS[123]   |     W[11]    ]
+    [ DQp[1][2]  |     W[12]    ]
+    [ VSS[124]   |     W[13]    ]
+    [ VSS[125]   |     W[14]    ]
+
+  val channel-A = Ref("chA")
+  val channel-B = Ref("chB")
+  val channel-C = Ref("chC")
+  val channel-D = Ref("chD")
+  val ctl-r     = Ref("ctl")
+  val pwr       = Ref("pwr")
+
+  val box-params = BoxSymbolParams(
+    show-grid = false
+  )
+
+  val box = BoxSymbol(self, params = box-params)
+
+  for (c in [channel-A channel-B channel-C channel-D], i in 0 to false) do :
+    for j in 0 to 10 do :
+      set-bank(c, DQp[j][i])
+      set-side(Left, DQp[j][i])
+    set-bank(c, RCK_c[i])
+    set-bank(c, RCK_t[i])
+    set-bank(c, WCK_c[i])
+    set-bank(c, WCK_t[i])
+    set-side(Right, RCK_c[i] RCK_t[i] WCK_c[i] WCK_t[i])
+    for j in 0 to 5 do :
+      set-bank(c, CA[j][i])
+      set-side(Right, CA[j][i])
+    set-bank(c, DQE[i])
+    set-side(Right, DQE[i])
+    set-bank(c, ERR[i])
+    set-side(Right, ERR[i])
+
+  set-bank(ctl-r, self.ZQ_AB self.ZQ_CD, self.RESET_n)
+  set-side(Left, self.ZQ_AB self.ZQ_CD, self.RESET_n)
+  set-bank(pwr, self.VSS self.VDD self.VDDQ self.VPP)
+  set-side(Down, self.VSS)
+  set-side(Up, self.VDD self.VDDQ self.VPP)
+
+
+  assign-symbols(
+    ctl-r     => box,
+    pwr       => box,
+    channel-A => box,
+    channel-B => box,
+    channel-C => box,
+    channel-D => box,
+  )
+
+  val lp = create-landpattern(FBGA266())
+  assign-landpattern(lp)
+
+  for i in 0 to 4 do :
+    diff-pin-model(self.RCK_c[i], self.RCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
+    diff-pin-model(self.WCK_c[i], self.WCK_t[i], delay = typ(1.0e-15) loss = typ(0.1))
+
+  for i in 0 to 4 do :
+    for j in 0 to 10 do :
+      pin-model(self.DQp[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    for j in 0 to 5 do :
+        pin-model(self.CA[j][i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.DQE[i]) = PinModel(typ(1.0e-15), typ(0.1))
+    pin-model(self.ERR[i]) = PinModel(typ(1.0e-15), typ(0.1))
+  pin-model(self.RESET_n) = PinModel(typ(1.0e-15), typ(0.1))
+
+public pcb-module mem-device :
+  port io : gddr7()
+  port pwr : power
+
+  public inst mem : jsl/examples/protocols/memory/gddr7/gddr7-src/mem-component
+
+  for i in 0 to 4 do :
+    for j in 0 to 10 do :
+      topo-net(io.data[i].DQ[j] mem.DQp[j][i])
+    topo-net(io.data[i].RCK.P mem.RCK_t[i])
+    topo-net(io.data[i].RCK.N mem.RCK_c[i])
+    topo-net(io.data[i].WCK.P mem.WCK_t[i])
+    topo-net(io.data[i].WCK.N mem.WCK_c[i])
+    topo-net(io.data[i].DQE   mem.DQE[i])
+    topo-net(io.data[i].ERR   mem.ERR[i])
+    for j in 0 to 5 do :
+      topo-net(io.data[i].CA[j] mem.CA[j][i])
+
+  topo-net(io.control.RESET_n mem.RESET_n)
+  topo-net(io.control.ZQ_AB mem.ZQ_AB)
+  topo-net(io.control.ZQ_CD mem.ZQ_CD)
+
+  for p in pins(mem.VDDQ) do :
+    net (pwr.V+ p)
+
+  for p in pins(mem.VDD) do :
+    net (pwr.V+ p)
+
+  for p in pins(mem.VSS) do :
+    net (pwr.V- p)
+
+
+val ic-pkg-body = PackageBody(
+  width = 24.0 +/- 0.1,
+  length = 24.0 +/- 0.1,
+  height = 0.71 +/- [0.06, 0.0]
+)
+
+val ic-bga-pkg = BGA(
+  num-leads = 900,
+  rows = 30,
+  columns = 30,
+  lead-diam = 0.25,
+  pitch = 0.75,
+  package-body = ic-pkg-body,
+  density-level = DensityLevelB
+)
+
+defn lookup-bga-row-name (idx:Int, table:Tuple<Char>) :
+  val buffer = StringBuffer()
+  let loop (i:Int = idx) :
+    val rem = i / length(table)
+    val char-index = i % length(table)
+    loop(rem - 1) when rem > 0
+    print(buffer, table[char-index])
+  to-string(buffer)
+
+defn red-alph-letter (r:Int) -> String:
+  val table = to-tuple $
+    for ch in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" filter:
+      not contains?(upper-case("IOQSXZ"), ch)
+  lookup-bga-row-name(r, table)
+
+defn pin-name (r:Int, c:Int) :
+  val letter = red-alph-letter(r)
+  Ref(letter)[c + 1]
+
+var sig-pin-cnt = -1
+var gnd-pin-cnt = -1
+
+defn sig-pin-num (a:Int b:Int) -> Int :
+  sig-pin-cnt = sig-pin-cnt + 1
+  sig-pin-cnt
+
+defn gnd-pin-num (a:Int b:Int) -> Int :
+  gnd-pin-cnt = gnd-pin-cnt + 1
+  gnd-pin-cnt
+
+defn signal-ball? (a:Int b:Int) -> True|False :
+  if a == 0 or a == 29 or b == 0 or b == 29 :
+    true
+  else :
+    if (a * 30 + b + a % 2) % 2  == 0 :
+      true
+    else :
+      false
+
+public pcb-component ic-component :
+  reference-prefix = "U"
+  mpn = "ic-JITX-GDDR7"
+  description = "Dummy GDDR7 IC"
+
+  pin-properties :
+    [pin:Ref     | pads:Ref ... ]
+    for i in 0 to 30 do :
+      for j in 0 to 30 do :
+        if signal-ball?(i, j) :
+          [ P[(sig-pin-num(i, j))] | (pin-name(i, j)) ]
+        else :
+          [ GND[(gnd-pin-num(i, j))] | (pin-name(i, j)) ]
+
+  val channel-A = Ref("chA")
+  val channel-B = Ref("chB")
+  val channel-C = Ref("chC")
+  val channel-D = Ref("chD")
+  val pwr       = Ref("pwr")
+
+  val box-params = BoxSymbolParams(
+    show-grid = false
+  )
+
+  val box = BoxSymbol(self, params = box-params)
+
+  for (c in [channel-A channel-B channel-C channel-D], i in 0 to false) do :
+    for j in 0 to 63 do :
+      set-bank(c, self.P[i * 127 + j])
+      set-side(Left, self.P[i * 127 + j])
+    for j in 63 to 127 do :
+      set-bank(c, self.P[i * 127 + j])
+      set-side(Right, self.P[i * 127 + j])
+
+
+  set-bank(pwr, self.GND)
+  set-side(Down, self.GND)
+
+
+  assign-symbols(
+    pwr       => box,
+    channel-A => box,
+    channel-B => box,
+    channel-C => box,
+    channel-D => box,
+  )
+
+  val lp = create-landpattern(ic-bga-pkg)
+  assign-landpattern(lp)
+
+  ; for i in 0 to 4 do :
+  ;   diff-pin-model(self.RCK_c[i], self.RCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
+  ;   diff-pin-model(self.WCK_c[i], self.WCK_t[i],       delay = typ(10.0e-15) loss = typ(0.1))
+
+
+public pcb-module ic-device :
+  port pwr : power
+
+  public inst ic : jsl/examples/protocols/memory/gddr7/gddr7-src/ic-component
+
+  pcb-bundle gen-io :
+    port p
+
+  for i in 0 to 450 do :
+    supports gen-io :
+      gen-io.p => ic.P[i]
+
+  supports gddr7() :
+    for i in 0 to 4 do :
+      require d-pin : gen-io[10]
+      for j in 0 to 10 do :
+        gddr7().data[i].DQ[j] => d-pin[j].p
+
+      require c-pin : gen-io[6]
+      gddr7().data[i].RCK.P => c-pin[0].p 
+      gddr7().data[i].RCK.N => c-pin[1].p
+      gddr7().data[i].WCK.P => c-pin[2].p
+      gddr7().data[i].WCK.N => c-pin[3].p
+      gddr7().data[i].DQE   => c-pin[4].p
+      gddr7().data[i].ERR   => c-pin[5].p
+
+      require ca-pin : gen-io[5]
+      for j in 0 to 5 do :
+        gddr7().data[i].CA[j] => ca-pin[j].p
+
+    require r-pin : gen-io[3]
+    gddr7().control.RESET_n => r-pin[0].p
+    gddr7().control.ZQ_AB   => r-pin[1].p
+    gddr7().control.ZQ_CD   => r-pin[2].p
+
+  for p in pins(ic.GND) do :
+    net (pwr.V- p)
+
+; view(mem-component)

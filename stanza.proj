@@ -1,5 +1,16 @@
+include? ".slm/stanza.proj"  ; Dependencies
+pkg-cache: ".slm/pkg-cache"
+
+package jsl defined-in "./jsl.stanza"
 packages jsl/* defined-in "./src/"
 
 packages jsl/tests/* defined-in "./tests/"
 packages jsl/tests/landpatterns/* defined-in "./tests/landpatterns/"
 packages jsl/examples/* defined-in "./examples/"
+
+; This target's only purpose is to allow a target that
+;  SLM can build to drive the dependency resolution.
+build fetch-deps:
+    inputs:
+        jsl/tests/math
+    s: "tmp-fetch.s"

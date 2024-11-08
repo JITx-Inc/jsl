@@ -5,20 +5,8 @@ defpackage jsl/examples/smbols/box-symbol:
   import jitx
   import jitx/commands
 
-  import jsl/symbols/audio
-  import jsl/symbols/box-symbol
-  import jsl/design/settings
-  import jsl/landpatterns/two-pin/SMT
+  import jsl
   import jsl/examples/landpatterns/board
-  import jsl/landpatterns/packages
-  import jsl/landpatterns/pad-island
-  import jsl/landpatterns/SOIC
-  import jsl/landpatterns/numbering
-  import jsl/landpatterns/pad-planner
-  import jsl/symbols/SymbolDefn
-  import jsl/symbols/decorators
-  import jsl/bundles/comms
-  import jsl/bundles/general
 
 pcb-component basic:
   pin-properties:
@@ -297,8 +285,8 @@ pcb-component test-default-align:
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    col-width = 10
-    row-width = 5))
+    min-col-width = 10
+    min-row-width = 5))
   set-grid(box, [2,2])
   set-alignment(N, self.rail.V+)
   set-alignment(S, self.rail.V-)
@@ -332,8 +320,8 @@ pcb-component test-pad-ref:
     [ADDR[1] | p[4] | Right | 1 | "A1" ]
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
-    col-width = 10
-    row-width = 5
+    min-col-width = 10
+    min-row-width = 5
     pad-ref-size = 2.0))
   set-grid(box, [2,2])
   set-alignment(N, self.rail.V+)
@@ -407,8 +395,8 @@ pcb-component test-pin-pitch:
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    col-width = 10
-    row-width = 5
+    min-col-width = 10
+    min-row-width = 5
     pin-pitch = 5.0))
   set-grid(box, [2,2])
   set-alignment(N, self.rail.V+)
@@ -444,8 +432,8 @@ pcb-component test-up-column:
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    col-width = 1
-    row-width = 5
+    min-col-width = 1
+    min-row-width = 5
   ))
   set-grid(box, [3,3], Ref("test"))
   set-alignment(N, self.rail.V+)
@@ -485,7 +473,7 @@ pcb-component test-even-row:
     ;col-width = 1
     ; line-width = 0.4
     ; pin-length = 4.4
-    row-width = 5
+    min-row-width = 5
   ))
   set-grid(box, [2, 1])
   set-alignment(N, self.rail.V+)
@@ -521,7 +509,7 @@ pcb-component test-group-margin:
 
   val box = BoxSymbol(self, params = BoxSymbolParams(
     show-grid = true
-    row-width = 5
+    min-row-width = 5
   ))
   set-grid(box, [2, 2])
 

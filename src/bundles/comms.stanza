@@ -15,7 +15,6 @@ protocol
 @member scl Synchronous Clock Line
 <DOC>
 public pcb-bundle i2c:
-  name = "I2C"
   description = "Inter-Integrated Circuit (I2C) - Serial Communication Protocol"
   port sda
   port scl
@@ -25,20 +24,21 @@ doc: \<DOC>
 SMBus Bundle
 System Management Bus (SMBus) is a two wire serial communication protocol
 @see http://smbus.org/specs/
+@member SMBALERT#
+@member SMBSUS#
 <DOC>
 public pcb-enum jsl/bundles/comms/SMBUSPins :
   SMBALERT#
   SMBSUS#
 
 pcb-bundle smbus-b (pins:Collection<SMBUSPins>):
-  name = "SMBus"
   description = "System Management Bus (SMBus) - Serial Communication Protocol"
   port smbclk
   port smbdat
   for p in pins do :
     switch(p) :
-      SMBALERT#  : make-pin(`smbalert#)
-      SMBSUS#    : make-pin(`smbsus#)
+      SMBALERT#  : make-port(`smbalert#)
+      SMBSUS#    : make-port(`smbsus#)
 
 doc: \<DOC>
 Configurable SMBus Bundle
@@ -88,7 +88,6 @@ which consists of a differential pair `H` / `L`
 
 <DOC>
 public pcb-bundle can-phy :
-  name = "CAN Physical Interface"
   port H
   port L
 
@@ -116,6 +115,9 @@ SPI Bundle Pin Names
 A list of possible names for the SPI interface. Note that in order to connect
 SPI interfaces automatically, the constituent pins need to be present on all
 objects to be connected.
+@member SPI-CS
+@member SPI-COPI
+@member SPI-CIPO
 <DOC>
 
 public pcb-enum jsl/bundles/comms/SPIPins :
@@ -125,7 +127,6 @@ public pcb-enum jsl/bundles/comms/SPIPins :
   SPI-DQS
 
 pcb-bundle spi-b (pins:Collection<SPIPins>):
-  name = "SPI"
   port sck
   for p in pins do :
     switch(p) :
@@ -254,9 +255,21 @@ public pcb-bundle octal-spi-with-cs-dqs :
   port data : pin[8]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; UART - Univeral Asynchronous Receiver/Transmitter
+; UART - Universal Asynchronous Receiver/Transmitter
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+doc: \<DOC>
+@member UART-DTR
+@member UART-CTS
+@member UART-DCD
+@member UART-RI
+@member UART-DSR
+@member UART-RTS
+@member UART-CK
+@member UART-DE
+@member UART-RX
+@member UART-TX
+<DOC>
 public pcb-enum jsl/bundles/comms/UARTPins :
   UART-DTR
   UART-CTS
@@ -270,19 +283,18 @@ public pcb-enum jsl/bundles/comms/UARTPins :
   UART-TX
 
 pcb-bundle uart-b (pins:Collection<UARTPins>):
-  name = "UART"
   for p in pins do :
     switch(p) :
-      UART-DTR : make-pin(`dtr)
-      UART-CTS : make-pin(`cts)
-      UART-DCD : make-pin(`dcd)
-      UART-RI  : make-pin(`ri)
-      UART-DSR : make-pin(`dsr)
-      UART-RTS : make-pin(`rts)
-      UART-CK : make-pin(`ck)
-      UART-DE : make-pin(`de)
-      UART-RX : make-pin(`rx)
-      UART-TX : make-pin(`tx)
+      UART-DTR : make-port(`dtr)
+      UART-CTS : make-port(`cts)
+      UART-DCD : make-port(`dcd)
+      UART-RI  : make-port(`ri)
+      UART-DSR : make-port(`dst)
+      UART-RTS : make-port(`rts)
+      UART-CK : make-port(`ck)
+      UART-DE : make-port(`de)
+      UART-RX : make-port(`rx)
+      UART-TX : make-port(`tx)
 
 doc: \<DOC>
 UART Bundle Generator
@@ -355,3 +367,92 @@ public pcb-bundle i2s  (pins:Collection<I2SPins>) :
       I2S-SDMI : make-pin(`sdmi)
       else:
         throw $ ValueError("I2S does not support pin type: %_" % [p])
+
+
+doc: \<DOC>
+Optional Pins in the Microwire Bundle Construction
+<DOC>
+public pcb-enum jsl/bundles/comms/MicrowirePins :
+  Microwire-CS
+  Microwire-DO
+  Microwire-DI
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements. It often comes
+in a 3-wire variant.
+
+@member clk Synchronous clock - Required Port
+@member cs Chip Select - Optional Port
+@member do Data Output - Optional Port
+@member di Data Input - Optional Port
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public pcb-bundle microwire-b (opts:Collection<MicrowirePins>) :
+  port clk
+  for p in opts do :
+    switch(p) :
+      Microwire-CS: make-port(`cs)
+      Microwire-DO: make-port(`do)
+      Microwire-DI: make-port(`di)
+
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements. It often comes
+in a 3-wire variant.
+
+@member clk Synchronous clock - Required Port
+@member cs Chip Select - Optional Port
+@member do Data Output - Optional Port
+@member di Data Input - Optional Port
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public defn microwire (opts:MicrowirePins ...) :
+  microwire-b(opts)
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements.
+
+This implementation provides the full 4-wire
+interface.
+
+@member clk Synchronous clock
+@member cs Chip Select
+@member do Data Output
+@member di Data Input
+
+<DOC>
+public defn microwire-4 ():
+  microwire(Microwire-CS, Microwire-DO, Microwire-DI)
+
+
+doc: \<DOC>
+Microwire serial communciation protocol
+
+Microwire is a subset of SPI with slightly
+different latching requirements.
+
+This is a 3-wire variant where `do` is is typically
+a bidirectional data wire.
+
+@member clk Synchronous clock
+@member cs Chip Select
+@member do Data Output/Input
+
+@param opts Set of optional ports to include in this bundle
+definition. Duplicates are not allowed.
+<DOC>
+public defn microwire-3wire ():
+  microwire(Microwire-CS, Microwire-DO)

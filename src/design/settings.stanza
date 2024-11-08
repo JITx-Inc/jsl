@@ -4,6 +4,11 @@ defpackage jsl/design/settings:
   import jitx
   import jitx/commands
 
+doc: \<DOC>
+@member DensityLevelA
+@member DensityLevelB
+@member DensityLevelC
+<DOC>
 public pcb-enum jsl/design/settings/DensityLevel:
   DensityLevelA
   DensityLevelB

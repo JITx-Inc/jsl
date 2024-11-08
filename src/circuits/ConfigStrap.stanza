@@ -10,6 +10,7 @@ defpackage jsl/circuits/ConfigStrap:
 
   import core
   import collections
+  import math
   import jitx
   import jitx/commands
 
@@ -155,7 +156,7 @@ and `p[2]`.
 @param lo-comp Optional component for instantiating the low-side of the divider. If `lo` is
 not provided then `comp` is used for both the high and low side of the divider.
 @param pack? Optional Component Array Packing Generator. By default, this value
-is a {@link LongitudinalPacking}. If the user passes `None()` then no `place`
+is a {@link type:LongitudinalPacking}. If the user passes `None()` then no `place`
 statements for the components in the array are created.
 @param name? Optional name for the configuration strap definition
 @return This function creates a `pcb-module` within a closure and then
@@ -222,3 +223,33 @@ public defn ConfigStrap (
         pack-array(pack, hi-comps, lo-comps)
 
   config-strap
+
+doc: \<DOC>
+Configuration Strap BOM Configuration Setter
+
+This function is a generator and expects to be called
+from within a `pcb-module` context.
+
+@param straps ConfigStrap instance to configure.
+@param cfg Value to assign as binary to the configuration
+strap object. We will set the high/low components to
+`InBom` or `MarkedDNP` depending on the binary state of each bit.
+<DOC>
+public defn set-straps-config (straps:JITXObject, cfg:Int):
+  inside pcb-module:
+    val hw-rev-bits = length(straps.configs)
+    val bit-max = to-int(pow(2.0, to-double(hw-rev-bits))) - 1
+    if cfg > bit-max:
+      throw $ ValueError("Invalid HW Rev Bits Value '%_' - Greater than bitvector max: '%_'" % [cfg, bit-max])
+
+    for i in 0 to hw-rev-bits do:
+      val mask = (1 << i)
+      val b = (mask & cfg) > 0
+
+      instance-status(straps.hi-comps[i]):
+        bom-status =  MarkedDNP when not b else InBOM
+
+      instance-status(straps.lo-comps[i]):
+        bom-status =  MarkedDNP when b else InBOM
+
+

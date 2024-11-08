@@ -6,10 +6,7 @@ defpackage jsl/examples/protocols/sata/SATA-main:
   import jitx/commands
 
 
-  import jsl/design/settings
-
-  import jsl/protocols/sata
-  import jsl/si/helpers
+  import jsl
 
   import jsl/examples/protocols/common/example-board
   import jsl/examples/protocols/common/example-components

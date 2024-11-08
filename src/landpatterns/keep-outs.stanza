@@ -1,0 +1,193 @@
+#use-added-syntax(jitx)
+defpackage jsl/landpatterns/keep-outs:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/ensure
+  import jsl/utils
+  import jsl/geometry/box
+  import jsl/landpatterns/VirtualLP
+  import jsl/landpatterns/silkscreen
+
+doc: \<DOC>
+Interface Type for Keepout Creation
+
+Custom keepout generators can be built by inheriting
+from this type and then implementing the interface
+<DOC>
+public deftype KeepoutCreator
+
+doc: \<DOC>
+Build the keep-out layer geometry in the Virtual LP Scene Graph
+
+This function will generate the necessary keep-out artwork
+in the virtual LP scene graph.
+<DOC>
+public defmulti build-keep-out (kc:KeepoutCreator, vp:VirtualLP -- side:Side = Top) -> False
+
+public val DEF_KEEPOUT_LAYER_SET = [LayerIndex(0)]
+
+doc: \<DOC>
+Keepout Creator for Intra-pad Keepouts
+
+For SMT chip components like resistors and capacitors,
+we often want to restrict copper underneath the component.
+This can be for SI reasons, manufacturing reasons, etc.
+
+Sometimes we want to restrict the ground plane on an internal
+layer underneath these components.
+
+This type is used to construct these keepouts on any layer
+of the board design.
+<DOC>
+public defstruct IntraPadKeepOut <: KeepoutCreator :
+  doc: \<DOC>
+  Set of copper layers where the keepout will be placed.
+  The most obvious layer would be the top layer underneath
+  the component. But for some applications, we might want
+  to add keepouts in the reference plane underneath the
+  component as well.
+
+  The default value is the top layer `LayerIndex(0)`
+  <DOC>
+  layer-set:Tuple<LayerIndex> with:
+    ensure => ensure-not-empty!
+    default => DEF_KEEPOUT_LAYER_SET
+
+  doc: \<DOC>
+  Shrink the created keepout
+  By default, this type will create a keepout that is
+  the same size as the interstitial region between the
+  pads of the SMT component.
+  This parameter can be used to make this keepout region
+  smaller (or larger if negative).
+  By default this value is 0.0.
+  <DOC>
+  shrink-by:Double|Percentage|Dims with:
+    default => 0.0
+with:
+  printer => true
+  keyword-constructor => true
+
+
+public defmethod build-keep-out (k:IntraPadKeepOut, vp:VirtualLP -- side:Side = Top) :
+
+  val b = pad-interior-bounds(vp, side, layer-spec = false)
+  val sh-by = match(shrink-by(k)):
+    (s:Double): Point(s, s)
+    (s:Dims): Point(x(s), y(s))
+    (p:Percentage):
+      val s = dims(b)
+      Point(x(s) * p, y(s) * p)
+
+  val b* = shrink(sh-by, b)
+  val sh = to-Rectangle(b*)
+
+  val cls = ["keepout"]
+  for ly in layer-set(k) do:
+    val fb = ForbidCopper(ly)
+    add-artwork(vp, fb, sh, class = cls)
+
+
+doc: \<DOC>
+Application Layer Keepout Generator Interface
+
+This type defines an interface for application layer keepout generators.
+The idea is that sometimes, you will want to have a keepout placed over
+a component - but you don't want to change the `pcb-component` definition
+to introduce this keepout there.
+
+For example - if your application requires
+a 32 layer board and you want keepouts on layers 16 and 19 - it may not make
+sense to encode this in the `pcb-component`.
+<DOC>
+public deftype IKeepoutOverlay
+
+doc: \<DOC>
+Retrieve the Keepout Shape for a particular Copper Layer
+@param k KeepoutOverlay object
+@param lyId Optionally create custom shapes based on the desired layer.
+See {@link type:KeepoutOverlay} for a constant shape variant.
+@return geometry for the constructed keepout region. This shape
+can be offset with a {@link type:Pose} for offset keepouts.
+<DOC>
+public defmulti shape (k:IKeepoutOverlay, lyId:LayerIndex) -> Shape
+
+doc: \<DOC>
+Keepout Overlay Generator
+
+This method must be called from a `pcb-module` context.
+This method will construct a Keepout object and then place it in the
+current `pcb-module` context relative to the passed `other` instance.
+The Keepout object is basically a `pcb-module` that only contains
+`layer` statements.
+
+@param k KeepoutOverlay object
+@param other Component or Module Instance which the constructed keepout object will
+track.
+@param layer-set Set of copper layers that keepouts will be drawn on. By default this
+is only the top layer.
+@param side Which side of the board to work from
+@param name Optional name to apply to the keepout object. This is useful for
+differentiating multiple keepout objects in a board.
+
+<DOC>
+public defmulti make-keepout-overlay (k:IKeepoutOverlay, other:JITXObject -- layer-set:Tuple<LayerIndex> = DEF_KEEPOUT_LAYER_SET, side:Side = Top, name:String = ?) -> False
+
+doc: \<DOC>
+Default Implementation
+<DOC>
+public defmethod make-keepout-overlay (k:IKeepoutOverlay, other:JITXObject -- layer-set:Tuple<LayerIndex> = DEF_KEEPOUT_LAYER_SET, side:Side = Top, name:String = ?) :
+  val lySh-set = to-tuple $ for lyId in layer-set seq:
+    lyId => shape(k, lyId)
+
+  inside pcb-module:
+    inst ko : keepout-overlay(lySh-set, name? = name)
+    place(ko) at loc(0.0, 0.0) on side (relative-to other)
+
+doc: \<DOC>
+Keepout Overlay Object Definition
+
+This module is used to construct the `keepout-overlay` instance in `make-keepout-overlay`
+It primarily consists of layer statements on `ForbidCopper(layerId)`.
+
+@param layer-set Set of `copper => Shape` mappings that will be constructed as keepouts
+@param name? Optional Name for the module.
+<DOC>
+public pcb-module keepout-overlay (layer-set:Tuple<KeyValue<LayerIndex, Shape>> -- name?:Maybe<String> = None()):
+  match(name?):
+    (_:None):
+      false
+    (given:One<String>):
+      name = value(given)
+
+  for kvp in layer-set do:
+    val [lyId, sh] = unpack(kvp)
+    layer(ForbidCopper(lyId)) = sh
+
+
+doc: \<DOC>
+Constant Shape Keepout Overlay Generator
+
+This generator implements the IKeepoutOverlay interface
+and constructs keepouts of the same shape on all
+requested copper layers.
+<DOC>
+public deftype KeepoutOverlay <: IKeepoutOverlay
+
+doc: \<DOC>
+Constructor for KeepoutOverlay
+@param const-shape Constant Geometry that will be applied on all copper layers
+requested.
+<DOC>
+public defn KeepoutOverlay (const-shape:Shape) -> KeepoutOverlay:
+  val sh = const-shape
+  new KeepoutOverlay:
+    defmethod shape (this, lyId:LayerIndex) -> Shape:
+      sh
+    defmethod print (o:OutputStream, this) :
+      print(o, "KeepoutOverlay(%_)" % [sh])
+
+
+

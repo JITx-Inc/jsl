@@ -7,35 +7,6 @@ defpackage jsl/symbols/op-amps:
   import jsl/design/Classable
   import jsl/symbols/framework
 
-doc: \<DOC>
-Op-Amp Triangle Symbol Parameterization
-<DOC>
-public defstruct OpAmpSymbolParams <: Equalable :
-  tri-height:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-tri-height
-  )
-  tri-width:Double with: (
-    ensure => ensure-positive!,
-    updater => sub-tri-width
-  )
-  line-width:Double with: (
-    ensure => ensure-positive!
-    updater => sub-line-width
-  )
-  pin-length:Double with: (
-    ensure => ensure-positive!
-    updater => sub-pin-length
-  )
-  pad-ref-size:Double with: (
-    ensure => ensure-positive!
-    updater => sub-pad-ref-size
-  )
-with:
-  constructor => #OpAmpSymbolParams
-  equalable => true
-  printer => true
-
 val DEF_TRI_HEIGHT = 4.0
 val DEF_TRI_WIDTH = 4.0
 val DEF_LINE_WIDTH = 0.05
@@ -43,16 +14,38 @@ val DEF_LINE_WIDTH = 0.05
 val DEF_PIN_LENGTH = 2.5
 val DEF_PAD_REF_SIZE = 0.75
 
-public defn OpAmpSymbolParams (
-  --
-  tri-height:Double = DEF_TRI_HEIGHT,
-  tri-width:Double = DEF_TRI_WIDTH,
-  line-width:Double = DEF_LINE_WIDTH,
-  pin-length:Double = DEF_PIN_LENGTH,
-  pad-ref-size:Double = DEF_PAD_REF_SIZE
-  ) -> OpAmpSymbolParams :
-  #OpAmpSymbolParams(tri-height, tri-width, line-width, pin-length, pad-ref-size)
-
+doc: \<DOC>
+Op-Amp Triangle Symbol Parameterization
+<DOC>
+public defstruct OpAmpSymbolParams <: SymbolParams :
+  tri-height:Double with:
+    ensure => ensure-positive!,
+    updater => sub-tri-height
+    default => DEF_TRI_HEIGHT
+  tri-width:Double with:
+    ensure => ensure-positive!,
+    updater => sub-tri-width
+    default => DEF_TRI_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width
+    default => DEF_LINE_WIDTH
+  pin-length:Double with:
+    ensure => ensure-positive!
+    updater => sub-pin-length
+    default => DEF_PIN_LENGTH
+  pad-ref-size:Double with:
+    ensure => ensure-positive!
+    updater => sub-pad-ref-size
+    default => DEF_PAD_REF_SIZE
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
 
 public defn to-tuple (p:OpAmpSymbolParams) -> [Double, Double, Double, Double, Double] :
   [tri-height(p), tri-width(p), line-width(p), pin-length(p), pad-ref-size(p)]
@@ -108,10 +101,9 @@ public val OPAMP_IN_BASE_REF = Ref("in")
 public val OPAMP_OUT_REF = Ref("out")
 
 public defstruct OpAmpSymbol <: SymbolDefn :
-  pitch:Double with: (
+  pitch:Double with:
     ensure => ensure-positive!
     default => DEF_OPAMP_PITCH
-  )
 
   doc: \<DOC>
   Input Base Reference or Explicit Input References.
@@ -127,35 +119,32 @@ public defstruct OpAmpSymbol <: SymbolDefn :
           `PosRef` is the reference for the positive input and `NegReg` is the
           reference for the negative input.
   <DOC>
-  in-ref:Ref|[Ref, Ref] with: (
+  in-ref:Ref|[Ref, Ref] with:
     default => OPAMP_IN_BASE_REF
-  )
+
   doc: \<DOC>
   Output Reference
   User can override the default for supporting multi-channel
   chips. The default expected output pin ref is `out`
   <DOC>
-  out-ref:Ref with: (
+  out-ref:Ref with:
     default => OPAMP_OUT_REF
-  )
 
-  params:OpAmpSymbolParams with: (
-    default => get-default-opamp-symbol-params()
-  )
+  params:Maybe<OpAmpSymbolParams> with:
+    default => None()
+
 with:
-  constructor => #OpAmpSymbol
+  keyword-constructor => true
+  printer => true
 
-public defn OpAmpSymbol (
-  --
-  pitch:Double = DEF_OPAMP_PITCH,
-  in-ref:Ref|[Ref, Ref] = OPAMP_IN_BASE_REF,
-  out-ref:Ref = OPAMP_OUT_REF
-  params:OpAmpSymbolParams = get-default-opamp-symbol-params()
-  ) -> OpAmpSymbol :
-  #OpAmpSymbol(pitch, in-ref, out-ref, params)
 
 public defmethod name (x:OpAmpSymbol) -> String :
   "OpAmp"
+
+defmethod get-params (x:OpAmpSymbol) -> OpAmpSymbolParams :
+  match(params(x)):
+    (_:None): get-default-opamp-symbol-params()
+    (given:One<OpAmpSymbolParams>): value(given)
 
 public defn get-input-refs (x:OpAmpSymbol) -> [Ref, Ref]:
   val in-ref-arg = in-ref(x)
@@ -167,7 +156,7 @@ public defn get-input-refs (x:OpAmpSymbol) -> [Ref, Ref]:
 public defn add-opamp-pins (x:OpAmpSymbol, node:SymbolNode) :
 
   val w = pitch(x) / 2.0
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
   val h2 = tri-height(p) / 2.0
 
   val input-params = VirtualPinParams(
@@ -192,10 +181,12 @@ public defmethod build-pins (x:OpAmpSymbol, node:SymbolNode) :
   add-opamp-pins(x, node)
 
 public defmethod build-artwork (x:OpAmpSymbol, node:SymbolNode) :
-  build-opamp-glyphs(node, pitch(x), params(x))
+  val p = get-params(x) as OpAmpSymbolParams
+  build-opamp-glyphs(node, pitch(x), p)
 
 public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
-  val p = params(x)
+  val p = get-params(x) as OpAmpSymbolParams
+  val lp = get-label-params(p)
   val w = tri-width(p)
 
   ; If you compute the geometry, the
@@ -204,6 +195,10 @@ public defmethod build-params (x:OpAmpSymbol, sn:SymbolNode) :
   ; We then pad on this a bit for the ref point.
   val y = 0.25 * w
 
-  text(sn, [0.5, y + 1.5], ">REF", anchor = W, font-size = 8)
-  text(sn, [0.5, y + 0.5], ">VALUE", anchor = W, font-size = 8)
+  build-labels(
+    lp,
+    sn,
+    LabelPosition([0.5, y + 1.5], W)
+    LabelPosition([0.5, y + 0.5], W)
+  )
 

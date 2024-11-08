@@ -1,0 +1,160 @@
+#use-added-syntax(jitx)
+defpackage jsl/symbols/SymbolParams:
+  import core
+  import jitx
+  import jitx/commands
+
+  import maybe-utils
+
+  import jsl/ensure
+  import jsl/errors
+  import jsl/symbols/SymbolNode
+
+public val DEF_SYMB_REF_SIZE = 0.5
+public val DEF_SYMB_LABEL_SIZE = 0.5
+
+doc: \<DOC>
+Symbol Label COnfiguration Parameters
+
+This object provides settings for configuring the
+reference designator and value labels.
+<DOC>
+public defstruct SymbolLabelParams <: Equalable :
+  doc: \<DOC>
+  Dimension of the Reference Designator label
+  This value is in schematic symbol grid units.
+  <DOC>
+  ref-label-size:Double with:
+    ensure => ensure-positive!
+    updater => sub-ref-label-size
+    default => DEF_SYMB_REF_SIZE
+
+  doc: \<DOC>
+  Dimension of the Value Label
+  This value is in schematic symbol grid units
+  If `None()` - then no value label is created.
+  <DOC>
+  value-label-size:Maybe<Double> with:
+    ensure => ensure-positive!
+    updater => sub-value-label-size
+    default => One $ DEF_SYMB_LABEL_SIZE
+
+with:
+  keyword-constructor => true
+  printer => true
+  equalable => true
+
+var DEF_SYMBOL_LABEL_PARAMS = SymbolLabelParams()
+public defn get-default-symbol-label-params () -> SymbolLabelParams:
+  DEF_SYMBOL_LABEL_PARAMS
+
+public defn set-default-symbol-label-params (v:SymbolLabelParams) -> False :
+  DEF_SYMBOL_LABEL_PARAMS = v
+
+doc: \<DOC>
+Utility Class for Specifying the label position
+<DOC>
+public defstruct LabelPosition:
+  doc: \<DOC>
+  Position of the label
+  If `Point` or `[Double, Double]` - then no rotation
+    is applied.
+  <DOC>
+  pos:Pose|Point|[Double, Double]
+  doc: \<DOC>
+  Anchor Position for the Label
+  This places the start or end of the text
+  depending on where the anchor is set.
+  <DOC>
+  anchor:Anchor
+with:
+  printer => true
+  keyword-constructor => true
+
+doc: \<DOC>
+Build Label Text in the SymbolNode scene graph
+
+@param p Label Parameters Object
+@param sn SymbolNode scene graph
+@param ref-lab Position for the Reference Designator Label
+@param val-lab Position for the Value Label
+<DOC>
+public defn build-labels (p:SymbolLabelParams, sn:SymbolNode, ref-lab:LabelPosition, val-lab:LabelPosition):
+  text(sn, pos(ref-lab), ">REF", anchor = anchor(ref-lab), unit-size = ref-label-size(p))
+  match(value-label-size(p)):
+    (_:None): false
+    (given:One<Double>):
+      text(sn, pos(val-lab), ">VALUE", anchor = anchor(val-lab), unit-size = value(given))
+
+doc: \<DOC>
+Compute the Designator and Value Label Positions
+
+This function assumes that you want to place the stacked
+on top of each other. Typically you would do this above or
+below the symbol - hence the need for the anchor.
+
+@param p Symbol Parameters object for the symbol
+@param anchor Sets where the origin position of the stacked labels is.
+This function only accepts `N` and `S` as anchor positions. If passed
+`S` - then this function will put the value label at the origin and the
+ref des label above it (+Y). If the value label is not active - then
+the ref des label is placed at the origin.
+If passed `N` - then this function will put the ref label at the origin
+and then value label below it (-Y).
+@param margin Distance between labels as a ratio of the label height. Default is 20%.
+@return Tuple of the Ref Des Label Position and then the Value Label Position.
+@throws ArgumentError If anchor is anything other than `N` or `S`.
+<DOC>
+public defn compute-label-positions (p:SymbolParams, anchor:Anchor, margin:Percentage = (20 %)) -> [Point, Point] :
+  val lp = get-label-params(p)
+  val r-H = ref-label-size(lp)
+  val v-H? = value-label-size(lp)
+  val va = vertical(anchor)
+  switch(va):
+    N: ; REF / Then optional Label
+      val vmarg = r-H * margin
+      [
+        Point(0.0, 0.0)
+        Point(0.0, (- (r-H + vmarg)))
+      ]
+    S: ; Ref above optional Label
+      match(v-H?):
+        (_:None): [ Point(0.0, 0.0), Point(0.0, 0.0) ]
+        (given:One<Double>):
+          val v-H = value(given)
+          val vmarg = v-H * margin
+          [
+            Point(0.0, v-H + vmarg),
+            Point(0.0, 0.0)
+          ]
+    else:
+      throw $ ArgumentError("Unhandled Anchor for Label Positions")
+
+
+doc: \<DOC>
+Base type for Symbol Parameterization
+
+Each symbol can create a derived type that defines
+the unique parameters for that symbol. This type
+defines the base parameterization that all symbols
+must have.
+<DOC>
+public defstruct SymbolParams <: Equalable:
+  doc: \<DOC>
+  Optional Label Parameter Overrides
+  This field is optional and if left as `None()` then the
+  default label parameters will be queried from
+  {@link get-default-symbol-label-params}. Alternatively, the
+  user may override this default behavior by providing a
+  {@link type:SymbolLabelParams} instance.
+  <DOC>
+  label-params?:Maybe<SymbolLabelParams> with:
+    default => None()
+with:
+  keyword-constructor => true
+  printer => true
+  equalable => true
+
+public defmulti get-label-params (x:SymbolParams) -> SymbolLabelParams
+public defmethod get-label-params (x:SymbolParams) -> SymbolLabelParams:
+  value-or-else(label-params?(x), get-default-symbol-label-params)
