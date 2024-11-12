@@ -89,8 +89,6 @@ consult: https://docs.jitx.com/reference/statements/viastmt/heading.html
 
 defn bd (via-stop) :
   Backdrill(
-    Top,                    ; Side - Top / Bottom
-    via-stop,               ; Stop Layer
     0.3                     ; drill diameter, mm
     0.6                     ; starting pad diameter, mm
     0.5                     ; Soldermask Opening diameter, mm
