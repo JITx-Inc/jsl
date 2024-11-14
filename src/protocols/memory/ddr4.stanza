@@ -161,7 +161,7 @@ public pcb-bundle ddr4-ctl-channel (rank:DDR4-rank):
   port RESET_n : pin
   port ODT     : pin
   port PAR     : pin
-  port TEN     : pin
+  ; port TEN     : pin
   port ALERT_n : pin
   ; port ZQ      : pin[width-to-lane(width)]
 
