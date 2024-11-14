@@ -313,7 +313,7 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-    val iwidth = width-to-int(width(cst))
+    ; val iwidth = width-to-int(width(cst))
     val ilane  = width-to-lane(width(cst))
     val irank  = rank-to-int(rank(cst))
     val topo   = topology(cst) ; not sure how to use this atm
@@ -322,53 +322,67 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst) loss = loss(cst) route-struct = diff-dqs-rs(cst))
 
     val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
-    diffpair-constrain(cst-ck,  src.ctl.CK, dst.ctl.CK)
+    diffpair-constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
     timing-window(skew-ck(cst), guide-ck, src.ctl.CK => dst.ctl.CK)
 
+    ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
     for i in 0 to ilane do :
-      val guide-dqs-i = src.data.DQS[i].P => dst.data.DQS[i].P
+      val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
       diffpair-constrain(cst-dqs, src.data.DQS[i], dst.data.DQS[i])
-      timing-window(skew-dqs(cst), guide-dqs-i, src.data.DQS[i] => dst.data.DQS[i])
+      ; constrain DQS with respect to DQS (guide)
+      timing-window(skew-dqs(cst), guide-dqs, src.data.DQS[i] => dst.data.DQS[i])
+      ; constrain DQS with respect to CK
+      timing-window(skew-ck-dqs(cst), guide-ck, src.data.DQS[i] => dst.data.DQS[i])
+      ; constrain DQ with respect to DQS
+      val dq-bus = to-tuple $ for j in i * 8 to (i + 1) * 8 seq : src.data.DQ[j] => dst.data.DQ[j]
+      timing-window(skew-dq-dqs(cst), guide-dqs, dq-bus)
+      structure(dq-bus) = se-dq-rs(cst)
+      max-loss(loss(cst), dq-bus)
 
-    ; for i in 0 to lane do :
-    ;   val dq-bus = to-tuple $ for j in 0 to width seq : src.data.DQ[j] => dst.data.DQ[j]
+    ; now constrain addr/cmd/ctrl signals (1x per bus)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.CKE => dst.ctl.CKE)
+    structure(src.ctl.CKE => dst.ctl.CKE) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.CKE => dst.ctl.CKE)
+    val addr-bus = to-tuple $ for j in 0 to 17 seq : src.ctl.A[j] => dst.ctl.A[j]
+    timing-window(skew-cmd-addr-ctl-ck(cst), guide-ck, addr-bus)
+    structure(addr-bus) = se-rs(cst)
+    max-loss(loss(cst), addr-bus)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.ACT_n => dst.ctl.ACT_n)
+    structure(src.ctl.ACT_n => dst.ctl.ACT_n) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.ACT_n => dst.ctl.ACT_n)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.BG[0] => dst.ctl.BG[0])
+    structure(src.ctl.BG[0] => dst.ctl.BG[0]) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.BG[0] => dst.ctl.BG[0])
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.BG[1] => dst.ctl.BG[1])
+    structure(src.ctl.BG[1] => dst.ctl.BG[1]) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.BG[1] => dst.ctl.BG[1])
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.BA[0] => dst.ctl.BA[0])
+    structure(src.ctl.BA[0] => dst.ctl.BA[0]) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.BA[0] => dst.ctl.BA[0])
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.BA[1] => dst.ctl.BA[1])
+    structure(src.ctl.BA[1] => dst.ctl.BA[1]) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.BA[1] => dst.ctl.BA[1])
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.CS_n[0] => dst.ctl.CS_n[0])
+    structure(src.ctl.CS_n[0] => dst.ctl.CS_n[0]) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.CS_n[0] => dst.ctl.CS_n[0])
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.RESET_n => dst.ctl.RESET_n)
+    structure(src.ctl.RESET_n => dst.ctl.RESET_n) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.RESET_n => dst.ctl.RESET_n)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.ODT => dst.ctl.ODT)
+    structure(src.ctl.ODT => dst.ctl.ODT) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.ODT => dst.ctl.ODT)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.PAR => dst.ctl.PAR)
+    structure(src.ctl.PAR => dst.ctl.PAR) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.PAR => dst.ctl.PAR)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.ALERT_n => dst.ctl.ALERT_n)
+    structure(src.ctl.ALERT_n => dst.ctl.ALERT_n) = se-rs(cst)
+    max-loss(loss(cst), src.ctl.ALERT_n => dst.ctl.ALERT_n)
 
-
-
-      ; diffpair-constrain(cst-wck, src.data[i].WCK  dst.data[i].WCK)
-      ; timing-window(skew-rck-wck(cst) guide-rck src.data[i].RCK.P => dst.data[i].RCK.P)
-      ; timing-window(skew-rck-wck(cst) guide-rck src.data[i].WCK.P => dst.data[i].WCK.P)
-      ; val guide-rck-chan = src.data[i].RCK.P => dst.data[i].RCK.P
-      ; val guide-wck-chan = src.data[i].WCK.P => dst.data[i].WCK.P
-      ; val guide-dq = src.data[i].DQ[0] => dst.data[i].DQ[0]
-      ; val dq-bus = to-tuple $ cat{_, [src.data[i].DQE => dst.data[i].DQE]} $ for j in 0 to 10 seq : src.data[i].DQ[j] => dst.data[i].DQ[j]
-      ; timing-window(skew-rck-dq(cst)    guide-rck-chan topos = dq-bus)
-      ; timing-window(skew-wck-dq(cst)    guide-wck-chan topos = dq-bus)
-      ; timing-window(skew-dq(cst)        guide-dq       topos = dq-bus)
-      ; timing-window(skew-err-wck(cst),  guide-wck-chan src.data[i].ERR => dst.data[i].ERR)
-      ; val ca-bus = to-tuple $ for j in 0 to 5 seq : src.data[i].CA[j] => dst.data[i].CA[j]
-      ; val guide-ca = src.data[i].CA[0]   => dst.data[i].CA[0]
-      ; timing-window(skew-wck-ca(cst), guide-wck-chan  topos = ca-bus)
-      ; timing-window(skew-rst-ca(cst), guide-reset     topos = ca-bus)
-      ; timing-window(skew-ca(cst),     guide-ca        topos = ca-bus)
-
-      ; structure(src.data[i].DQ, dst.data[i].DQ) = se-route-struct(cst)
-      ; structure(src.data[i].DQE, dst.data[i].DQE) = se-route-struct(cst)
-      ; structure(src.data[i].CA, dst.data[i].CA) = se-route-struct(cst)
-      ; structure(src.data[i].ERR, dst.data[i].ERR) = se-route-struct(cst)
-
-
-      ; max-loss(loss(cst), src.data[i].DQ  => dst.data[i].DQ)
-      ; max-loss(loss(cst), src.data[i].DQE => dst.data[i].DQE)
-      ; max-loss(loss(cst), src.data[i].CA  => dst.data[i].CA)
-      ; max-loss(loss(cst), src.data[i].ERR => dst.data[i].ERR)
 
 public defn connect-DDR4 (src:JITXObject dst:JITXObject -- width:DDR4-width = DDR4-x16 topology:DDR4-topology = FlyBy rank:DDR4-rank = SingleRank diff-ck-rs:DifferentialRoutingStructure diff-dqs-rs:DifferentialRoutingStructure dq-rs:RoutingStructure rs:RoutingStructure) :
   inside pcb-module :
     val ddr4-cst = DDR4-Constraint(width = width, topology = topology, rank = rank, diff-ck-rs = diff-ck-rs, diff-dqs-rs = diff-dqs-rs, se-dq-rs = dq-rs, se-rs = rs)
     constrain-topology(src, dst, ddr4-cst)
-
-
 
 doc: \<DOC>
 @brief Returns address mapping depending on the topology for each address pin that can be permuted
@@ -388,12 +402,12 @@ BG1 | BG1 | BG0 ; this is optional depending on the memory size/rank
 <DOC>
 ; public defn DDR4-Topology-address-map (a:JITXObject topo:DDR4-topology) -> JITXObject:
 ;   switch(a) :
-;     A[3] :  if topo == ClamShell  : A[4] else : A[3]
-;     A[4] :  if topo == ClamShell  : A[3] else : A[4]
-;     A[5] :  if topo == ClamShell  : A[6] else : A[5]
-;     A[6] :  if topo == ClamShell  : A[5] else : A[6]
-;     A[7] :  if topo == ClamShell  : A[8] else : A[7]
-;     A[8] :  if topo == ClamShell  : A[7] else : A[8]
+;      A[3] : if topo == ClamShell  : A[4] else :  A[3]
+;      A[4] : if topo == ClamShell  : A[3] else :  A[4]
+;      A[5] : if topo == ClamShell  : A[6] else :  A[5]
+;      A[6] : if topo == ClamShell  : A[5] else :  A[6]
+;      A[7] : if topo == ClamShell  : A[8] else :  A[7]
+;      A[8] : if topo == ClamShell  : A[7] else :  A[8]
 ;     A[11] : if topo == ClamShell : A[13] else : A[11]
 ;     A[13] : if topo == ClamShell : A[11] else : A[13]
 ;     BA[0] : if topo == ClamShell : BA[1] else : BA[0]
