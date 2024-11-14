@@ -87,14 +87,11 @@ For other via types and arguments, please
 consult: https://docs.jitx.com/reference/statements/viastmt/heading.html
 <DOC>
 
-defn bd (via-stop) :
-  Backdrill(
-    Top,                    ; Side - Top / Bottom
-    via-stop,               ; Stop Layer
-    0.3                     ; drill diameter, mm
-    0.6                     ; starting pad diameter, mm
-    0.5                     ; Soldermask Opening diameter, mm
-    0.5                     ; Copper Clearance Diameter, mm
+val small-drill = Backdrill(
+    diameter = 0.3                     ; drill diameter, mm
+    startpad-diameter =   0.6                     ; starting pad diameter, mm
+    solder-mask-opening = 0.5                     ; Soldermask Opening diameter, mm
+    copper-clearance = 0.5                     ; Copper Clearance Diameter, mm
   )
 
 public pcb-via bd-via (via-start:LayerIndex via-stop:LayerIndex via-name:String) :
@@ -104,8 +101,7 @@ public pcb-via bd-via (via-start:LayerIndex via-stop:LayerIndex via-name:String)
   diameter = 0.200
   hole-diameter = 0.100
   type = MechanicalDrill
-  backdrill = bd(via-stop)
-
+  backdrill = Backdrill(bottom = small-drill)
 
 public pcb-via th-via (via-name:String) :
   name = via-name

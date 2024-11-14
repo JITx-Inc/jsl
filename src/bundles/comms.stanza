@@ -358,6 +358,10 @@ public pcb-bundle i2s :
 
 doc: \<DOC>
 Optional Pins in the Microwire Bundle Construction
+
+@member Microwire-CS Includes the Chip Select Port
+@member Microwire-DO Includes the Data Output Port
+@member Microwire-DI Includes the Data Input Port
 <DOC>
 public pcb-enum jsl/bundles/comms/MicrowirePins :
   Microwire-CS
@@ -438,8 +442,6 @@ a bidirectional data wire.
 @member cs Chip Select
 @member do Data Output/Input
 
-@param opts Set of optional ports to include in this bundle
-definition. Duplicates are not allowed.
 <DOC>
 public defn microwire-3wire ():
   microwire(Microwire-CS, Microwire-DO)
