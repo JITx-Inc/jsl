@@ -334,19 +334,31 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
       ; constrain DQS with respect to CK
       timing-window(skew-ck-dqs(cst), guide-ck, src.data.DQS[i] => dst.data.DQS[i])
       ; constrain DQ with respect to DQS
-      val dq-bus = to-tuple $ for j in i * 8 to (i + 1) * 8 seq : src.data.DQ[j] => dst.data.DQ[j]
-      timing-window(skew-dq-dqs(cst), guide-dqs, dq-bus)
-      structure(dq-bus) = se-dq-rs(cst)
-      max-loss(loss(cst), dq-bus)
+      val bs = i * 8
+      val be = (i + 1) * 8
+      ; val dq-bus = to-tuple $ for j in bs to be seq : src.data.DQ[j] => dst.data.DQ[j]
+      for j in bs to be do :
+        val guide-dq = src.data.DQ[j] => dst.data.DQ[j]
+        timing-window(skew-dq-dqs(cst), guide-dqs, guide-dq)
+        structure(guide-dq) = se-dq-rs(cst)
+        max-loss(loss(cst), guide-dq)
+        ; timing-window(skew-dq-dqs(cst), guide-dqs, dq-bus)
+        ; structure(dq-bus) = se-dq-rs(cst)
+        ; max-loss(loss(cst), dq-bus)
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.CKE => dst.ctl.CKE)
     structure(src.ctl.CKE => dst.ctl.CKE) = se-rs(cst)
     max-loss(loss(cst), src.ctl.CKE => dst.ctl.CKE)
-    val addr-bus = to-tuple $ for j in 0 to 17 seq : src.ctl.A[j] => dst.ctl.A[j]
-    timing-window(skew-cmd-addr-ctl-ck(cst), guide-ck, addr-bus)
-    structure(addr-bus) = se-rs(cst)
-    max-loss(loss(cst), addr-bus)
+    ; val addr-bus = to-tuple $ for j in 0 to 17 seq : src.ctl.A[j] => dst.ctl.A[j]
+    for j in 0 to 17 do :
+      val guide-addr = src.ctl.A[j] => dst.ctl.A[j]
+      timing-window(skew-cmd-addr-ctl-ck(cst), guide-ck, guide-addr)
+      structure(guide-addr) = se-rs(cst)
+      max-loss(loss(cst), guide-addr)
+    ; timing-window(skew-cmd-addr-ctl-ck(cst), guide-ck, addr-bus)
+    ; structure(addr-bus) = se-rs(cst)
+    ; max-loss(loss(cst), addr-bus)
     timing-window(skew-cmd-addr-ctrl(cst), guide-ck, src.ctl.ACT_n => dst.ctl.ACT_n)
     structure(src.ctl.ACT_n => dst.ctl.ACT_n) = se-rs(cst)
     max-loss(loss(cst), src.ctl.ACT_n => dst.ctl.ACT_n)
