@@ -358,61 +358,61 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     ; there are two constraints to be applied:
     ; First is versus CK and is +/- 20 ps
     ; Second is versus the other signals in the same group and is +/- 10 ps
-    ; let's pick an arbitrary signal to serve as the guide for the overall CMD/ADDR/CTL group
-    val guide-cac-group = src.ctl.CKE => dst.ctl.CKE
+    ; let's pick an arbitrary signal to serve as the guide for the overall ADDR/CMD/CTL group
+    val guide-acc-group = src.ctl.CKE => dst.ctl.CKE
     ; now back to our regularly scheduled program
     val target-cke = src.ctl.CKE => dst.ctl.CKE
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cke)
-    ; no need for timing-window for the CKE signal versus guide-cac-group as it's defining the group timing constraint
+    ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
     structure(target-cke) = se-rs(cst)
     max-loss(loss(cst), target-cke)
     for j in 0 to 17 do :
       val target-addr = src.ctl.A[j] => dst.ctl.A[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-addr)
-      timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-addr)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
       structure(target-addr) = se-rs(cst)
       max-loss(loss(cst), target-addr)
 
     val target-act = src.ctl.ACT_n => dst.ctl.ACT_n
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-act)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-act)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
     structure(target-act) = se-rs(cst)
     max-loss(loss(cst), target-act)
     for j in 0 to 2 do :
       val target-bg = src.ctl.BG[j] => dst.ctl.BG[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-bg)
-      timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-bg)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-bg)
       structure(target-bg) = se-rs(cst)
       max-loss(loss(cst), target-bg)
       val target-ba = src.ctl.BA[j] => dst.ctl.BA[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
-      timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, guide-ba)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
       structure(target-ba) = se-rs(cst)
       max-loss(loss(cst), target-ba)
     for j in 0 to irank do:
       val target-cs = src.ctl.CS_n[j] => dst.ctl.CS_n[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cs)
-      timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-cs)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cs)
       structure(target-cs) = se-rs(cst)
       max-loss(loss(cst), target-cs)
     val target-reset = src.ctl.RESET_n => dst.ctl.RESET_n
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-reset)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-reset)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-reset)
     structure(target-reset) = se-rs(cst)
     max-loss(loss(cst), target-reset)
     val target-odt = src.ctl.ODT => dst.ctl.ODT
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-odt)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-odt)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
     structure(target-odt) = se-rs(cst)
     max-loss(loss(cst), target-odt)
     val target-par = src.ctl.PAR => dst.ctl.PAR
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-par)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-par)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-par)
     structure(target-par) = se-rs(cst)
     max-loss(loss(cst), target-par)
     val target-alert = src.ctl.ALERT_n => dst.ctl.ALERT_n
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-alert)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-cac-group, target-alert)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-alert)
     structure(target-alert) = se-rs(cst)
     max-loss(loss(cst), target-alert)
 
