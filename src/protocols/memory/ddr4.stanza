@@ -235,7 +235,7 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
   skew-ck-dqs:Toleranced with :
-    default => min-max(-85.0e-12 935.0e-12)
+    default => min-typ-max(-85.0e-12 0.0 935.0e-12)
   doc: \<DOC>
   DQ to DQS Inter-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -329,30 +329,25 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst) loss = loss(cst) route-struct = diff-dqs-rs(cst))
 
     val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
-    diffpair-constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
+    constrain(cst-ck, src.ctl.CK dst.ctl.CK)
 
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
     ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
     for i in 0 to ilane do :
       val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
-      diffpair-constrain(cst-dqs, src.data.DQS[i], dst.data.DQS[i])
+      constrain(cst-dqs, src.data.DQS[i] dst.data.DQS[i])
       ; constrain DQS with respect to CK
       timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
       ; constrain DQ with respect to DQS
       val bs = i * 8
       val be = bs + 8
-      for j in bs to be do :
-        val target-dq = src.data.DQ[j] => dst.data.DQ[j]
-        timing-window(skew-dq-dqs(cst), guide-dqs, target-dq)
-        structure(target-dq) = se-dq-rs(cst)
-        max-loss(loss(cst), target-dq)
-
-      ; Add DM_n constraints
-      val target-dm = src.data.DM_n[i] => dst.data.DM_n[i]
-      timing-window(skew-dm-dqs(cst), guide-dqs, target-dm)
-      structure(target-dm) = se-dq-rs(cst)
-      max-loss(loss(cst), target-dm)
+      val target-dqm-bus = to-tuple $ cat{_, [src.data.DM_n[i] => dst.data.DM_n[i]]} $ for j in bs to be seq : src.data.DQ[j] => dst.data.DQ[j]
+      timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
+      structure(src.data.DQ, dst.data.DQ) = se-dq-rs(cst)
+      structure(src.data.DM_n, dst.data.DM_n) = se-dq-rs(cst)
+      max-loss(loss(cst), src.data.DQ  => dst.data.DQ)
+      max-loss(loss(cst), src.data.DM_n => dst.data.DM_n)
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     ; there are two constraints to be applied:
