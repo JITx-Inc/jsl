@@ -275,7 +275,8 @@ public defn make-board-def (f:Substrate, outline:Shape -- signal-shrink:Maybe<Do
     stackup = create-pcb-stackup $ stackup(f)
     boundary = outline
     match(signal-shrink):
-      (_:None): false
+      (_:None): 
+        signal-boundary = outline
       (given:One<Double>):
         val shrink = value(given)
         ensure-positive!("signal-shrink", shrink)
