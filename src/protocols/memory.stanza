@@ -1,3 +1,4 @@
 defpackage jsl/protocols/memory:
   forward jsl/protocols/memory/lpddr4
   forward jsl/protocols/memory/gddr7
+  forward jsl/protocols/memory/ddr4
