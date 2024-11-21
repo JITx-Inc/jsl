@@ -131,14 +131,14 @@ one or more ddr4 memory chips/DIMMs.
 @member topology Topology of the DDR4 connection (FlyBy or ClamShell)
 <DOC>
 
-public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = SingleRank topology:DDR4-topology = FlyBy) :
+public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = SingleRank, topology:DDR4-topology = FlyBy) :
   if width == DDR4-x4 and rank != SingleRank:
-    fatal("DDR4-x4 is only supported in SingleRank configuration")
+    throw(ArgumentError("DDR4-x4 is only supported in SingleRank configuration"))
   if width == DDR4-x16 and rank == QuadRank:
-    fatal("DDR4-x16 is not supported in QuadRank configuration")
+    throw(ArgumentError("DDR4-x16 is not supported in QuadRank configuration"))
   ddr4-b(width, rank, topology)
 
-public pcb-bundle ddr4-b (width:DDR4-width rank:DDR4-rank topology:DDR4-topology) :
+public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology) :
   name = "DDR4"
   description = "DDR4 Dynamic Random-Access Memory protocol"
   port data    : ddr4-data-channel(width) ;
@@ -153,7 +153,7 @@ public pcb-bundle ddr4-ctl-channel (rank:DDR4-rank):
   ; how do I use rank here? Needs some work...
   port CK      : diff-pair
   port CKE     : pin
-  port A       : pin[[0 to 17]]
+  port A       : pin[17]
   port ACT_n   : pin
   port BG      : pin[2] ; not fully present?
   port BA      : pin[2] ; not fully present?
@@ -175,14 +175,21 @@ doc: \<DOC>
 This is a helper function that returns the expected differential
 trace impedance for the standard.
 
-@return Upper/lower limits for the impedance.
+@return Upper/lower limits for the impedance in a struct.
 <DOC>
-public defn ddr4-get-default-trace-impedance () -> [Toleranced, Toleranced, Toleranced, Toleranced] :
-  [ 90.0 +/- (5 %) ; CLK
-   100.0 +/- (5 %) ; DQS
-    50.0 +/- (5 %) ; DQ
-    45.0 +/- (5 %)]; CMD/CTRL/ALERT
-
+public defstruct DDR4-Impedances <: Equalable:
+  ck-imped:Toleranced with: 
+     default => 90.0 +/- (5 %)
+  dqs-imped:Toleranced with:
+     default => 100.0 +/- (5 %)
+  dq-imped:Toleranced with:
+    default => 50.0 +/- (5 %)
+  acc-imped:Toleranced with:
+    default => 45.0 +/- (5 %)
+with:
+  printer => true
+  keyword-constructor => true
+  equalable => true
 
 doc: \<DOC>
 DDR4 SI Constraint Type
@@ -221,7 +228,7 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   Channel Rank
   <DOC>
   rank:DDR4-rank
-    doc: \<DOC>
+  doc: \<DOC>
   CK Intra-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-ck:Toleranced with :
@@ -235,7 +242,7 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
   skew-ck-dqs:Toleranced with :
-    default => min-typ-max(-85.0e-12 0.0 935.0e-12)
+    default => min-typ-max(-85.0e-12, 0.0, 935.0e-12)
   doc: \<DOC>
   DQ to DQS Inter-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -292,20 +299,20 @@ Constructor for the DDR4 Link Constraint
 @param rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
 <DOC>
 public defn DDR4-Constraint (
-    width:DDR4-width
-    topology:DDR4-topology
-    rank:DDR4-rank
-    diff-ck-rs:DifferentialRoutingStructure
-    diff-dqs-rs:DifferentialRoutingStructure
-    se-dq-rs:RoutingStructure
+    width:DDR4-width,
+    topology:DDR4-topology,
+    rank:DDR4-rank,
+    diff-ck-rs:DifferentialRoutingStructure,
+    diff-dqs-rs:DifferentialRoutingStructure,
+    se-dq-rs:RoutingStructure,
     se-rs:RoutingStructure ) -> DDR4-Constraint:
   DDR4-Constraint(
-    width = width
-    topology = topology
-    rank = rank
-    diff-ck-rs = diff-ck-rs
-    diff-dqs-rs = diff-dqs-rs
-    se-dq-rs = se-dq-rs
+    width = width,
+    topology = topology,
+    rank = rank,
+    diff-ck-rs = diff-ck-rs,
+    diff-dqs-rs = diff-dqs-rs,
+    se-dq-rs = se-dq-rs,
     se-rs = se-rs
   )
 
@@ -320,16 +327,14 @@ the parameterization of `src`, including width.
 public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
 
-    ; val iwidth = width-to-int(width(cst))
     val ilane  = width-to-lane(width(cst))
     val irank  = rank-to-int(rank(cst))
-    ; val topo   = topology(cst) ; not sure how to use this atm
 
-    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst)  loss = loss(cst) route-struct = diff-ck-rs(cst))
-    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst) loss = loss(cst) route-struct = diff-dqs-rs(cst))
+    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
+    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
 
     val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
-    constrain(cst-ck, src.ctl.CK dst.ctl.CK)
+    constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
 
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
@@ -412,42 +417,21 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     max-loss(loss(cst), target-alert)
 
 
-public defn connect-DDR4 (src:JITXObject dst:JITXObject -- width:DDR4-width = DDR4-x16 topology:DDR4-topology = FlyBy rank:DDR4-rank = SingleRank diff-ck-rs:DifferentialRoutingStructure diff-dqs-rs:DifferentialRoutingStructure dq-rs:RoutingStructure rs:RoutingStructure) :
+public defn connect-DDR4 (src:JITXObject, dst:JITXObject
+                          -- width:DDR4-width = DDR4-x16,
+                          topology:DDR4-topology = FlyBy,
+                          rank:DDR4-rank = SingleRank,
+                          diff-ck-rs:DifferentialRoutingStructure,
+                          diff-dqs-rs:DifferentialRoutingStructure,
+                          dq-rs:RoutingStructure,
+                          rs:RoutingStructure) :
   inside pcb-module :
-    val ddr4-cst = DDR4-Constraint(width = width, topology = topology, rank = rank, diff-ck-rs = diff-ck-rs, diff-dqs-rs = diff-dqs-rs, se-dq-rs = dq-rs, se-rs = rs)
+    val ddr4-cst = DDR4-Constraint(width = width,
+                                   topology = topology,
+                                   rank = rank,
+                                   diff-ck-rs = diff-ck-rs,
+                                   diff-dqs-rs = diff-dqs-rs,
+                                   se-dq-rs = dq-rs,
+                                   se-rs = rs)
     constrain-topology(src, dst, ddr4-cst)
-
-doc: \<DOC>
-@brief Returns address mapping depending on the topology for each address pin that can be permuted
-Memory Controller Pin	| DRAM Pin (Non-Mirrored)	| DRAM Pin (Mirrored)
-A3	| A3	| A4
-A4	| A4	| A3
-A5	| A5	| A6
-A6	| A6	| A5
-A7	| A7	| A8
-A8	| A8	| A7
-A11	| A11 | A13
-A13	| A13 | A11
-BA0	| BA0 | BA1
-BA1	| BA1 | BA0 ; this is optional depending on the memory size/rank
-BG0 | BG0 | BG1
-BG1 | BG1 | BG0 ; this is optional depending on the memory size/rank
-<DOC>
-; public defn DDR4-Topology-address-map (a:JITXObject topo:DDR4-topology) -> JITXObject:
-;   switch(a) :
-;      A[3] : if topo == ClamShell  : A[4] else :  A[3]
-;      A[4] : if topo == ClamShell  : A[3] else :  A[4]
-;      A[5] : if topo == ClamShell  : A[6] else :  A[5]
-;      A[6] : if topo == ClamShell  : A[5] else :  A[6]
-;      A[7] : if topo == ClamShell  : A[8] else :  A[7]
-;      A[8] : if topo == ClamShell  : A[7] else :  A[8]
-;     A[11] : if topo == ClamShell : A[13] else : A[11]
-;     A[13] : if topo == ClamShell : A[11] else : A[13]
-;     BA[0] : if topo == ClamShell : BA[1] else : BA[0]
-;     BA[1] : if topo == ClamShell : BA[0] else : BA[1]
-;     BG[0] : if topo == ClamShell : BG[1] else : BG[0]
-;     BG[1] : if topo == ClamShell : BG[0] else : BG[1]
-;     else :
-;       println("Attempting to use unknown address (%_) for mapping" % [a])
-;       false
 
