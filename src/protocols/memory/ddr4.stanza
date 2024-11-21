@@ -349,10 +349,10 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
       val be = bs + 8
       val target-dqm-bus = to-tuple $ cat{_, [src.data.DM_n[i] => dst.data.DM_n[i]]} $ for j in bs to be seq : src.data.DQ[j] => dst.data.DQ[j]
       timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
-      structure(src.data.DQ, dst.data.DQ) = se-dq-rs(cst)
-      structure(src.data.DM_n, dst.data.DM_n) = se-dq-rs(cst)
-      max-loss(loss(cst), src.data.DQ  => dst.data.DQ)
-      max-loss(loss(cst), src.data.DM_n => dst.data.DM_n)
+      max-loss(loss(cst), ep-sets = target-dqm-bus)
+    ; needs to be outside the loop as structure() can't handle a Tuple<KeyValue> argument
+    structure(src.data.DQ, dst.data.DQ) = se-dq-rs(cst)
+    structure(src.data.DM_n, dst.data.DM_n) = se-dq-rs(cst)
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     ; there are two constraints to be applied:
