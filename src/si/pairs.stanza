@@ -72,6 +72,23 @@ defmethod constrain (cst:LaneConstraint, src:JITXObject, dst:JITXObject) -> Fals
       (csts:[SI-Constraint, SI-Constraint]):
         constrain(csts[i], src-ep, dst-ep)
 
+doc: \<DOC>
+Default symbol incrementing behavior for `topo-pair`
+
+When a topology is separated into separate segments,
+this function will create new names with the following pattern:
+
+```
+<BASE>-<ID>
+```
+Where the base and id are separated by a hyphen
+
+@param base Base name for the created topo-nets
+@param id counter index into the number of segments
+@return Symbol name for the topo-net segment.
+<DOC>
+public defn incrementing_symbol_id (base:String, id:Int) -> String:
+  to-string $ "%_-%_" % [base, id]
 
 doc: \<DOC>
 Construct a chained topology of diff-pair objects including ports, components and modules.
@@ -94,6 +111,24 @@ This function is recursive. Hence, the `KeyValue` sequence should not include a 
 The first and last elements of the chained topology are expected to be ports of
 type `diff-pair`. Any other type of bundle is an error.
 
+@param pairs Sequence of ports and instances that make up this topology
+implemented as cascading `KeyValue` objects. Use the `=>` operator.
+Don't use `()` inside a chain. For example, use `A => B => C => D` _not_ `A => (B => C) => D`
+@param index Internal value needed for the recursive naming. Default is 1. You will
+not typically need to provide this value.
+@param name Name for all nets or a Base name for constructing subsequent net names.
+If `make-symb-name` is `false` then this name will be applied to all nets. If there
+are separate connections, then the JITX runtime will give these nets `[N]` suffices
+where `N` is an integer and increments for every separate connection that has the
+same net name.
+If `make-symb-name` is not `false`, then this is the base name and will be
+passed as the first argument to `make-symb-name` to construct the net names
+for each of the topology segments created by this function.
+@param make-symb-name Optional Function that converts `name` and the `index`
+into a net name for a topology segment. `index` is increment at every level
+of recursion so that we can create unique names. If this value is `false`,
+then no unique names are created and `name` is used explicitly.
+
 @snippet
 
 ```stanza
@@ -106,8 +141,18 @@ topo-pair(src => block-cap => ESD => dst)
 @snip-note 3 Notice that the topology chain references the components directly. `topo-pair`
 will use `require` statements to extract out the necessary interfaces and create topology connections.
 <DOC>
-public defn topo-pair (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
+public defn topo-pair (
+  pair:KeyValue<JITXObject,JITXObject|KeyValue>,
+  index:Int = 1
+  --
+  name:String|Printable|False = false,
+  make-symb-name:False|((String, Int) -> String) = incrementing_symbol_id
+  ):
   inside pcb-module:
+    val base-name = to-string(name)
+    val n = match(make-symb-name):
+      (_:False): base-name
+      (f:((String, Int) -> String)): f(base-name, index)
     val [p1, o2] = unpack(pair)
     match(p1):
       (expected:JITXObject):
@@ -134,16 +179,16 @@ public defn topo-pair (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
             match(port-type(pt)):
               (b:Bundle):
                 if b == diff-pair:
-                  topo-net(p1 => p2)
-                  topo-pair(kp)
+                  topo-net(p1 => p2, name = n)
+                  topo-pair(kp, name = n, make-symb-name = make-symb-name)
                 else if b == dual-pair:
-                  topo-net(p1 => p2.A)
-                  topo-pair(p2.B => o3)
+                  topo-net(p1 => p2.A, name = n)
+                  topo-pair(p2.B => o3, index + 1, name = base-name, make-symb-name = make-symb-name)
                 else if b == lane-pair:
-                  topo-net(p1 => p2.TX)
-                  topo-pair(p2.RX => o3)
+                  topo-net(p1 => p2.TX, name = n)
+                  topo-pair(p2.RX => o3, index + 1, name = base-name, make-symb-name = make-symb-name)
                 else:
-                  throw $ ValueError("Invalid Bundle Type: %_" % [name(b)])
+                  throw $ ValueError("Invalid Bundle Type: %_" % [jitx/commands/name(b)])
               (x):
                 throw $ ValueError("Invalid Port Type: %_" % [p2])
           (i:Instance):
@@ -155,12 +200,12 @@ public defn topo-pair (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
             val it = instantiable-type(i)
             if supports?(it, dual-pair):
               require x:dual-pair from i
-              topo-net(p1 => x.A)
-              topo-pair(x.B => o3)
+              topo-net(p1 => x.A, name = n)
+              topo-pair(x.B => o3, index + 1, name = base-name, make-symb-name = make-symb-name)
             else if supports?(it, lane-pair):
               require x:lane-pair from i
-              topo-net(p1 => x.RX)
-              topo-pair(x.TX => o3)
+              topo-net(p1 => x.RX, name = n)
+              topo-pair(x.TX => o3, index + 1, name = base-name, make-symb-name = make-symb-name)
             else:
               throw $ InvalidComponentSupports(["dual-pair", "lane-pair"])
           (non-port-inst):
@@ -168,7 +213,7 @@ public defn topo-pair (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
       (p2:JITXObject):
         match(p2):
           (pt:Pin):
-            topo-net(p1, p2)
+            topo-net(p1, p2, name = n)
           (_):
             throw $ ValueError("Expected Port for Final Object - Received: '%_'" % [p2])
 

@@ -27,11 +27,17 @@ This function must be used in a `pcb-module` context.
 
 @param p1 Pin object
 @param p2 Pin object
+@param name Optional name for the constructed nets. If `false` then no
+name is applied to the `net` statement.
 <DOC>
-public defn topo-net (p1:JITXObject, p2:JITXObject):
+public defn topo-net (p1:JITXObject, p2:JITXObject -- name:String|Printable|False = false):
   check-matching-port-types(p1, p2)
   inside pcb-module:
-    net (p1, p2)
+    match(name):
+      (_:False):
+        net (p1, p2)
+      (n:String|Printable):
+        make-net(to-symbol(to-string(n)), [p1, p2])
     topology-segment(p1, p2)
 
 
@@ -46,6 +52,8 @@ using a sequence of key value pairs of pins (singles, bundles, or arrays)
 This function must be used in a `pcb-module` context.
 
 @param pair Key Value Pair (KVP) of pins or recursive KVPs of pins.
+@param name Optional name for the constructed nets. If `false` then no
+name is applied to the `net` statement.
 
 @snippet
 
@@ -73,7 +81,7 @@ referenced objects in this sequence are `diff-pair` bundles.
    between the terminal points.
 
 <DOC>
-public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
+public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue> -- name:String|Printable|False = false):
   ; TODO - Make the `key` of the KeyValue a `JITXObject|KeyValue` too
   ;  so that we can handle sequences like:
   ;
@@ -84,10 +92,10 @@ public defn topo-net (pair:KeyValue<JITXObject,JITXObject|KeyValue>):
   match(o2):
     (kp:KeyValue):
       val [p2, rest] = unpack(kp)
-      topo-net(p1, p2)
-      topo-net(kp)
+      topo-net(p1, p2, name = name)
+      topo-net(kp, name = name)
     (p2:JITXObject):
-      topo-net(p1, p2)
+      topo-net(p1, p2, name = name)
 
 doc: \<DOC>
 Construct a KeyValue Daisy Chain of Ports
