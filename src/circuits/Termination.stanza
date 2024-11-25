@@ -17,19 +17,28 @@ Default is a simple RC parallel circuit.
 @member SHIELD Connected to the shield of a connector, etc.
 @member GND Ground plane connection for the termination.
 
-@param R-query Resistor query parameters - default is `ResistorQuery()`.
-@param C-query Capacitor query parameters. Default sets a min rated
-voltage of 50.0V.
+@param R-query Resistor query parameters - default is `get-default-resistor-query()`.
+@param C-query Capacitor query parameters - defualt is `get-default-capacitor-query()`. 
+By default, this function will set min rated voltage to 50.0V if no voltage rating
+is present in the `C-query`.
 <DOC>
 public defn shield-termination (
-  R-query:ResistorQuery = ResistorQuery(),
-  C-query:CapacitorQuery = CapacitorQuery(rated-voltage = AtLeast(50.0))
+  R-query:ResistorQuery = get-default-resistor-query(),
+  C-query:CapacitorQuery = get-default-capacitor-query(),
   ) -> Instantiable:
+  val has-V-rating = key?(C-query, RatedVoltage)
+  val C-query* = if not has-V-rating:
+    set(
+      C-query, 
+      rated-voltage = AtLeast(50.0)
+      sort! = SortKey(rated-voltage = Increasing)
+      )
+  else: C-query
 
   pcb-module shield-term-t :
     port SHIELD
     port GND
     insert-resistor(SHIELD, GND, R-query, resistance = 0.0, inst-name = "R")
-    insert-capacitor(SHIELD, GND, C-query, capacitance = 4.7e-9, inst-name = "C")
+    insert-capacitor(SHIELD, GND, C-query*, capacitance = 4.7e-9, inst-name = "C")
 
   shield-term-t
