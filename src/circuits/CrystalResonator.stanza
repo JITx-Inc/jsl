@@ -17,13 +17,14 @@ Construct a Crystal Resonator Circuit
 that this circuit will attach to.
 @param V-rating Minimum voltage rating for the capacitors selected for this circuit. The
 user is assumed to have added the necessary voltage derating for their application.
+@param tc-code Default temperature rating to use for the load capacitors. This overides
+the default temperature coefficient code from the C-query. The default value is `C0G`
 @param prec Capacitor Value Precision Series that load capacitors will be selected from.
-@param query? Override-able base query for the capacitor selection. By default, this algorithm
-filters on:
+@param C-query Capacitor Query Object for customizing capacitor selection. Default is `get-default-capacitor-query()`.
+The following keys will be modified:
 
-*  Type = "ceramic"
-*  Temp Code = "C0G"
-*  Min Voltage = `V-rating`
+1.  `temperature-coefficient_code` - This function uses `C0G`
+2.  `rated-voltage` - This function overrides any voltage rating with the `V-rating` value. The results are sorted from lowest to highest.
 
 @return A `pcb-module` definition that can be instantiated to form the
 resonant tank for a crystal resonator. This module will have the following ports:
@@ -37,22 +38,20 @@ public defn create-crystal-resonator (
   C-load:Toleranced,
   C-stray:Toleranced,
   V-rating:Double,
+  tc-code:String = "C0G",
   prec:Percentage = (5 %),
-  query?:CapacitorQuery = ?
+  C-query:CapacitorQuery = get-default-capacitor-query()
   ) -> Instantiable:
 
   val cap-V = 2.0 * (C-load - C-stray)
   val c-bal = closest-std-val(typ(cap-V), prec)
 
-  val q = match(query?):
-    (_:None):
-      CapacitorQuery(
-        type = "ceramic",
-        temperature-coefficient_code = "C0G",
-        rated-voltage = AtLeast(V-rating),
-        sort! = SortKey(rated-voltage = Increasing)
-      )
-    (given:One<CapacitorQuery>): value(given)
+  val q = add(
+    C-query,
+    rated-voltage = AtLeast(V-rating),
+    sort! = SortKey(rated-voltage = Increasing),
+    temperature-coefficient_code = tc-code
+  )
 
   val cap-type = create-capacitor(
     q,

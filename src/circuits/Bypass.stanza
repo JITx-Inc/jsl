@@ -34,14 +34,13 @@ public defn bypass (elem:JITXObject, p1:JITXObject, p2:JITXObject):
     short-net(e-p1, p1)
     net (e-p2, p2)
 
-val BYPASS_DEF_QB = CapacitorQuery()
 val BYPASS_DEF_VAL = 0.1e-6 ; Farads
 
 
 defn insert-bypass (pos:JITXObject, neg:JITXObject -- elem-type?:Instantiable|Double, inst-name?:Maybe<String|Symbol> = None(), qb?:Maybe<CapacitorQuery> = None()) :
 
   val inst-name = to-string $ value-or(inst-name?, "%_-byp" % [get-ref-name $ ref(pos)])
-  val qb = value-or(qb?, BYPASS_DEF_QB)
+  val qb = value-or(qb?, get-default-capacitor-query())
 
   inside pcb-module:
     val elem-type = match(elem-type?):
@@ -72,8 +71,7 @@ can be used to control the other aspects of the query.
 given, then the Ref name of the `pos` signal will be used to create an instance name
 in the form `<NAME>-byp`.
 @param qb Optional capacitor query builder. This builder will extend the global defaults
-with any customization the user desires. The default value is `CapacitorQuery()` with no
-additional parameters.
+with any customization the user desires. The default value is `get-default-capacitor-query()`.
 @return Instance for this bypass component
 <DOC>
 public defn insert-bypass (pos:JITXObject, neg:JITXObject -- elem-type:Instantiable|Double = BYPASS_DEF_VAL, inst-name:String|Symbol = ?, qb:CapacitorQuery = ?) :
@@ -96,8 +94,7 @@ can be used to control the other aspects of the query.
 given, then the Ref name of the `pos` signal will be used to create an instance name
 in the form `<NAME>-byp`.
 @param qb Optional capacitor query builder. This builder will extend the global defaults
-with any customization the user desires. The default value is `CapacitorQuery()` with no
-additional parameters.
+with any customization the user desires. The default value is `get-default-capacitor-query()`.
 @return Instance for this bypass component
 <DOC>
 public defn insert-bypass (rail:JITXObject -- elem-type:Instantiable|Double = BYPASS_DEF_VAL, inst-name:String|Symbol = ?, qb:CapacitorQuery = ?) :
