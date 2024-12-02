@@ -1,3 +1,12 @@
+doc: \<DOC>
+@title Power Symbol
+@desc This module defines the Power symbol and associated construction functions.
+
+@snippet  Assign the default symbol to a ne:
+```stanza
+  symbol(VBUS) = PWR-SYMB
+```
+<DOC>
 #use-added-syntax(jitx)
 defpackage jsl/symbols/net-symbols/power-symbol:
   import core
