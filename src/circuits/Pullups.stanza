@@ -1,3 +1,13 @@
+doc: \<DOC>
+@title Pullups
+@desc This module defines functions for creating pullup and pulldown resistors.
+
+@snippet  Create a pullup resistor from a pin to a power rail:
+```stanza
+  val pullup-miim = create-resistor(resistance = 4.7e3, precision = (1 %))
+  insert-pullup(mng-bus.mdio, rail-3v3, elem-type = pullup-miim)
+```
+<DOC>
 #use-added-syntax(jitx)
 defpackage jsl/circuits/Pullups:
   import core

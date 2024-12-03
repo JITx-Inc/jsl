@@ -1,3 +1,12 @@
+doc: \<DOC>
+@title Ground Symbol
+@desc This module defines the Ground symbol and associated construction functions.
+
+@snippet  Assign the default symbol to a net:
+```stanza
+symbol(GND) = GND-SYMB
+```
+<DOC>
 #use-added-syntax(jitx)
 defpackage jsl/symbols/net-symbols/ground-symbol:
   import core

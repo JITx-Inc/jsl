@@ -1,3 +1,31 @@
+doc: \<DOC>
+@title MDI: Media Dependent Interface
+@desc This module defines the MDI bundle and associated constraint functions
+for the 1000Base-T Ethernet standard.
+
+@snippet  Create a 1000Base-T MDI Constraint and apply it to a simple topology
+```stanza
+  require eth-0 : MDI-1000Base-T from ethernet-jack[0]
+  require eth-1 : MDI-1000Base-T from ethernet-jack[1]
+  val mdi-constraint = MDI-1000Base-T-Constraint(
+    route-struct = diff-routing-struct(substrate, 100)
+  )
+  topo-net(eth-0, eth-1)
+  constrain(mdi-constraint, eth-1, eth-0)
+```
+
+@snippet  Create a 1000Base-T MDI Constraint and apply it to a complex topology
+```stanza
+  val esd = diodes/ESD224DQAR/create-esd-pool(2, GND)
+  val mdi-constraint = MDI-1000Base-T-Constraint(
+    route-struct = diff-routing-struct(substrate, 100)
+  )
+  within [src, dst] = constrain-topology(eth-0 => eth-1, mdi-constraint):
+    require protected-pairs:dual-pair[4] from esd
+    for p in 0 to 4:
+      topo-pair(src.TP[p] => protected-pairs[p].A => protected-pairs[p].B => dst.TP[p])
+```
+<DOC>
 #use-added-syntax(jitx)
 defpackage jsl/protocols/ethernet/MDI/MDI-1000Base-T:
   import core
@@ -15,7 +43,7 @@ public val NUM_PAIRS_1000Base-T = 4
 doc: \<DOC>
 1000Base-T MDI Bundle
 
-@member TP Array of 4 diff-pairs for the 4 twisted pairs
+@member TP : diff-pair[NUM_PAIRS_1000Base-T]. Array of 4 diff-pairs for the 4 twisted pairs
 that make up the 1000Base-T medium. The pairs are zero
 indexed and the mapping from index to pair identifiers is
 0 => A
@@ -196,7 +224,7 @@ public defn MDI-1000Base-T-Constraint (
   #MDI-1000Base-T-Constraint(skew, loss, route-struct, inter-skew)
 
 doc: \<DOC>
-Construct a Constraint for 1000Base-T MDI with default specs
+Construct a Constraint for 1000Base-T MDI with default specs (800fs intra-pair skew, 12dB loss, 330fs inter-pair skew)
 
 @param route-struct User provided routing structure for each of the
 diff-pair bundles of the MDI.
