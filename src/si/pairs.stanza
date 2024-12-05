@@ -149,7 +149,7 @@ public defn topo-pair (
   make-symb-name:False|((String, Int) -> String) = incrementing_symbol_id
   ):
   inside pcb-module:
-    val base-name = to-string(name)
+    val base-name = match(name:String|Printable) : to-string(name)
     val n = match(make-symb-name):
       (_:False): base-name
       (f:((String, Int) -> String)): f(base-name, index)
