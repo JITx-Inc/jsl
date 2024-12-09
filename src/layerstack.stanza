@@ -207,13 +207,14 @@ public val FR4-Material = DielectricMaterial(
   name = "FR4 (Generic)"
   description = "Generic FR4 for Ease of Use. For SI - you probably want to define your own"
   dielectric-coefficient = 4.26 ; @ 1GHz
-  loss-tangent = 0.25 ; @ 1GHz
+  loss-tangent = 0.02 ; @ 1GHz
 )
 
 public val SoldermaskMaterial = DielectricMaterial(
   name = "Soldermask (Generic)"
   description = "Generic Soldermask material based on Taiyo BSN4000"
-  dielectric-coefficient = 3.9
+  dielectric-coefficient = 3.9 ; @ 1GHz
+  loss-tangent = 0.035 ; @ 1GHz
   is-soldermask = true
 )
 
