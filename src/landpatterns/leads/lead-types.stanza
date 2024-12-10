@@ -91,6 +91,7 @@ with:
   equalable => true
   hashable => true
   printer => true
+  keyword-constructor => true
 
 doc: \<DOC>
 Compute the IPC-compliant Pad Constraints for this SMT Lead
