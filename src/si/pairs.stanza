@@ -111,7 +111,7 @@ This function is recursive. Hence, the `KeyValue` sequence should not include a 
 The first and last elements of the chained topology are expected to be ports of
 type `diff-pair`. Any other type of bundle is an error.
 
-@param pairs Sequence of ports and instances that make up this topology
+@param pair Sequence of ports and instances that make up this topology
 implemented as cascading `KeyValue` objects. Use the `=>` operator.
 Don't use `()` inside a chain. For example, use `A => B => C => D` _not_ `A => (B => C) => D`
 @param index Internal value needed for the recursive naming. Default is 1. You will

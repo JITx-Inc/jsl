@@ -318,6 +318,9 @@ public defstruct Corner-PadPlanner <: PadPlanner :
   corner-shaper:(Dims -> Shape)
   shaper:(Dims -> Shape)
   rows:Int|Tuple<Int>
+with:
+  printer => true
+  keyword-constructor => true
 
 public defmethod active? (x:Corner-PadPlanner, row:Int, column:Int) -> True|False :
   match(rows(x)):

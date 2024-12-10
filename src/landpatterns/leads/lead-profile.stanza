@@ -41,15 +41,7 @@ with:
   equalable => true
   printer => true
   hashable => true
-  constructor => #Lead-Profile
-
-public defn Lead-Profile (
-  --
-  span:Toleranced,
-  pitch:Double
-  lead:SMT-Lead
-  ) -> Lead-Profile :
-  #Lead-Profile(span, pitch, lead)
+  keyword-constructor => true
 
 doc: \<DOC>
 Compute the Lead-Profile parameters
@@ -95,15 +87,7 @@ with:
   equalable => true
   printer => true
   hashable => true
-  constructor => #Lead-Profile-Params
-
-public defn Lead-Profile-Params (
-  --
-  pad-size:Dims,
-  center:Double,
-  pitch:Double
-  ):
-  #Lead-Profile-Params(pad-size, center, pitch)
+  keyword-constructor => true
 
 public defn to-tuple (params:Lead-Profile-Params) -> [Dims, Double, Double] :
   [pad-size(params), center(params), pitch(params)]
