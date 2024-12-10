@@ -87,7 +87,7 @@ public defstruct Dual-Package <: Package :
 
 with:
   printer => true
-  constructor => #Dual-Package
+  keyword-constructor => true
 
 public defmethod build-pads (
   pkg:Dual-Package,
