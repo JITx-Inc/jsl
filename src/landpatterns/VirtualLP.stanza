@@ -376,6 +376,30 @@ public defn get-layers (vp:VirtualLP, offset:Pose = loc(0.0, 0.0)) -> Tuple<Laye
     get-layers(child, offset * pose(child))
   to-tuple $ cat(local-art, kid-art)
 
+doc: \<DOC>
+Retrieve Geoemtry for all including pads
+
+This function recursively finds all of the shapes on all artwork and pads
+in the scene graph. It then returns them as `LayerShape` objects.
+@param vp Virtual LP scene graph
+@param offset Offset position to apply to the created LayerShape objects.
+This will cause all created objects to be in the same root frame of reference
+for the VirtualLP `vp`.
+@return Tuple of LayerShape objects. The child layer content will be transformed
+to be in the parent's frame of reference.
+<DOC>
+public defn get-layers-all (vp:VirtualLP, offset:Pose = loc(0.0, 0.0)) -> Tuple<LayerShape> :
+  val local-art = for va in artwork(vp) seq:
+    to-layer-shape(va, offset)
+  val local-lands = for land in lands(vp) seq-cat:
+    get-layers(land)
+  val kid-shapes = for child in children(vp) seq-cat:
+    val shs = get-layers-all(child)
+    for sh in shs seq:
+      LayerShape(specifier(sh), pose(child) * shape(sh))
+  to-tuple $ for shList in [local-art, local-lands, kid-shapes] seq-cat:
+    shList
+
 public defn get-copper (vp:VirtualLP, li:LayerIndex) -> Tuple<VirtualCopper> :
   to-tuple $ for m in metal(vp) filter:
     layer-index(m) == li
