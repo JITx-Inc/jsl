@@ -1,0 +1,4 @@
+include? ".slm/stanza.proj"
+pkg-cache: ".slm/pkg-cache"
+
+packages jsl-build-deps/* defined-in "src/"

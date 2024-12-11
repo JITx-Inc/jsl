@@ -1,0 +1,6 @@
+name = "jsl-build-deps"
+version = "0.1.0"
+[dependencies.docgen]
+pkg="docgen"
+version="0.1.6"
+type="conan"
