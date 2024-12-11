@@ -1,0 +1,4 @@
+defpackage jsl-build-deps/notused:
+  import core
+
+println("This program is not used. It is just to get the dependencies")
