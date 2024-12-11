@@ -74,6 +74,25 @@ tests: fetch-deps
 test-%: fetch-deps
 	$(STANZA) run-test $(JSL_TESTS) -tagged $(@:test-%=%) | grep -v "SKIP" | awk NF
 
+DOCS_DIR=./docs_build
+DOCGEN=$(DOCS_DIR)/.slm/deps/docgen/bin/docgen
+DEFS_DB=$(DOCS_DIR)/jsl_defs_db.dat
+
+build-docgen: fetch-deps
+	cd $(DOCS_DIR)
+	$(SLM) build
+	cd ..
+	test -f $(DOCGEN)
+
+
+DOC_PKGS_FILE := $(DOCS_DIR)/pkgs.txt
+PKGS := $(shell cat ${DOC_PKGS_FILE} | xargs)
+
+test-docs: build-docgen
+	$(STANZA) definitions-database ./stanza.proj -o $(DEFS_DB)
+	$(DOCGEN) generate $(DEFS_DB) -type mkdocs -pkgs $(PKGS) -standalone src -o $(DOCS_DIR)/docs
+
+
 .PHONY: clean
 clean:
 	$(STANZA) clean
