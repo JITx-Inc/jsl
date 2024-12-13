@@ -27,4 +27,5 @@ jobs:
         run: |
           cd .github/
           echo -n "${{ secrets.JITX_LICENSE }}" > jitx-client/license
-          docker compose up --force-recreate --exit-code-from jitx-client
+          docker build jitx-client
+          docker compose up --exit-code-from jitx-client
