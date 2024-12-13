@@ -219,7 +219,7 @@ public defn build-polarity-cylinder-marker (
   ; val [pad-1, pad-2] = get-two-pin-pads(vp)
   ; val neg-fill = PolygonWithArcs([Point(R, 0.0), Point((- R), 0.0), Arc(Point(0.0, 0.0), R, 180.0, 180.0)])
   ; val neg-smask = get-layer(pad-2, SolderMask(side))
-  ; val neg-smask* = expand(pose(pad-2) * neg-smask[0], mask-clearance)
+  ; val neg-smask* = expand-or-shrink(pose(pad-2) * neg-smask[0], mask-clearance)
   ; val neg-fill* = Difference(neg-fill, neg-smask*)
   ; add(markers, neg-fill*)
 

@@ -170,7 +170,7 @@ public defn smd-thermal-pad (tp:ThermalPad) -> Pad:
     (_:None): sh ; Replicate the copper shape
     (given:One<PasteSubdivision>):
       create-paste-subdivision $ value(given)
-  smd-pad(sh, expand(sh, sm), paste)
+  smd-pad(sh, expand-or-shrink(sh, sm), paste)
 
 
 doc: \<DOC>

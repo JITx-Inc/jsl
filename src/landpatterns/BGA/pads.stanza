@@ -272,11 +272,11 @@ public defn build-bga-pad (
     type = SMD
 
     val c-adj = compute-adj(copper-adj(config), ball)
-    val copper = expand(ball, c-adj)
+    val copper = expand-or-shrink(ball, c-adj)
     shape = copper
 
     val s-adj = compute-adj(mask-adj(config), ball)
-    val smask = expand(ball, s-adj)
+    val smask = expand-or-shrink(ball, s-adj)
     make-soldermask(smask)
 
     match(paste-adj(config)):
@@ -298,7 +298,7 @@ public defn build-bga-pad (
         make-pastemask(paste-sh)
       (paste:Double|Percentage):
         val p-adj = compute-adj(paste, ball)
-        val paste-sh = expand(ball, p-adj)
+        val paste-sh = expand-or-shrink(ball, p-adj)
         make-pastemask(paste-sh)
 
   bga-pad
