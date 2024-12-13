@@ -1,0 +1,17 @@
+@label jitx/pcb-board
+@label jitx/pcb-bundle
+@label jitx/pcb-check
+@label jitx/pcb-component
+@label jitx/pcb-enum
+@label jitx/pcb-landpattern
+@label jitx/pcb-material
+@label jitx/pcb-module
+@label jitx/pcb-pad
+@label jitx/pcb-rules
+@label jitx/pcb-routing-structure
+@label jitx/pcb-differential-routing-structure
+@label jitx/pcb-stackup
+@label jitx/pcb-via
+@label jitx/pcb-struct
+@label jitx/pcb-symbol
+@label jitx/pcb-schematic-template
