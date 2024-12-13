@@ -88,8 +88,16 @@ build-docgen: fetch-deps
 DOC_PKGS_FILE := $(DOCS_DIR)/pkgs.txt
 PKGS := $(shell cat ${DOC_PKGS_FILE} | xargs)
 
+# This is likely not correct in the 
+#   general case. In development - JITX_ROOT is set by `SLM_CONFIG` is not 
+#   In production - JITX_ROOT is not set
+JITX_ROOT := ${SLM_CONFIG}
+
 test-docs: build-docgen
-	$(STANZA) definitions-database ./stanza.proj -o $(DEFS_DB)
+
+	$(STANZA) definitions-database $(JITX_ROOT)/stanza.proj -o $(DOCS_DIR)/jitx_runtime_db.dat
+	$(STANZA) definitions-database ./stanza.proj -merge-with $(DOCS_DIR)/jitx_runtime_db.dat -o $(DEFS_DB)
+
 	$(DOCGEN) generate $(DEFS_DB) -type mkdocs -pkgs $(PKGS) -standalone src -o $(DOCS_DIR)/docs
 
 
