@@ -59,7 +59,8 @@ public defn expand-union (x:Shape|Union, amount:Double) -> Shape:
     (U:Union):
       Union $ for obj in shapes(U) seq:
         expand-union(obj, amount)
-    (y:Shape): expand(y, amount)
+    (y:Shape):
+      expand-or-shrink(y, amount)
 
 doc: \<DOC>
 Increase the size of a `Dims` by `amount` on all sides

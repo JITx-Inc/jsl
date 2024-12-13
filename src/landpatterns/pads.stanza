@@ -136,7 +136,7 @@ different shapes - specifically rectangle and non-convex pad shapes
 <DOC>
 public defn make-soldermask (amount:Double = get-default-soldermask-amount()) :
   inside pcb-pad:
-    val mask-shape = expand(pad-shape(self), amount)
+    val mask-shape = expand-or-shrink(pad-shape(self), amount)
     make-soldermask(mask-shape)
 
 
@@ -175,7 +175,7 @@ default this is the top-side (convention when constructing pads).
 <DOC>
 public defn make-pastemask (amount:Double, side:Side = Top) :
   inside pcb-pad:
-    val mask-shape = expand(pad-shape(self), amount)
+    val mask-shape = expand-or-shrink(pad-shape(self), amount)
     make-pastemask(mask-shape, side)
 
 doc: \<DOC>
@@ -196,7 +196,7 @@ TODO - Create a diagram here for the pad definition
 <DOC>
 public pcb-pad smd-pad (
   copper:Shape,
-  mask:Shape|False = expand(copper, get-default-soldermask-amount()),
+  mask:Shape|False = expand-or-shrink(copper, get-default-soldermask-amount()),
   paste:Shape|False = copper
   ) :
   name  = "SMD Pad"
@@ -266,7 +266,7 @@ The default value is `false` meaning **no** pastemask opening is applied.
 public pcb-pad pth-pad (
   hole:Shape,
   copper:Shape,
-  mask:Shape|False = expand(copper, get-default-soldermask-amount()),
+  mask:Shape|False = expand-or-shrink(copper, get-default-soldermask-amount()),
   paste:Shape|False = false
   ) :
   name = "PTH-Pad"
@@ -345,7 +345,7 @@ public pcb-pad npth-pad (
     (m:False) :
       ; @NOTE - this was broken in OCDB
       val amount = get-default-soldermask-amount()
-      expand(hole, amount)
+      expand-or-shrink(hole, amount)
     (m:Shape) : m
   layer(SolderMask(Top)) = sm
   layer(SolderMask(Bottom)) = sm

@@ -61,7 +61,7 @@ public defn compute-params (
 
   val delta = Gmin(ipc) + x(pad-size)
   val pitch = pitch(pf)
-  #Lead-Profile-Params(pad-size, delta, pitch)
+  Lead-Profile-Params(pad-size, delta, pitch)
 
 
 doc: \<DOC>
