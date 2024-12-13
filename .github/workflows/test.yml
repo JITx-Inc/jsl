@@ -27,10 +27,4 @@ jobs:
         run: |
           cd .github/
           echo -n "${{ secrets.JITX_LICENSE }}" > jitx-client/license
-          JSL_OP=tests docker compose up --exit-code-from jitx-client
-
-      - name: make test-docs
-        run: |
-          cd .github/
-          echo -n "${{ secrets.JITX_LICENSE }}" > jitx-client/license
-          JSL_OP=test-docs docker compose up --exit-code-from jitx-client
+          docker compose up --exit-code-from jitx-client
