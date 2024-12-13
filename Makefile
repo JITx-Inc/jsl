@@ -1,6 +1,7 @@
 
 SLM_STANZA ?= jstanza
 STANZA := $(SLM_STANZA)
+
 CWD := $(shell pwd)
 SLM ?= slm
 
@@ -87,18 +88,34 @@ build-docgen: fetch-deps
 
 DOC_PKGS_FILE := $(DOCS_DIR)/pkgs.txt
 PKGS := $(shell cat ${DOC_PKGS_FILE} | xargs)
+JITX_PKGS_FILE := $(DOCS_DIR)/jitx_pkgs.txt
+JITX_PKGS := $(shell cat ${JITX_PKGS_FILE} | xargs)
 
-# This is likely not correct in the 
-#   general case. In development - JITX_ROOT is set by `SLM_CONFIG` is not 
-#   In production - JITX_ROOT is not set
-JITX_ROOT := ${SLM_CONFIG}
+
+# I'm trying to cover my bases here because
+# our build, ci, and production environments
+# are all so different. It is frankly amazing
+# that anything works.
+
+$(info STANZA: $(STANZA))
+$(info STANZA_CONFIG: $(STANZA_CONFIG))
+
+ifeq (${JITX_ROOT},)
+$(info Overriding JITX_ROOT with: ${STANZA_CONFIG})
+JITX_ROOT := ${STANZA_CONFIG}
+else
+ifeq (${STANZA_CONFIG},)
+$(info Overriding STANZA_CONFIG with: ${JITX_ROOT})
+STANZA_CONFIG := ${JITX_ROOT}
+endif
+endif
 
 test-docs: build-docgen
 
 	$(STANZA) definitions-database $(JITX_ROOT)/stanza.proj -o $(DOCS_DIR)/jitx_runtime_db.dat
 	$(STANZA) definitions-database ./stanza.proj -merge-with $(DOCS_DIR)/jitx_runtime_db.dat -o $(DEFS_DB)
 
-	$(DOCGEN) generate $(DEFS_DB) -type mkdocs -pkgs $(PKGS) -standalone src -o $(DOCS_DIR)/docs
+	$(DOCGEN) generate $(DEFS_DB) -type mkdocs -pkgs $(PKGS) $(JITX_PKGS) -standalone $(DOCS_DIR)/src -o $(DOCS_DIR)/docs
 
 
 .PHONY: clean
