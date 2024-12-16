@@ -1,5 +1,5 @@
 doc: \<DOC>
-@title MDI: Media Dependent Interface
+@title MDI - Media Dependent Interface
 @desc This module defines the MDI bundle and associated constraint functions
 for the 1000Base-T Ethernet standard.
 
