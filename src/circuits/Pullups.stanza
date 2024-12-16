@@ -69,7 +69,6 @@ public defn add-pulldown (elem:JITXObject, sig:JITXObject, rail:JITXObject) :
   inside pcb-module:
     add-puller(elem, sig, rail, false)
 
-val PULLUP_DEF_QB =  ResistorQuery(precision = (5 %))
 
 doc: \<DOC>
 Construct a pullup instance from an Instantiable
@@ -89,9 +88,9 @@ will create a 10k resistor for the pullup.
 @param inst-name? Name of the created instance. If no name is provided, we will
 use the Ref of the `sig` argument. For example, `netsw.C.IRQ_N` will be converted
 to `IRQ_N-pu`.
-@param qb? Optional Resistor query builder for the selection of the pullup resistor
-in the case that `elem-type?` is a `Double`. By default, the global query defaults are
-extended with `ResistorQuery(precision = (5 %))`.
+@param qb Optional Resistor query builder for the selection of the pullup resistor
+in the case that `elem-type?` is a `Double`. By default, `get-default-resistor-query()`
+is consulted if the user doesn't provide a query builder.
 @param make-public Determines if the created resistor instance will be defined
 with the `public` access modifier or not. By default, the component is defined as
 `private`
@@ -102,11 +101,10 @@ public defn insert-pullup (
   --
   elem-type:Instantiable|Double = 10.0e3,
   inst-name?:String|Symbol = ?,
-  qb?:ResistorQuery = ?,
+  qb:ResistorQuery = get-default-resistor-query(),
   make-public:True|False = false
   ) -> Instance:
   val inst-name = to-string $ value-or(inst-name?, "%_-pu" % [get-ref-name $ ref(sig)])
-  val qb = value-or(qb?, PULLUP_DEF_QB)
 
   inside pcb-module:
     val et = match(elem-type):
@@ -135,9 +133,9 @@ default.
 @param inst-name? Optional name of the created instance. If no name is provided, we will
 use the Ref name of the `sig` argument. For example, `netsw.C.IRQ_N` will be converted
 to `IRQ_N-pu`.
-@param qb? Optional Resistor query builder for the selection of the pullup resistor
-in the case that `elem-type?` is a `Double`. By default, the global query defaults are
-extended with `ResistorQuery(precision = (5 %))`.
+@param qb Optional Resistor query builder for the selection of the pullup resistor
+in the case that `elem-type?` is a `Double`. By default, `get-default-resistor-query()`
+is consulted if the user doesn't provide a query builder.
 @param make-public Determines if the created resistor instance will be defined
 with the `public` access modifier or not. By default, the component is defined as
 `private`
@@ -148,11 +146,10 @@ public defn insert-pulldown (
   --
   elem-type:Instantiable|Double = 10.0e3,
   inst-name?:String|Symbol = ?,
-  qb?:ResistorQuery = ?,
+  qb:ResistorQuery = get-default-resistor-query(),
   make-public:True|False = false
   ) -> Instance:
   val inst-name = to-string $ value-or(inst-name?, "%_-pd" % [get-ref-name $ ref(sig)])
-  val qb = value-or(qb?, PULLUP_DEF_QB)
 
   inside pcb-module:
     val et = match(elem-type):
