@@ -377,7 +377,7 @@ public defn get-layers (vp:VirtualLP, offset:Pose = loc(0.0, 0.0)) -> Tuple<Laye
   to-tuple $ cat(local-art, kid-art)
 
 doc: \<DOC>
-Retrieve Geoemtry for all including pads
+Retrieve Geometry for all including pads
 
 This function recursively finds all of the shapes on all artwork and pads
 in the scene graph. It then returns them as `LayerShape` objects.
