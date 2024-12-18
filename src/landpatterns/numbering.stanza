@@ -45,8 +45,8 @@ doc: \<DOC>
 Null Numbering Object
 
 This is a default object for creating packages that don't require
-any pad numbering. These landpatterns may not contain any pads to
-number.
+any pad numbering. These landpatterns will likely not have any
+pads to number.
 <DOC>
 public defstruct NullNumbering <: Numbering
 defmethod to-pad-id (n:NullNumbering, row:Int, column:Int) -> Int|Ref:
