@@ -562,6 +562,37 @@ public defn add-thermal-pad (
     val pd-def = smd-thermal-pad(tp)
     append(vp, VirtualPad(pad-id, pd-def, pose, class = cls))
 
+doc: \<DOC>
+Add a non-plated hole
+
+Non-plated holes can't be pads so we need special
+handling.
+
+@param vp Virtual Landpattern Scene Graph
+@param hole Hole shape for the non-plated hole. Doesn't have to be 
+a Circle/Capsule - could be any rout-able shape.
+@param mask Soldermask opening. This can be either a `Shape` or 
+a expansion amount. If a `Shape`, then we use it directly.
+If this value is a `Double`, then we use this to expand around
+the `hole` by this many mm. Default is based on the `SolderMaskRegistration` in 
+the current rule set.
+@param pose Location for the cutout in the `vp` node. Default is `loc(0.0, 0.0)`
+<DOC>
+public defn add-non-plated-hole (
+  vp:VirtualLP
+  --
+  hole:Shape,
+  mask:Shape|Double = clearance(current-rules(), SolderMaskRegistration)
+  pose:Pose = loc(0.0, 0.0)
+) :
+  val mask-sh = match(mask):
+    (d:Double): expand(hole, d)
+    (sh:Shape): sh
+
+  add-cutout(vp, pose * hole)
+  add-artwork(vp, SolderMask(Top), pose * mask-sh)
+  add-artwork(vp, SolderMask(Bottom), pose * mask-sh)
+
 
 doc: \<DOC>
 Create a reference designator in the current virtual landpattern
