@@ -268,11 +268,18 @@ public defn Quad-Package (
     density-level
   )
 
-public defmethod build-pads (
+doc: \<DOC>
+Quad Package Pad Builder
+
+This function generates the `VirtualPad` instances
+for the Quad derived packages. It is separate from
+the `build-pads` defmethod so that it can be called
+explicitly in derived types.
+<DOC>
+public defn Quad-build-pads (
   pkg:Quad-Package
   vp:VirtualLP
   ) -> False :
-
   val profile = lead-profile(pkg)
   val num-scheme = lead-numbering(pkg)
   val pad-planner = pad-planner(pkg)
@@ -323,7 +330,11 @@ public defmethod build-pads (
   if thermal-lead?(pkg) is-not False:
       add-thermal-pad(vp, num-leads(pkg) + 1, thermal-lead?(pkg))
 
-
+public defmethod build-pads (
+  pkg:Quad-Package
+  vp:VirtualLP
+  ) -> False :
+  Quad-build-pads(pkg, vp)
 
 doc: \<DOC>
 Quad Grid Planner
