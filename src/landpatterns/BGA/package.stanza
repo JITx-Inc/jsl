@@ -18,15 +18,11 @@ defpackage jsl/landpatterns/BGA/package:
   import jsl/landpatterns/grid-planner
 
 doc: \<DOC>
-@title Ball Grid Array Package
-@desc The BGA package use a 2-D grid of rows (letters) and
-columns (integers). The grid is typically delineated in row-major order.
-@member num-leads Total number of leads for the BGA Grid
-@member lead-diam BGA Ball Lead Diameter in mm
-@member package-body Component body physical representation.
-@member pad-planner Pad Planner for the BGA package
-@member lead-numbering Lead Numbering Scheme for the BGA Package
-@member density-level Density Level for the Generated Package
+@title BGA package definition
+@desc The BGA package use a 2-D grid of rows (letters) and columns (integers). The grid
+is typically delineated in row-major order. This constructor is used for the case where the
+number of leads, lead diameter, package body, pad planner, lead numbering, and density level
+are specified.
 
 @snippet A simple BGA package
 ```stanza
@@ -35,12 +31,13 @@ columns (integers). The grid is typically delineated in row-major order.
   val cols = 3
   val grid = Grid-Numbering(rows, cols)
   val pitch = 0.5
+  val dl = DensityLevelB
 
   val planner = Full-Matrix-Planner(
     pad-config = PadConfig-D(
       copper-D-adj = ipc-bga-copper(
         NonSolderMaskDefined,
-        density-level = DensityLevelC
+        density-level = dl
         ),
       mask-D-adj = 0.0,
     ),
@@ -61,35 +58,31 @@ columns (integers). The grid is typically delineated in row-major order.
     package-body = body,
     lead-numbering = grid,
     pad-planner = planner,
-    density-level = DensityLevelB
+    density-level = dl
   )
 ```
 <DOC>
 public defstruct BGA <: Package :
   doc: \<DOC>
-  @title num-leads
-  @desc Total number of leads for the BGA Grid
+  @desc Total number of leads for the BGA package. Must be positive.
   <DOC>
   num-leads:Int with: (
     ensure => ensure-positive!,
     as-method => true
   )
   doc: \<DOC>
-  @title lead-diam
-  @desc BGA Ball Lead Diameter in mm
+  @desc BGA ball lead diameter in millimeters (mm). Must be positive.
   <DOC>
   lead-diam:Double with: (
     ensure => ensure-positive!,
   )
 
   doc: \<DOC>
-  @title package-body
-  @desc Package Body for the BGA.
+  @desc Package body definition for the BGA.
   <DOC>
   package-body:PackageBody with: (as-method => true)
 
   doc: \<DOC>
-  @title pad-planner
   @desc The planner determines which pads will be created in the
   grid. See {@link PadPlanner} and {@link GridPlanner} for more info.
   This interface will define the pitch (distance between balls) and
@@ -98,14 +91,14 @@ public defstruct BGA <: Package :
   pad-planner:PadPlanner with: (as-method => true)
 
   doc: \<DOC>
-  @title lead-numbering
   @desc The lead numbering scheme determines the order of the leads in the grid.
   <DOC>
   lead-numbering:Numbering with: (as-method => true)
 
   doc: \<DOC>
-  @title density-level
-  @desc The density level determines the amount of space between the balls.
+  @desc Indication of board density and determines
+  whether minimum, nominal, and maximum material conditions are
+  used. Board density level as defined in IPC 7351B (DensityLevelA, DensityLevelB, DensityLevelC).
   <DOC>
   density-level:DensityLevel with: (as-method => true)
 with:
@@ -114,43 +107,11 @@ with:
   constructor => #BGA
 
 doc: \<DOC>
-@title BGA Package Constructor
 @desc The function constructs a Full Matrix BGA by default
-using the passed arguments. For more control over
-the pads and numbering, use the other constructor
-variant.
-
-@param num-leads Total number of lead placements assuming
-all leads are present.
-@param rows Number of rows of ball leads (Y dimension)
-@param columns Number of columns of ball leads (X dimension)
-@param lead-diam Size of the BGA ball lead.
-@param pitch Ball Spacing
-@param package-body Component body physical representation.
-@param density-level Density Level for the Generated Package
-
-@snippet An alternate way to define a simple BGA package
-```stanza
-  ; NSMD
-  val rows = 3
-  val cols = 3
-  val pitch = 0.5
-  val body = PackageBody(
-    width = 2.0 +/- 0.1,
-    length = 2.0 +/- 0.1,
-    height = 0.71 +/- [0.06, 0.0]
-  )
-
-  val pkg = BGA(
-    num-leads = 9,
-    rows = rows,
-    columns = cols,
-    lead-diam = 0.3,
-    pitch = pitch,
-    package-body = body,
-    density-level = DensityLevelB
-  )
-```
+using the passed arguments. This constructor is used for
+the case where the number of leads, rows, columns, lead
+diameter, lead pitch, package body and density level are
+specified.
 <DOC>
 public defn BGA (
   --
@@ -177,43 +138,10 @@ public defn BGA (
   )
 
 doc: \<DOC>
-@title BGA Package Constructor
-@desc This function constructs a BGA package with the passed arguments.
-@param num-leads Total number of leads for the BGA Grid
-@param lead-diam BGA Ball Lead Diameter in mm
-@param package-body Component body physical representation.
-@param pad-planner Pad Planner for the BGA package
-@param lead-numbering Lead Numbering Scheme for the BGA Package
-@param density-level Density Level for the Generated Package
-
-@snippet A simple BGA package
-```stanza
-  ; NSMD
-  val rows = 3
-  val cols = 3
-  val pitch = 0.5
-
-  val body = PackageBody(
-    width = 2.0 +/- 0.1,
-    length = 2.0 +/- 0.1,
-    height = 0.71 +/- [0.06, 0.0]
-  )
-  val grid = Grid-Numbering(rows, cols)
-  val planner = Full-Matrix-Planner(
-    rows = rows,
-    columns = cols,
-    pitch = pitch
-  )
-
-  val pkg = BGA(
-    num-leads = 9,
-    lead-diam = 0.3,
-    package-body = body,
-    pad-planner = planner,
-    lead-numbering = grid,
-    density-level = DensityLevelB
-  )
-```
+@desc This function constructs a BGA package with the passed arguments. 
+This constructor is used for the case where the
+number of leads, lead diameter, package body, pad planner, lead numbering, and density level
+are specified.
 <DOC>
 public defn BGA (
   --
@@ -234,17 +162,18 @@ public defn BGA (
   )
 
 doc: \<DOC>
-@title Get BGA Planner
-@desc This function returns the planner for the BGA package.
-@param bga BGA Package
+@desc This function returns the planner object for the BGA package.
+@param bga BGA package
+@return BGA-PadPlanner object
 <DOC>
 public defn get-bga-planner (bga:BGA) -> BGA-PadPlanner:
   pad-planner(bga) as BGA-PadPlanner
 
 doc: \<DOC>
-@title BGA Name
-@desc This function returns the name of the BGA package.
-@param bga BGA Package
+@desc This function returns the name of the BGA package calculated from the
+number of leads, pitch, grid size, and package body dimensions.
+@param bga BGA package
+@return Name of the BGA package as a string
 <DOC>
 public defmethod name (bga:BGA) -> String:
   defn to-deci (v:Double) -> String:
@@ -274,9 +203,9 @@ public defmethod name (bga:BGA) -> String:
   ])
 
 doc: \<DOC>
-@title BGA Court Yard Excess
 @desc This function returns the amount of excess space around the BGA package based on the density level.
-@param bga BGA Package
+@param bga BGA package
+@return Excess space in millimeters (mm)
 <DOC>
 public defmethod courtyard-excess (pkg:BGA) -> Double :
   ; From IPC 7351B Table 3-17
@@ -286,10 +215,9 @@ public defmethod courtyard-excess (pkg:BGA) -> Double :
     DensityLevelC: 0.5
 
 doc: \<DOC>
-@title Build Vpads
 @desc This function builds the virtual pads for the BGA package.
-@param pkg BGA Package
-@param vp Virtual Land Pattern
+@param pkg BGA package
+@param vp Virtual landpattern
 <DOC>
 public defn build-vpads (
   pkg:BGA,
@@ -307,13 +235,11 @@ public defn build-vpads (
     lead-grid = planner,
     num-scheme = lead-numbering(pkg)
   )
-
   append-all(vp, pad-seq)
 
 doc: \<DOC>
-@title Build Pads
-@desc This function builds the pads for the BGA package using a virtual land pattern.
-@param pkg BGA Package
+@desc This function builds the pads for the BGA package in the virtual landpattern.
+@param pkg BGA package
 @param vp Virtual Land Pattern
 <DOC>
 public defmethod build-pads (
@@ -323,13 +249,12 @@ public defmethod build-pads (
   build-vpads(pkg, vp)
 
 doc: \<DOC>
-@title Compute Overall Outline
-@desc This function computes the overall outline for the BGA package.
-@param vp Virtual Land Pattern
-@param body Package Body
-@param density-level Density Level
-@param line-width Silkscreen Line Width
-@param mask-clearance Mask Clearance
+@desc This function computes the overall outline for the BGA package using the virtual
+landpattern.
+@param vp Virtual landpattern
+@param body Package body
+@param density-level Board density level (DensityLevelA, DensityLevelB, DensityLevelC)
+@return LineRectangle object of the overall outline
 <DOC>
 public defn compute-overall-outline (
   vp:VirtualLP,
@@ -348,11 +273,10 @@ public defn compute-overall-outline (
   LineRectangle(overall, line-width = line-width)
 
 doc: \<DOC>
-@title Build BGA Pad Outline
-@desc This function builds the outline for the BGA package.
-@param vp Virtual Land Pattern
-@param body Package Body
-@param density-level Density Level
+@desc This function builds the outline for the BGA package in the virtual landpattern.
+@param vp Virtual landpattern
+@param body Package body
+@param density-level Board density level (DensityLevelA, DensityLevelB, DensityLevelC)
 <DOC>
 public defn build-outline (
   vp:VirtualLP,
@@ -363,13 +287,12 @@ public defn build-outline (
   add-artwork(vp, Silkscreen("outline", Top), outline, class = "outline")
 
 doc: \<DOC>
-@title Build BGA Pin 1 Marker
-@desc This function builds the pin 1 marker for the BGA package.
-@param vp Virtual Land Pattern
+@desc This function builds the pin 1 marker for the BGA package in the virtual landpattern.
+@param vp Virtual landpattern
 @param pin-1-id Pin 1 ID
 @param side Side (Top, Right, Bottom, Left)
-@param line-width Silkscreen Line Width
-@param mask-clearance SolderMask Clearance
+@param line-width Silkscreen line width in mm
+@param mask-clearance SolderMask clearance in mm
 <DOC>
 public defn build-pin-1-marker (
   vp:VirtualLP
@@ -404,9 +327,8 @@ public defn build-pin-1-marker (
     )
 
 doc: \<DOC>
-@title Build BGA Silkscreen Artwork
-@desc This function builds the silkscreen artwork for the BGA package.
-@param pkg BGA Package
+@desc This function builds the silkscreen artwork for the BGA package in the virtual landpattern.
+@param pkg BGA package
 @param vp Virtual Land Pattern
 <DOC>
 public defmethod build-silkscreen (
