@@ -28,13 +28,13 @@ configurations, including:
 doc: \<DOC>
 @desc BGA Pad Type - SMD vs NSMD
 
-SMD (SolderMaskDefined):
+@member SolderMaskDefined
 - Soldermask opening is smaller than copper pad
 - Better for fine pitch BGAs (<0.5mm)
 - Provides better pad adhesion
 - Also called "Non-Collapsible"
 
-NSMD (NonSolderMaskDefined): 
+@member NonSolderMaskDefined
 - Soldermask opening is larger than copper pad
 - Better for larger pitch BGAs
 - Provides better solder joint reliability

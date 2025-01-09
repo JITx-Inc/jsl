@@ -204,7 +204,7 @@ public defmethod name (bga:BGA) -> String:
 
 doc: \<DOC>
 @desc This function returns the amount of excess space around the BGA package based on the density level.
-@param bga BGA package
+@param pkg BGA package
 @return Excess space in millimeters (mm)
 <DOC>
 public defmethod courtyard-excess (pkg:BGA) -> Double :
