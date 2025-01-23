@@ -24,31 +24,6 @@ pcb-module pcie-example :
 
   val b-cap = block-cap(220.0e-9)
 
-  ; Construct a typical passive connector setup
-  ;  for a 2 lane configuration. This means a
-  ;  straight through `tx => tx` and `rx => rx`
-  ;  configuration.
-
-  require src-ep : pcie(2) from dut1
-  require dst-ep : pcie(2) from dut2
-
-  within [src, dst] = constrain-topology(src-ep, dst-ep, cst):
-    ; Here we construct the circuit topology for the link
-    ;   Note that we don't need to worry about any of the constraint
-    ;   application, as that is handled by the `PCIe-Constraint` type.
-    ;   You can add other components in the topology as you wish - below
-    ;   is a typical basic implementation.
-    for i in indices(src.data.lane) do:
-      inst tx-coupler : dp-coupler(b-cap)
-      topo-pair(src.data.lane[i].TX => tx-coupler => dst.data.lane[i].TX)
-      ; No Blocking Caps on the Receive side.
-      topo-net(src.data.lane[i].RX => dst.data.lane[i].RX)
-
-    topo-net(src.data.refclk => dst.data.refclk)
-    ; The control signals do not demand a topology so
-    ;  we just use a straight net connection.
-    net (src.control, dst.control)
-
   ; Setup an example of an active to active connection between
   ;  two ICs (ie not to a connector). In this case, we need
   ;  a null-modem style connection and blocking caps on both rx and

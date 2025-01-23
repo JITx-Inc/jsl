@@ -82,11 +82,19 @@ public defn PCIe-enum-to-int (en:PCIeWidth) -> Int:
     PCIe-x8  :  8
     PCIe-x16 : 16
     PCIe-x32 : 32
+
 doc: \<DOC>
-@member PCIe-PRSNT#
+Optional PCIe Control Pin Enum
+@member PCIe-PRSNT# Hot-plug (Presences) detection
+@member PCIe-WAKE# Device Wake
+@member PCIe-PERST# Reset
+@member PCIe-CLKREQ# Clock Request
 <DOC>
 public pcb-enum jsl/bundles/pcie/PCIePins :
   PCIe-PRSNT#
+  PCIe-WAKE#
+  PCIe-PERST#
+  PCIe-CLKREQ#
 
 doc: \<DOC>
 @brief PCI-e Bundle
@@ -106,6 +114,38 @@ and it also includes a refclk (100MHz) differential pair
 public defn pcie (lanes:Int, opt-pins:PCIePins ...) :
   pcie-b(lanes, opt-pins)
 
+; Common Control signals - minus Presence. 
+val COMMON_CTL = [PCIe-WAKE#, PCIe-PERST#, PCIe-CLKREQ#]
+
+doc: \<DOC>
+Construct an N-lane PCIe Bundle with Standard Control Signals
+
+The default control signal set is:
+
+*  PCIe-WAKE#
+*  PCIe-PERST#
+*  PCIe-CLKREQ#
+
+But doesn't include presence / hotplug detection. See
+{@link pcie-with-hotplug}
+
+@return PCIe `pcb-bundle` definition
+<DOC>
+public defn pcie-std (lanes:Int):
+  pcie-b(lanes, COMMON_CTL)
+
+public defn pcie-with-hotplug (lanes:Int):
+  pcie-b(lanes, to-tuple $ cat(COMMON_CTL, [PCIe-PRSNT#]))
+
+doc: \<DOC>
+Parametric PCIe Bundle Definition
+
+@param lanes Number of {@link lane-pair} sets for the `data` interface
+@param opt-pins Set of optional control pins to construct.
+
+@member control PCIe Control bundle controlled by `opt-pins`
+@member data PCIe Data bundle
+<DOC>
 public pcb-bundle pcie-b (lanes:Int, opt-pins:Collection<PCIePins>) :
   name = "PCI-e"
   description = "PCI-e Serial Communications Link"
@@ -117,34 +157,71 @@ doc: \<DOC>
 The Data bundle consists of a number (1 or more) of RX and TX pairs (1 RX/TX pair set = 1 lane)
 and it also includes a refclk (100MHz) differential pair.
 @param lanes The number of lanes in the bundle.
-@member rx The receive diff-pair (# of lanes wide)
-@member tx The transmit diff-pair (# of lanes wide)
+@member lane An array of {@link lane-pair} ports
+@member refclk Reference Clock, typically 100MHz
 <DOC>
-
 public pcb-bundle pcie-data (lanes:Int) :
   name = "PCI-e Data"
   description = "PCI-e Serial Communications Link Data"
   port lane : lane-pair[lanes]
   port refclk : diff-pair
 
+doc: \<DOC>
+PCIe Control Bundle
+
+Note that all pins are optional because there are common 
+cases where control pins are shared across bundles. By allowing
+them to be configured - we can create sub-set bundles that
+are often useful when doing pin assignment.
+
+@member PRSNT# HotPlug / Presence detection
+@member PEWAKE# Wake signal
+@member PERST# Reset signal
+@member CLKREQ# Clock Request signal
+<DOC>
 pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   name = "PCI-e Control"
   description = "PCI-e Serial Communications Link Control"
-  port PEWAKE#
-  port PERST#          ; PCI-E Reset signal
-  port CLKREQ#         ; clock request
   for p in pins do :
     switch(p) :
-      PCIe-PRSNT# : make-port(`PRSNT#) ; hot plug detection
+      PCIe-PRSNT# : make-port(`PRSNT#)    ; hot plug detection
+      PCIe-WAKE# : make-port(`PEWAKE#)
+      PCIe-PERST# : make-port(`PERST#)    ; PCI-E Reset signal
+      PCIe-CLKREQ# : ,make-port(`CLKREQ#) ; clock request
+
+
+public defn has-PEWAKE# (b:Bundle) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "PEWAKE#")
+
+public defn has-PERST# (b:Bundle) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "PERST#")
+
+public defn has-PRSNT# (b:Bundle) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "PRSNT#")
+
+public defn has-CLKREQ# (b:Bundle) -> True|False :
+  for p in pins(b) any? :
+    val refName = to-string $ ref(p)
+    suffix?(refName, "CLKREQ#")
 
 doc: \<DOC>
 @brief PCI-e Control bundle
 PCI-e is a serial communication supporting high speed data links
+
+All signal pins of the control bundle are optional and controlled by
+the `pins` set.
+
 @param pins An optional set of pins to be implemented in the control bundle
-@member PEWAKE#
-@member PERST#
-@member CLKREQ#
-@member PRSNT# Optional signal
+@member PRSNT# HotPlug / Presence detection
+@member PEWAKE# Wake signal
+@member PERST# Reset signal
+@member CLKREQ# Clock Request signal
 <DOC>
 
 public defn pcie-control (pins:Collection<PCIePins>) :

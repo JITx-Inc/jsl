@@ -139,7 +139,7 @@ public pcb-module module :
 
   public inst sw : component
 
-  val bd-4x = pcie(4)
+  val bd-4x = pcie-std(4)
   supports bd-4x :
     for i in 0 to 4 do :
       bd-4x.data.lane[i].RX.P => sw.PRXP[i]
@@ -153,7 +153,7 @@ public pcb-module module :
     bd-4x.control.PERST#  => sw.PERST#[0]
     bd-4x.control.CLKREQ# => sw.GPIO[1]
 
-  val bd-4x-prsnt = pcie(4, PCIe-PRSNT#)
+  val bd-4x-prsnt = pcie-with-hotplug(4)
   supports bd-4x-prsnt :
     for i in 0 to 4 do :
       bd-4x-prsnt.data.lane[i].RX.P => sw.PRXP[i]
@@ -168,29 +168,58 @@ public pcb-module module :
     bd-4x-prsnt.control.PRSNT#  => sw.GPIO[12]
     bd-4x-prsnt.control.CLKREQ# => sw.GPIO[1]
 
+  ; For the PCIe-2X, I'm going to demonstrate
+  ;   how to use a shared port WAKE pin across
+  ;   the different. This is common situation where
+  ;   if we are not careful, we can run into an unsat
+  ;   condition. The key is to just not include the shared
+  ;   port in the pin assignment solution and backfill it
+  ;   in an external port where the fanout happens.
+
+  val pcie-2x-shared-wake = sw.GPIO[7]
   val ctls-2x = [
-    [sw.GPIO[6], sw.GPIO[12], sw.GPIO[1]]
-    [sw.GPIO[7], sw.GPIO[13], sw.GPIO[2]]
+    [pcie-2x-shared-wake, sw.GPIO[12], sw.GPIO[1]]
+    [pcie-2x-shared-wake, sw.GPIO[13], sw.GPIO[2]]
   ]
-  val bd-2x = pcie(2)
+  ; The internal bundle contains reset, and clock request
+  ;  but does not include the WAKE 
+  val bd-2x-int = pcie(2, PCIe-PERST#, PCIe-CLKREQ#)
   for j in 0 to 2 do:
-    supports bd-2x:
+    supports bd-2x-int:
       val ch-offset = (2 * j)
       for i in 0 to 2 do :
-        bd-2x.data.lane[i].RX.P => sw.PRXP[i + ch-offset]
-        bd-2x.data.lane[i].RX.N => sw.PRXN[i + ch-offset]
-        bd-2x.data.lane[i].TX.P => sw.PTXP[i + ch-offset]
-        bd-2x.data.lane[i].TX.N => sw.PTXN[i + ch-offset]
-      bd-2x.data.refclk.P => sw.REFCLKP[ch-offset]
-      bd-2x.data.refclk.N => sw.REFCLKN[ch-offset]
+        bd-2x-int.data.lane[i].RX.P => sw.PRXP[i + ch-offset]
+        bd-2x-int.data.lane[i].RX.N => sw.PRXN[i + ch-offset]
+        bd-2x-int.data.lane[i].TX.P => sw.PTXP[i + ch-offset]
+        bd-2x-int.data.lane[i].TX.N => sw.PTXN[i + ch-offset]
+      bd-2x-int.data.refclk.P => sw.REFCLKP[ch-offset]
+      bd-2x-int.data.refclk.N => sw.REFCLKN[ch-offset]
 
-      val [wake, present, clkreq] = ctls-2x[j]
+      val [_, present, clkreq] = ctls-2x[j]
 
-      bd-2x.control.PEWAKE# => wake
-      bd-2x.control.PERST#  => sw.PERST#[ch-offset]
-      bd-2x.control.CLKREQ# => clkreq
+      bd-2x-int.control.PERST#  => sw.PERST#[ch-offset]
+      bd-2x-int.control.CLKREQ# => clkreq
 
-  val bd-2x-prsnt = pcie(2, PCIe-PRSNT#)
+  val bd-2x-ext = pcie-std(2)
+
+  ; The external interface for the PCIe with Shared Wake is different
+  ;   from the other interfaces because it has to be implemented as an
+  ;   externally facing port instead of a `supports` statement.
+  ;   Fortunately, it still takes advantage of pin assignment and hides
+  ;   the details of the connection but requires a different connection
+  ;   method at the top-level.
+  port pcie-2x : bd-2x-ext[2]
+
+  for pt in indices(pcie-2x) do:
+    net (pcie-2x[pt].control.PEWAKE#, pcie-2x-shared-wake)
+
+    require pt-int : bd-2x-int from self
+    topo-net(pcie-2x[pt].data => pt-int.data)
+    net (pcie-2x[pt].control.PERST#, pt-int.control.PERST#)
+    net (pcie-2x[pt].control.CLKREQ#, pt-int.control.CLKREQ#)
+
+
+  val bd-2x-prsnt = pcie-with-hotplug(2)
   for j in 0 to 2 do:
     supports bd-2x-prsnt:
       val ch-offset = (2 * j)
@@ -209,7 +238,7 @@ public pcb-module module :
       bd-2x-prsnt.control.PRSNT# => present
       bd-2x-prsnt.control.CLKREQ# => clkreq
 
-  val bd-1x = pcie(1)
+  val bd-1x = pcie-std(1)
   val ctls-1x = [
     [sw.GPIO[8], sw.GPIO[12], sw.GPIO[1]],
     [sw.GPIO[9], sw.GPIO[14], sw.GPIO[3]],
@@ -230,7 +259,7 @@ public pcb-module module :
       bd-1x.control.PEWAKE# => wake
       bd-1x.control.CLKREQ# => clkreq
 
-  val bd-1x-prsnt = pcie(1, PCIe-PRSNT#)
+  val bd-1x-prsnt = pcie-with-hotplug(1)
   for j in 0 to 4 do:
     supports bd-1x-prsnt:
       bd-1x-prsnt.data.lane[0].RX.P => sw.PRXP[j]

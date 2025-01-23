@@ -1,0 +1,155 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/pcie/pcie-conn :
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl
+
+; This is primarily just a placeholder for a 
+;  real PCIe connector.
+val SSOP-pkg = SOP(
+    num-leads = 32,
+    lead-profile = Lead-Profile(
+      span = min-max(6.2, 6.6),
+      pitch = 0.65,
+      lead = SOP-Lead(
+        length = min-max(0.5, 0.75),
+        width = min-max(0.19, 0.3)
+      )
+    ),
+    package-body = PackageBody(
+      width = min-max(4.3, 4.5)
+      length = min-max(4.9, 5.1)
+      height = min-max(1.0, 1.2)
+    ),
+    density-level = DensityLevelC
+  )
+
+
+
+public pcb-component component :
+  reference-prefix = "J"
+  mpn = "JITX002"
+  description = "Dummy PCIe Connector with multiple PCIe supports"
+
+  port REFCLK : diff-pair
+  port LANE : lane-pair[4]
+
+  pin-properties :
+    [pin:Ref    | pads:Int ... ]
+
+    [REFCLK.N       | 1 ]
+    [REFCLK.P       | 2 ]
+    [GND[0]         | 3 ]
+
+    [LANE[0].TX.P   | 4 ]
+    [LANE[0].TX.N   | 5 ]
+    [GND[1]         | 6 ]
+    [LANE[0].RX.P   | 7 ]
+    [LANE[0].RX.N   | 8 ]
+    [GND[2]         | 9 ]
+
+    [LANE[1].TX.P   | 10 ]
+    [LANE[1].TX.N   | 11 ]
+    [GND[3]         | 12 ]
+    [LANE[1].RX.P   | 13]
+    [LANE[1].RX.N   | 14 ]
+    [GND[4]         | 15 ]
+    [PRSNT#         | 16 ]
+
+    [GND[5]         | 17 ]
+    [LANE[2].TX.P   | 18 ]
+    [LANE[2].TX.N   | 19 ]
+    [GND[6]         | 20 ]
+    [LANE[2].RX.P   | 21 ]
+    [LANE[2].RX.N   | 22 ]
+    [GND[7]         | 23 ]
+
+    [LANE[3].TX.P   | 24 ]
+    [LANE[3].TX.N   | 25 ]
+    [GND[8]         | 26 ]
+    [LANE[3].RX.P   | 27 ]
+    [LANE[3].RX.N   | 28 ]
+    [GND[9]         | 29 ]
+
+    [PERST#         | 30 ]
+    [PEWAKE#        | 31 ]
+    [CLKREQ#        | 32 ]
+
+
+
+  val box = BoxSymbol(self)
+
+  set-side(Left, self.GND, self.PERST#, self.PEWAKE#, self.CLKREQ#, self.PRSNT#)
+  set-side(Right, self.LANE, self.REFCLK)
+
+  assign-symbol $ create-symbol(box)
+
+  val lp = create-landpattern(SSOP-pkg)
+  assign-landpattern(lp)
+
+
+  for i in 0 to 4 do :
+    diff-pin-model(self.LANE[i].TX.P, LANE[i].TX.N,       delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.LANE[i].RX.P, LANE[i].RX.N,       delay = typ(10.0e-15) loss = typ(0.1))
+
+  diff-pin-model(self.REFCLK.P, self.REFCLK.N, delay = typ(10.0e-15) loss = typ(0.1))
+
+
+doc: \<DOC>
+Helper function for creating the necessary PCIe Supports Statements
+
+The user must pass a bundle type, such as `pcie-std(<N>)` and
+this will construct a supports statement that will connect
+the bundle ports to the predefined `self.sw` instance of the 
+`compponent` connector.
+<DOC>
+defn connect_lanes (b:Bundle):
+  inside pcb-module:
+    supports b:
+      for i in indices(b.data.lane) do :
+        b.data.lane[i].RX.P => self.sw.LANE[i].RX.P
+        b.data.lane[i].RX.N => self.sw.LANE[i].RX.N
+        b.data.lane[i].TX.P => self.sw.LANE[i].TX.P
+        b.data.lane[i].TX.N => self.sw.LANE[i].TX.N
+      b.data.refclk.P => self.sw.REFCLK.P
+      b.data.refclk.N => self.sw.REFCLK.N
+
+      b.control.PEWAKE# => self.sw.PEWAKE#
+      b.control.PERST#  => self.sw.PERST#
+      b.control.CLKREQ# => self.sw.CLKREQ#
+
+      if has-PRSNT#(b):
+        b.control.PRSNT#  => self.sw.PRSNT#
+
+
+doc: \<DOC>
+PCIe Connector Module with Exposed Pin-Assigned PCIe ports
+
+User must use:
+
+```
+inst dut : jsl/examples/protocols/pcie/pcie-conn/module
+require pcie-1x:pcie-std(1) from dut
+```
+
+To access one of the PCIe interface.
+<DOC>
+public pcb-module module :
+
+  public inst sw : component
+
+  val bundle-types = [
+    pcie-std(4),
+    pcie-std(2),
+    pcie-std(1),
+    pcie-with-hotplug(4),
+    pcie-with-hotplug(2),
+    pcie-with-hotplug(1),
+  ]
+
+  for btype in bundle-types do:
+    connect_lanes(btype)
+
+
