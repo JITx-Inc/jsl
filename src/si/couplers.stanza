@@ -27,8 +27,18 @@ Example: Block Capacitors for SI transmitter
 adjacent to one another. The components will still be placed at the same X location,
 but the right component will be slid up (positive Y) by (y-skew/2). The left component
 will be slid down (negative Y) by (y-skew/2).
+@param pre-pose To support components that are not defined in JSL's standard 2-pin land pattern
+framework, the `pre-pose` argument can be used to modify the component placement
+before constructing the coupler structure. This pose modification is applied to both
+components equally. By default, this value is `loc(0.0, 0.0)`
 <DOC>
-public pcb-module dp-coupler (comp:Instantiable -- margin:Double = 0.0, y-skew:Double = 0.0) :
+public pcb-module dp-coupler (
+  comp:Instantiable 
+  -- 
+  margin:Double = 0.0, 
+  y-skew:Double = 0.0,
+  pre-pose:Pose = loc(0.0, 0.0)
+  ) :
   port A : diff-pair
   port B : diff-pair
 
@@ -49,12 +59,15 @@ public pcb-module dp-coupler (comp:Instantiable -- margin:Double = 0.0, y-skew:D
   ; This places these components such that they are directly adjacent
   ;  to each other. This assumes that the pads for the 2-pin component
   ;  are aligned vertically on the Y axis.
-  val cyard = get-courtyard-dims(comp)
+  val cyard-sh = pre-pose * get-courtyard-shape(comp)
+  val cyard = dims(cyard-sh)
+
   val x-off = (x(cyard) + margin) / 2.0
 
   val y2 = y-skew / 2.0
-  place(c[0]) at loc(x-off, y2) on Top
-  place(c[1]) at loc((- x-off), (- y2)) on Top
+
+  place(c[0]) at loc(x-off, y2) * pre-pose on Top
+  place(c[1]) at loc((- x-off), (- y2)) * pre-pose on Top
 
 doc: \<DOC>
 Construct Aligned Symmetric Shunt Components
