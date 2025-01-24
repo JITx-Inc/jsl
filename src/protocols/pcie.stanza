@@ -187,7 +187,7 @@ pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
       PCIe-PRSNT# : make-port(`PRSNT#)    ; hot plug detection
       PCIe-WAKE# : make-port(`PEWAKE#)
       PCIe-PERST# : make-port(`PERST#)    ; PCI-E Reset signal
-      PCIe-CLKREQ# : ,make-port(`CLKREQ#) ; clock request
+      PCIe-CLKREQ# : make-port(`CLKREQ#) ; clock request
 
 
 public defn has-PEWAKE# (b:Bundle) -> True|False :

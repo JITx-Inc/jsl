@@ -170,7 +170,7 @@ public pcb-module module :
 
   ; For the PCIe-2X, I'm going to demonstrate
   ;   how to use a shared port WAKE pin across
-  ;   the different. This is common situation where
+  ;   the different endpoints. This is common situation where
   ;   if we are not careful, we can run into an unsat
   ;   condition. The key is to just not include the shared
   ;   port in the pin assignment solution and backfill it
