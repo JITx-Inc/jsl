@@ -26,17 +26,19 @@ public pcb-component component :
   mpn = "JITX001"
   description = "Dummy device with multiple PCIe supports"
 
+  port REFCLK : diff-pair[4]
+
   pin-properties :
     [pin:Ref    | pads:Ref ... ]
 
-    [REFCLKN[0] | A[1] ]
-    [REFCLKP[0] | A[2] ]
-    [REFCLKP[1] | D[4] ]
-    [REFCLKN[1] | D[3] ]
-    [REFCLKP[2] | D[2] ]
-    [REFCLKN[2] | D[1] ]
-    [REFCLKP[3] | C[7] ]
-    [REFCLKN[3] | C[6] ]
+    [REFCLK[0].N | A[1] ]
+    [REFCLK[0].P | A[2] ]
+    [REFCLK[1].P | D[4] ]
+    [REFCLK[1].N | D[3] ]
+    [REFCLK[2].P | D[2] ]
+    [REFCLK[2].N | D[1] ]
+    [REFCLK[3].P | C[7] ]
+    [REFCLK[3].N | C[6] ]
 
     [PTXP[0]    | B[3] ]
     [PTXN[0]    | B[2] ]
@@ -104,7 +106,7 @@ public pcb-component component :
   set-side(Right, self.PTXP, self.PTXN, self.PRXP, self.PRXN)
 
   set-bank(ctl-r, self.GPIO, self.PERST#)
-  set-bank(ctl-r, self.REFCLKP, self.REFCLKN)
+  set-bank(ctl-r, self.REFCLK)
 
   set-group("reset-grp", self.PERST#)
 
@@ -115,10 +117,10 @@ public pcb-component component :
 
   for i in 0 to 4 do:
     val  name = to-string $ "ref-clk-%_" % [i]
-    set-group(name, self.REFCLKP[i], self.REFCLKN[i] )
+    set-group(name, self.REFCLK[i].P, self.REFCLK[i].N )
     set-head-margin(box, 0.5, name)
 
-  set-side(Right, self.REFCLKP, self.REFCLKN)
+  set-side(Right, self.REFCLK)
 
   assign-symbols(
     ctl-r => box,
@@ -132,41 +134,83 @@ public pcb-component component :
   for i in 0 to 4 do :
     diff-pin-model(self.PRXP[i], self.PRXN[i],       delay = typ(10.0e-15) loss = typ(0.1))
     diff-pin-model(self.PTXP[i], self.PTXN[i],       delay = typ(10.0e-15) loss = typ(0.1))
-    diff-pin-model(self.REFCLKP[i], self.REFCLKN[i], delay = typ(10.0e-15) loss = typ(0.1))
+    diff-pin-model(self.REFCLK[i].P, self.REFCLK[i].N, delay = typ(10.0e-15) loss = typ(0.1))
+
+
+
+defn connect_lanes (
+  b:Bundle, 
+  ref_clk:JITXObject, 
+  ctl_lines:[JITXObject, JITXObject, JITXObject], 
+  present:JITXObject|False,
+  --
+  ch-offset:Int = 0
+  ):
+  val [wake, reset, clkreq] = ctl_lines
+  inside pcb-module:
+    supports b:
+      for i in indices(b.data.lane) do :
+        b.data.lane[i].RX.P => self.sw.PRXP[i + ch-offset]
+        b.data.lane[i].RX.N => self.sw.PRXN[i + ch-offset]
+        b.data.lane[i].TX.P => self.sw.PTXP[i + ch-offset]
+        b.data.lane[i].TX.N => self.sw.PTXN[i + ch-offset]
+      b.data.refclk.P => ref_clk.P
+      b.data.refclk.N => ref_clk.N
+
+      if has-PEWAKE#(b):
+        b.control.PEWAKE# => wake
+      if has-PERST#(b):
+        b.control.PERST#  => reset
+      if has-CLKREQ#(b):
+        b.control.CLKREQ# => clkreq
+
+      if has-PRSNT#(b):
+        match(present):
+          (_:False):
+            throw $ ValueError("Missing Present Connection - Passed False")
+          (p:JITXObject):
+            b.control.PRSNT#  => p
 
 
 public pcb-module module :
 
   public inst sw : component
 
-  val bd-4x = pcie-std(4)
-  supports bd-4x :
-    for i in 0 to 4 do :
-      bd-4x.data.lane[i].RX.P => sw.PRXP[i]
-      bd-4x.data.lane[i].RX.N => sw.PRXN[i]
-      bd-4x.data.lane[i].TX.P => sw.PTXP[i]
-      bd-4x.data.lane[i].TX.N => sw.PTXN[i]
-    bd-4x.data.refclk.P => sw.REFCLKP[0]
-    bd-4x.data.refclk.N => sw.REFCLKN[0]
+  ;;;;;;;;;;;;;;;;;;;;;;;
+  ; PCIe 4x
+  ;;;;;;;;;;;;;;;;;;;;;;;
 
-    bd-4x.control.PEWAKE# => sw.GPIO[5]
-    bd-4x.control.PERST#  => sw.PERST#[0]
-    bd-4x.control.CLKREQ# => sw.GPIO[1]
+
+  val bd-4x = pcie-std(4)
+  connect_lanes(bd-4x, self.sw.REFCLK[0], [sw.GPIO[5], sw.PERST#[0], sw.GPIO[1]], false)
+
 
   val bd-4x-prsnt = pcie-with-hotplug(4)
-  supports bd-4x-prsnt :
-    for i in 0 to 4 do :
-      bd-4x-prsnt.data.lane[i].RX.P => sw.PRXP[i]
-      bd-4x-prsnt.data.lane[i].RX.N => sw.PRXN[i]
-      bd-4x-prsnt.data.lane[i].TX.P => sw.PTXP[i]
-      bd-4x-prsnt.data.lane[i].TX.N => sw.PTXN[i]
-    bd-4x-prsnt.data.refclk.P => sw.REFCLKP[0]
-    bd-4x-prsnt.data.refclk.N => sw.REFCLKN[0]
+  connect_lanes(bd-4x-prsnt, self.sw.REFCLK[0], [sw.GPIO[5], sw.PERST#[0], sw.GPIO[1]], sw.GPIO[12])
 
-    bd-4x-prsnt.control.PEWAKE# => sw.GPIO[5]
-    bd-4x-prsnt.control.PERST#  => sw.PERST#[0]
-    bd-4x-prsnt.control.PRSNT#  => sw.GPIO[12]
-    bd-4x-prsnt.control.CLKREQ# => sw.GPIO[1]
+  ;;;;;;;;;;;;;;;;;;;;;;;
+  ; PCIe 1x
+  ;;;;;;;;;;;;;;;;;;;;;;;
+
+  val bd-1x = pcie-std(1)
+  val bd-1x-prsnt = pcie-with-hotplug(1)
+
+  val ctls-1x = [
+    [sw.GPIO[8], sw.PERST#[0], sw.GPIO[1]],
+    [sw.GPIO[9], sw.PERST#[1], sw.GPIO[3]],
+    [sw.GPIO[10], sw.PERST#[2], sw.GPIO[2]],
+    [sw.GPIO[11], sw.PERST#[3], sw.GPIO[4]],
+  ]
+
+  for j in 0 to 4 do:
+    connect_lanes(bd-1x, self.sw.REFCLK[j], ctls-1x[j], false, ch-offset = j)
+    connect_lanes(bd-1x-prsnt, self.sw.REFCLK[j], ctls-1x[j], sw.GPIO[12 + j], ch-offset = j)
+
+
+
+  ;;;;;;;;;;;;;;;;;;;;;;;
+  ; PCIe 2x
+  ;;;;;;;;;;;;;;;;;;;;;;;
 
   ; For the PCIe-2X, I'm going to demonstrate
   ;   how to use a shared port WAKE pin across
@@ -178,27 +222,17 @@ public pcb-module module :
 
   val pcie-2x-shared-wake = sw.GPIO[7]
   val ctls-2x = [
-    [pcie-2x-shared-wake, sw.GPIO[12], sw.GPIO[1]]
-    [pcie-2x-shared-wake, sw.GPIO[13], sw.GPIO[2]]
+    [pcie-2x-shared-wake, sw.PERST#[0], sw.GPIO[1]]
+    [pcie-2x-shared-wake, sw.PERST#[2], sw.GPIO[2]]
   ]
   ; The internal bundle contains reset, and clock request
   ;  but does not include the WAKE 
   val bd-2x-int = pcie(2, PCIe-PERST#, PCIe-CLKREQ#)
+
   for j in 0 to 2 do:
-    supports bd-2x-int:
-      val ch-offset = (2 * j)
-      for i in 0 to 2 do :
-        bd-2x-int.data.lane[i].RX.P => sw.PRXP[i + ch-offset]
-        bd-2x-int.data.lane[i].RX.N => sw.PRXN[i + ch-offset]
-        bd-2x-int.data.lane[i].TX.P => sw.PTXP[i + ch-offset]
-        bd-2x-int.data.lane[i].TX.N => sw.PTXN[i + ch-offset]
-      bd-2x-int.data.refclk.P => sw.REFCLKP[ch-offset]
-      bd-2x-int.data.refclk.N => sw.REFCLKN[ch-offset]
+    val ch-offset = (2 * j)
+    connect_lanes(bd-2x-int, sw.REFCLK[ch-offset], ctls-2x[j], false, ch-offset = ch-offset)
 
-      val [_, present, clkreq] = ctls-2x[j]
-
-      bd-2x-int.control.PERST#  => sw.PERST#[ch-offset]
-      bd-2x-int.control.CLKREQ# => clkreq
 
   val bd-2x-ext = pcie-std(2)
 
@@ -219,59 +253,4 @@ public pcb-module module :
     net (pcie-2x[pt].control.CLKREQ#, pt-int.control.CLKREQ#)
 
 
-  val bd-2x-prsnt = pcie-with-hotplug(2)
-  for j in 0 to 2 do:
-    supports bd-2x-prsnt:
-      val ch-offset = (2 * j)
-      for i in 0 to 2 do :
-        bd-2x-prsnt.data.lane[i].RX.P => sw.PRXP[i + ch-offset]
-        bd-2x-prsnt.data.lane[i].RX.N => sw.PRXN[i + ch-offset]
-        bd-2x-prsnt.data.lane[i].TX.P => sw.PTXP[i + ch-offset]
-        bd-2x-prsnt.data.lane[i].TX.N => sw.PTXN[i + ch-offset]
-      bd-2x-prsnt.data.refclk.P => sw.REFCLKP[ch-offset]
-      bd-2x-prsnt.data.refclk.N => sw.REFCLKN[ch-offset]
-
-      val [wake, present, clkreq] = ctls-2x[j]
-
-      bd-2x-prsnt.control.PEWAKE# => wake
-      bd-2x-prsnt.control.PERST#  => sw.PERST#[ch-offset]
-      bd-2x-prsnt.control.PRSNT# => present
-      bd-2x-prsnt.control.CLKREQ# => clkreq
-
-  val bd-1x = pcie-std(1)
-  val ctls-1x = [
-    [sw.GPIO[8], sw.GPIO[12], sw.GPIO[1]],
-    [sw.GPIO[9], sw.GPIO[14], sw.GPIO[3]],
-    [sw.GPIO[10], sw.GPIO[13], sw.GPIO[2]],
-    [sw.GPIO[11], sw.GPIO[15], sw.GPIO[4]],
-  ]
-  for j in 0 to 4 do:
-    supports bd-1x:
-      bd-1x.data.lane[0].RX.P => sw.PRXP[j]
-      bd-1x.data.lane[0].RX.N => sw.PRXN[j]
-      bd-1x.data.lane[0].TX.P => sw.PTXP[j]
-      bd-1x.data.lane[0].TX.N => sw.PTXN[j]
-      bd-1x.data.refclk.P => sw.REFCLKP[j]
-      bd-1x.data.refclk.N => sw.REFCLKN[j]
-
-      val [wake, present, clkreq] = ctls-1x[j]
-      bd-1x.control.PERST#  => sw.PERST#[j]
-      bd-1x.control.PEWAKE# => wake
-      bd-1x.control.CLKREQ# => clkreq
-
-  val bd-1x-prsnt = pcie-with-hotplug(1)
-  for j in 0 to 4 do:
-    supports bd-1x-prsnt:
-      bd-1x-prsnt.data.lane[0].RX.P => sw.PRXP[j]
-      bd-1x-prsnt.data.lane[0].RX.N => sw.PRXN[j]
-      bd-1x-prsnt.data.lane[0].TX.P => sw.PTXP[j]
-      bd-1x-prsnt.data.lane[0].TX.N => sw.PTXN[j]
-      bd-1x-prsnt.data.refclk.P => sw.REFCLKP[j]
-      bd-1x-prsnt.data.refclk.N => sw.REFCLKN[j]
-
-      val [wake, present, clkreq] = ctls-1x[j]
-      bd-1x-prsnt.control.PERST#  => sw.PERST#[j]
-      bd-1x-prsnt.control.PEWAKE# => wake
-      bd-1x-prsnt.control.PRSNT# => present
-      bd-1x-prsnt.control.CLKREQ# => clkreq
 
