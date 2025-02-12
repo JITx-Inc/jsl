@@ -28,24 +28,21 @@ pcb-module pcie-example :
   ;  two ICs (ie not to a connector). In this case, we need
   ;  a null-modem style connection and blocking caps on both rx and
   ;  tx.
-  ;  Notice that the `reverse-pcie-lane` function handles the null-modem
-  ;  swap. We continue to use `tx => tx` and `rx => rx` inside for
-  ;  consistency.
-  require src-IC : pcie(2, PCIe-PRSNT#) from dut1
-  require dst-IC : pcie(2, PCIe-PRSNT#) from dut2
+  require src-IC : pcie-with-hotplug(1) from dut1
+  require dst-IC : pcie-with-hotplug(1) from dut2
 
   ; TODO - the routing structure is not applying through the node here.
 
-  within [src, dst-straight] = constrain-topology(src-IC, dst-IC, cst):
-    ;  Notice that the `reverse-pcie-lane` function handles the null-modem
-    ;  swap. We continue to use `tx => tx` and `rx => rx` inside for
-    ;  consistency.
-    val dst = reverse-pcie-lanes(dst-straight)
+  within [src, dst] = constrain-topology(src-IC, dst-IC, cst):
     for i in indices(src.data.lane) do:
+      ;  We reverse the Tx/Rx in a null-modem style for active->active connection.
+      val lane-Rx = dst.data.lane[i].TX
+      val lane-Tx = dst.data.lane[i].RX
+
       inst tx-coupler : dp-coupler(b-cap)
-      topo-pair(src.data.lane[i].TX => tx-coupler => dst.data.lane[i].TX)
+      topo-pair(src.data.lane[i].TX => tx-coupler => lane-Tx)
       inst rx-coupler : dp-coupler(b-cap)
-      topo-pair(src.data.lane[i].RX => rx-coupler => dst.data.lane[i].RX)
+      topo-pair(src.data.lane[i].RX => rx-coupler => lane-Rx)
 
     topo-net(src.data.refclk => dst.data.refclk)
     net (src.control, dst.control)

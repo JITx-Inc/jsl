@@ -139,9 +139,9 @@ public pcb-component component :
 
 
 defn connect_lanes (
-  b:Bundle, 
-  ref_clk:JITXObject, 
-  ctl_lines:[JITXObject, JITXObject, JITXObject], 
+  b:Bundle,
+  ref_clk:JITXObject,
+  ctl_lines:[JITXObject, JITXObject, JITXObject],
   present:JITXObject|False,
   --
   ch-offset:Int = 0
@@ -176,17 +176,22 @@ public pcb-module module :
 
   public inst sw : component
 
+  ; Optional Connection to demonstrate shared
+  ;  pins across pin assigned bundles.
+  port shared_wake
+
+  net (shared_wake, sw.GPIO[7])
+
   ;;;;;;;;;;;;;;;;;;;;;;;
   ; PCIe 4x
   ;;;;;;;;;;;;;;;;;;;;;;;
 
 
   val bd-4x = pcie-std(4)
-  connect_lanes(bd-4x, self.sw.REFCLK[0], [sw.GPIO[5], sw.PERST#[0], sw.GPIO[1]], false)
-
+  connect_lanes(bd-4x, self.sw.REFCLK[0], [sw.GPIO[8], sw.PERST#[0], sw.GPIO[1]], false)
 
   val bd-4x-prsnt = pcie-with-hotplug(4)
-  connect_lanes(bd-4x-prsnt, self.sw.REFCLK[0], [sw.GPIO[5], sw.PERST#[0], sw.GPIO[1]], sw.GPIO[12])
+  connect_lanes(bd-4x-prsnt, self.sw.REFCLK[0], [sw.GPIO[8], sw.PERST#[0], sw.GPIO[1]], sw.GPIO[12])
 
   ;;;;;;;;;;;;;;;;;;;;;;;
   ; PCIe 1x
@@ -207,50 +212,22 @@ public pcb-module module :
     connect_lanes(bd-1x-prsnt, self.sw.REFCLK[j], ctls-1x[j], sw.GPIO[12 + j], ch-offset = j)
 
 
-
   ;;;;;;;;;;;;;;;;;;;;;;;
   ; PCIe 2x
   ;;;;;;;;;;;;;;;;;;;;;;;
 
-  ; For the PCIe-2X, I'm going to demonstrate
-  ;   how to use a shared port WAKE pin across
-  ;   the different endpoints. This is common situation where
-  ;   if we are not careful, we can run into an unsat
-  ;   condition. The key is to just not include the shared
-  ;   port in the pin assignment solution and backfill it
-  ;   in an external port where the fanout happens.
-
   val pcie-2x-shared-wake = sw.GPIO[7]
   val ctls-2x = [
-    [pcie-2x-shared-wake, sw.PERST#[0], sw.GPIO[1]]
-    [pcie-2x-shared-wake, sw.PERST#[2], sw.GPIO[2]]
+    [sw.GPIO[8], sw.PERST#[0], sw.GPIO[1]]
+    [sw.GPIO[10], sw.PERST#[2], sw.GPIO[3]]
   ]
   ; The internal bundle contains reset, and clock request
-  ;  but does not include the WAKE 
-  val bd-2x-int = pcie(2, PCIe-PERST#, PCIe-CLKREQ#)
+  ;  but does not include the WAKE
+  val bd-2x = pcie-std(2)
+  val bd-2x-prsnt = pcie-with-hotplug(2)
 
   for j in 0 to 2 do:
-    val ch-offset = (2 * j)
-    connect_lanes(bd-2x-int, sw.REFCLK[ch-offset], ctls-2x[j], false, ch-offset = ch-offset)
-
-
-  val bd-2x-ext = pcie-std(2)
-
-  ; The external interface for the PCIe with Shared Wake is different
-  ;   from the other interfaces because it has to be implemented as an
-  ;   externally facing port instead of a `supports` statement.
-  ;   Fortunately, it still takes advantage of pin assignment and hides
-  ;   the details of the connection but requires a different connection
-  ;   method at the top-level.
-  port pcie-2x : bd-2x-ext[2]
-
-  for pt in indices(pcie-2x) do:
-    net (pcie-2x[pt].control.PEWAKE#, pcie-2x-shared-wake)
-
-    require pt-int : bd-2x-int from self
-    topo-net(pcie-2x[pt].data => pt-int.data)
-    net (pcie-2x[pt].control.PERST#, pt-int.control.PERST#)
-    net (pcie-2x[pt].control.CLKREQ#, pt-int.control.CLKREQ#)
-
+    connect_lanes(bd-2x, self.sw.REFCLK[j], ctls-2x[j], false, ch-offset = 2 * j)
+    connect_lanes(bd-2x-prsnt, self.sw.REFCLK[j], ctls-2x[j], sw.GPIO[12 + j], ch-offset = 2 * j)
 
 

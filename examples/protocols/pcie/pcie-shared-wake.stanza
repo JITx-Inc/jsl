@@ -31,10 +31,11 @@ pcb-module pcie-example :
   ;
   ;  The two connectors share the one wake pin from the IC source module
   val pcie-btype = pcie-std(2)
-  require src-ep : pcie-btype[2] from dut1
   for i in 0 to 2 do:
     require dst-ep : pcie-btype from conns[i]
-    within [src, dst] = constrain-topology(src-ep[i], dst-ep, cst):
+    require src-ep : pcie-btype from dut1
+
+    within [src, dst] = constrain-topology(src-ep, dst-ep, cst):
       ; Here we construct the circuit topology for the link
       ;   Note that we don't need to worry about any of the constraint
       ;   application, as that is handled by the `PCIe-Constraint` type.
@@ -49,7 +50,16 @@ pcb-module pcie-example :
       topo-net(src.data.refclk => dst.data.refclk)
       ; The control signals do not demand a topology so
       ;  we just use a straight net connection.
-      net (src.control, dst.control)
+      net (src.control.PERST#, dst.control.PERST#)
+      net (src.control.CLKREQ#, dst.control.CLKREQ#)
+
+      ; Notice that this is a direct connection that doesn't use
+      ;  the pin assigned bundles. This is how we make a shared
+      ;  connection. It must be out of band from the pin assignment solution.
+      ;  Note that this will not work for topologies with the `constrain-topology`
+      ;  structure unless you make a custom `SI-Constraint` object that is aware
+      ;  of the shared topology and then apply constraints from the top level.
+      net (dut1.shared_wake, dst.control.PEWAKE#)
 
 
 
