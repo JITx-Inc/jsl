@@ -45,23 +45,29 @@ doc: \<DOC>
 
 SATA Generation enums representing different SATA specification versions with their corresponding data rates.
 
-## Members
-@member `SATA1p0` - SATA 1.0 (1.5 Gbit/s)
-@member `SATA2p0` - SATA 2.0 (3.2 Gbit/s)
-@member `SATA3p0` - SATA 3.0 (6.0 Gbit/s)
-@member `SATA3p1` - SATA 3.1 (6.0 Gbit/s)
-@member `SATA3p2` - SATA 3.2 (6.0 Gbit/s)
-@member `SATA3p3` - SATA 3.3 (6.0 Gbit/s)
-@member `SATA3p4` - SATA 3.4 (6.0 Gbit/s)
+- SATA1p0: SATA 1.0 (1.5 Gbit/s)
+- SATA2p0: SATA 2.0 (3.2 Gbit/s)
+- SATA3p0: SATA 3.0 (6.0 Gbit/s)
+- SATA3p1: SATA 3.1 (6.0 Gbit/s)
+- SATA3p2: SATA 3.2 (6.0 Gbit/s)
+- SATA3p3: SATA 3.3 (6.0 Gbit/s)
+- SATA3p4: SATA 3.4 (6.0 Gbit/s)
 <DOC>
 
 public pcb-enum jsl/protocols/sata/SATAGen:
+  doc: "SATA 1.0 (1.5 Gbit/s)"
   SATA1p0  ; 1.5 Gbit/s
+  doc: "SATA 2.0 (3.2 Gbit/s)"
   SATA2p0  ; 3.2 Gbit/s
+  doc: "SATA 3.0 (6.0 Gbit/s)"
   SATA3p0  ; 6.0 Gbit/s
+  doc: "SATA 3.1 (6.0 Gbit/s)"
   SATA3p1  ; 6.0 Gbit/s
+  doc: "SATA 3.2 (6.0 Gbit/s)"
   SATA3p2  ; 6.0 Gbit/s
+  doc: "SATA 3.3 (6.0 Gbit/s)"
   SATA3p3  ; 6.0 Gbit/s
+  doc: "SATA 3.4 (6.0 Gbit/s)"
   SATA3p4  ; 6.0 Gbit/s
 
 doc: \<DOC>
@@ -70,7 +76,7 @@ doc: \<DOC>
 The SATA Bundle definition for connecting SATA devices.
 
 ## Members
-@member `lane`: Lane pair for the SATA bundle (consists of a TX and RX diff pair)
+- lane: Lane pair for the SATA bundle (consists of a TX and RX diff pair)
 <DOC>
 
 public pcb-bundle SATA :
@@ -85,9 +91,9 @@ doc: \<DOC>
 Constructs the SATA topology and applies constraints to the channel for intra-pair skew and channel loss.
 
 ## Parameters
-@param `cons`: The signal integrity constraints for the differential signals being connected.
-@param `src`: Source port of `Bundle` type `SATA`.
-@param `dst`: Destination port of `Bundle` type `SATA`.
+- cons: The signal integrity constraints for the differential signals being connected.
+- src: Source port of Bundle type SATA.
+- dst: Destination port of Bundle type SATA.
 
 ## Behavior
 Creates and constrains the topology between source and destination SATA ports.
@@ -117,10 +123,10 @@ Calculating the intra-pair skew distance to time correspondence depends on the m
 - At 10 mils, intra-pair skew is 1.50 ps to 1.70 ps
 
 ## Parameters
-@param `gen`: SATA generation enum specifying which standard to use
+- gen: SATA generation enum specifying which standard to use
 
 ## Returns
-@return A tuple of `[Toleranced, Double]` representing intra-pair skew bounds and maximum loss
+A tuple of [Toleranced, Double] representing intra-pair skew bounds and maximum loss
 <DOC>
 
 public defn SATA-get-skew-loss-vals (gen:jsl/protocols/sata/SATAGen) -> [Toleranced, Double]:
@@ -139,7 +145,7 @@ doc: \<DOC>
 Returns the differential impedance specified by the SATA standard.
 
 ## Returns
-@return A `Toleranced` value representing the upper/lower limits for the impedance (90.0 Ω ± 15%).
+A Toleranced value representing the upper/lower limits for the impedance (90.0 Ω ± 15%).
 <DOC>
 
 public defn SATA-get-trace-impedance () -> Toleranced :
@@ -151,11 +157,11 @@ doc: \<DOC>
 Constructs a SATA-Constraints object with appropriate parameters for the specified SATA generation.
 
 ## Parameters
-@param `route-struct`: Differential Pair Routing Structure - Use `pcb-differential-routing-structure` to create.
-@param `gen`: Optional SATA generation enum (defaults to SATA3p0)
+- route-struct: Differential Pair Routing Structure - Use pcb-differential-routing-structure to create.
+- gen: Optional SATA generation enum (defaults to SATA3p0)
 
 ## Returns
-@return A `DiffPair-Constraint` object configured for the specified SATA generation.
+A DiffPair-Constraint object configured for the specified SATA generation.
 <DOC>
 public defn SATA-Constraint (
   --
