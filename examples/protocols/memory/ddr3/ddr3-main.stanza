@@ -1,0 +1,103 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/ddr3/ddr3-main :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+  import jitx/parts
+
+  import jsl/design/settings
+  import jsl/symbols
+  import jsl/symbols/net-symbols
+  import jsl/symbols/SymbolDefn
+
+  import protocols/memory/ddr3
+  import jsl/bundles
+  import jsl/si
+
+  import jsl/examples/protocols/memory/ddr3/ddr3-board
+
+public defn ddr3-acc-termination (A:JITXObject V:JITXObject) :
+  inside pcb-module :
+    net clk-term ()
+    insert-capacitor(clk-term V ["capacitance" => 100.0e-9 "case" => "0201"])
+    for p in pins(A) do :
+      ; println("pin to be matched %_" % [ref(p)])
+      val pin-name = to-string(ref(p))
+      match(index-of-chars(pin-name, "clk")) :
+        (a:Int) :
+          ; println("pin-type clk %_" % [ref(p)])
+          insert-resistor(p clk-term ["resistance" => 39.0 "tolerance" => 0.01 "case" => "0201"]) ; special termination
+        (b:False) :
+          ; println("pin-type reg %_" % [ref(p)])
+          insert-resistor(p V ["resistance" => 39.0 "tolerance" => 0.01 "case" => "0201"])
+
+      val conn-pins = connected-pins(p)
+      for cp in conn-pins do :
+        ; println("found pin %_ for %_" % [ref(cp) ref(p)])
+        topology-segment(p cp)
+        structure(p => cp) = single-ended-40
+
+
+public pcb-module ddr3-example :
+
+  pin VTT
+
+  public inst processor : jsl/examples/protocols/memory/ddr3/MCIMX6Q5EYM10AC
+  public inst dram : jsl/examples/protocols/memory/ddr3/MT41J256M16HA-125-E
+  
+  net GND (processor.GND dram.GND)
+  net V1P5_DDR (processor.NVCC_DRAM dram.V1P5_DDR)
+  place(processor.mcu) at loc(30.000, 48.500, 90.000) on Top
+  place(dram.mem) at loc(50.500, 30.500, 90.000) on Top
+
+
+  ; inst div : voltage-divider(source-voltage = typ(1.500) divider-output = typ(0.750))
+  ; net (div.in V1P5_DDR)
+  ; net (div.out VTT)
+  ; net (div.lo GND)
+
+  require ddr-data-mcu  : DDR3-16b-data-lane[4] from processor.mcu
+  require ddr-ctrl-mcu  : DDR3-acc-lane from processor.mcu
+  var prev-end = false
+  val mem-datas = Vector<JITXObject>()
+  val mem-ctrls = Vector<JITXObject>()
+
+  for (mem in [dram-1.mem dram-2.mem dram-3.mem dram-4.mem], i in 0 to false) do :
+    require mem-data : DDR3-16b-data-lane from mem
+    require mem-ctrl : DDR3-acc-lane from mem
+
+    ddr3-si-16b-data-lane(ddr-data-mcu[i] mem-data)
+    if prev-end == false :
+      ddr3-si-acc-lane(ddr-ctrl-mcu mem-ctrl)
+    else :
+      ddr3-si-acc-lane(prev-end as JITXObject mem-ctrl)
+
+    prev-end = mem-ctrl
+    add(mem-datas, mem-data)
+    add(mem-ctrls, mem-ctrl)
+    if mem == dram-4.mem :
+      println("adding termination")
+      ddr3-acc-termination(mem-ctrl VTT)
+
+  ddr3-si-overall-constraint(mem-datas, mem-ctrls, ddr-data-mcu, ddr-ctrl-mcu)
+
+  ; planes
+  ; layer 4,7 V1P5_DDR
+  ; layer 1,9 GND
+  val signal-boundary = PolygonWithArcs([Point(0.0, 0.0),
+                   Point(70.0, 0.0),
+                   Point(70.0, 95.0),
+                   Point(0.0, 95.0),
+                   Point(0.0, 0.0)])
+  geom(GND) :
+    copper-pour(LayerIndex(1), isolate = 0.15, rank = 1) = signal-boundary
+  geom(GND) :
+    copper-pour(LayerIndex(8), isolate = 0.1, rank = 1) = signal-boundary
+  geom(V1P5_DDR) :
+    copper-pour(LayerIndex(3), isolate = 0.15, rank = 1) = signal-boundary
+  geom(V1P5_DDR) :
+    copper-pour(LayerIndex(6), isolate = 0.1, rank = 1) = signal-boundary
+
+  symbol(GND) = GND-SYMB
+  symbol(V1P5_DDR) = PWR-SYMB

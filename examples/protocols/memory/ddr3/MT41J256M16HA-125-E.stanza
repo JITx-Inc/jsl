@@ -1,0 +1,784 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/ddr3/MT41J256M16HA-125-E :
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+  import jitx/parts
+  
+  import jsl/symbols/box-symbol
+  import jsl/symbols/generic-components
+
+  import jsl/bundles
+  import jsl/protocols/memory/ddr3
+
+pcb-pad oval-smd-pad :
+  type = SMD
+  shape = Capsule(0.35, 0.35, loc(0.0, 0.0))
+  ocdb/utils/landpatterns/apply-soldermask(0.05)
+  layer(Paste(Top)) = Capsule(0.35, 0.35, loc(0.0, 0.0))
+
+public pcb-landpattern _96_FPGA_DD3_14MMX10MM-SMALL_SIZE :
+  pad A1 : oval-smd-pad at loc(-3.200, 6.000) on Top
+  pad A2 : oval-smd-pad at loc(-2.400, 6.000) on Top
+  pad A3 : oval-smd-pad at loc(-1.600, 6.000) on Top
+  pad A7 : oval-smd-pad at loc(1.600, 6.000) on Top
+  pad A8 : oval-smd-pad at loc(2.400, 6.000) on Top
+  pad A9 : oval-smd-pad at loc(3.200, 6.000) on Top
+  pad B1 : oval-smd-pad at loc(-3.200, 5.200) on Top
+  pad B2 : oval-smd-pad at loc(-2.400, 5.200) on Top
+  pad B3 : oval-smd-pad at loc(-1.600, 5.200) on Top
+  pad B7 : oval-smd-pad at loc(1.600, 5.200) on Top
+  pad B8 : oval-smd-pad at loc(2.400, 5.200) on Top
+  pad B9 : oval-smd-pad at loc(3.200, 5.200) on Top
+  pad C1 : oval-smd-pad at loc(-3.200, 4.400) on Top
+  pad C2 : oval-smd-pad at loc(-2.400, 4.400) on Top
+  pad C3 : oval-smd-pad at loc(-1.600, 4.400) on Top
+  pad C7 : oval-smd-pad at loc(1.600, 4.400) on Top
+  pad C8 : oval-smd-pad at loc(2.400, 4.400) on Top
+  pad C9 : oval-smd-pad at loc(3.200, 4.400) on Top
+  pad D1 : oval-smd-pad at loc(-3.200, 3.600) on Top
+  pad D2 : oval-smd-pad at loc(-2.400, 3.600) on Top
+  pad D3 : oval-smd-pad at loc(-1.600, 3.600) on Top
+  pad D7 : oval-smd-pad at loc(1.600, 3.600) on Top
+  pad D8 : oval-smd-pad at loc(2.400, 3.600) on Top
+  pad D9 : oval-smd-pad at loc(3.200, 3.600) on Top
+  pad E1 : oval-smd-pad at loc(-3.200, 2.800) on Top
+  pad E2 : oval-smd-pad at loc(-2.400, 2.800) on Top
+  pad E3 : oval-smd-pad at loc(-1.600, 2.800) on Top
+  pad E7 : oval-smd-pad at loc(1.600, 2.800) on Top
+  pad E8 : oval-smd-pad at loc(2.400, 2.800) on Top
+  pad E9 : oval-smd-pad at loc(3.200, 2.800) on Top
+  pad F1 : oval-smd-pad at loc(-3.200, 2.000) on Top
+  pad F2 : oval-smd-pad at loc(-2.400, 2.000) on Top
+  pad F3 : oval-smd-pad at loc(-1.600, 2.000) on Top
+  pad F7 : oval-smd-pad at loc(1.600, 2.000) on Top
+  pad F8 : oval-smd-pad at loc(2.400, 2.000) on Top
+  pad F9 : oval-smd-pad at loc(3.200, 2.000) on Top
+  pad G1 : oval-smd-pad at loc(-3.200, 1.200) on Top
+  pad G2 : oval-smd-pad at loc(-2.400, 1.200) on Top
+  pad G3 : oval-smd-pad at loc(-1.600, 1.200) on Top
+  pad G7 : oval-smd-pad at loc(1.600, 1.200) on Top
+  pad G8 : oval-smd-pad at loc(2.400, 1.200) on Top
+  pad G9 : oval-smd-pad at loc(3.200, 1.200) on Top
+  pad H1 : oval-smd-pad at loc(-3.200, 0.400) on Top
+  pad H2 : oval-smd-pad at loc(-2.400, 0.400) on Top
+  pad H3 : oval-smd-pad at loc(-1.600, 0.400) on Top
+  pad H7 : oval-smd-pad at loc(1.600, 0.400) on Top
+  pad H8 : oval-smd-pad at loc(2.400, 0.400) on Top
+  pad H9 : oval-smd-pad at loc(3.200, 0.400) on Top
+  pad J1 : oval-smd-pad at loc(-3.200, -0.400) on Top
+  pad J2 : oval-smd-pad at loc(-2.400, -0.400) on Top
+  pad J3 : oval-smd-pad at loc(-1.600, -0.400) on Top
+  pad J7 : oval-smd-pad at loc(1.600, -0.400) on Top
+  pad J8 : oval-smd-pad at loc(2.400, -0.400) on Top
+  pad J9 : oval-smd-pad at loc(3.200, -0.400) on Top
+  pad K1 : oval-smd-pad at loc(-3.200, -1.200) on Top
+  pad K2 : oval-smd-pad at loc(-2.400, -1.200) on Top
+  pad K3 : oval-smd-pad at loc(-1.600, -1.200) on Top
+  pad K7 : oval-smd-pad at loc(1.600, -1.200) on Top
+  pad K8 : oval-smd-pad at loc(2.400, -1.200) on Top
+  pad K9 : oval-smd-pad at loc(3.200, -1.200) on Top
+  pad L1 : oval-smd-pad at loc(-3.200, -2.000) on Top
+  pad L2 : oval-smd-pad at loc(-2.400, -2.000) on Top
+  pad L3 : oval-smd-pad at loc(-1.600, -2.000) on Top
+  pad L7 : oval-smd-pad at loc(1.600, -2.000) on Top
+  pad L8 : oval-smd-pad at loc(2.400, -2.000) on Top
+  pad L9 : oval-smd-pad at loc(3.200, -2.000) on Top
+  pad M1 : oval-smd-pad at loc(-3.200, -2.800) on Top
+  pad M2 : oval-smd-pad at loc(-2.400, -2.800) on Top
+  pad M3 : oval-smd-pad at loc(-1.600, -2.800) on Top
+  pad M7 : oval-smd-pad at loc(1.600, -2.800) on Top
+  pad M8 : oval-smd-pad at loc(2.400, -2.800) on Top
+  pad M9 : oval-smd-pad at loc(3.200, -2.800) on Top
+  pad N1 : oval-smd-pad at loc(-3.200, -3.600) on Top
+  pad N2 : oval-smd-pad at loc(-2.400, -3.600) on Top
+  pad N3 : oval-smd-pad at loc(-1.600, -3.600) on Top
+  pad N7 : oval-smd-pad at loc(1.600, -3.600) on Top
+  pad N8 : oval-smd-pad at loc(2.400, -3.600) on Top
+  pad N9 : oval-smd-pad at loc(3.200, -3.600) on Top
+  pad P1 : oval-smd-pad at loc(-3.200, -4.400) on Top
+  pad P2 : oval-smd-pad at loc(-2.400, -4.400) on Top
+  pad P3 : oval-smd-pad at loc(-1.600, -4.400) on Top
+  pad P7 : oval-smd-pad at loc(1.600, -4.400) on Top
+  pad P8 : oval-smd-pad at loc(2.400, -4.400) on Top
+  pad P9 : oval-smd-pad at loc(3.200, -4.400) on Top
+  pad R1 : oval-smd-pad at loc(-3.200, -5.200) on Top
+  pad R2 : oval-smd-pad at loc(-2.400, -5.200) on Top
+  pad R3 : oval-smd-pad at loc(-1.600, -5.200) on Top
+  pad R7 : oval-smd-pad at loc(1.600, -5.200) on Top
+  pad R8 : oval-smd-pad at loc(2.400, -5.200) on Top
+  pad R9 : oval-smd-pad at loc(3.200, -5.200) on Top
+  pad T1 : oval-smd-pad at loc(-3.200, -6.000) on Top
+  pad T2 : oval-smd-pad at loc(-2.400, -6.000) on Top
+  pad T3 : oval-smd-pad at loc(-1.600, -6.000) on Top
+  pad T7 : oval-smd-pad at loc(1.600, -6.000) on Top
+  pad T8 : oval-smd-pad at loc(2.400, -6.000) on Top
+  pad T9 : oval-smd-pad at loc(3.200, -6.000) on Top
+
+  layer(Silkscreen("F-SilkS", Top)) = Polygon([
+    Point(-5.025, 7.025)
+    Point(-3.975, 7.025)
+    Point(-5.025, 5.975)])
+  layer(Silkscreen("F-SilkS", Top)) = Line(0.200, [Point(-5.100, -7.100), Point(-5.100, 7.100)])
+  layer(Silkscreen("F-SilkS", Top)) = Line(0.200, [Point(-5.100, -7.100), Point(5.100, -7.100)])
+  layer(Silkscreen("F-SilkS", Top)) = Line(0.200, [Point(-5.100, 7.100), Point(5.100, 7.100)])
+  layer(Silkscreen("F-SilkS", Top)) = Line(0.200, [Point(5.100, -7.100), Point(5.100, 7.100)])
+  layer(CustomLayer("ASM Top", Top)) = Line(0.200, [Point(-5.000, -7.000), Point(-5.000, 7.000)])
+  layer(CustomLayer("ASM Top", Top)) = Line(0.200, [Point(-5.000, -7.000), Point(5.000, -7.000)])
+  layer(CustomLayer("ASM Top", Top)) = Line(0.200, [Point(-5.000, 7.000), Point(5.000, 7.000)])
+  layer(CustomLayer("ASM Top", Top)) = Line(0.200, [Point(5.000, -7.000), Point(5.000, 7.000)])
+  layer(CustomLayer("ASM Top", Top)) = Polyline(0.254, [
+    Arc(-3.800, 6.300, 0.100, 0.0, 360.000)])
+  layer(CustomLayer("ASM Top", Top)) = Text(">REF", 1.524, SW, loc(-0.500, 1.500, 270.000), "Arial", StrokeFont, false, false)
+
+  model3d = Model3D("../../3d-models/96_FPGA_DD3_14MMX10MM-SMALL_SIZE_e997E6E4D.STEP",
+    Vec3D(0.0, -1.00000000031741e-005, 0.0),
+    Vec3D(1.000, 1.000, 1.000),
+    Vec3D(0.0, 0.0, 90.000),
+    ["ModelSource" => "0" "ModelType" => "0" "BodyLayerId" => "57" "BodyColor3D" => "0" "BodyProjection" => "0" "BodyOverallHeight" => "1.2" "BodyStandoffHeight" => "0.0" "BodyOpacity3D" => "1.0" "IsEmbed" => "false" "OverrideColor" => "false" "BodyIdentifier" => ""],
+    )
+
+public pcb-symbol MT41J256M16HA-125E :
+  pin A0 at Point(251.460, 353.060) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A1 at Point(251.460, 350.520) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A2 at Point(251.460, 347.980) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A3 at Point(251.460, 345.440) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A4 at Point(251.460, 342.900) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A5 at Point(251.460, 340.360) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A6 at Point(251.460, 337.820) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A7 at Point(251.460, 335.280) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A8 at Point(251.460, 332.740) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A9 at Point(251.460, 330.200) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin BA0 at Point(251.460, 317.500) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin BA1 at Point(251.460, 314.960) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin BA2 at Point(251.460, 312.420) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD1 at Point(266.700, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD2 at Point(269.240, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD3 at Point(271.780, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD4 at Point(274.320, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD5 at Point(276.860, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD6 at Point(279.400, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD7 at Point(281.940, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD8 at Point(284.480, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDD9 at Point(287.020, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ1 at Point(292.100, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ2 at Point(294.640, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ3 at Point(297.180, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ4 at Point(299.720, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS1 at Point(264.160, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS2 at Point(266.700, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS3 at Point(269.240, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS4 at Point(271.780, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS5 at Point(274.320, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS6 at Point(276.860, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS7 at Point(279.400, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS8 at Point(281.940, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS9 at Point(284.480, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS10 at Point(287.020, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS11 at Point(289.560, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSS12 at Point(292.100, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ1 at Point(297.180, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ2 at Point(299.720, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ3 at Point(302.260, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ4 at Point(304.800, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ5 at Point(307.340, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin NC_L1 at Point(327.660, 287.020) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin NC_L9 at Point(327.660, 284.480) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin NC_M7 at Point(327.660, 281.940) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A14 at Point(327.660, 279.400) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ0 at Point(327.660, 353.060) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ1 at Point(327.660, 350.520) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ2 at Point(327.660, 347.980) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ3 at Point(327.660, 345.440) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ4 at Point(327.660, 342.900) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ5 at Point(327.660, 340.360) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ6 at Point(327.660, 337.820) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ7 at Point(327.660, 335.280) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A10AP at Point(251.460, 327.660) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A11 at Point(251.460, 325.120) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A12BC at Point(251.460, 322.580) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin LDQS[0] at Point(327.660, 309.880) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin LDQS[1] at Point(327.660, 307.340) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin UDQS[0] at Point(327.660, 302.260) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin UDQS[1] at Point(327.660, 299.720) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ8 at Point(327.660, 332.740) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ9 at Point(327.660, 330.200) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ10 at Point(327.660, 327.660) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ11 at Point(327.660, 325.120) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ12 at Point(327.660, 322.580) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ13 at Point(327.660, 320.040) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ14 at Point(327.660, 317.500) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin DQ15 at Point(327.660, 314.960) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ5 at Point(302.260, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ6 at Point(304.800, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ7 at Point(307.340, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ8 at Point(309.880, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VDDQ9 at Point(312.420, 358.140) with :
+    direction = Up
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ6 at Point(309.880, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ7 at Point(312.420, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ8 at Point(314.960, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VSSQ9 at Point(317.500, 259.080) with :
+    direction = Down
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin A13 at Point(251.460, 320.040) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin NC_J9 at Point(327.660, 289.560) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin NC_J1 at Point(327.660, 292.100) with :
+    direction = Right
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin CK[0] at Point(251.460, 294.640) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin CK[1] at Point(251.460, 292.100) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin CKE at Point(251.460, 289.560) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin CS at Point(251.460, 307.340) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin RAS at Point(251.460, 304.800) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin CAS at Point(251.460, 302.260) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin WE at Point(251.460, 299.720) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin RESET at Point(251.460, 287.020) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin ODT at Point(251.460, 279.400) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VREFCA at Point(251.460, 274.320) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin VREFDQ at Point(251.460, 271.780) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin ZQ at Point(251.460, 281.940) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin LDM at Point(251.460, 266.700) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+  pin UDM at Point(251.460, 264.160) with :
+    direction = Left
+    length = 7.620
+    number-size = 1.523
+    name-size = 1.523
+
+  layer("foreground") = Text(">VALUE", 0.762, C, loc(243.790, 366.110), "", TrueTypeFont, false, false)
+  layer("foreground") = Text(">REF", 0.762, C, loc(243.790, 367.172), "", TrueTypeFont, false, false)
+  layer("foreground") = Rectangle(76.200, 99.060, loc(289.560, 308.610))
+  layer("foreground") = Text("4G_DDR3_SDRAM_256MX16", 1.371, SW, loc(274.320, 314.960), "", TrueTypeFont, false, false)
+
+public pcb-component component :
+  manufacturer = "Micron Technology Inc"
+  mpn = "MT41J256M16HA-125:E"
+  reference-prefix = "U2"
+  pin-properties :
+    [pin:Ref | pads:Ref ... | side:Dir]
+    [A0 | N3 | Left]
+    [A1 | P7 | Left]
+    [A2 | P3 | Left]
+    [A3 | N2 | Left]
+    [A4 | P8 | Left]
+    [A5 | P2 | Left]
+    [A6 | R8 | Left]
+    [A7 | R2 | Left]
+    [A8 | T8 | Left]
+    [A9 | R3 | Left]
+    [BA0 | M2 | Left]
+    [BA1 | N8 | Left]
+    [BA2 | M3 | Left]
+    [VDD1 | B2 | Up]
+    [VDD2 | D9 | Up]
+    [VDD3 | G7 | Up]
+    [VDD4 | K2 | Up]
+    [VDD5 | K8 | Up]
+    [VDD6 | N1 | Up]
+    [VDD7 | N9 | Up]
+    [VDD8 | R1 | Up]
+    [VDD9 | R9 | Up]
+    [VDDQ1 | A1 | Up]
+    [VDDQ2 | A8 | Up]
+    [VDDQ3 | C1 | Up]
+    [VDDQ4 | C9 | Up]
+    [VSS1 | A9 | Down]
+    [VSS2 | B3 | Down]
+    [VSS3 | E1 | Down]
+    [VSS4 | G8 | Down]
+    [VSS5 | J2 | Down]
+    [VSS6 | J8 | Down]
+    [VSS7 | M1 | Down]
+    [VSS8 | M9 | Down]
+    [VSS9 | P1 | Down]
+    [VSS10 | P9 | Down]
+    [VSS11 | T1 | Down]
+    [VSS12 | T9 | Down]
+    [VSSQ1 | B1 | Down]
+    [VSSQ2 | B9 | Down]
+    [VSSQ3 | D1 | Down]
+    [VSSQ4 | D8 | Down]
+    [VSSQ5 | E2 | Down]
+    [NC_L1 | L1 | Right]
+    [NC_L9 | L9 | Right]
+    [NC_M7 | M7 | Right]
+    [A14 | T7 | Right]
+    [DQ0 | E3 | Right]
+    [DQ1 | F7 | Right]
+    [DQ2 | F2 | Right]
+    [DQ3 | F8 | Right]
+    [DQ4 | H3 | Right]
+    [DQ5 | H8 | Right]
+    [DQ6 | G2 | Right]
+    [DQ7 | H7 | Right]
+    [A10AP | L7 | Left]
+    [A11 | R7 | Left]
+    [A12BC | N7 | Left]
+    [LDQS[0] | F3 | Right]
+    [LDQS[1] | G3 | Right]
+    [UDQS[0] | C7 | Right]
+    [UDQS[1] | B7 | Right]
+    [DQ8 | D7 | Right]
+    [DQ9 | C3 | Right]
+    [DQ10 | C8 | Right]
+    [DQ11 | C2 | Right]
+    [DQ12 | A7 | Right]
+    [DQ13 | A2 | Right]
+    [DQ14 | B8 | Right]
+    [DQ15 | A3 | Right]
+    [VDDQ5 | D2 | Up]
+    [VDDQ6 | E9 | Up]
+    [VDDQ7 | F1 | Up]
+    [VDDQ8 | H2 | Up]
+    [VDDQ9 | H9 | Up]
+    [VSSQ6 | E8 | Down]
+    [VSSQ7 | F9 | Down]
+    [VSSQ8 | G1 | Down]
+    [VSSQ9 | G9 | Down]
+    [A13 | T3 | Left]
+    [NC_J9 | J9 | Right]
+    [NC_J1 | J1 | Right]
+    [CK[0] | J7 | Left]
+    [CK[1] | K7 | Left]
+    [CKE | K9 | Left]
+    [CS | L2 | Left]
+    [RAS | J3 | Left]
+    [CAS | K3 | Left]
+    [WE | L3 | Left]
+    [RESET | T2 | Left]
+    [ODT | K1 | Left]
+    [VREFCA | M8 | Left]
+    [VREFDQ | H1 | Left]
+    [ZQ | L8 | Left]
+    [LDM | E7 | Left]
+    [UDM | D3 | Left]
+
+  assign-landpattern(_96_FPGA_DD3_14MMX10MM-SMALL_SIZE)
+  assign-symbol(MT41J256M16HA-125E)
+
+  property(self.ComponentLink1URL) = "http://www.micron.com/~/media/Documents/Products/Data%20Sheet/DRAM/DDR3/4Gb_DDR3_SDRAM.pdf"
+  property(self.\|Memory Size|) = "4G (256M x 16)"
+  property(self.\|Memory Type|) = "DDR3 SDRAM"
+  property(self.\|Operating Temperature|) = "0°C ~ 95°C"
+  property(self.\|Package / Case|) = "96-TFBGA"
+  property(self.Speed) = "800MHz"
+  property(self.Value) = "MT41J256M16HA-125:E"
+
+  supports DDR3-16b-data-lane :
+    for (p in [self.DQ0 self.DQ1 self.DQ2 self.DQ3 self.DQ4 self.DQ5 self.DQ6 self.DQ7], i in 0 to false) do :
+      DDR3-16b-data-lane.data[0].dq[i] => p
+    DDR3-16b-data-lane.data[0].dqs.P => self.LDQS[0]
+    DDR3-16b-data-lane.data[0].dqs.N => self.LDQS[1]
+    DDR3-16b-data-lane.data[0].dqm   => self.LDM
+    for (p in [self.DQ8 self.DQ9 self.DQ10 self.DQ11 self.DQ12 self.DQ13 self.DQ14 self.DQ15], i in 0 to false) do :
+      DDR3-16b-data-lane.data[1].dq[i] => p
+    DDR3-16b-data-lane.data[1].dqs.P => self.UDQS[0]
+    DDR3-16b-data-lane.data[1].dqs.N => self.UDQS[1]
+    DDR3-16b-data-lane.data[1].dqm   => self.UDM
+
+  supports DDR3-acc-lane :
+    for (p in [self.A0 self.A1 self.A2 self.A3 self.A4 self.A5 self.A6 self.A7 self.A8 self.A9 self.A10AP self.A11 self.A12BC self.A13 self.A14 self.NC_M7], i in 0 to false) do :
+      DDR3-acc-lane.a[i]  => p
+
+    DDR3-acc-lane.reset_b  => self.RESET
+    DDR3-acc-lane.we_b     => self.WE
+    DDR3-acc-lane.cas_b    => self.CAS
+    DDR3-acc-lane.ras_b    => self.RAS
+    DDR3-acc-lane.sdba[0]  => self.BA0
+    DDR3-acc-lane.sdba[1]  => self.BA1
+    DDR3-acc-lane.sdba[2]  => self.BA2
+    DDR3-acc-lane.sdodt    => self.ODT
+    DDR3-acc-lane.cs_b     => self.CS
+    DDR3-acc-lane.sdcke    => self.CKE
+    DDR3-acc-lane.clk.P    => self.CK[0]
+    DDR3-acc-lane.clk.N    => self.CK[1]
+
+public pcb-module module :
+  public inst mem : jsl/examples/protocols/memory/ddr3/MT41J256M16HA-125-E/component
+
+  pin GND
+  pin V1P5_DDR
+
+  for p in pins(mem) do :
+    if prefix?(to-string(ref(p)), "mem.VSS") :
+      net (GND p)
+    if prefix?(to-string(ref(p)), "mem.VDD") :
+      net (V1P5_DDR p)
+
+  insert-resistor(mem.ZQ GND ["resistance" => 240.0, "tolerance" => 0.01 "case" => "0201"])
