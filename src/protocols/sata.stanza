@@ -1,22 +1,32 @@
 doc: \<DOC>
-@brief SATA Protocol
+# SATA Protocol
 
-SATA is a serial protocol supporting high speed links for storage applications
-@see https://en.wikipedia.org/wiki/SATA
+SATA is a serial protocol supporting high speed links for storage applications.
 
-This functions and definitions in this file support defining SATA
-connections between sources and receivers on a printed circuit board.
+## Overview
 
-SATA Revision 1.0 These devices were widely used in personal desktop and office computers, configured from PATA drives daisy chained together in a primary/secondary configuration. SATA Revision 1 devices reached a top transfer rate of 1.5 Gbps.
-SATA Revision 2.0 These devices doubled the transfer speed to 3.2 Gbps with the inclusion of port multipliers, port selectors and improved queue depth.
-SATA Revision 3.0 These interfaces supported drive transfer rates up to 6 Gbps. Revision 3 drives are backward-compatible with SATA Revision 1 and Revision 2 devices, though with lower transfer speeds.
-SATA Revision 3.1 This intermediate revision added final design requirements for SATA Universal Storage Module for consumer-based portable storage applications.
-SATA Revision 3.2 This update added the SATA Express specification. It supports the simultaneous use of SATA ports and PCI Express (PCIe) lanes.
-SATA Revision 3.3 This revision addressed the use of shingled magnetic recording
-SATA Revision 3.5 This change promoted greater integration and interoperability with PCIe flash and other I/O protocols.
+This file provides functions and definitions for creating SATA connections between sources and 
+receivers on a printed circuit board.
 
-@see https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf
+## SATA Revision History
 
+- **SATA Revision 1.0**: Reached a top transfer rate of 1.5 Gbps. Widely used in personal desktop 
+  and office computers, configured from PATA drives daisy chained in primary/secondary configuration.
+- **SATA Revision 2.0**: Doubled the transfer speed to 3.2 Gbps with port multipliers, port selectors 
+  and improved queue depth.
+- **SATA Revision 3.0**: Supported drive transfer rates up to 6 Gbps. Backward-compatible with SATA 
+  Revision 1 and Revision 2 devices (at lower transfer speeds).
+- **SATA Revision 3.1**: Added final design requirements for SATA Universal Storage Module for 
+  consumer-based portable storage applications.
+- **SATA Revision 3.2**: Added the SATA Express specification. Supports simultaneous use of SATA ports 
+  and PCI Express (PCIe) lanes.
+- **SATA Revision 3.3**: Addressed the use of shingled magnetic recording.
+- **SATA Revision 3.5**: Promoted greater integration and interoperability with PCIe flash and 
+  other I/O protocols.
+
+## References
+- [Wikipedia SATA](https://en.wikipedia.org/wiki/SATA)
+- [SATA-IO Specification](https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf)
 <DOC>
 #use-added-syntax(jitx)
 defpackage jsl/protocols/sata:
@@ -31,15 +41,18 @@ defpackage jsl/protocols/sata:
 
 
 doc: \<DOC>
-@brief SATA Generation enums
-This is a fixed list of possible generation definitions for SATA
-@member SATA1p0
-@member SATA2p0
-@member SATA3p0
-@member SATA3p1
-@member SATA3p2
-@member SATA3p3
-@member SATA3p4
+# SATAGen Enumeration
+
+SATA Generation enums representing different SATA specification versions with their corresponding data rates.
+
+## Members
+@member `SATA1p0` - SATA 1.0 (1.5 Gbit/s)
+@member `SATA2p0` - SATA 2.0 (3.2 Gbit/s)
+@member `SATA3p0` - SATA 3.0 (6.0 Gbit/s)
+@member `SATA3p1` - SATA 3.1 (6.0 Gbit/s)
+@member `SATA3p2` - SATA 3.2 (6.0 Gbit/s)
+@member `SATA3p3` - SATA 3.3 (6.0 Gbit/s)
+@member `SATA3p4` - SATA 3.4 (6.0 Gbit/s)
 <DOC>
 
 public pcb-enum jsl/protocols/sata/SATAGen:
@@ -52,9 +65,12 @@ public pcb-enum jsl/protocols/sata/SATAGen:
   SATA3p4  ; 6.0 Gbit/s
 
 doc: \<DOC>
-@brief SATA Bundle
-The Data Bundle consists of 1 lane pair (1 RX and TX pair)
-@member lane Lane pair for the SATA bundle (consists of a TX and RX diff pair)
+# SATA Bundle
+
+The SATA Bundle definition for connecting SATA devices.
+
+## Members
+@member `lane`: Lane pair for the SATA bundle (consists of a TX and RX diff pair)
 <DOC>
 
 public pcb-bundle SATA :
@@ -64,15 +80,17 @@ public pcb-bundle SATA :
 
 
 doc: \<DOC>
-@brief Construct the SATA Topology and Constraints
+# connect-SATA
 
-This function constructs the SATA topology and applies constraints
-to the channel for intra-pair skew and channel loss.
+Constructs the SATA topology and applies constraints to the channel for intra-pair skew and channel loss.
 
-@param cons The signal integrity constraints for the differential signals being connected.
-@param src This is expected to be a port of `Bundle` type `SATA`
-@param dst This is expected to be a port of `Bundle` type `SATA`
+## Parameters
+@param `cons`: The signal integrity constraints for the differential signals being connected.
+@param `src`: Source port of `Bundle` type `SATA`.
+@param `dst`: Destination port of `Bundle` type `SATA`.
 
+## Behavior
+Creates and constrains the topology between source and destination SATA ports.
 <DOC>
 public defn connect-SATA (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
   inside pcb-module :
@@ -83,16 +101,26 @@ public defn connect-SATA (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
       topo-net(s.RX d.RX)
 
 doc: \<DOC>
-@brief Curated values for skew and loss of SATA connection
-This is a helper function that returns the bounds on the intra-pair
-skew timing and maximum loss as expected by the particular standard targeted by
-the user.The values returned are a toleranced value with upper/lower limits for the
-intra-pair skew and the maximum loss as a double representing dB.
+# SATA-get-skew-loss-vals
 
-Calculating the intra-pair skew distance to time correspondence depends on the material.
-tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
-@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
-@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+Returns curated values for skew and loss of SATA connection based on the SATA generation.
+
+This function returns the bounds on the intra-pair skew timing and maximum loss as expected 
+by the particular SATA standard. Returns a tuple containing:
+1. A toleranced value with upper/lower limits for the intra-pair skew
+2. The maximum loss as a double representing dB
+
+## Notes on Skew Calculation
+Calculating the intra-pair skew distance to time correspondence depends on the material:
+- tpd 147 ps/in to 170 ps/in → 147 fs/mil to 170 fs/mil
+- At 5 mils, intra-pair skew is 750 fs to 850 fs
+- At 10 mils, intra-pair skew is 1.50 ps to 1.70 ps
+
+## Parameters
+@param `gen`: SATA generation enum specifying which standard to use
+
+## Returns
+@return A tuple of `[Toleranced, Double]` representing intra-pair skew bounds and maximum loss
 <DOC>
 
 public defn SATA-get-skew-loss-vals (gen:jsl/protocols/sata/SATAGen) -> [Toleranced, Double]:
@@ -106,22 +134,28 @@ public defn SATA-get-skew-loss-vals (gen:jsl/protocols/sata/SATAGen) -> [Toleran
     SATA3p4 : [0.0 +/- 1.0e-12, 15.0] ; 
 
 doc: \<DOC>
-@brief Differential impedance specified by the SATA standard
-This is a helper function that returns the expected differential
-trace impedance.
+# SATA-get-trace-impedance
 
-@return Upper/lower limits for the impedance.
+Returns the differential impedance specified by the SATA standard.
+
+## Returns
+@return A `Toleranced` value representing the upper/lower limits for the impedance (90.0 Ω ± 15%).
 <DOC>
 
 public defn SATA-get-trace-impedance () -> Toleranced :
   90.0 +/- (15 %)
 
 doc: \<DOC>
-Construct a SATA-Constraints object
+# SATA-Constraint
 
-@param route-struct Differential Pair Routing Structure - Use
-`pcb-differential-routing-structure` to create.
-@return Diff-Pair Constraint Object
+Constructs a SATA-Constraints object with appropriate parameters for the specified SATA generation.
+
+## Parameters
+@param `route-struct`: Differential Pair Routing Structure - Use `pcb-differential-routing-structure` to create.
+@param `gen`: Optional SATA generation enum (defaults to SATA3p0)
+
+## Returns
+@return A `DiffPair-Constraint` object configured for the specified SATA generation.
 <DOC>
 public defn SATA-Constraint (
   --
