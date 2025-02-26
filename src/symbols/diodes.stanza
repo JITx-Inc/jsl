@@ -773,3 +773,163 @@ var CURR-PHOTO-DIODE-SYMBOL:TwoPinSymbol = PhotoDiodeSymbol()
 public defn get-default-photo-diode-symbol () : CURR-PHOTO-DIODE-SYMBOL
 public defn set-default-photo-diode-symbol (symb:TwoPinSymbol) :
   CURR-PHOTO-DIODE-SYMBOL = symb
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; TVS Diode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+val DEF_TVS_WING_SIZE = 0.1
+
+public defstruct TVSDiodeSymbolParams <: DiodeSymbolParams :
+  wing-size:Double with:
+    ensure => ensure-positive!,
+    updater => sub-wing-size
+    default => DEF_TVS_WING_SIZE
+  body-dims:Dims|Double with:
+    ensure => ensure-positive!,
+    updater => sub-body-dims
+    as-method => true
+    default => DEF_BODY_WIDTH
+  line-width:Double with:
+    ensure => ensure-positive!
+    updater => sub-line-width,
+    as-method => true
+    default => DEF_LINE_WIDTH
+  filled?:True|False with:
+    updater => sub-filled?,
+    as-method => true
+    default => DEF_FILLED?
+  ; SymbolParams Interface
+  label-params?:Maybe<SymbolLabelParams> with:
+    as-method => true
+    default => None()
+with:
+  keyword-constructor => true
+  equalable => true
+  printer => true
+
+
+public defn sub-base-params (p:TVSDiodeSymbolParams, b:DiodeSymbolParams) -> TVSDiodeSymbolParams :
+  p $> sub-body-dims{_, body-dims(b)}
+    $> sub-line-width{_, line-width(b)}
+    $> sub-filled?{_, filled?(b)}
+    $> {_ as TVSDiodeSymbolParams}
+
+var CUSTOM_TVS_PARAMS:True|False = false
+var DEF_TVS_DIODE_PARAMS = TVSDiodeSymbolParams()
+public defn get-default-tvs-diode-symbol-params () -> TVSDiodeSymbolParams :
+  if CUSTOM_TVS_PARAMS:
+    DEF_TVS_DIODE_PARAMS
+  else:
+    sub-base-params(DEF_TVS_DIODE_PARAMS, get-default-diode-symbol-params())
+
+
+doc: \<DOC>
+Determine if the new params for the tvs diode symbol modifies the base parameters
+
+This helps implement the logic that allows the user to modify
+only the `DEF_NON_POL_PARAMS` and have this propagate to
+the `DEF_POL_PARAMS`
+<DOC>
+defn check-non-base-defaults (p:TVSDiodeSymbolParams) -> True|False :
+  val b = get-default-diode-symbol-params()
+  (p as DiodeSymbolParams) != b
+
+public defn set-default-tvs-diode-symbol-params (v:TVSDiodeSymbolParams) -> False :
+  CUSTOM_TVS_PARAMS = check-non-base-defaults(v)
+  DEF_TVS_DIODE_PARAMS = v
+
+
+public defn build-tvs-diode-glyphs (
+  node:SymbolNode,
+  pitch:Double,
+  params:TVSDiodeSymbolParams
+  ) :
+
+  ; The TVS Diode Symbol consists of 2 triangles, one pointed down
+  ;   and the other pointed up.
+  ;
+  ;
+  ;     ---------
+  ;     \       /
+  ;      \     /
+  ;       \   /
+  ;        \ /   /
+  ;      -------
+  ;    /   / \
+  ;       /   \
+  ;      /     \
+  ;     /       \
+  ;    -----------
+
+
+  val [body-dims, line-width, filled?] = to-tuple(params)
+  val wing-size = wing-size(params)
+
+  val bw2 = body-width(params) / 2.0
+  val h = compute-body-start(params)
+  val h2 = h / 2.0
+  val p2 = pitch / 2.0
+
+  line(node, [Point(0.0, (- p2)), Point(0.0, (- h))], width = line-width, name = "front-porch")
+
+  val tri-pts = [Point(0.0, (- h2)), Point(bw2, h2), Point((- bw2), h2), Point(0.0, (- h2))]
+  val half-Tri = if filled?:
+    Polygon([tri-pts])
+  else:
+    Line(line-width, tri-pts)
+
+  val top-Tri = loc(0.0, h2 ) * half-Tri
+  add-glyph(node, top-Tri, name? = One("body"))
+  val bot-Tri = loc(0.0, (- h2), 180.0) * half-Tri
+  add-glyph(node, bot-Tri, name? = One("body"))
+
+  line(node, [Point(0.0, h), Point(0.0, p2)], width = line-width, name = "back-porch")
+
+  val wing-shape = Line(line-width, [Point(bw2, 0.0), Point(0.0, 0.0), Point((- wing-size), (- wing-size))])
+
+  val L-wing = loc((- bw2), 0.0) * wing-shape
+  add-glyph(node, L-wing, name? = One("L-wing"))
+  val R-wing = loc(bw2, 0.0, 180.0) * wing-shape
+  add-glyph(node, R-wing, name? = One("R-wing"))
+
+
+public defstruct TVSDiodeSymbol <: TwoPinSymbol :
+  doc: \<DOC>
+  Pitch between the Pins of a Diode Symbol
+  This value is in symbol grid units (not mm)
+  <DOC>
+  pitch:Double with:
+    as-method => true
+    default => TWO_PIN_DEF_PITCH
+  polarized?:True|False with:
+    as-method => true
+    default => true
+  params:Maybe<TVSDiodeSymbolParams> with:
+    as-method => true
+    default => None()
+with:
+  printer => true
+  keyword-constructor => true
+
+public defmethod name (x:TVSDiodeSymbol) -> String :
+  "TVSDiode"
+
+defmethod get-params (x:TVSDiodeSymbol) -> TVSDiodeSymbolParams :
+  match(params(x)):
+    (_:None): get-default-tvs-diode-symbol-params()
+    (given:One<TVSDiodeSymbolParams>): value(given)
+
+
+public defmethod build-artwork (
+  x:TVSDiodeSymbol, sn:SymbolNode
+  ):
+  val p = get-params(x) as TVSDiodeSymbolParams
+  build-tvs-diode-glyphs(sn, pitch(x), p)
+
+var CURR-TVS-DIODE-SYMBOL:TwoPinSymbol = TVSDiodeSymbol()
+public defn get-default-tvs-diode-symbol () : CURR-TVS-DIODE-SYMBOL
+public defn set-default-tvs-diode-symbol (symb:TwoPinSymbol) :
+  CURR-TVS-DIODE-SYMBOL = symb

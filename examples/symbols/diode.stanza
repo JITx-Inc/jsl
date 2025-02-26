@@ -142,6 +142,37 @@ pcb-component test-Photodiode:
   val lp = create-landpattern(pkg)
   assign-landpattern(lp)
 
+pcb-component test-TVSDiode:
+  manufacturer = "TI"
+  mpn = "ESD751"
+
+  pin-properties :
+    [pin:Ref | pads:Ref ... ]
+    [ a | a ]
+    [ c | c ]
+
+  val symb-defn = TVSDiodeSymbol()
+  assign-symbol $ create-symbol(symb-defn)
+
+  val pkg = Molded-2pin(
+    lead-span = min-max(0.85, 0.95)
+    polarized? = true,
+    pin-1-id? = One $ #R(c),
+    keep-out = One $ IntraPadKeepOut(),
+    lead = Molded-2pin-Lead(
+      length = min-max(0.2, 0.3)
+      width = min-max(0.45, 0.55)
+    )
+    package-body = PackageBody(
+      length = min-max(0.9, 1.1),
+      width = min-max(0.5, 0.7),
+      height = min-max(0.3, 0.45)
+    )
+  )
+
+  assign-landpattern $ create-landpattern(pkg)
+
+
 pcb-module test-design:
   inst d1 : test-Diode
   inst d2 : test-Schottky
@@ -149,6 +180,7 @@ pcb-module test-design:
   inst d4 : test-Tunnel
   inst d5 : test-LED
   inst d6 : test-Photodiode
+  inst d7 : test-TVSDiode
 
 val board-shape = RoundedRectangle(50.0, 50.0, 0.25)
 ; Set the top level module (the module to be compile into a schematic and PCB)
@@ -160,3 +192,4 @@ set-main-module(test-design)
 
 ; View the results
 view-schematic()
+view-board()
