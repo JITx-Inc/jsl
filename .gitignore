@@ -2,6 +2,7 @@
 .vscode
 .DS_Store
 designs
+parts-db
 
 docs_build/jsl_defs_db.dat
 docs_build/docs/
