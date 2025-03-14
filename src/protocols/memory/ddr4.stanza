@@ -5,7 +5,10 @@ DDR4 is a high speed memory protocol
 @see https://en.wikipedia.org/wiki/DDR4_SDRAM
 
 This functions and definitions in this file support defining DDR4
-connections between microprocessors and memories in a board design.
+connections between microprocessors and memories in a board design. The
+DDR4 standard is a complex specification with many timing constraints and
+impedance requirements. This implementation is based on the DDR4 SDRAM
+Standard Version 4.00, October 2018. This file supports both point to point and FlyBy connections.
 
 This file contains curated values for skew and loss of DDR4 channel
 It specifies the bounds on the intra-pair
@@ -91,8 +94,8 @@ public defn width-to-lane (en:DDR4-width) -> Int:
 doc: \<DOC>
 @brief ddr4 topology
 This is a fixed list of possible topologies for ddr4 memories
-@member FlyBy
-@member ClamShell
+@member FlyBy - Supported by the subordinate constraints for DDR4-Data-Constraints and DDR4-Control-Constraints
+@member ClamShell - Not implemented yet
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr4/DDR4-topology:
   FlyBy
@@ -100,10 +103,10 @@ public pcb-enum jsl/protocols/memory/ddr4/DDR4-topology:
 
 doc: \<DOC>
 @brief DDR4 rank Options
-This is a fixed list of possible rank options for ddr4 implementations
-@member SingleRank
-@member DualRank
-@member QuadRank
+This is a fixed list of possible rank options for ddr4 implementations (i.e. number of CS_n signals)
+@member SingleRank - 1 CS_n signal
+@member DualRank - 2 CS_n signals
+@member QuadRank - 4 CS_n signals
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr4/DDR4-rank:
   SingleRank
@@ -213,36 +216,30 @@ The `constrain` function for this type expects two compatible `ddr4-b` types.
     dqs-rs:DifferentialRoutingStructure
     dq-rs:RoutingStructure
     rs:RoutingStructure ) -> DDR4-Constraint:
-
 <DOC>
-public defstruct DDR4-Constraint <: SI-Constraint :
-  doc: \<DOC>
-  Channel Bit Width
-  <DOC>
-  width:DDR4-width
-  doc: \<DOC>
-  Topology of memory channel
-  <DOC>
-  topology:DDR4-topology
-  doc: \<DOC>
-  Channel Rank
-  <DOC>
-  rank:DDR4-rank
-  doc: \<DOC>
-  CK Intra-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-ck:Toleranced with :
-    default => 0.0 +/- 1.00e-12
-  doc: \<DOC>
-  DQS Intra-pair Timing Skew Constraint in Seconds
-  <DOC>
-  skew-dqs:Toleranced with :
-    default => 0.0 +/- 1.00e-12
+
+
+public defstruct DDR4-Data-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
   skew-ck-dqs:Toleranced with :
     default => min-typ-max(-85.0e-12, 0.0, 935.0e-12)
+
+
+; this is the data-only subset of the overall DDR4-Constraint
+; needs to be separate because the constrain() function would get confused if
+; we pass in the full DDR4-Constraint object as the type argument
+public defstruct DDR4-Data-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Channel Bit Width
+  <DOC>
+  width:DDR4-width
+  doc: \<DOC>
+  DQS Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-dqs:Toleranced with :
+    default => 0.0 +/- 1.00e-12
   doc: \<DOC>
   DQ to DQS Inter-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -253,6 +250,51 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   <DOC>
   skew-dm-dqs:Toleranced with:
     default => 0.0 +/- 3.50e-12 ; Same as DQ timing
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    default => 5.0
+  doc: \<DOC>
+  Differential Routing Structure for DQS [100.0 Ohms +/- (5 %)]
+  <DOC>
+  diff-dqs-rs:DifferentialRoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for each DQ signal [50.0 Ohms +/- (5 %)]
+  <DOC>
+  se-dq-rs:RoutingStructure
+with:
+  keyword-constructor => true
+  constructor => #DDR4-Data-Constraint
+
+
+doc: \<DOC>
+Constructor for the DDR4 Data Link Constraint
+@param width Width of the DDR4 interface (enumerated type)
+@param diff-dqs-rs Differential Routing Structure constraints for DQS signals
+@param se-dq-rs Routing Structure constraints for DQ signals
+<DOC>
+public defn DDR4-Data-Constraint (
+    width:DDR4-width,
+    diff-dqs-rs:DifferentialRoutingStructure,
+    se-dq-rs:RoutingStructure ) -> DDR4-Data-Constraint:
+  DDR4-Data-Constraint(
+    width = width,
+    diff-dqs-rs = diff-dqs-rs,
+    se-dq-rs = se-dq-rs,
+  )
+
+public defstruct DDR4-Ctl-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Channel Rank (i.e. number of CS_n signals)
+  <DOC>
+  rank:DDR4-rank
+  doc: \<DOC>
+  CK Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-ck:Toleranced with :
+    default => 0.0 +/- 1.00e-12
   doc: \<DOC>
   CMD/ADDR/CTRL to CK Inter-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -270,21 +312,117 @@ public defstruct DDR4-Constraint <: SI-Constraint :
     ensure => ensure-positive!,
     default => 5.0
   doc: \<DOC>
-  Differential Routing Structure for CK  [90.0 +/- (5 %)]
+  Differential Routing Structure for CK  [90.0 Ohms +/- (5 %)]
   <DOC>
   diff-ck-rs:DifferentialRoutingStructure
   doc: \<DOC>
-  Differential Routing Structure for DQS [100.0 +/- (5 %)]
-  <DOC>
-  diff-dqs-rs:DifferentialRoutingStructure
-  doc: \<DOC>
-  Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
-  <DOC>
-  se-dq-rs:RoutingStructure
-  doc: \<DOC>
-  Single-Ended Routing Structure for all other SE signal [45.0 +/- (5 %)]
+  Single-Ended Routing Structure for all other SE signal [45.0 Ohms +/- (5 %)]
   <DOC>
   se-rs:RoutingStructure
+with:
+  keyword-constructor => true
+  constructor => #DDR4-Ctl-Constraint
+
+doc: \<DOC>
+Constructor for the DDR4 Link Constraint
+@param rank Rank of the DDR4 interface (enumerated type)
+@param diff-ck-rs Differential Routing Structure constraints for CK signals
+@param se-rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
+<DOC>
+public defn DDR4-Ctl-Constraint (
+    rank:DDR4-rank,
+    diff-ck-rs:DifferentialRoutingStructure,
+    se-rs:RoutingStructure ) -> DDR4-Ctl-Constraint:
+  DDR4-Ctl-Constraint(
+    rank = rank,
+    diff-ck-rs = diff-ck-rs,
+    se-rs = se-rs,
+  )
+
+
+public defstruct DDR4-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Channel Bit Width (4, 8, 16, 72)
+  <DOC>
+  width:DDR4-width
+  doc: \<DOC>
+  Topology of memory channel (unused at present as FlyBy is the only supported topology)
+  <DOC>
+  topology:DDR4-topology
+  doc: \<DOC>
+  Channel Rank
+  <DOC>
+  rank:DDR4-rank
+  doc: \<DOC>
+  Data Link Constraint
+  <DOC>
+  data-cst:DDR4-Data-Constraint
+  doc: \<DOC>
+  ACC Link Constraint
+  <DOC>
+  ctl-cst:DDR4-Ctl-Constraint
+  doc: \<DOC>
+  Data To ACC Constraint
+  <DOC>
+  data-acc-cst:DDR4-Data-ACC-Constraint
+
+  ; doc: \<DOC>
+  ; CK Intra-pair Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-ck:Toleranced with :
+  ;   default => 0.0 +/- 1.00e-12
+  ; doc: \<DOC>
+  ; DQS Intra-pair Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-dqs:Toleranced with :
+  ;   default => 0.0 +/- 1.00e-12
+  ; doc: \<DOC>
+  ; CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-ck-dqs:Toleranced with :
+  ;   default => min-typ-max(-85.0e-12, 0.0, 935.0e-12)
+  ; doc: \<DOC>
+  ; DQ to DQS Inter-pair Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-dq-dqs:Toleranced with :
+  ;   default => 0.0 +/- 3.50e-12
+  ; doc: \<DOC>
+  ; DM_n to DQS.P Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-dm-dqs:Toleranced with:
+  ;   default => 0.0 +/- 3.50e-12 ; Same as DQ timing
+  ; doc: \<DOC>
+  ; CMD/ADDR/CTRL to CK Inter-pair Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-cmd-addr-ctrl-ck:Toleranced with :
+  ;   default => 0.0 +/- 20.0e-12
+  ; doc: \<DOC>
+  ; CMD, ADDR, CTRL (w/o CK) Intra-group Timing Skew Constraint in Seconds
+  ; <DOC>
+  ; skew-cmd-addr-ctrl:Toleranced  with:
+  ;   default =>  0.0 +/- 10.0e-12
+  ; doc: \<DOC>
+  ; Diff-Pair Max Loss Limit Constraint in dB
+  ; <DOC>
+  ; loss:Double with:
+  ;   ensure => ensure-positive!,
+  ;   default => 5.0
+  ; doc: \<DOC>
+  ; Differential Routing Structure for CK  [90.0 +/- (5 %)]
+  ; <DOC>
+  ; diff-ck-rs:DifferentialRoutingStructure
+  ; doc: \<DOC>
+  ; Differential Routing Structure for DQS [100.0 +/- (5 %)]
+  ; <DOC>
+  ; diff-dqs-rs:DifferentialRoutingStructure
+  ; doc: \<DOC>
+  ; Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
+  ; <DOC>
+  ; se-dq-rs:RoutingStructure
+  ; doc: \<DOC>
+  ; Single-Ended Routing Structure for all other SE signal [45.0 +/- (5 %)]
+  ; <DOC>
+  ; se-rs:RoutingStructure
 
 with:
   keyword-constructor => true
@@ -302,18 +440,16 @@ public defn DDR4-Constraint (
     width:DDR4-width,
     topology:DDR4-topology,
     rank:DDR4-rank,
-    diff-ck-rs:DifferentialRoutingStructure,
-    diff-dqs-rs:DifferentialRoutingStructure,
-    se-dq-rs:RoutingStructure,
-    se-rs:RoutingStructure ) -> DDR4-Constraint:
+    data-cst:DDR4-Data-Constraint,
+    ctl-cst:DDR4-Ctl-Constraint,
+    data-acc-cst:DDR4-Data-ACC-Constraint ) -> DDR4-Constraint:
   DDR4-Constraint(
     width = width,
     topology = topology,
     rank = rank,
-    diff-ck-rs = diff-ck-rs,
-    diff-dqs-rs = diff-dqs-rs,
-    se-dq-rs = se-dq-rs,
-    se-rs = se-rs
+    data-cst = data-cst,
+    ctl-cst = ctl-cst,
+    data-acc-cst = data-acc-cst
   )
 
 doc: \<DOC>
@@ -330,20 +466,134 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     val ilane  = width-to-lane(width(cst))
     val irank  = rank-to-int(rank(cst))
 
-    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
-    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
+    ; val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
+    ; val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
 
-    val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
-    constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
+    ; val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
+    ; constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
+
+    ; ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
+    ; ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
+    ; ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
+    ; for i in 0 to ilane do :
+    ;   val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
+    ;   constrain(cst-dqs, src.data.DQS[i] dst.data.DQS[i])
+    ;   ; constrain DQS with respect to CK
+    ;   timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
+    ;   ; constrain DQ with respect to DQS
+    ;   val bs = i * 8
+    ;   val be = bs + 8
+    ;   val target-dqm-bus = to-tuple $ cat{_, [src.data.DM_n[i] => dst.data.DM_n[i]]} $ for j in bs to be seq : src.data.DQ[j] => dst.data.DQ[j]
+    ;   timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
+    ;   max-loss(loss(cst), ep-sets = target-dqm-bus)
+    ; ; needs to be outside the loop as structure() can't handle a Tuple<KeyValue> argument
+    ; structure(src.data.DQ, dst.data.DQ) = se-dq-rs(cst)
+    ; structure(src.data.DM_n, dst.data.DM_n) = se-dq-rs(cst)
+
+    ; ; now constrain addr/cmd/ctrl signals (1x per bus)
+    ; ; there are two constraints to be applied:
+    ; ; First is versus CK and is +/- 20 ps
+    ; ; Second is versus the other signals in the same group and is +/- 10 ps
+    ; ; let's pick an arbitrary signal to serve as the guide for the overall ADDR/CMD/CTL group
+    ; val guide-acc-group = src.ctl.CKE => dst.ctl.CKE
+    ; ; now back to our regularly scheduled program
+    ; val target-cke = src.ctl.CKE => dst.ctl.CKE
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cke)
+    ; ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
+    ; structure(target-cke) = se-rs(cst)
+    ; max-loss(loss(cst), target-cke)
+    ; for j in 0 to 17 do :
+    ;   val target-addr = src.ctl.A[j] => dst.ctl.A[j]
+    ;   timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-addr)
+    ;   timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
+    ;   structure(target-addr) = se-rs(cst)
+    ;   max-loss(loss(cst), target-addr)
+
+    ; val target-act = src.ctl.ACT_n => dst.ctl.ACT_n
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-act)
+    ; timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
+    ; structure(target-act) = se-rs(cst)
+    ; max-loss(loss(cst), target-act)
+    ; for j in 0 to 2 do :
+    ;   val target-bg = src.ctl.BG[j] => dst.ctl.BG[j]
+    ;   timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-bg)
+    ;   timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-bg)
+    ;   structure(target-bg) = se-rs(cst)
+    ;   max-loss(loss(cst), target-bg)
+    ;   val target-ba = src.ctl.BA[j] => dst.ctl.BA[j]
+    ;   timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
+    ;   timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
+    ;   structure(target-ba) = se-rs(cst)
+    ;   max-loss(loss(cst), target-ba)
+    ; for j in 0 to irank do:
+    ;   val target-cs = src.ctl.CS_n[j] => dst.ctl.CS_n[j]
+    ;   timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cs)
+    ;   timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cs)
+    ;   structure(target-cs) = se-rs(cst)
+    ;   max-loss(loss(cst), target-cs)
+    ; val target-reset = src.ctl.RESET_n => dst.ctl.RESET_n
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-reset)
+    ; timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-reset)
+    ; structure(target-reset) = se-rs(cst)
+    ; max-loss(loss(cst), target-reset)
+    ; val target-odt = src.ctl.ODT => dst.ctl.ODT
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-odt)
+    ; timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
+    ; structure(target-odt) = se-rs(cst)
+    ; max-loss(loss(cst), target-odt)
+    ; val target-par = src.ctl.PAR => dst.ctl.PAR
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-par)
+    ; timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-par)
+    ; structure(target-par) = se-rs(cst)
+    ; max-loss(loss(cst), target-par)
+    ; val target-alert = src.ctl.ALERT_n => dst.ctl.ALERT_n
+    ; timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-alert)
+    ; timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-alert)
+    ; structure(target-alert) = se-rs(cst)
+    ; max-loss(loss(cst), target-alert)
+
+
+public defn connect-DDR4 (src:JITXObject, dst:JITXObject
+                          -- width:DDR4-width = DDR4-x16,
+                          topology:DDR4-topology = FlyBy,
+                          rank:DDR4-rank = SingleRank,
+                          diff-ck-rs:DifferentialRoutingStructure,
+                          diff-dqs-rs:DifferentialRoutingStructure,
+                          dq-rs:RoutingStructure,
+                          rs:RoutingStructure) :
+  inside pcb-module :
+    val ddr4-cst = DDR4-Constraint(width = width,
+                                   topology = topology,
+                                   rank = rank,
+                                   diff-ck-rs = diff-ck-rs,
+                                   diff-dqs-rs = diff-dqs-rs,
+                                   se-dq-rs = dq-rs,
+                                   se-rs = rs)
+    constrain-topology(src, dst, ddr4-cst)
+
+
+
+doc: \<DOC>
+Constrain a DDR4 Data Link assuming that it is a discrete link (not DIMM or combined data/control)
+
+@param cst Constraint Object
+@param src Source End Point - must be of `ddr4-data-channel` type
+@param dst Destination End Point - must be of `ddr4-data-channel` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+
+    val ilane  = width-to-lane(width(cst))
+    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
 
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
     ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
     for i in 0 to ilane do :
+      ; constrain DQS per byte lane
       val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
       constrain(cst-dqs, src.data.DQS[i] dst.data.DQS[i])
-      ; constrain DQS with respect to CK
-      timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
       ; constrain DQ with respect to DQS
       val bs = i * 8
       val be = bs + 8
@@ -351,8 +601,27 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
       timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
       max-loss(loss(cst), ep-sets = target-dqm-bus)
     ; needs to be outside the loop as structure() can't handle a Tuple<KeyValue> argument
+    ; this statement will handle the entire DQ bus
     structure(src.data.DQ, dst.data.DQ) = se-dq-rs(cst)
+    ; this statement will handle the DM_n signal
     structure(src.data.DM_n, dst.data.DM_n) = se-dq-rs(cst)
+
+doc: \<DOC>
+Constrain a DDR4 Ctl Link assuming that it is a discrete link (not DIMM or combined data/control)
+
+@param cst Constraint Object
+@param src Source End Point - must be of `ddr4-ctl-channel` type
+@param dst Destination End Point - must be of `ddr4-ctl-channel` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defmethod constrain (cst:DDR4-Ctl-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+
+    val irank  = rank-to-int(rank(cst))
+    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
+
+    val guide-ck  = src.ctl.CK.P => dst.ctl.CK.P
+    constrain(cst-ck, src.ctl.CK, dst.ctl.CK)
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     ; there are two constraints to be applied:
@@ -415,23 +684,4 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-alert)
     structure(target-alert) = se-rs(cst)
     max-loss(loss(cst), target-alert)
-
-
-public defn connect-DDR4 (src:JITXObject, dst:JITXObject
-                          -- width:DDR4-width = DDR4-x16,
-                          topology:DDR4-topology = FlyBy,
-                          rank:DDR4-rank = SingleRank,
-                          diff-ck-rs:DifferentialRoutingStructure,
-                          diff-dqs-rs:DifferentialRoutingStructure,
-                          dq-rs:RoutingStructure,
-                          rs:RoutingStructure) :
-  inside pcb-module :
-    val ddr4-cst = DDR4-Constraint(width = width,
-                                   topology = topology,
-                                   rank = rank,
-                                   diff-ck-rs = diff-ck-rs,
-                                   diff-dqs-rs = diff-dqs-rs,
-                                   se-dq-rs = dq-rs,
-                                   se-rs = rs)
-    constrain-topology(src, dst, ddr4-cst)
 
