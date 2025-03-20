@@ -42,11 +42,16 @@ track the instance as it moves in the layout.
 <DOC>
 pcb-module test-design:
   inst non-keepout : test-SOIC
+  net GND (non-keepout.VSS)
 
   inst app-keepout : test-SOIC
+  net (GND, app-keepout.VSS)
+
   val KO = KeepoutOverlay(Rectangle(4.0, 6.0))
   make-keepout-overlay(KO, app-keepout, name = "D-Overlay")
 
+  geom(GND):
+    copper-pour(LayerIndex(0), isolate = 0.25, rank = 1) = board-shape
 
 ; Set the top level module (the module to be compile into a schematic and PCB)
 set-current-design("APP-Specific-Keepout-TEST")
