@@ -44,11 +44,18 @@ public pcb-stackup jlcpcb-jlc2313 :
   stack(0.035, copper)
   stack(0.019, soldermask) ; 0.5mil over conductor
 
+public pcb-via default-th:
+  start = Top
+  stop = Bottom
+  type = MechanicalDrill
+  diameter = 0.6
+  hole-diameter = 0.3
 
 public pcb-board default-board (outline:Shape) :
   stackup = jlcpcb-jlc2313
   boundary = outline
   signal-boundary = outline
+  vias = [default-th]
 
 public pcb-rules default-rules :
   min-copper-width = 0.13 ; 5mil
