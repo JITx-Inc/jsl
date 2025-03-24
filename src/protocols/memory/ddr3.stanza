@@ -67,23 +67,24 @@ public defn width-to-lane (en:DDR3-width) -> Int:
 doc: \<DOC>
 @brief ddr3 topology
 This is a fixed list of possible topologies for ddr3 memories
-@member FlyBy
-@member ClamShell
+@member DDR3-FlyBy
+@member DDR3-ClamShell
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr3/DDR3-topology:
-  FlyBy
-  ClamShell
+  DDR3-FlyBy
+  DDR3-ClamShell
 
 doc: \<DOC>
 @brief DDR3 rank Options
 This is a fixed list of possible rank options for ddr3 implementations
-@member SingleRank
-@member DualRank
-@member QuadRank
+@member DDR3-SingleRank
+@member DDR3-DualRank
+@member DDR3-QuadRank
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr3/DDR3-rank:
-  SingleRank
-  DualRank
+  DDR3-SingleRank
+  DDR3-DualRank
+  DDR3-QuadRank
 
 doc: \<DOC>
 @brief DDR3 rank enum conversion to integers
@@ -92,8 +93,8 @@ which determines the number of CS_n signals needed to control the memories
 <DOC>
 public defn rank-to-int (en:DDR3-rank) -> Int:
   switch(en) :
-    SingleRank : 1
-    DualRank   : 2
+    DDR3-SingleRank : 1
+    DDR3-DualRank   : 2
 
 doc: \<DOC>
 @brief ddr3 Bundle
@@ -101,11 +102,11 @@ One ddr3 bundle consists of the connections between an integrated memory control
 one or more ddr3 memory chips/DIMMs.
 @member data Data channel(s) for ddr3 depending on the width
 @member ctl Control channel for ddr3
-@member rank Rank configuration of the DDR3 memory (SingleRank, DualRank, or QuadRank)
-@member topology Topology of the DDR3 connection (FlyBy or ClamShell)
+@member rank Rank configuration of the DDR3 memory (DDR3-SingleRank, DDR3-DualRank, or DDR3-QuadRank)
+@member topology Topology of the DDR3 connection (DDR3-FlyBy or DDR3-ClamShell)
 <DOC>
 
-public defn ddr3 (width:DDR3-width -- rank:DDR3-rank = SingleRank, topology:DDR3-topology = FlyBy) :
+public defn ddr3 (width:DDR3-width -- rank:DDR3-rank = DDR3-SingleRank, topology:DDR3-topology = DDR3-FlyBy) :
   ddr3-b(width, rank, topology)
 
 public pcb-bundle ddr3-b (width:DDR3-width, rank:DDR3-rank, topology:DDR3-topology) :
@@ -376,8 +377,8 @@ public defmethod constrain (cst:DDR3-Constraint, src:JITXObject, dst:JITXObject)
 
 public defn connect-DDR3 (src:JITXObject, dst:JITXObject
                           -- width:DDR3-width = DDR3-x16,
-                          topology:DDR3-topology = FlyBy,
-                          rank:DDR3-rank = SingleRank,
+                          topology:DDR3-topology = DDR3-FlyBy,
+                          rank:DDR3-rank = DDR3-SingleRank,
                           diff-ck-rs:DifferentialRoutingStructure,
                           diff-dqs-rs:DifferentialRoutingStructure,
                           dq-rs:RoutingStructure,
@@ -390,4 +391,4 @@ public defn connect-DDR3 (src:JITXObject, dst:JITXObject
                                    diff-dqs-rs = diff-dqs-rs,
                                    se-dq-rs = dq-rs,
                                    se-rs = rs)
-    constrain-topology(src, dst, ddr3-cst) 
+    constrain-topology(src, dst, ddr3-cst)
