@@ -47,6 +47,8 @@ public pcb-enum jsl/protocols/memory/ddr3/DDR3-width:
 doc: \<DOC>
 @brief DDR3 Width enum conversion to integers
 This converts possible lane widths for ddr3 memory channels into the corresponding integer
+@param en DDR3-width enum
+@return Integer value corresponding to the width
 <DOC>
 public defn width-to-int (en:DDR3-width) -> Int:
   switch(en) :
@@ -58,6 +60,8 @@ doc: \<DOC>
 This converts possible lane widths for ddr3 memory channels
 into the corresponding integer number of 8-bit lanes which
 determines the number of DQS pairs required.
+@param en DDR3-width enum
+@return Integer value corresponding to the lane count
 <DOC>
 public defn width-to-lane (en:DDR3-width) -> Int:
   switch(en) :
@@ -88,6 +92,8 @@ doc: \<DOC>
 @brief DDR3 rank enum conversion to integers
 This converts possible rank options for ddr3 memory channels into a corresponding integer
 which determines the number of CS_n signals needed to control the memories
+@param en DDR3-rank enum
+@return Integer value corresponding to the rank
 <DOC>
 public defn rank-to-int (en:DDR3-rank) -> Int:
   switch(en) :
