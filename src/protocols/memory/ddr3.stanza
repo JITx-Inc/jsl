@@ -1,48 +1,29 @@
 doc: \<DOC>
-@brief Double Data Rate 4 Memory Standard (DDR4)
+@brief Double Data Rate 3 Memory Standard (DDR3)
 
-DDR4 is a high speed memory protocol
-@see https://en.wikipedia.org/wiki/DDR4_SDRAM
+DDR3 is a high speed memory protocol
+@see https://en.wikipedia.org/wiki/DDR3_SDRAM
 
-The functions and definitions in this file support defining DDR4
-connections between microprocessors and memories in a board design. The
-DDR4 standard is a complex specification with many timing constraints and
-impedance requirements. This implementation is based on the DDR4 SDRAM
-Standard Version 4.00, October 2018. This file supports both point to point and FlyBy connections.
+The functions and definitions in this file support defining DDR3
+connections between microprocessors and memories in a board design.
 
-This file contains curated values for skew and loss of DDR4 channel
+This file contains curated values for skew and loss of DDR3 channel
 It specifies the bounds on the intra-pair
 skew timing and maximum loss as expected by this particular standard. The values
 returned are a toleranced value with upper/lower limits for the
 intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
 table are derived from the references listed below.
 
-1. Skew match between A[17] A[13:0] and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
-2. Skew match between RAS_n, CAS_n, WE_n, and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
-3. Skew match between BA[1:0], BG[1:0] and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
-4. Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
-5. Skew match between CMD/ADDR/CTRL within a channel is 0.0 +/- 20e-12 (20 ps) Intel
-6. Skew match of CK is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
-7. Skew match of DQS is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
-8. Skew match between DQ and DQS.P within a byte lane is 0.0 +/- 3.5e-12 (3.5 ps) Intel or 0.0 +/- 100.0e-12 (100 ps) AMD 
-9. Skew match between CK.P and DQS.P is -85 ps to 935 ps Intel or -149 ps to +1796 ps AMD
-
-Intel specs derived from:
-https://www.intel.com/content/www/us/en/docs/programmable/683216/23-2-2-7-1/skew-matching-guidelines-for-ddr4-discrete.html
-AMD specs derived from:
-https://docs.amd.com/r/en-US/ug863-versal-pcb-design/Timing-Constraint-Rules-for-DDR4-Signals
-for the DDR4 component table
-
-Calculating the distance to time correspondence depends on the board material.
-Example:
-  tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
-  @  5 mils spec'ed that is a intra-pair skew of 735 fs to 850 fs depending on the material characteristics
-  @ 10 mils spec'ed that is a intra-pair skew of 1.47 ps to 1.70 ps depending on the material characteristics
+1. Skew match between CMD/ADDR/CTRL and CK.P is 0.0 +/- 25e-12 (25 ps)
+2. Skew match of CK is 0.0 +/- 1.0e-12 (1 ps)
+3. Skew match of DQS is 0.0 +/- 1.0e-12 (1 ps)
+4. Skew match between DQ and DQS.P within a byte lane is 0.0 +/- 3.5e-12 (3.5 ps)
+5. Skew match between CK.P and DQS.P is -75 ps to 900 ps (example values, needs verification)
 
 <DOC>
 
 #use-added-syntax(jitx)
-defpackage jsl/protocols/memory/ddr4:
+defpackage jsl/protocols/memory/ddr3:
   import core
   import jitx
   import jitx/commands
@@ -54,133 +35,119 @@ defpackage jsl/protocols/memory/ddr4:
   import jsl/pin-assignment
 
 doc: \<DOC>
-@brief DDR4 width enums
-This is a fixed list of possible lane widths for DDR4 memory channels
-@member DDR4-x4   4 bit width
-@member DDR4-x8   8 bit width
-@member DDR4-x16 16 bit width
-@member DDR4-x72 72 bit width
+@brief DDR3 width enums
+This is a fixed list of possible lane widths for DDR3 memory channels
+@member DDR3-x8   8 bit width
+@member DDR3-x16 16 bit width
 <DOC>
-public pcb-enum jsl/protocols/memory/ddr4/DDR4-width:
-  DDR4-x4
-  DDR4-x8
-  DDR4-x16
-  DDR4-x72
+public pcb-enum jsl/protocols/memory/ddr3/DDR3-width:
+  DDR3-x8
+  DDR3-x16
 
 doc: \<DOC>
-@brief DDR4 Width enum conversion to integers
-This converts possible lane widths for ddr4 memory channels into the corresponding integer
+@brief DDR3 Width enum conversion to integers
+This converts possible lane widths for ddr3 memory channels into the corresponding integer
+@param en DDR3-width enum
+@return Integer value corresponding to the width
 <DOC>
-public defn width-to-int (en:DDR4-width) -> Int:
+public defn width-to-int (en:DDR3-width) -> Int:
   switch(en) :
-    DDR4-x4  :  4
-    DDR4-x8  :  8
-    DDR4-x16 : 16
-    DDR4-x72 : 72
+    DDR3-x8  :  8
+    DDR3-x16 : 16
 
 doc: \<DOC>
-@brief DDR4 Width enum conversion to lane count
-This converts possible lane widths for ddr4 memory channels
+@brief DDR3 Width enum conversion to lane count
+This converts possible lane widths for ddr3 memory channels
 into the corresponding integer number of 8-bit lanes which
 determines the number of DQS pairs required.
+@param en DDR3-width enum
+@return Integer value corresponding to the lane count
 <DOC>
-public defn width-to-lane (en:DDR4-width) -> Int:
+public defn width-to-lane (en:DDR3-width) -> Int:
   switch(en) :
-    DDR4-x4  : 1 ; degenerate case
-    DDR4-x8  : 1
-    DDR4-x16 : 2
-    DDR4-x72 : 9
+    DDR3-x8  : 1
+    DDR3-x16 : 2
 
 doc: \<DOC>
-@brief ddr4 topology
-This is a fixed list of possible topologies for ddr4 memories
-@member DDR4-FlyBy - Supported by the subordinate constraints for DDR4-Data-Constraints and DDR4-ACC-Constraints
+@brief ddr3 topology
+This is a fixed list of possible topologies for ddr3 memories
+@member DDR3-FlyBy
 <DOC>
-public pcb-enum jsl/protocols/memory/ddr4/DDR4-topology:
-  DDR4-FlyBy
+public pcb-enum jsl/protocols/memory/ddr3/DDR3-topology:
+  DDR3-FlyBy
 
 doc: \<DOC>
-@brief DDR4 rank Options
-This is a fixed list of possible rank options for ddr4 implementations (i.e. number of CS_n signals)
-@member DDR4-SingleRank - 1 CS_n signal
-@member DDR4-DualRank - 2 CS_n signals
-@member DDR4-QuadRank - 4 CS_n signals
+@brief DDR3 rank Options
+This is a fixed list of possible rank options for ddr3 implementations
+@member DDR3-SingleRank
+@member DDR3-DualRank
+@member DDR3-QuadRank
 <DOC>
-public pcb-enum jsl/protocols/memory/ddr4/DDR4-rank:
-  DDR4-SingleRank
-  DDR4-DualRank
-  DDR4-QuadRank
+public pcb-enum jsl/protocols/memory/ddr3/DDR3-rank:
+  DDR3-SingleRank
+  DDR3-DualRank
+  DDR3-QuadRank
 
 doc: \<DOC>
-@brief DDR4 rank enum conversion to integers
-This converts possible rank options for ddr4 memory channels into a corresponding integer
+@brief DDR3 rank enum conversion to integers
+This converts possible rank options for ddr3 memory channels into a corresponding integer
 which determines the number of CS_n signals needed to control the memories
+@param en DDR3-rank enum
+@return Integer value corresponding to the rank
 <DOC>
-public defn rank-to-int (en:DDR4-rank) -> Int:
+public defn rank-to-int (en:DDR3-rank) -> Int:
   switch(en) :
-    DDR4-SingleRank : 1
-    DDR4-DualRank   : 2
-    DDR4-QuadRank   : 4
+    DDR3-SingleRank : 1
+    DDR3-DualRank   : 2
+    DDR3-QuadRank   : 4
 
 doc: \<DOC>
-@brief ddr4 Bundle
-One ddr4 bundle consists of the connections between an integrated memory controller and
-one or more ddr4 memory chips/DIMMs.
-@member data Data channel(s) for ddr4 depending on the width
-@member acc ACC channel for ddr4
-@member rank Rank configuration of the DDR4 memory (DDR4-SingleRank, DDR4-DualRank, or DDR4-QuadRank)
-@member topology Topology of the DDR4 connection (DDR4-FlyBy or DDR4-ClamShell)
-@member BG-len Number of BG pins
-@member BA-len Number of BA pins
+@brief ddr3 Bundle
+One ddr3 bundle consists of the connections between an integrated memory controller and
+one or more ddr3 memory chips/DIMMs.
+@param data Data channel(s) for ddr3 depending on the width
+@param acc ACC (address command control) channel for ddr3
+@param rank Rank configuration of the DDR3 memory (DDR3-SingleRank, DDR3-DualRank, or DDR3-QuadRank)
+@param topology Topology of the DDR3 connection (DDR3-FlyBy or DDR3-ClamShell)
+@param BA-len Number of BA pins
 <DOC>
 
-public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = DDR4-SingleRank, topology:DDR4-topology = DDR4-FlyBy, BG-len:Int = 2, BA-len:Int = 2) :
-  if width == DDR4-x4 and rank != DDR4-SingleRank:
-    throw(ArgumentError("DDR4-x4 is only supported in DDR4-SingleRank configuration"))
-  if width == DDR4-x16 and rank == DDR4-QuadRank:
-    throw(ArgumentError("DDR4-x16 is not supported in DDR4-QuadRank configuration"))
-  ddr4-b(width, rank, topology, BG-len, BA-len)
+public defn ddr3 (width:DDR3-width -- rank:DDR3-rank = DDR3-SingleRank, topology:DDR3-topology = DDR3-FlyBy, BA-len:Int = 3) :
+  if width == DDR3-x16 and rank == DDR3-QuadRank:
+    throw(ArgumentError("DDR3-x16 is not supported in DDR3-QuadRank configuration"))
+  ddr3-b(width, rank, topology, BA-len)
 
-public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology, BG-len:Int, BA-len:Int) :
-  name = "DDR4"
-  description = "DDR4 Dynamic Random-Access Memory protocol"
-  port data    : ddr4-data-channel(width) ;
-  port acc     : ddr4-acc-channel(rank, BG-len, BA-len) ; covers all CMD/CTRL/ADDR
+public pcb-bundle ddr3-b (width:DDR3-width, rank:DDR3-rank, topology:DDR3-topology, BA-len:Int) :
+  name = "DDR3"
+  description = "DDR3 Dynamic Random-Access Memory protocol"
+  port data    : ddr3-data-channel(width) ;
+  port acc     : ddr3-acc-channel(rank, BA-len) ; covers all CMD/CTRL/ADDR
 
-public pcb-bundle ddr4-data-channel (width:DDR4-width):
+public pcb-bundle ddr3-data-channel (width:DDR3-width):
   port DQ    : pin[width-to-int(width)] ; will vary from 3:0 to 7:0 to 15:0 to 71:0 as appropriate
   port DQS   : diff-pair[width-to-lane(width)] ; will either be 0 or 1:0 to 8:0
-  port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
+  port DM    : pin[width-to-lane(width)] ; data mask per 8b lane (note: DDR3 uses DM, not DM_n)
 
-public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, BG-len:Int, BA-len:Int):
+public pcb-bundle ddr3-acc-channel (rank:DDR3-rank, BA-len:Int):
   port CK      : diff-pair
   port CKE     : pin
-  port A       : pin[17]
-  port ACT_n   : pin
-  port BG      : pin[BG-len]
-  port BA      : pin[BA-len]
+  port A       : pin[15]  ; DDR3 typically has 15 address lines compared to 17 in DDR4
+  port RAS_n   : pin      ; DDR3 has separate RAS_n, CAS_n, WE_n unlike DDR4
+  port CAS_n   : pin
+  port WE_n    : pin
+  port BA      : pin[BA-len]   ; DDR3 has 3 bank address lines (no BG)
   port CS_n    : pin[rank-to-int(rank)]
   port RESET_n : pin
   port ODT     : pin
-  port PAR     : pin
-  port ALERT_n : pin
-  ; not routed pins for DDR4?
-  ; port ZQ      : pin[width-to-lane(width)]
-  ; port TEN     : pin
-
-  ; port RAS_n   : pin ; aka A[16]
-  ; port CAS_n   : pin ; aka A[15]
-  ; port WE_n    : pin ; aka A[14]
-
 
 doc: \<DOC>
-@brief Differential impedance specified by the DDR4 standard
-This is a defstruct that holds the expected differential
+@brief Differential impedance specified by the DDR3 standard
+This is a helper defstruct that holds the expected differential
 trace impedance for the standard.
 
 @return Upper/lower limits for the impedance in a struct.
 <DOC>
-public defstruct DDR4-Impedances <: Equalable:
+public defstruct DDR3-Impedances <: Equalable:
   ck-imped:Toleranced with:
      default => 90.0 +/- (5 %)
   dqs-imped:Toleranced with:
@@ -195,7 +162,7 @@ with:
   equalable => true
 
 doc: \<DOC>
-DDR4 SI Constraint Type
+DDR3 SI Constraint Type
 
 This derives from the whole data lane constraint as most of the dq signals
 are single-ended but referenced to the dqs pairs. The remainder of the signals are
@@ -203,51 +170,47 @@ constrained to the CK pair. The constraints are:
 
     0.0 +/-    1.0e-12   ; Intra-pair skew match of CK is +/- 1 ps
     0.0 +/-    1.0e-12   ; Intra-pair skew match of DQS is +/- 1 ps
-  -85.0e-12 +935.0e-12   ; Skew match between CK.P and DQS.P -85 ps to 935 ps
+  -75.0e-12 +900.0e-12   ; Skew match between CK.P and DQS.P -75 ps to 900 ps (example values, needs verification)
     0.0 +/-    3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps
-    0.0 +/-   20.0e-12   ; Skew match between A[17] A[13:0] and CK.P +/- 20 ps
-    0.0 +/-   20.0e-12   ; Skew match between RAS_n, CAS_n, WE_n, and CK.P is +/- 20 ps
-    0.0 +/-   20.0e-12   ; Skew match between BA[1:0], BG[1:0] and CK.P is +/- 20 ps
-    0.0 +/-   20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
-    0.0 +/-   20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
+    0.0 +/-   25.0e-12   ; Skew match between CMD/ADDR/CTRL and CK.P +/- 25 ps
 
 <DOC>
 
-public defstruct DDR4-Data-ACC-Constraint <: SI-Constraint :
+public defstruct DDR3-Data-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
   Channel Bit Width
   <DOC>
-  width:DDR4-width
-
+  width:DDR3-width
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
   skew-ck-dqs:Toleranced with :
-    default => min-typ-max(-85.0e-12, 0.0, 935.0e-12)
+    default => min-typ-max(-75.0e-12, 0.0, 900.0e-12)
 with:
   keyword-constructor => true
-  constructor => #DDR4-Data-ACC-Constraint
+  constructor => #DDR3-Data-ACC-Constraint
 
 doc: \<DOC>
-Constructor for the DDR4 Data Link Constraint
-@param width Width of the DDR4 interface (enumerated type)
+Constructor for the DDR3 Data Link Constraint
+@param width Width of the DDR3 interface (enumerated type)
 @param diff-dqs-rs Differential Routing Structure constraints for DQS signals
 @param se-dq-rs Routing Structure constraints for DQ signals
 <DOC>
-public defn DDR4-Data-ACC-Constraint (
-    width:DDR4-width ) -> DDR4-Data-ACC-Constraint:
-  DDR4-Data-ACC-Constraint(
+public defn DDR3-Data-ACC-Constraint (
+    width:DDR3-width ) -> DDR3-Data-ACC-Constraint:
+  DDR3-Data-ACC-Constraint(
     width = width
   )
 
-; this is the data-only subset of the overall DDR4-Constraint
+
+; this is the data-only subset of the overall DDR3-Constraint
 ; needs to be separate because the constrain() function would get confused if
-; we pass in the full DDR4-Constraint object as the type argument
-public defstruct DDR4-Data-Constraint <: SI-Constraint :
+; we pass in the full DDR3-Constraint object as the type argument
+public defstruct DDR3-Data-Constraint <: SI-Constraint :
   doc: \<DOC>
   Channel Bit Width
   <DOC>
-  width:DDR4-width
+  width:DDR3-width
   doc: \<DOC>
   DQS Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -279,30 +242,31 @@ public defstruct DDR4-Data-Constraint <: SI-Constraint :
   se-dq-rs:RoutingStructure
 with:
   keyword-constructor => true
-  constructor => #DDR4-Data-Constraint
+  constructor => #DDR3-Data-Constraint
 
 
 doc: \<DOC>
-Constructor for the DDR4 Data Link Constraint
-@param width Width of the DDR4 interface (enumerated type)
+Constructor for the DDR3 Data Link Constraint
+@param width Width of the DDR3 interface (enumerated type)
 @param diff-dqs-rs Differential Routing Structure constraints for DQS signals
 @param se-dq-rs Routing Structure constraints for DQ signals
 <DOC>
-public defn DDR4-Data-Constraint (
-    width:DDR4-width,
+public defn DDR3-Data-Constraint (
+    width:DDR3-width,
     diff-dqs-rs:DifferentialRoutingStructure,
-    se-dq-rs:RoutingStructure ) -> DDR4-Data-Constraint:
-  DDR4-Data-Constraint(
+    se-dq-rs:RoutingStructure ) -> DDR3-Data-Constraint:
+  DDR3-Data-Constraint(
     width = width,
     diff-dqs-rs = diff-dqs-rs,
     se-dq-rs = se-dq-rs,
   )
 
-public defstruct DDR4-ACC-Constraint <: SI-Constraint :
+
+public defstruct DDR3-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
   Channel Rank (i.e. number of CS_n signals)
   <DOC>
-  rank:DDR4-rank
+  rank:DDR3-rank
   doc: \<DOC>
   CK Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -312,12 +276,12 @@ public defstruct DDR4-ACC-Constraint <: SI-Constraint :
   CMD/ADDR/CTRL to CK Inter-pair Timing Skew Constraint in Seconds
   <DOC>
   skew-cmd-addr-ctrl-ck:Toleranced with :
-    default => 0.0 +/- 20.0e-12
+    default => 0.0 +/- 25.0e-12
   doc: \<DOC>
   CMD, ADDR, CTRL (w/o CK) Intra-group Timing Skew Constraint in Seconds
   <DOC>
   skew-cmd-addr-ctrl:Toleranced  with:
-    default =>  0.0 +/- 10.0e-12
+    default =>  0.0 +/- 12.0e-12
   doc: \<DOC>
   Diff-Pair Max Loss Limit Constraint in dB
   <DOC>
@@ -334,38 +298,38 @@ public defstruct DDR4-ACC-Constraint <: SI-Constraint :
   se-rs:RoutingStructure
 with:
   keyword-constructor => true
-  constructor => #DDR4-ACC-Constraint
+  constructor => #DDR3-ACC-Constraint
 
 doc: \<DOC>
-Constructor for the DDR4 Link Constraint
-@param rank Rank of the DDR4 interface (enumerated type)
+Constructor for the DDR3 Link Constraint
+@param rank Rank of the DDR3 interface (enumerated type)
 @param diff-ck-rs Differential Routing Structure constraints for CK signals
 @param se-rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
 <DOC>
-public defn DDR4-ACC-Constraint (
-    rank:DDR4-rank,
+public defn DDR3-ACC-Constraint (
+    rank:DDR3-rank,
     diff-ck-rs:DifferentialRoutingStructure,
-    se-rs:RoutingStructure ) -> DDR4-ACC-Constraint:
-  DDR4-ACC-Constraint(
+    se-rs:RoutingStructure ) -> DDR3-ACC-Constraint:
+  DDR3-ACC-Constraint(
     rank = rank,
     diff-ck-rs = diff-ck-rs,
     se-rs = se-rs,
   )
 
 
-public defstruct DDR4-Constraint <: SI-Constraint :
+public defstruct DDR3-Constraint <: SI-Constraint :
   doc: \<DOC>
-  Channel Bit Width (4, 8, 16, 72)
+  Channel Bit Width
   <DOC>
-  width:DDR4-width
+  width:DDR3-width
   doc: \<DOC>
-  Topology of memory channel (unused at present as DDR4-FlyBy is the only supported topology)
+  Topology of memory channel
   <DOC>
-  topology:DDR4-topology
+  topology:DDR3-topology
   doc: \<DOC>
   Channel Rank
   <DOC>
-  rank:DDR4-rank
+  rank:DDR3-rank
   doc: \<DOC>
   Differential Routing Structure for CK  [90.0 +/- (5 %)]
   <DOC>
@@ -386,26 +350,26 @@ public defstruct DDR4-Constraint <: SI-Constraint :
   doc: \<DOC>
   Data Link Constraint
   <DOC>
-  data-cst:DDR4-Data-Constraint with:
-    default => DDR4-Data-Constraint(width = width, diff-dqs-rs = diff-dqs-rs, se-dq-rs = se-dq-rs)
+  data-cst:DDR3-Data-Constraint with:
+    default => DDR3-Data-Constraint(width = width, diff-dqs-rs = diff-dqs-rs, se-dq-rs = se-dq-rs)
   doc: \<DOC>
   ACC Link Constraint
   <DOC>
-  acc-cst:DDR4-ACC-Constraint with:
-    default => DDR4-ACC-Constraint(rank = rank, diff-ck-rs = diff-ck-rs, se-rs = se-rs)
+  acc-cst:DDR3-ACC-Constraint with:
+    default => DDR3-ACC-Constraint(rank = rank, diff-ck-rs = diff-ck-rs, se-rs = se-rs)
   doc: \<DOC>
   Data To ACC Constraint
   <DOC>
-  data-acc-cst:DDR4-Data-ACC-Constraint with:
-    default => DDR4-Data-ACC-Constraint(width = width)
+  data-acc-cst:DDR3-Data-ACC-Constraint with:
+    default => DDR3-Data-ACC-Constraint(width = width)
 
 with:
   keyword-constructor => true
-  constructor => #DDR4-Constraint
+  constructor => #DDR3-Constraint
 
 
 doc: \<DOC>
-Constructor for the DDR4 Link Constraint
+Constructor for the DDR3 Link Constraint
 @param ck-rs Differential Routing Structure constraints for CK signals
 @param dqs-rs Differential Routing Structure constraints for DQS signals
 @param dq-rs Routing Structure constraints for DQ signals
@@ -414,18 +378,18 @@ Constructor for the DDR4 Link Constraint
 @param acc-cst ACC Link sub-constraint
 @param data-acc-cst Data To ACC sub-constraint
 <DOC>
-public defn DDR4-Constraint (
-    width:DDR4-width,
-    topology:DDR4-topology,
-    rank:DDR4-rank,
+public defn DDR3-Constraint (
+    width:DDR3-width,
+    topology:DDR3-topology,
+    rank:DDR3-rank,
     diff-ck-rs:DifferentialRoutingStructure,
     diff-dqs-rs:DifferentialRoutingStructure,
     se-dq-rs:RoutingStructure,
     se-rs:RoutingStructure,
-    data-cst:DDR4-Data-Constraint,
-    acc-cst:DDR4-ACC-Constraint,
-    data-acc-cst:DDR4-Data-ACC-Constraint ) -> DDR4-Constraint:
-  DDR4-Constraint(
+    data-cst:DDR3-Data-Constraint,
+    acc-cst:DDR3-ACC-Constraint,
+    data-acc-cst:DDR3-Data-ACC-Constraint ) -> DDR3-Constraint:
+  DDR3-Constraint(
     width = width,
     topology = topology,
     rank = rank,
@@ -438,15 +402,16 @@ public defn DDR4-Constraint (
     data-acc-cst = data-acc-cst
   )
 
+
 doc: \<DOC>
-Constrain a DDR4 Link assuming that it is a discrete link (not DIMM)
+Constrain a DDR3 Link assuming that it is a discrete link (not DIMM)
 
 @param cst Constraint Object
-@param src Source End Point - must be of `ddr4-b` type
-@param dst Destination End Point - must be of `ddr4-b` type and match
+@param src Source End Point - must be of `ddr3-b` type
+@param dst Destination End Point - must be of `ddr3-b` type and match
 the parameterization of `src`, including width.
 <DOC>
-public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
+public defmethod constrain (cst:DDR3-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
 
     val ilane  = width-to-lane(width(cst))
@@ -457,42 +422,41 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     constrain(data-acc-cst(cst), src, dst)
 
 doc: \<DOC>
-Helper function to connect and constrain a DDR4 link assuming that it is a discrete point to point link (not FlyBy)
-@param src Source End Point - must be of `ddr4-b` type
-@param dst Destination End Point - must be of `ddr4-b` type and match
+Helper function to connect and constrain a DDR3 link assuming that it is a discrete point to point link (not FlyBy)
+@param src Source End Point - must be of `ddr3-b` type
+@param dst Destination End Point - must be of `ddr3-b` type and match
 the parameterization of `src`, including width.
 <DOC>
 
 
-
-public defn connect-DDR4 (src:JITXObject, dst:JITXObject
-                          -- width:DDR4-width = DDR4-x16,
-                          topology:DDR4-topology = DDR4-FlyBy,
-                          rank:DDR4-rank = DDR4-SingleRank,
+public defn connect-DDR3 (src:JITXObject, dst:JITXObject
+                          -- width:DDR3-width = DDR3-x16,
+                          topology:DDR3-topology = DDR3-FlyBy,
+                          rank:DDR3-rank = DDR3-SingleRank,
                           diff-ck-rs:DifferentialRoutingStructure,
                           diff-dqs-rs:DifferentialRoutingStructure,
                           dq-rs:RoutingStructure,
                           rs:RoutingStructure) :
   inside pcb-module :
-    val ddr4-cst = DDR4-Constraint(width = width,
+    val ddr3-cst = DDR3-Constraint(width = width,
                                    topology = topology,
                                    rank = rank,
                                    diff-ck-rs = diff-ck-rs,
                                    diff-dqs-rs = diff-dqs-rs,
                                    se-dq-rs = dq-rs,
                                    se-rs = rs)
-    constrain-topology(src, dst, ddr4-cst)
+    constrain-topology(src, dst, ddr3-cst)
 
 doc: \<DOC>
-Constrain a DDR4 Data to ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
+Constrain a DDR3 Data to ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
 
 @param cst Data to ACC channel constraint object
-@param src Source end point - must be of `ddr4` type
-@param dst Destination end point - must be of `ddr4` type and match
+@param src Source end point - must be of `ddr3-b` type
+@param dst Destination end point - must be of `ddr3-b` type and match
 the parameterization of `src`, including width.
 <DOC>
 
-public defmethod constrain (cst:DDR4-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
+public defmethod constrain (cst:DDR3-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module :
     val ilane  = width-to-lane(width(cst))
 
@@ -504,14 +468,14 @@ public defmethod constrain (cst:DDR4-Data-ACC-Constraint, src:JITXObject, dst:JI
       timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
 
 doc: \<DOC>
-Constrain a DDR4 Data Link assuming that it is a discrete link (not DIMM or combined data/control)
+Constrain a DDR3 Data Link assuming that it is a discrete link (not DIMM or combined data/control)
 
 @param cst Data channel constraint object
-@param src Source end point - must be of `ddr4-data-channel` type
-@param dst Destination end point - must be of `ddr4-data-channel` type and match
+@param src Source end point - must be of `ddr3-data-channel` type
+@param dst Destination end point - must be of `ddr3-data-channel` type and match
 the parameterization of `src`, including width.
 <DOC>
-public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
+public defmethod constrain (cst:DDR3-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
 
     val ilane  = width-to-lane(width(cst))
@@ -537,14 +501,14 @@ public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXOb
     structure(src.DM_n, dst.DM_n) = se-dq-rs(cst)
 
 doc: \<DOC>
-Constrain a DDR4 ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
+Constrain a DDR3 ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
 
 @param cst ACC channel constraint object
-@param src Source end point - must be of `ddr4-acc-channel` type
-@param dst Destination end point - must be of `ddr4-acc-channel` type and match
+@param src Source end point - must be of `ddr3-acc-channel` type
+@param dst Destination end point - must be of `ddr3-acc-channel` type and match
 the parameterization of `src`, including rank.
 <DOC>
-public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
+public defmethod constrain (cst:DDR3-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
 
     val irank  = rank-to-int(rank(cst))
@@ -577,12 +541,6 @@ public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObj
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
     structure(target-act) = se-rs(cst)
     max-loss(loss(cst), target-act)
-    for j in 0 to length(src.BG) do :
-      val target-bg = src.BG[j] => dst.BG[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-bg)
-      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-bg)
-      structure(target-bg) = se-rs(cst)
-      max-loss(loss(cst), target-bg)
     for j in 0 to length(src.BA) do :
       val target-ba = src.BA[j] => dst.BA[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
