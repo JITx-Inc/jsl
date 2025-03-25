@@ -4,7 +4,7 @@ doc: \<DOC>
 DDR4 is a high speed memory protocol
 @see https://en.wikipedia.org/wiki/DDR4_SDRAM
 
-This functions and definitions in this file support defining DDR4
+The functions and definitions in this file support defining DDR4
 connections between microprocessors and memories in a board design. The
 DDR4 standard is a complex specification with many timing constraints and
 impedance requirements. This implementation is based on the DDR4 SDRAM
@@ -95,11 +95,9 @@ doc: \<DOC>
 @brief ddr4 topology
 This is a fixed list of possible topologies for ddr4 memories
 @member DDR4-FlyBy - Supported by the subordinate constraints for DDR4-Data-Constraints and DDR4-ACC-Constraints
-@member DDR4-ClamShell - Not implemented yet
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr4/DDR4-topology:
   DDR4-FlyBy
-  DDR4-ClamShell
 
 doc: \<DOC>
 @brief DDR4 rank Options
@@ -177,7 +175,7 @@ public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, BG-len:Int, BA-len:Int):
 
 doc: \<DOC>
 @brief Differential impedance specified by the DDR4 standard
-This is a helper function that returns the expected differential
+This is a defstruct that holds the expected differential
 trace impedance for the standard.
 
 @return Upper/lower limits for the impedance in a struct.
@@ -213,13 +211,7 @@ constrained to the CK pair. The constraints are:
     0.0 +/-   20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
     0.0 +/-   20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
 
-The `constrain` function for this type expects two compatible `ddr4-b` types.
-    ck-rs:DifferentialRoutingStructure
-    dqs-rs:DifferentialRoutingStructure
-    dq-rs:RoutingStructure
-    rs:RoutingStructure ) -> DDR4-Constraint:
 <DOC>
-
 
 public defstruct DDR4-Data-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
@@ -463,6 +455,14 @@ public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject)
     constrain(data-cst(cst), src.data, dst.data)
     constrain(acc-cst(cst), src.acc, dst.acc)
     constrain(data-acc-cst(cst), src, dst)
+
+doc: \<DOC>
+Helper function to connect and constrain a DDR4 link assuming that it is a discrete point to point link (not FlyBy)
+@param src Source End Point - must be of `ddr4-b` type
+@param dst Destination End Point - must be of `ddr4-b` type and match
+the parameterization of `src`, including width.
+<DOC>
+
 
 
 public defn connect-DDR4 (src:JITXObject, dst:JITXObject
