@@ -134,32 +134,32 @@ one or more ddr4 memory chips/DIMMs.
 @member topology Topology of the DDR4 connection (DDR4-FlyBy or DDR4-ClamShell)
 <DOC>
 
-public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = DDR4-SingleRank, topology:DDR4-topology = DDR4-FlyBy) :
+public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = DDR4-SingleRank, topology:DDR4-topology = DDR4-FlyBy, bg-len:Int = 2, ba-len:Int = 2) :
   if width == DDR4-x4 and rank != DDR4-SingleRank:
     throw(ArgumentError("DDR4-x4 is only supported in DDR4-SingleRank configuration"))
   if width == DDR4-x16 and rank == DDR4-QuadRank:
     throw(ArgumentError("DDR4-x16 is not supported in DDR4-QuadRank configuration"))
-  ddr4-b(width, rank, topology)
+  ddr4-b(width, rank, topology, bg-len, ba-len)
 
-public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology) :
+public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology, bg-len:Int, ba-len:Int) :
   name = "DDR4"
   description = "DDR4 Dynamic Random-Access Memory protocol"
   port data    : ddr4-data-channel(width) ;
-  port acc     : ddr4-acc-channel(rank) ; covers all CMD/CTRL/ADDR
+  port acc     : ddr4-acc-channel(rank, bg-len, ba-len) ; covers all CMD/CTRL/ADDR
 
 public pcb-bundle ddr4-data-channel (width:DDR4-width):
   port DQ    : pin[width-to-int(width)] ; will vary from 3:0 to 7:0 to 15:0 to 71:0 as appropriate
   port DQS   : diff-pair[width-to-lane(width)] ; will either be 0 or 1:0 to 8:0
   port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
 
-public pcb-bundle ddr4-acc-channel (rank:DDR4-rank):
+public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, bg-len:Int, ba-len:Int):
   ; how do I use rank here? Needs some work...
   port CK      : diff-pair
   port CKE     : pin
   port A       : pin[17]
   port ACT_n   : pin
-  port BG      : pin[2] ; not fully present?
-  port BA      : pin[2] ; not fully present?
+  port BG      : pin[bg-len]
+  port BA      : pin[ba-len]
   port CS_n    : pin[rank-to-int(rank)]
   port RESET_n : pin
   port ODT     : pin
@@ -621,11 +621,11 @@ public defn connect-DDR4 (src:JITXObject, dst:JITXObject
                                    se-rs = rs)
     constrain-topology(src, dst, ddr4-cst)
 
-public defn constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
-  inside pcb-module :
-    constrain(data-cst(cst), src.data, dst.data)
-    constrain(acc-cst(cst), src.acc, dst.acc)
-    constrain(data-acc-cst(cst), src, dst)
+; public defn constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
+;   inside pcb-module :
+;     constrain(data-cst(cst), src.data, dst.data)
+;     constrain(acc-cst(cst), src.acc, dst.acc)
+;     constrain(data-acc-cst(cst), src, dst)
 
 public defmethod constrain (cst:DDR4-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module :
@@ -700,7 +700,7 @@ public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObj
     ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
     structure(target-cke) = se-rs(cst)
     max-loss(loss(cst), target-cke)
-    for j in 0 to 17 do :
+    for j in 0 to length(src.A) do :
       val target-addr = src.A[j] => dst.A[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-addr)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
@@ -712,12 +712,13 @@ public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObj
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
     structure(target-act) = se-rs(cst)
     max-loss(loss(cst), target-act)
-    for j in 0 to 2 do :
+    for j in 0 to length(src.BG) do :
       val target-bg = src.BG[j] => dst.BG[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-bg)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-bg)
       structure(target-bg) = se-rs(cst)
       max-loss(loss(cst), target-bg)
+    for j in 0 to length(src.BA) do :
       val target-ba = src.BA[j] => dst.BA[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
