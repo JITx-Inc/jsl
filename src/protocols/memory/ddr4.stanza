@@ -55,16 +55,20 @@ defpackage jsl/protocols/memory/ddr4:
 
 doc: \<DOC>
 @brief DDR4 width enums
-This is a fixed list of possible lane widths for DDR4 memory channels
+This is a fixed list of possible lane widths for DDR4 memory channels (i.e. number of DQ signals). 
 @member DDR4-x4   4 bit width
 @member DDR4-x8   8 bit width
 @member DDR4-x16 16 bit width
+@member DDR4-x32 32 bit width
+@member DDR4-x64 64 bit width
 @member DDR4-x72 72 bit width
 <DOC>
 public pcb-enum jsl/protocols/memory/ddr4/DDR4-width:
   DDR4-x4
   DDR4-x8
   DDR4-x16
+  DDR4-x32
+  DDR4-x64
   DDR4-x72
 
 doc: \<DOC>
@@ -76,6 +80,8 @@ public defn width-to-int (en:DDR4-width) -> Int:
     DDR4-x4  :  4
     DDR4-x8  :  8
     DDR4-x16 : 16
+    DDR4-x32 : 32
+    DDR4-x64 : 64
     DDR4-x72 : 72
 
 doc: \<DOC>
@@ -89,6 +95,8 @@ public defn width-to-lane (en:DDR4-width) -> Int:
     DDR4-x4  : 1 ; degenerate case
     DDR4-x8  : 1
     DDR4-x16 : 2
+    DDR4-x32 : 4
+    DDR4-x64 : 8
     DDR4-x72 : 9
 
 doc: \<DOC>
@@ -148,7 +156,7 @@ public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topolo
   port acc     : ddr4-acc-channel(rank, BG-len, BA-len) ; covers all CMD/CTRL/ADDR
 
 public pcb-bundle ddr4-data-channel (width:DDR4-width):
-  port DQ    : pin[width-to-int(width)] ; will vary from 3:0 to 7:0 to 15:0 to 71:0 as appropriate
+  port DQ    : pin[width-to-int(width)] ; will vary from 3:0 to 71:0 as appropriate
   port DQS   : diff-pair[width-to-lane(width)] ; will either be 0 or 1:0 to 8:0
   port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
 
