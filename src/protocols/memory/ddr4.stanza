@@ -161,15 +161,15 @@ public pcb-bundle ddr4-data-channel (width:DDR4-width):
   port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
 
 public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, BG-len:Int, BA-len:Int):
-  port CK      : diff-pair
-  port CKE     : pin
+  port CK      : diff-pair[rank-to-int(rank)]
+  port CKE     : pin[rank-to-int(rank)]
   port A       : pin[17]
   port ACT_n   : pin
   port BG      : pin[BG-len]
   port BA      : pin[BA-len]
   port CS_n    : pin[rank-to-int(rank)]
   port RESET_n : pin
-  port ODT     : pin
+  port ODT     : pin[rank-to-int(rank)]
   port PAR     : pin
   port ALERT_n : pin
   ; not routed pins for DDR4?
