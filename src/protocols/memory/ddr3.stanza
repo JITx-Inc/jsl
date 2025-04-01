@@ -138,7 +138,7 @@ public pcb-bundle ddr3-acc-channel (rank:DDR3-rank, BA-len:Int):
   port BA      : pin[BA-len]   ; DDR3 has 3 bank address lines (no BG)
   port CS_n    : pin[rank-to-int(rank)]
   port RESET_n : pin
-  port ODT     : pin
+  port ODT     : pin[rank-to-int(rank)]
 
 doc: \<DOC>
 @brief Differential impedance specified by the DDR3 standard
