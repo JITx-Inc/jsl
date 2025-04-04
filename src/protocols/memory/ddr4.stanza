@@ -221,8 +221,10 @@ constrained to the CK pair. The constraints are:
 
 <DOC>
 
+doc: \<DOC>
+Constructor for the DDR4 Data ACC Inter-signal timing skew constraint
+<DOC>
 public defstruct DDR4-Data-ACC-Constraint <: SI-Constraint :
-
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
@@ -232,18 +234,10 @@ with:
   keyword-constructor => true
   constructor => #DDR4-Data-ACC-Constraint
 
-; doc: \<DOC>
-; Constructor for the DDR4 Data Link Constraint
-; @param width Width of the DDR4 interface (enumerated type)
-; @param diff-dqs-rs Differential Routing Structure constraints for DQS signals
-; @param se-dq-rs Routing Structure constraints for DQ signals
-; <DOC>
-; public defn DDR4-Data-ACC-Constraint () -> DDR4-Data-ACC-Constraint:
-;   DDR4-Data-ACC-Constraint()
 
-; this is the data-only subset of the overall DDR4-Constraint
-; needs to be separate because the constrain() function would get confused if
-; we pass in the full DDR4-Constraint object as the type argument
+doc: \<DOC>
+Constructor for the DDR4 Data Link Constraint
+<DOC>
 public defstruct DDR4-Data-Constraint <: SI-Constraint :
   doc: \<DOC>
   DQS Intra-pair Timing Skew Constraint in Seconds
@@ -278,21 +272,9 @@ with:
   keyword-constructor => true
   constructor => #DDR4-Data-Constraint
 
-
-; doc: \<DOC>
-; Constructor for the DDR4 Data Link Constraint
-; @param width Width of the DDR4 interface (enumerated type)
-; @param diff-dqs-rs Differential Routing Structure constraints for DQS signals
-; @param se-dq-rs Routing Structure constraints for DQ signals
-; <DOC>
-; public defn DDR4-Data-Constraint (
-;     diff-dqs-rs:DifferentialRoutingStructure,
-;     se-dq-rs:RoutingStructure ) -> DDR4-Data-Constraint:
-;   DDR4-Data-Constraint(
-;     diff-dqs-rs = diff-dqs-rs,
-;     se-dq-rs = se-dq-rs,
-;   )
-
+doc: \<DOC>
+Constructor for the DDR4 ACC Link Constraint
+<DOC>
 public defstruct DDR4-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
   CK Intra-pair Timing Skew Constraint in Seconds
@@ -326,21 +308,6 @@ public defstruct DDR4-ACC-Constraint <: SI-Constraint :
 with:
   keyword-constructor => true
   constructor => #DDR4-ACC-Constraint
-
-; doc: \<DOC>
-; Constructor for the DDR4 Link Constraint
-; @param rank Rank of the DDR4 interface (enumerated type)
-; @param diff-ck-rs Differential Routing Structure constraints for CK signals
-; @param se-rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
-; <DOC>
-; public defn DDR4-ACC-Constraint (
-;     diff-ck-rs:DifferentialRoutingStructure,
-;     se-rs:RoutingStructure ) -> DDR4-ACC-Constraint:
-;   DDR4-ACC-Constraint(
-;     diff-ck-rs = diff-ck-rs,
-;     se-rs = se-rs,
-;   )
-
 
 public defstruct DDR4-Constraint <: SI-Constraint :
   doc: \<DOC>
@@ -437,7 +404,6 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR4-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-
     constrain(data-cst(cst), src.data, dst.data)
     constrain(acc-cst(cst), src.acc, dst.acc)
     constrain(data-acc-cst(cst), src, dst)
@@ -498,9 +464,7 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
-
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
     ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
@@ -553,7 +517,7 @@ public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObj
     for j in 0 to length(src.CKE) do :
       val target-cke = src.CKE[j] => dst.CKE[j]
       timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cke)
-    ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
+      ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
       structure(target-cke) = se-rs(cst)
       max-loss(loss(cst), target-cke)
     for j in 0 to length(src.A) do :
@@ -562,7 +526,6 @@ public defmethod constrain (cst:DDR4-ACC-Constraint, src:JITXObject, dst:JITXObj
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
       structure(target-addr) = se-rs(cst)
       max-loss(loss(cst), target-addr)
-
     val target-act = src.ACT_n => dst.ACT_n
     timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-act)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)

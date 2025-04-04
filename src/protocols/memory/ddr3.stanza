@@ -138,7 +138,7 @@ public pcb-bundle ddr3-acc-channel (rank:DDR3-rank, BA-len:Int):
   port BA      : pin[BA-len]   ; DDR3 has 3 bank address lines (no BG)
   port CS_n    : pin[rank-to-int(rank)]
   port RESET_n : pin
-  port ODT     : pin
+  port ODT     : pin[rank-to-int(rank)]
 
 doc: \<DOC>
 @brief Differential impedance specified by the DDR3 standard
@@ -176,11 +176,10 @@ constrained to the CK pair. The constraints are:
 
 <DOC>
 
+doc: \<DOC>
+Constructor for the DDR3 Data ACC Inter-signal timing skew constraint
+<DOC>
 public defstruct DDR3-Data-ACC-Constraint <: SI-Constraint :
-  doc: \<DOC>
-  Channel Bit Width
-  <DOC>
-  width:DDR3-width
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
   <DOC>
@@ -192,25 +191,8 @@ with:
 
 doc: \<DOC>
 Constructor for the DDR3 Data Link Constraint
-@param width Width of the DDR3 interface (enumerated type)
-@param diff-dqs-rs Differential Routing Structure constraints for DQS signals
-@param se-dq-rs Routing Structure constraints for DQ signals
 <DOC>
-public defn DDR3-Data-ACC-Constraint (
-    width:DDR3-width ) -> DDR3-Data-ACC-Constraint:
-  DDR3-Data-ACC-Constraint(
-    width = width
-  )
-
-
-; this is the data-only subset of the overall DDR3-Constraint
-; needs to be separate because the constrain() function would get confused if
-; we pass in the full DDR3-Constraint object as the type argument
 public defstruct DDR3-Data-Constraint <: SI-Constraint :
-  doc: \<DOC>
-  Channel Bit Width
-  <DOC>
-  width:DDR3-width
   doc: \<DOC>
   DQS Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -244,29 +226,10 @@ with:
   keyword-constructor => true
   constructor => #DDR3-Data-Constraint
 
-
 doc: \<DOC>
-Constructor for the DDR3 Data Link Constraint
-@param width Width of the DDR3 interface (enumerated type)
-@param diff-dqs-rs Differential Routing Structure constraints for DQS signals
-@param se-dq-rs Routing Structure constraints for DQ signals
+Constructor for the DDR3 ACC Link Constraint
 <DOC>
-public defn DDR3-Data-Constraint (
-    width:DDR3-width,
-    diff-dqs-rs:DifferentialRoutingStructure,
-    se-dq-rs:RoutingStructure ) -> DDR3-Data-Constraint:
-  DDR3-Data-Constraint(
-    width = width,
-    diff-dqs-rs = diff-dqs-rs,
-    se-dq-rs = se-dq-rs,
-  )
-
-
 public defstruct DDR3-ACC-Constraint <: SI-Constraint :
-  doc: \<DOC>
-  Channel Rank (i.e. number of CS_n signals)
-  <DOC>
-  rank:DDR3-rank
   doc: \<DOC>
   CK Intra-pair Timing Skew Constraint in Seconds
   <DOC>
@@ -299,22 +262,6 @@ public defstruct DDR3-ACC-Constraint <: SI-Constraint :
 with:
   keyword-constructor => true
   constructor => #DDR3-ACC-Constraint
-
-doc: \<DOC>
-Constructor for the DDR3 Link Constraint
-@param rank Rank of the DDR3 interface (enumerated type)
-@param diff-ck-rs Differential Routing Structure constraints for CK signals
-@param se-rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
-<DOC>
-public defn DDR3-ACC-Constraint (
-    rank:DDR3-rank,
-    diff-ck-rs:DifferentialRoutingStructure,
-    se-rs:RoutingStructure ) -> DDR3-ACC-Constraint:
-  DDR3-ACC-Constraint(
-    rank = rank,
-    diff-ck-rs = diff-ck-rs,
-    se-rs = se-rs,
-  )
 
 
 public defstruct DDR3-Constraint <: SI-Constraint :
@@ -351,18 +298,17 @@ public defstruct DDR3-Constraint <: SI-Constraint :
   Data Link Constraint
   <DOC>
   data-cst:DDR3-Data-Constraint with:
-    default => DDR3-Data-Constraint(width = width, diff-dqs-rs = diff-dqs-rs, se-dq-rs = se-dq-rs)
+    default => DDR3-Data-Constraint(diff-dqs-rs = diff-dqs-rs, se-dq-rs = se-dq-rs)
   doc: \<DOC>
   ACC Link Constraint
   <DOC>
   acc-cst:DDR3-ACC-Constraint with:
-    default => DDR3-ACC-Constraint(rank = rank, diff-ck-rs = diff-ck-rs, se-rs = se-rs)
+    default => DDR3-ACC-Constraint(diff-ck-rs = diff-ck-rs, se-rs = se-rs)
   doc: \<DOC>
   Data To ACC Constraint
   <DOC>
   data-acc-cst:DDR3-Data-ACC-Constraint with:
-    default => DDR3-Data-ACC-Constraint(width = width)
-
+    default => DDR3-Data-ACC-Constraint()
 with:
   keyword-constructor => true
   constructor => #DDR3-Constraint
@@ -413,10 +359,6 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR3-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-
-    val ilane  = width-to-lane(width(cst))
-    val irank  = rank-to-int(rank(cst))
-
     constrain(data-cst(cst), src.data, dst.data)
     constrain(acc-cst(cst), src.acc, dst.acc)
     constrain(data-acc-cst(cst), src, dst)
@@ -458,11 +400,9 @@ the parameterization of `src`, including width.
 
 public defmethod constrain (cst:DDR3-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module :
-    val ilane  = width-to-lane(width(cst))
+    val guide-ck  = src.acc.CK[0].P => dst.acc.CK[0].P
 
-    val guide-ck  = src.acc.CK.P => dst.acc.CK.P
-
-    for i in 0 to ilane do :
+    for i in 0 to length(src.data.DQS) do :
       val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
       ; constrain DQS with respect to CK
       timing-window(skew-ck-dqs(cst), guide-ck, guide-dqs)
@@ -477,14 +417,11 @@ the parameterization of `src`, including width.
 <DOC>
 public defmethod constrain (cst:DDR3-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
-
-    val ilane  = width-to-lane(width(cst))
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
-
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
     ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
-    for i in 0 to ilane do :
+    for i in 0 to length(src.DQS) do :
       ; constrain DQS per byte lane
       val guide-dqs = src.DQS[i].P => dst.DQS[i].P
       constrain(cst-dqs, src.DQS[i], dst.DQS[i])
@@ -511,66 +448,72 @@ the parameterization of `src`, including rank.
 public defmethod constrain (cst:DDR3-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module:
 
-    val irank  = rank-to-int(rank(cst))
     val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
 
-    val guide-ck  = src.CK.P => dst.CK.P
-    constrain(cst-ck, src.CK, dst.CK)
+    ; constrain first CK as root to others with the same tight constraint?
+    val guide-cks = src.CK[0].P => dst.CK[0].P
+
+    for i in 0 to length(src.CK) do :
+      val guide-ck = src.CK[i].P => dst.CK[i].P
+      constrain(cst-ck, src.CK[i], dst.CK[i])
+      if i > 0 :
+        timing-window(skew-ck(cst), guide-cks,  src.CK[i] => dst.CK[i])
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     ; there are two constraints to be applied:
     ; First is versus CK and is +/- 20 ps
     ; Second is versus the other signals in the same group and is +/- 10 ps
     ; let's pick an arbitrary signal to serve as the guide for the overall ADDR/CMD/CTL group
-    val guide-acc-group = src.CKE => dst.CKE
+    val guide-acc-group = src.CKE[0] => dst.CKE[0]
     ; now back to our regularly scheduled program
-    val target-cke = src.CKE => dst.CKE
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cke)
-    ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
-    structure(target-cke) = se-rs(cst)
-    max-loss(loss(cst), target-cke)
+    for j in 0 to length(src.CKE) do :
+      val target-cke = src.CKE[j] => dst.CKE[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cke)
+      ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
+      structure(target-cke) = se-rs(cst)
+      max-loss(loss(cst), target-cke)
     for j in 0 to length(src.A) do :
       val target-addr = src.A[j] => dst.A[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-addr)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-addr)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
       structure(target-addr) = se-rs(cst)
       max-loss(loss(cst), target-addr)
-
-    val target-act = src.ACT_n => dst.ACT_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-act)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
-    structure(target-act) = se-rs(cst)
-    max-loss(loss(cst), target-act)
     for j in 0 to length(src.BA) do :
       val target-ba = src.BA[j] => dst.BA[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-ba)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
       structure(target-ba) = se-rs(cst)
       max-loss(loss(cst), target-ba)
-    for j in 0 to irank do:
+    for j in 0 to length(src.CS_n) do:
       val target-cs = src.CS_n[j] => dst.CS_n[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cs)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cs)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cs)
       structure(target-cs) = se-rs(cst)
       max-loss(loss(cst), target-cs)
     val target-reset = src.RESET_n => dst.RESET_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-reset)
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-reset)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-reset)
     structure(target-reset) = se-rs(cst)
     max-loss(loss(cst), target-reset)
-    val target-odt = src.ODT => dst.ODT
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-odt)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
-    structure(target-odt) = se-rs(cst)
-    max-loss(loss(cst), target-odt)
-    val target-par = src.PAR => dst.PAR
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-par)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-par)
-    structure(target-par) = se-rs(cst)
-    max-loss(loss(cst), target-par)
-    val target-alert = src.ALERT_n => dst.ALERT_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-alert)
-    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-alert)
-    structure(target-alert) = se-rs(cst)
-    max-loss(loss(cst), target-alert)
+    for j in 0 to length(src.ODT) do :
+      val target-odt = src.ODT[j] => dst.ODT[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-odt)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
+      structure(target-odt) = se-rs(cst)
+      max-loss(loss(cst), target-odt)
+    val target-ras = src.RAS_n => dst.RAS_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-ras)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ras)
+    structure(target-ras) = se-rs(cst)
+    max-loss(loss(cst), target-ras)
+    val target-cas = src.CAS_n => dst.CAS_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cas)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cas)
+    structure(target-cas) = se-rs(cst)
+    max-loss(loss(cst), target-cas)
+    val target-we = src.WE_n => dst.WE_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-we)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-we)
+    structure(target-we) = se-rs(cst)
+    max-loss(loss(cst), target-we)
 
