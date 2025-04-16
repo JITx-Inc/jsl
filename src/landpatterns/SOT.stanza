@@ -398,3 +398,49 @@ public defn SOT-23-5 (
     lead-numbering = SOT23-5-Numbering,
     density-level = density-level
   )
+
+
+public val SOT23-6-Numbering = LookupTableNumbering(
+  [
+    [1, 4] ; Dual-Package Rotates 180 degrees on column 1
+    [2, 5]
+    [3, 6]
+  ]
+)
+
+public defstruct SOT23-6-PadPlanner <: ShapePadPlanner :
+  shaper:(Dims -> Shape) with:
+    as-method => true
+
+public defmethod active? (x:SOT23-6-PadPlanner, row:Int, column:Int):
+  to-pad-id(SOT23-6-Numbering, row, column) != 0
+
+public val SOT-23-6-DEF-PLANNER = SOT23-6-PadPlanner(rect-shaper)
+
+
+doc: \<DOC>
+5-pin SOT-23 Package
+
+@param lead-profile Typically the user would use a {@link type:SOT-Lead} instance
+here to define the leads for the package.
+@param package-body Dimensions for the body of the package.
+@param density-level Density rating for the landpattern. Default is from
+{@link DENSITY-LEVEL} in design settings.
+<DOC>
+public defn SOT-23-6 (
+  --
+  lead-profile:Lead-Profile,
+  package-body:PackageBody,
+  density-level:DensityLevel = DENSITY-LEVEL
+  ) -> SOT:
+
+  SOT(
+    ; Must be the full number of leads here
+    ;   even though only 5 are active.
+    num-leads = 6,
+    lead-profile = lead-profile
+    package-body = package-body,
+    pad-planner = SOT-23-6-DEF-PLANNER
+    lead-numbering = SOT23-6-Numbering,
+    density-level = density-level
+  )
