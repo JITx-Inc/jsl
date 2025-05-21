@@ -59,7 +59,9 @@ This is a fixed list of possible lane widths for DDR4 memory channels (i.e. numb
 @member DDR4-x4   4 bit width
 @member DDR4-x8   8 bit width
 @member DDR4-x16 16 bit width
+@member DDR4-x24 24 bit width
 @member DDR4-x32 32 bit width
+@member DDR4-x40 40 bit width
 @member DDR4-x64 64 bit width
 @member DDR4-x72 72 bit width
 <DOC>
@@ -67,7 +69,9 @@ public pcb-enum jsl/protocols/memory/ddr4/DDR4-width:
   DDR4-x4
   DDR4-x8
   DDR4-x16
+  DDR4-x24
   DDR4-x32
+  DDR4-x40
   DDR4-x64
   DDR4-x72
 
@@ -80,7 +84,9 @@ public defn width-to-int (en:DDR4-width) -> Int:
     DDR4-x4  :  4
     DDR4-x8  :  8
     DDR4-x16 : 16
+    DDR4-x24 : 24
     DDR4-x32 : 32
+    DDR4-x40 : 40
     DDR4-x64 : 64
     DDR4-x72 : 72
 
@@ -95,7 +101,9 @@ public defn width-to-lane (en:DDR4-width) -> Int:
     DDR4-x4  : 1 ; degenerate case
     DDR4-x8  : 1
     DDR4-x16 : 2
+    DDR4-x24 : 3
     DDR4-x32 : 4
+    DDR4-x40 : 5
     DDR4-x64 : 8
     DDR4-x72 : 9
 
