@@ -59,7 +59,10 @@ This is a fixed list of possible lane widths for DDR4 memory channels (i.e. numb
 @member DDR4-x4   4 bit width
 @member DDR4-x8   8 bit width
 @member DDR4-x16 16 bit width
+@member DDR4-x24 24 bit width
 @member DDR4-x32 32 bit width
+@member DDR4-x36 36 bit width
+@member DDR4-x40 40 bit width
 @member DDR4-x64 64 bit width
 @member DDR4-x72 72 bit width
 <DOC>
@@ -67,7 +70,10 @@ public pcb-enum jsl/protocols/memory/ddr4/DDR4-width:
   DDR4-x4
   DDR4-x8
   DDR4-x16
+  DDR4-x24
   DDR4-x32
+  DDR4-x36
+  DDR4-x40
   DDR4-x64
   DDR4-x72
 
@@ -80,7 +86,10 @@ public defn width-to-int (en:DDR4-width) -> Int:
     DDR4-x4  :  4
     DDR4-x8  :  8
     DDR4-x16 : 16
+    DDR4-x24 : 24
     DDR4-x32 : 32
+    DDR4-x36 : 36 ; nibble case!
+    DDR4-x40 : 40
     DDR4-x64 : 64
     DDR4-x72 : 72
 
@@ -95,7 +104,10 @@ public defn width-to-lane (en:DDR4-width) -> Int:
     DDR4-x4  : 1 ; degenerate case
     DDR4-x8  : 1
     DDR4-x16 : 2
+    DDR4-x24 : 3
     DDR4-x32 : 4
+    DDR4-x36 : 5 ; nibble case!
+    DDR4-x40 : 5
     DDR4-x64 : 8
     DDR4-x72 : 9
 
@@ -142,26 +154,26 @@ one or more ddr4 memory chips/DIMMs.
 @member BA-len Number of BA pins
 <DOC>
 
-public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = DDR4-SingleRank, topology:DDR4-topology = DDR4-FlyBy, BG-len:Int = 2, BA-len:Int = 2) :
+public defn ddr4 (width:DDR4-width -- rank:DDR4-rank = DDR4-SingleRank, topology:DDR4-topology = DDR4-FlyBy, CK-len:Int = 2, BG-len:Int = 2, BA-len:Int = 2) :
   if width == DDR4-x4 and rank != DDR4-SingleRank:
     throw(ArgumentError("DDR4-x4 is only supported in DDR4-SingleRank configuration"))
   if width == DDR4-x16 and rank == DDR4-QuadRank:
     throw(ArgumentError("DDR4-x16 is not supported in DDR4-QuadRank configuration"))
-  ddr4-b(width, rank, topology, BG-len, BA-len)
+  ddr4-b(width, rank, topology, CK-len, BG-len, BA-len)
 
-public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology, BG-len:Int, BA-len:Int) :
+public pcb-bundle ddr4-b (width:DDR4-width, rank:DDR4-rank, topology:DDR4-topology, CK-len:Int, BG-len:Int, BA-len:Int) :
   name = "DDR4"
   description = "DDR4 Dynamic Random-Access Memory protocol"
   port data    : ddr4-data-channel(width) ;
-  port acc     : ddr4-acc-channel(rank, BG-len, BA-len) ; covers all CMD/CTRL/ADDR
+  port acc     : ddr4-acc-channel(rank, CK-len, BG-len, BA-len) ; covers all CMD/CTRL/ADDR
 
 public pcb-bundle ddr4-data-channel (width:DDR4-width):
   port DQ    : pin[width-to-int(width)] ; will vary from 3:0 to 71:0 as appropriate
   port DQS   : diff-pair[width-to-lane(width)] ; will either be 0 or 1:0 to 8:0
   port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
 
-public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, BG-len:Int, BA-len:Int):
-  port CK      : diff-pair[rank-to-int(rank)]
+public pcb-bundle ddr4-acc-channel (rank:DDR4-rank, CK-len:Int, BG-len:Int, BA-len:Int):
+  port CK      : diff-pair[CK-len] ; was rank-to-int(rank) but some implementations have only 1 CK pair
   port CKE     : pin[rank-to-int(rank)]
   port A       : pin[17]
   port ACT_n   : pin
@@ -311,7 +323,7 @@ with:
 
 public defstruct DDR4-Constraint <: SI-Constraint :
   doc: \<DOC>
-  Channel Bit Width (4, 8, 16, 72)
+  Channel Bit Width (4, 8, 16, 24, 32, 36, 40, 64, 72)
   <DOC>
   width:DDR4-width
   doc: \<DOC>
@@ -468,13 +480,14 @@ public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXOb
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
     ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
+    val w = length(src.DQ)
     for i in 0 to length(src.DQS) do :
       ; constrain DQS per byte lane
       val guide-dqs = src.DQS[i].P => dst.DQS[i].P
       constrain(cst-dqs, src.DQS[i], dst.DQS[i])
       ; constrain DQ with respect to DQS
       val bs = i * 8
-      val be = bs + 8
+      val be = if i + 8 > w : w else : i + 8
       val target-dqm-bus = to-tuple $ cat{_, [src.DM_n[i] => dst.DM_n[i]]} $ for j in bs to be seq : src.DQ[j] => dst.DQ[j]
       timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
       max-loss(loss(cst), ep-sets = target-dqm-bus)
