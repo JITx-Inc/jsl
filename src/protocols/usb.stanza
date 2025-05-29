@@ -11,10 +11,10 @@ This package contains the definitions for the Universal Serial Bus protocol.
 The USB protocol contains many different layers from physical to logical. The bundles in
 this package are organized to support two levels in the application:
 
-2.  Transport - This is the set of signals that convey the information in the bus. These
+1.  Transport - This is the set of signals that convey the information in the bus. These
     signals typically traverse many components from the connector to the processor endpoint.
     These signals typically have SI constraints attached to them.
-1.  Connector - This is the physical layer where the USB cable meets the board. This
+2.  Connector - This is the physical layer where the USB cable meets the board. This
     interface may have power, shield, and other accessory pins in addition to the transport
     layer signals. These additional connections may or may not make there way to the
     processor endpoint.

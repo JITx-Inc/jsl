@@ -46,8 +46,8 @@ Helper for Creating QFN Lead Profiles
 
 For most QFN packages, the lead profile on the
 NS vs EW edges is the same. This function makes that
-assumption and constructions a {@link type:Quad-Lead-Profile}
-that
+assumption and constructs a {@link type:Quad-Lead-Profile}.
+
 <DOC>
 public defn QFN-Lead-Profile (
   --

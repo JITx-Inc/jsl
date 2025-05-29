@@ -52,7 +52,7 @@ doc: \<DOC>
   If given an Instantiable for one node of the chain, this function will
   create as many concrete instances as necessary.
 
-  The left- and right-most nodes of the chain must be  ports from the JITX
+  The left- and right-most nodes of the chain must be ports from the JITX
   design. Both concrete and abstract require ports work. They cannot be
   instances or instantiables.
 

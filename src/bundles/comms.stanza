@@ -191,7 +191,7 @@ Wide-SPI Bundle
 This bundle is used to define bundles for multi-data-line
 SPI busses. These are often seen for high bandwidth comms interfaces
 or on flash chips.
-@param width Number of datalines to include in this bundle. Common
+@param width Number of data lines to include in this bundle. Common
   values are 2, 4, and 8
 @param pins Optionally allow for Chip Select pin on this interface.
   Note CIPO and COPI are not supported.
@@ -341,7 +341,7 @@ Inter-Integrated Sound - I2S Protocol
 The I2S protocol is a synchronous serial communication
 protocol similar to SPI
 
-Originally Specification was from Phillips. Current
+Original specification was from Phillips. Current
 specification is present in NXP's references
 
 @see https://www.nxp.com/docs/en/user-manual/UM11732.pdf
@@ -369,7 +369,7 @@ public pcb-enum jsl/bundles/comms/MicrowirePins :
   Microwire-DI
 
 doc: \<DOC>
-Microwire serial communciation protocol
+Microwire serial communication protocol
 
 Microwire is a subset of SPI with slightly
 different latching requirements. It often comes
@@ -411,7 +411,7 @@ public defn microwire (opts:MicrowirePins ...) :
   microwire-b(opts)
 
 doc: \<DOC>
-Microwire serial communciation protocol
+Microwire serial communication protocol
 
 Microwire is a subset of SPI with slightly
 different latching requirements.

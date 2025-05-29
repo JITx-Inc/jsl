@@ -1,0 +1,334 @@
+doc: \<DOC>
+@brief (Q)SFP Protocol
+
+SFP is a serial communication protocol supporting high speed links for networking applications based on SERDES (RX/TX) data pairs
+@see https://en.wikipedia.org/wiki/Small_Form-factor_Pluggable
+
+This functions and definitions in this file support defining SFP, QSFP, QSFP-DD links between sources and receivers on a printed circuit board.
+
+Name	    | Nominal speed	| Lanes	| Standard
+SFP	      | 1   Gbit/s	  | 1	    | SFF INF-8074i
+cSFP	    | 1   Gbit/s	  | 2	    |
+SFP+	    | 10  Gbit/s	  | 1	    | SFF SFF-8431 4.1
+SFP28	    | 25  Gbit/s	  | 1	    | SFF SFF-8402
+SFP56	    | 50  Gbit/s	  | 1	    |
+SFP-DD    | 100 Gbit/s	  | 2	    | SFP-DD MSA[18]
+SFP112	  | 100 Gbit/s	  | 1	    | 2018-01-26	SFP, SFP+, SFP28, SFP56		LC
+SFP-DD112	| 200 Gbit/s	  | 2	    | 2018-01-26	SFP, SFP+, SFP28, SFP56, SFP-DD, SFP112		LC
+QSFP	    | 4   Gbit/s	  | 4	    | SFF INF-8438
+QSFP+	    | 40  Gbit/s	  | 4	    | SFF SFF-8436
+QSFP28	  | 100 Gbit/s    | 4	    | SFF SFF-8665
+QSFP56	  | 200 Gbit/s	  | 4	    | SFF SFF-8665
+QSFP112	  | 400 Gbit/s	  | 4	    | SFF SFF-8665
+QSFP-DD	  | 400 Gbit/s	  | 8	    | SFF INF-8628
+
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/protocols/sfp:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+
+doc: \<DOC>
+@brief SFP Generation enums
+This is a fixed list of supported link definitions for SFP connections
+@member link-SFP
+@member link-cSFP
+@member link-SFP+
+@member link-SFP28
+@member link-SFP56
+@member link-SFP-DD
+@member link-SFP112
+@member link-SFP-DD112
+@member link-QSFP
+@member link-QSFP+
+@member link-QSFP28
+@member link-QSFP56
+@member link-QSFP112
+@member link-QSFP-DD
+<DOC>
+
+public pcb-enum jsl/protocols/sfp/SFPLink:
+  link-SFP        ; 1.0 Gbit/s
+  link-cSFP       ; 1.0 Gbit/s
+  link-SFP+       ; 10.0 Gbit/s
+  link-SFP28      ; 25.0 Gbit/s
+  link-SFP56      ; 50.0 Gbit/s
+  link-SFP-DD     ; 100.0 Gbit/s
+  link-SFP112     ; 100.0 Gbit/s
+  link-SFP-DD112  ; 200.0 Gbit/s
+  link-QSFP       ; 4.0 Gbit/s
+  link-QSFP+      ; 40.0 Gbit/s
+  link-QSFP28     ; 100.0 Gbit/s
+  link-QSFP56     ; 200.0 Gbit/s
+  link-QSFP112    ; 400.0 Gbit/s
+  link-QSFP-DD    ; 400.0 Gbit/s
+
+doc: \<DOC>
+Small Form-factor Pluggable - aka SFP Link
+The SFP link is a high speed signaling protocol based on 1 SERDES (RX/TX) data pair (aka lane)
+<DOC>
+public defn SFP ():
+  SFP-Lane(1)
+
+doc: \<DOC>
+Small Form-factor Pluggable Dual Density - aka SFP-DD Link
+The SFP-DD link is a high speed signaling protocol based on 2 SERDES (RX/TX) data pairs (aka lanes)
+<DOC>
+public defn SFP-DD ():
+  SFP-Lane(2)
+
+doc: \<DOC>
+Quad Small Form-factor Pluggable - aka QSFP Link
+The QSFP link is a high speed signaling protocol based on 4 SERDES (RX/TX) data pairs (aka lanes)
+<DOC>
+public defn QSFP ():
+  SFP-Lane(4)
+
+doc: \<DOC>
+Quad Small Form-factor Pluggable Dual Density - aka QSFP-DD Link
+The QSFP-DD link is a high speed signaling protocol based on 8 SERDES (RX/TX) data pairs (aka lanes)
+<DOC>
+public defn QSFP-DD ():
+  SFP-Lane(8)
+
+doc: \<DOC>
+Small Form-factor Pluggable - aka SFP Link
+@brief SFP-Lane Bundle
+This bundle is used to represent a single SFP, SFP-DD,QSFP, or QSFP-DD link.
+@member lanes The number of lanes in the link
+<DOC>
+public pcb-bundle SFP-Lane (nl:Int) :
+  name = "SFP-Lane"
+  description = "SFP-Lane"
+  port lanes : lane-pair[nl]
+
+doc: \<DOC>
+Helper function to get the number of lanes in a (Q)SFP(-DD) link
+<DOC>
+public defn link-to-num-lanes (link:jsl/protocols/sfp/SFPLink) -> Int :
+  switch(link) :
+    link-SFP       : 1
+    link-cSFP      : 2
+    link-SFP+      : 1
+    link-SFP28     : 1
+    link-SFP56     : 1
+    link-SFP-DD    : 2
+    link-SFP112    : 1
+    link-SFP-DD112 : 2
+    link-QSFP      : 4
+    link-QSFP+     : 4
+    link-QSFP28    : 4
+    link-QSFP56    : 4
+    link-QSFP112   : 4
+    link-QSFP-DD   : 8
+
+doc: \<DOC>
+@brief Curated values for skew and loss of (Q)SFP(-DD) connection
+This is a helper function that returns the bounds on the intra-pair
+skew timing, inter-lane skew, and maximum loss as expected by the
+particular standard targeted by the user. The values returned are
+a toleranced value with upper/lower limits for the intra-pair and
+inter-lane skew and the maximum loss as a double representing dB.
+
+Calculating the intra-pair skew distance to time correspondence depends on the material.
+tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+@  5 mils spec'ed that is a intra-pair skew of 750 fs to 850 fs
+@ 10 mils spec'ed that is a intra-pair skew of 1.50 ps to 1.70 ps
+<DOC>
+
+public defn SFP-get-skew-loss-vals (link:jsl/protocols/sfp/SFPLink) -> [Toleranced, Toleranced, Double]:
+  ; skew, lane-skew, loss
+  switch(link) :
+    link-SFP       : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-cSFP      : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP+      : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP28     : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP56     : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP-DD    : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP112    : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-SFP-DD112 : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP      : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP+     : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP28    : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP56    : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP112   : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+    link-QSFP-DD   : [0.0 +/- 1.0e-12, 0.0 +/- 100.0e-12, 5.0]
+
+doc: \<DOC>
+@brief Differential impedance specified by the SFP standard
+This is a helper function that returns the expected differential
+trace impedance.
+
+@return Upper/lower limits for the impedance.
+<DOC>
+
+public defn SFP-get-trace-impedance () -> Toleranced :
+  100.0 +/- (10 %)
+
+doc: \<DOC>
+SFP Constraint
+This constraint is used to constrain lane(s) of the SFP interface.
+This type would typically be used with a {@link type:LaneConstraint}
+type for constructing a full-duplex SFP interface.
+This constraint expects to be passed `sfp` bundle ports to constrain.
+
+<DOC>
+public defstruct SFP-Constraint <: SI-Constraint :
+  doc : \<DOC>
+  SFP Specification
+  <DOC>
+  link : jsl/protocols/sfp/SFPLink
+  doc: \<DOC>
+  Specification for the intra-pair skew
+  <DOC>
+  skew : Toleranced
+  doc: \<DOC>
+  Max skew between all of the lanes in a single (Q)SFP(-DD) link
+  <DOC>
+  lane-skew : Toleranced
+  doc: \<DOC>
+  Max Loss Limit in dB
+  <DOC>
+  loss : Double with:
+    ensure => ensure-positive!
+  doc: \<DOC>
+  Differential routing structure for all signals.
+  <DOC>
+  route-struct : DifferentialRoutingStructure
+with:
+  keyword-constructor => true
+  constructor => #SFP-Constraint
+
+doc: \<DOC>
+Shorthand constructor for the SFP Constraint
+
+@param link The SFP link specification
+@param route-struct The differential routing structure
+<DOC>
+public defn SFP-Constraint (
+  --
+  link : jsl/protocols/sfp/SFPLink
+  route-struct : DifferentialRoutingStructure
+  ) -> SFP-Constraint :
+  val [ps, ls, ml] = SFP-get-skew-loss-vals(link)
+  SFP-Constraint(
+    link = link,
+    skew = ps,
+    lane-skew = ls,
+    loss = ml,
+    route-struct = route-struct
+  )
+
+defn route-constrain (cst:SFP-Constraint, route:KeyValue<JITXObject, JITXObject>) :
+  skew-window(skew(cst), route)
+  max-loss(loss(cst), route)
+  diff-structure(route-struct(cst), route)
+
+public defmethod constrain (cst:SFP-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+    val ls   = lane-skew(cst)
+    var ref-route
+
+    val src-cnt = length(src.lanes)
+    val dst-cnt = length(dst.lanes)
+    if src-cnt != dst-cnt:
+      throw $ ValueError("Mismatched Lane Count Between Src and Dst: src=%_ dst=%_" % [src-cnt, dst-cnt])
+    for i in indices(src.lanes) do :
+      val src-ep-tx = find-signal-end(src.lanes[i].TX)
+      val dst-ep-tx = find-signal-end(dst.lanes[i].TX)
+      val src-ep-rx = find-signal-end(src.lanes[i].RX)
+      val dst-ep-rx = find-signal-end(dst.lanes[i].RX)
+      val rx-route = src-ep-rx => dst-ep-rx
+      val tx-route = src-ep-tx => dst-ep-tx
+
+      route-constrain(cst, rx-route)
+      route-constrain(cst, tx-route)
+      timing-window(ls, src-ep-rx.N => dst-ep-rx.N, src-ep-tx.N => dst-ep-tx.N)
+      if i == 0 :
+        ref-route = src-ep-rx.N => dst-ep-rx.N
+      else :
+        timing-window(ls, ref-route, src-ep-rx.N => dst-ep-rx.N)
+
+;; TBD - Add support for the SFP-DD, QSFP, and QSFP-DD links
+
+
+doc: \<DOC>
+@brief Construct the SFP Topology and Constraints
+
+This function constructs the SFP topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param cons The signal integrity constraints for the differential signals and lanes being connected.
+@param src This is expected to be a port of `Bundle` type `SFP`
+@param dst This is expected to be a port of `Bundle` type `SFP`
+
+<DOC>
+public defn connect-SFP (cons:SFP-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(SFP-Lane(1), src, dst)
+    val lane-constraint = LaneConstraint(cons)
+    within [s,d] = constrain-topology(src.lane => dst.lane, lane-constraint) :
+      topo-pair(s d)
+
+doc: \<DOC>
+@brief Construct the SFP-DD Topology and Constraints
+
+This function constructs the SFP-DD topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param cons The signal integrity constraints for the differential signals and lanes being connected.
+@param src This is expected to be a port of `Bundle` type `SFP-DD`
+@param dst This is expected to be a port of `Bundle` type `SFP-DD`
+
+<DOC>
+public defn connect-SFP-DD (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(SFP-Lane(2), src, dst)
+    val lane-constraint = LaneConstraint(cons)
+    within [s,d] = constrain-topology(src.lanes => dst.lanes, lane-constraint) :
+      topo-pair(s d)
+
+doc: \<DOC>
+@brief Construct the QSFP Topology and Constraints
+
+This function constructs the QSFP topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param cons The signal integrity constraints for the differential signals and lanes being connected.
+@param src This is expected to be a port of `Bundle` type `SFP`, `SFP-DD`, `QSFP`, or `QSFP-DD`
+@param dst This is expected to be a port of `Bundle` type `SFP`, `SFP-DD`, `QSFP`, or `QSFP-DD`
+
+<DOC>
+public defn connect-QSFP (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(SFP-Lane(4), src, dst)
+    val lane-constraint = LaneConstraint(cons)
+    within [s,d] = constrain-topology(src.lanes => dst.lanes, lane-constraint) :
+      topo-pair(s d)
+
+doc: \<DOC>
+@brief Construct the QSFP-DD Topology and Constraints
+
+This function constructs the QSFP-DD topology and applies constraints
+to the channel for intra-pair skew and channel loss.
+
+@param cons The signal integrity constraints for the differential signals and lanes being connected.
+@param src This is expected to be a port of `Bundle` type `QSFP-DD`
+@param dst This is expected to be a port of `Bundle` type `QSFP-DD`
+
+<DOC>
+public defn connect-QSFP-DD (cons:SI-Constraint, src:JITXObject, dst:JITXObject) :
+  inside pcb-module :
+    check-bundle(SFP-Lane(8), src, dst)
+    val lane-constraint = LaneConstraint(cons)
+    within [s,d] = constrain-topology(src.lanes => dst.lanes, lane-constraint) :
+      topo-pair(s d)
+
