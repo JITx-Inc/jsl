@@ -1,4 +1,4 @@
 name = "jsl"
-version = "0.10.7"
+version = "0.10.8"
 [dependencies]
 maybe-utils = { git = "StanzaOrg/maybe-utils", version = "0.1.6"}
