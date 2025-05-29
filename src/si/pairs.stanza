@@ -106,7 +106,7 @@ If we encounter an instance - then we will use a `require` statement to extract
 out the diff-pair interfaces needed to construct our chained topology of
 diff-pairs.
 
-This function is recursive. Hence, the `KeyValue` sequence should not include a cycle.
+This function is recursive. The `KeyValue` sequence should not include a cycle.
 
 The first and last elements of the chained topology are expected to be ports of
 type `diff-pair`. Any other type of bundle is an error.
@@ -125,7 +125,7 @@ If `make-symb-name` is not `false`, then this is the base name and will be
 passed as the first argument to `make-symb-name` to construct the net names
 for each of the topology segments created by this function.
 @param make-symb-name Optional Function that converts `name` and the `index`
-into a net name for a topology segment. `index` is increment at every level
+into a net name for a topology segment. `index` is incremented at every level
 of recursion so that we can create unique names. If this value is `false`,
 then no unique names are created and `name` is used explicitly.
 
@@ -198,7 +198,7 @@ public defn topo-pair (
             ; User has passed us an instance of a `pcb-module` or `pcb-component`.
             ;  We need to create the `require` of the right type based on what that
             ;  instance supports - otherwise we will get a fatal exception.
-            ; We don't have cover `diff-pair` here because that would be a terminal
+            ; We don't have to cover `diff-pair` here because that would be a terminal
             ;  case and we are in the middle of the chain.
             val it = instantiable-type(i)
             if supports?(it, dual-pair):

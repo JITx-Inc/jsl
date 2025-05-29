@@ -28,8 +28,8 @@ constraint functions for their particular application.
 
 When constraining the topology, the {@link find-signal-end}
 function will be used on the `src` and `dst` so that the proper
-endpoints of the topology for found. The implementer of a new
-`constraints` type is responsible for implmenting this.
+endpoints of the topology are found. The implementer of a new
+`constraints` type is responsible for implementing this.
 
 @param cst The constraint object with state info
 @param src One endpoint port of the topology to constrain.

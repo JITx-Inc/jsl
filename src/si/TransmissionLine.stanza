@@ -71,7 +71,7 @@ Compute the Phase Velocity for this Structure in mm/s
 public defmulti phase-velocity (t:TransmissionLine -- freq:Double = ?) -> Double
 
 doc: \<DOC>
-Computer the insertion loss rate for this structure in db/mm
+Compute the insertion loss rate for this structure in db/mm
 @param t Transmission Line Structure
 @param freq Optional Frequency to compute dispersion relationships.
   If not given, then the DC parameter is assumed. Default value is `None()`

@@ -290,7 +290,7 @@ This function must be called in a `pcb-module` context.
 @param loss-dB Loss range that this design is willing to accept in dB
 @param ep-sets a series of endpoint pairs for the routes that we wish
   to adds limits on. Each `KeyValue` may be:
-  1.  Pin => Pin - Single pin to add constraints to
+  1.  Pin => Pin - Single pin to apply the constraint to.
   2.  Bundle => Bundle - Add individual constraints to each matching pin in the passed bundle. Must be the same type of bundle.
   3.  PortArray => PortArray - Add individual constraints for each port of a port array. Each PortArray must be of equal length and type.
 
@@ -365,7 +365,7 @@ such as `0.0 +/- 10.0e-12`.
 be made in reference to this topology.
 @param topos Set of topologies to which we will apply timing difference constraints.
 Each KVP can be `SinglePin => SinglePin`, `PortArray => PortArray`, or `Bundle` => `Bundle`.
-For the `PortArray` variant, the number of pins in each port array should be equal. Note that bundles are not supported
+For the `PortArray` variant, the number of pins in each port array should be equal. Note that bundles are not supported.
 <DOC>
 public defn timing-window (
   window:Toleranced,
