@@ -2,8 +2,8 @@
 defpackage jsl/protocols:
   forward jsl/protocols/displayport
   forward jsl/protocols/ethernet
+  forward jsl/protocols/memory
   forward jsl/protocols/pcie
   forward jsl/protocols/sata
+  forward jsl/protocols/sfp
   forward jsl/protocols/usb
-  forward jsl/protocols/memory
-

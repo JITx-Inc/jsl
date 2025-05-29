@@ -64,7 +64,7 @@ Compute the phase velocity for a TEM wave in a specific medium.
 
 The phase velocity is the signal propagation velocity in a particular
 medium. This function assumes that the medium of propagation is homogenous.
-For non-homogenous medium, the user should compute the effective relative permittivity
+For non-homogeneous medium, the user should compute the effective relative permittivity
 and then pass it to this function.
 
 @param eps-r Relative Permittivity of the Medium. This value is usually greater than or equal to 1.0
