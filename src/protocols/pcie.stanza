@@ -87,6 +87,9 @@ doc: \<DOC>
 <DOC>
 public pcb-enum jsl/bundles/pcie/PCIePins :
   PCIe-PRSNT#
+  PCIe-WAKE#
+  PCIe-PERST#
+  PCIe-CLKREQ#
 
 doc: \<DOC>
 @brief PCI-e Bundle
@@ -130,20 +133,20 @@ public pcb-bundle pcie-data (lanes:Int) :
 pcb-bundle pcie-control-b (pins:Collection<PCIePins>) :
   name = "PCI-e Control"
   description = "PCI-e Serial Communications Link Control"
-  port PEWAKE#
-  port PERST#          ; PCI-E Reset signal
-  port CLKREQ#         ; clock request
   for p in pins do :
     switch(p) :
       PCIe-PRSNT# : make-port(`PRSNT#) ; hot plug detection
+      PCIe-WAKE# : make-port(`WAKE#) ; wake up signal
+      PCIe-PERST# : make-port(`PERST#) ; reset signal
+      PCIe-CLKREQ# : make-port(`CLKREQ#) ; clock request
 
 doc: \<DOC>
 @brief PCI-e Control bundle
 PCI-e is a serial communication supporting high speed data links
 @param pins An optional set of pins to be implemented in the control bundle
-@member PEWAKE#
-@member PERST#
-@member CLKREQ#
+@member WAKE# Optional signal
+@member PERST# Optional signal
+@member CLKREQ# Optional signal
 @member PRSNT# Optional signal
 <DOC>
 
