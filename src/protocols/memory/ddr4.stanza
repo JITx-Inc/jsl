@@ -487,7 +487,7 @@ public defmethod constrain (cst:DDR4-Data-Constraint, src:JITXObject, dst:JITXOb
       constrain(cst-dqs, src.DQS[i], dst.DQS[i])
       ; constrain DQ with respect to DQS
       val bs = i * 8
-      val be = if i + 8 > w : w else : i + 8
+      val be = if i + 8 > w : w else : bs + 8
       val target-dqm-bus = to-tuple $ cat{_, [src.DM_n[i] => dst.DM_n[i]]} $ for j in bs to be seq : src.DQ[j] => dst.DQ[j]
       timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
       max-loss(loss(cst), ep-sets = target-dqm-bus)
