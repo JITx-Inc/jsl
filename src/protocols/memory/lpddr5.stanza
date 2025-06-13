@@ -1,0 +1,369 @@
+doc: \<DOC>
+@brief LPDDR5/LPDDR5X
+
+LPDDR5/LPDDR5X is a high-speed memory protocol for mobile and low-power applications
+@see https://en.wikipedia.org/wiki/LPDDR
+
+This file contains functions and definitions for supporting LPDDR5/LPDDR5X
+connections between microprocessors and memories in a board design. The
+LPDDR5 standard is a complex specification with many timing constraints and
+impedance requirements.
+
+This file supports single channel, dual channel, and quad channel configurations
+with rank = 1 or 2. The implementation supports both LPDDR5 and LPDDR5X protocols,
+with LPDDR5X providing higher data rates through improved signal integrity
+requirements and timing parameters.
+
+Key features:
+- Dual-channel (x32) and quad-channel (x64) configurations
+- Single and dual rank support
+- Write Clock (WCK) and Read Data Strobe (RDQS) for improved timing margins
+- Command/Address (CA) bus with 7-bit width per channel
+- Strict timing requirements for high-speed operation
+
+This file contains curated values for skew and loss of LPDDR5 channel.
+It specifies the bounds on the intra-pair skew timing and maximum loss as expected
+by this particular standard. The values returned are a toleranced value with 
+upper/lower limits for the intra-pair skew and the maximum loss as a double 
+representing dB.
+
+The CA bus uses a 7-bit command/address encoding scheme that supports:
+- Row and column addresses
+- Bank addresses
+- Command codes
+- Mode register settings
+
+Calculating the distance to time correspondence depends on the board material.
+Example:
+  tpd 147 ps/in 170 ps/in -> 147 fs/mil to 170 fs/mil
+  @  5 mils spec'ed that is a intra-pair skew of 735 fs to 850 fs depending on the material characteristics
+  @ 10 mils spec'ed that is a intra-pair skew of 1.47 ps to 1.70 ps depending on the material characteristics
+<DOC>
+
+#use-added-syntax(jitx)
+defpackage jsl/protocols/memory/lpddr5:
+  import core
+  import jitx
+  import jitx/commands
+  import collections
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+;============================================================
+;========================= Bundles ==========================
+;============================================================
+
+doc: \<DOC>
+@brief LPDDR5 Width enums
+This is a fixed list of possible channel widths for LPDDR5
+@member LPDDR5-x32 32-bit width (dual x16 channel)
+@member LPDDR5-x64 64-bit width (quad x16 channel)
+<DOC>
+public pcb-enum jsl/protocols/memory/lpddr5/LPDDR5-Width:
+  LPDDR5-x32
+  LPDDR5-x64
+
+public defn width-to-int (width:LPDDR5-Width) -> Int :
+  switch(width) :
+    LPDDR5-x32 : 32
+    LPDDR5-x64 : 64
+
+public defn num-channels (width:LPDDR5-Width) -> Int :
+  switch(width) :
+    LPDDR5-x32 : 2
+    LPDDR5-x64 : 4
+
+doc: \<DOC>
+@brief LPDDR5 Rank enums
+This is a fixed list of possible ranks for LPDDR5
+@member LPDDR5-SingleRank
+@member LPDDR5-DualRank
+<DOC>
+public pcb-enum jsl/protocols/memory/lpddr5/LPDDR5-Rank:
+  LPDDR5-SingleRank
+  LPDDR5-DualRank
+
+public defn rank-to-int (rank:LPDDR5-Rank) -> Int :
+  switch(rank) :
+    LPDDR5-SingleRank : 1
+    LPDDR5-DualRank   : 2
+
+doc: \<DOC>
+@brief LPDDR5 data lane bundle
+Represents a single x8 data lane in LPDDR5 memory
+@member dq Data pins (8 bits)
+@member wck Write clock
+@member dmi Data mask input
+@member rdqs Read strobe
+<DOC>
+public pcb-bundle lpddr5-data-lane :
+  port dq : pin[8]
+  port dmi : pin
+  port wck : diff-pair
+  port rdqs : diff-pair
+
+doc: \<DOC>
+@brief LPDDR5 bundle
+Represents the complete LPDDR5 memory interface
+@member d Data lanes (2 lanes per channel)
+@member cs Chip select
+@member ck Command clock
+@member ca Command/Address bus (7 bits)
+@member reset_n Reset signal (shared across all channels)
+<DOC>
+public pcb-bundle lpddr5 (width:LPDDR5-Width, rank:LPDDR5-Rank) :
+  port d : lpddr5-data-lane[num-channels(width)][2]
+  port cs : pin[num-channels(width)][rank-to-int(rank)]
+  port ck : diff-pair[num-channels(width)]
+  port ca : pin[num-channels(width)][7]
+  port zq : pin[num-channels(width)]
+  port reset_n : pin
+
+;============================================================
+;===================== Signal Integrity =====================
+;============================================================
+
+doc: \<DOC>
+@brief Differential impedance specified by the LPDDR5 standard
+This is a defstruct that holds the expected differential
+trace impedance for the standard.
+
+@return Upper/lower limits for the impedance in a struct.
+<DOC>
+public defstruct LPDDR5-Impedances <: Equalable:
+  ck-imped:Toleranced with:
+     default => 100.0 +/- (5 %)
+  wck-rdqs-imped:Toleranced with:
+     default => 100.0 +/- (5 %)
+  dq-imped:Toleranced with:
+    default => 50.0 +/- (5 %)
+  ca-imped:Toleranced with:
+    default => 50.0 +/- (5 %)
+with:
+  printer => true
+  keyword-constructor => true
+  equalable => true
+
+doc: \<DOC>
+LPDDR5 SI Constraint Type
+
+Values based on the LPDDR5 specifications
+
+Constraints:
+  CK Intra-pair Skew    => 0.0 +/- 1.0e-12 seconds
+  CK to CS Skew         => 0.0 +/- 4.0e-12 seconds
+  CK to CA Skew         => 0.0 +/- 4.0e-12 seconds
+  CK to WCK Skew        => -250.0e-12 to 1250.0e-12 seconds
+  CK to RDQS Skew       => -250.0e-12 to 1250.0e-12 seconds
+  WCK Intra-pair Skew   => 0.0 +/- 1.0e-12 seconds
+  RDQS Intra-pair Skew  => 0.0 +/- 1.0e-12 seconds
+  WCK to DQ/DMI Skew    => 0.0 +/- 2.5e-12 seconds
+  RDQS to DQ/DMI Skew   => 0.0 +/- 2.5e-12 seconds
+  DQ/DMI to DQ/DMI Skew => 0.0 +/- 2.5e-12 seconds
+  Maximum Signal Loss   => 4.0 dB
+<DOC>
+public defstruct LPDDR5-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  CK Intra-pair Skew Limit
+  <DOC>
+  skew-ck:Toleranced with :
+    default => 0.0 +/- 1.0e-12
+
+  doc: \<DOC>
+  CK to CS Skew Limit
+  <DOC>
+  skew-ck-cs:Toleranced with :
+    default => 0.0 +/- 4.0e-12
+
+  doc: \<DOC>
+  CK to CA Skew Limit
+  <DOC>
+  skew-ck-ca:Toleranced with :
+    default => 0.0 +/- 4.0e-12
+
+  doc: \<DOC>
+  CK to WCK Skew Limit
+  <DOC>
+  skew-ck-wck:Toleranced with :
+    default => min-max(-250.0e-12, 1250.0e-12)
+
+  doc: \<DOC>
+  CK to RDQS Skew Limit
+  <DOC>
+  skew-ck-rdqs:Toleranced with :
+    default => min-max(-250.0e-12, 1250.0e-12)
+
+  doc: \<DOC>
+  WCK Intra-pair Skew Limit
+  <DOC>
+  skew-wck:Toleranced with :
+    default => 0.0 +/- 1.0e-12
+
+  doc: \<DOC>
+  RDQS Intra-pair Skew Limit
+  <DOC>
+  skew-rdqs:Toleranced with :
+    default => 0.0 +/- 1.0e-12
+
+  doc: \<DOC>
+  WCK to DQ/DMI Skew Limit
+  <DOC>
+  skew-wck-dq:Toleranced with :
+    default => 0.0 +/- 2.5e-12
+
+  doc: \<DOC>
+  RDQS to DQ/DMI Skew Limit
+  <DOC>
+  skew-rdqs-dq:Toleranced with :
+    default => 0.0 +/- 2.5e-12
+
+  doc: \<DOC>
+  DQ/DMI to DQ/DMI Skew Limit
+  <DOC>
+  skew-dq-dq:Toleranced with :
+    default => 0.0 +/- 2.5e-12
+
+  doc: \<DOC>
+  Maximum Signal Loss
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    default => 4.0
+
+  doc: \<DOC>
+  Channel Bit Width
+  <DOC>
+  width:LPDDR5-Width
+
+  doc: \<DOC>
+  Channel Rank
+  <DOC>
+  rank:LPDDR5-Rank
+
+  doc: \<DOC>
+  Differential Pair Routing Structure for CK
+  <DOC>
+  diff-ck-rs:DifferentialRoutingStructure
+
+  doc: \<DOC>
+  Differential Pair Routing Structure for WCK/RDQS
+  <DOC>
+  diff-wck-rdqs-rs:DifferentialRoutingStructure
+
+  doc: \<DOC>
+  Single-Ended Routing Structure for DQ/DM signals
+  <DOC>
+  se-dq-rs:RoutingStructure
+
+  doc: \<DOC>
+  Single-Ended Routing Structure for CA/CS signals
+  <DOC>
+  se-ca-rs:RoutingStructure
+with:
+  keyword-constructor => true
+
+public defn LPDDR5-Constraint (width:LPDDR5-Width, rank:LPDDR5-Rank,
+                               diff-ck-rs:DifferentialRoutingStructure,
+                               diff-wck-rdqs-rs:DifferentialRoutingStructure,
+                               se-dq-rs:RoutingStructure,
+                               se-ca-rs:RoutingStructure) -> LPDDR5-Constraint :
+  LPDDR5-Constraint(width = width, rank = rank,
+                   diff-ck-rs = diff-ck-rs,
+                   diff-wck-rdqs-rs = diff-wck-rdqs-rs,
+                   se-dq-rs = se-dq-rs,
+                   se-ca-rs = se-ca-rs)
+
+doc: \<DOC>
+Add constraints to a LPDDR5 link
+
+Channel bit width and channel rank of 'src' and 'dst' must match width and rank of 'cst'
+@param cst Constraint Object.
+@param src Source End Point - must be of `lpddr5` type and meet the constraints
+@param dst Destination End Point - must be of `lpddr5` type and meet the constraints
+<DOC>
+public defmethod constrain (cst:LPDDR5-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  val n-ch = num-channels(width(cst))
+  val rnk = rank-to-int(rank(cst))
+  inside pcb-module :
+    val ck-const = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
+    val wck-const = DiffPair-Constraint(skew = skew-wck(cst), loss = loss(cst), route-struct = diff-wck-rdqs-rs(cst))
+    val rdqs-const = DiffPair-Constraint(skew = skew-rdqs(cst), loss = loss(cst), route-struct = diff-wck-rdqs-rs(cst))
+
+    ; Constrain the reset signal
+    structure(src.reset_n => dst.reset_n) = se-ca-rs(cst)
+    max-loss(loss(cst), src.reset_n => dst.reset_n)
+
+    for i in 0 to n-ch do :
+      ; CK intra-pair
+      diffpair-constrain(ck-const, src.ck[i], dst.ck[i])
+
+      val guide-ck = src.ck[i].P => dst.ck[i].P
+      for j in 0 to rnk do :
+        ; CK to CS
+        val target-cs = src.cs[i][j] => dst.cs[i][j]
+        timing-window(skew-ck-cs(cst), guide-ck, target-cs)
+        structure(target-cs) = se-ca-rs(cst)
+        max-loss(loss(cst), target-cs)
+
+      ; CK to CA - CA bus is 7 bits (0 to 6)
+      for j in 0 to 7 do :
+        val target-ca = src.ca[i][j] => dst.ca[i][j]
+        timing-window(skew-ck-ca(cst), guide-ck, target-ca)
+        structure(target-ca) = se-ca-rs(cst)
+        max-loss(loss(cst), target-ca)
+
+      ; Each channel has 2 data lanes (0 and 1)
+      for j in 0 to 2 do :
+        ; DQS intra-pair
+        diffpair-constrain(wck-const, src.d[i][j].wck, dst.d[i][j].wck)
+        ; RDQS intra-pair
+        diffpair-constrain(rdqs-const, src.d[i][j].rdqs, dst.d[i][j].rdqs)
+        ; CK to WCK
+        val target-wck = src.d[i][j].wck.P => dst.d[i][j].wck.P
+        timing-window(skew-ck-wck(cst), guide-ck, target-wck)
+        ; CK to RDQS
+        val target-rdqs = src.d[i][j].rdqs.P => dst.d[i][j].rdqs.P
+        timing-window(skew-ck-rdqs(cst), guide-ck, target-rdqs)
+
+        ; WCK to DQ/DMI
+        val target-dmi = src.d[i][j].dmi => dst.d[i][j].dmi
+        timing-window(skew-wck-dq(cst), target-wck, target-dmi)
+        structure(target-dmi) = se-dq-rs(cst)
+        max-loss(loss(cst), target-dmi)
+
+        ; DQ to DQS - Each lane has 8 DQ pins (0 to 7)
+        for k in 0 to 8 do :
+          val target-dq = src.d[i][j].dq[k] => dst.d[i][j].dq[k]
+          timing-window(skew-wck-dq(cst), target-wck, target-dq)
+          structure(target-dq) = se-dq-rs(cst)
+          max-loss(loss(cst), target-dq)
+
+        ; DQ to DQ - Create a tuple of all DQ connections in this lane
+        val dq-bus = to-tuple $ for k in 0 to 8 seq : src.d[i][j].dq[k] => dst.d[i][j].dq[k]
+        timing-window(skew-dq-dq(cst), src.d[i][j].dq[0] => dst.d[i][j].dq[0], topos = dq-bus)
+
+doc: \<DOC>
+Helper function to connect and constrain a LPDDR5 link
+@param src Source End Point - must be of `lpddr5` type
+@param dst Destination End Point - must be of `lpddr5` type and match
+the parameterization of `src`, including width and rank.
+<DOC>
+public defn connect-LPDDR5 (src:JITXObject, dst:JITXObject
+                           -- width:LPDDR5-Width = LPDDR5-x32,
+                           rank:LPDDR5-Rank = LPDDR5-SingleRank,
+                           diff-ck-rs:DifferentialRoutingStructure,
+                           diff-wck-rdqs-rs:DifferentialRoutingStructure,
+                           dq-rs:RoutingStructure,
+                           ca-rs:RoutingStructure) :
+  inside pcb-module :
+    val lpddr5-cst = LPDDR5-Constraint(width = width,
+                                      rank = rank,
+                                      diff-ck-rs = diff-ck-rs,
+                                      diff-wck-rdqs-rs = diff-wck-rdqs-rs,
+                                      se-dq-rs = dq-rs,
+                                      se-ca-rs = ca-rs)
+    constrain-topology(src, dst, lpddr5-cst)
