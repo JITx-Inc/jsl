@@ -1,0 +1,269 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/lpddr5/lpddr5-board:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/symbols
+  import jsl/symbols/net-symbols
+  import jsl/symbols/SymbolDefn
+
+  import jsl/protocols/memory/lpddr5
+  import jsl/bundles
+  import jsl/si
+
+  import jsl/examples/protocols/memory/lpddr5/lpddr5-src
+
+doc: \<DOC>
+@brief Simple board rules
+This structure sets the simple design rules to be applied to a design. Note
+that routing-structures will supersede these values when applied to traces.
+See https://docs.jitx.com/reference/statements/rulestmt/heading.html
+<DOC>
+
+public pcb-rules lpddr5-board-rules:
+  min-copper-width             = 0.066
+  min-copper-copper-space      = 0.066
+  min-copper-hole-space        = 0.075
+  min-copper-edge-space        = 0.254
+  min-annular-ring             = 0.050
+  min-drill-diameter           = 0.100
+  min-silkscreen-width         = 0.100
+  min-pitch-leaded             = 0.350
+  min-pitch-bga                = 0.350
+  max-board-width              = 406.4
+  max-board-height             = 558.8
+  min-silk-solder-mask-space   = 0.050
+  min-silkscreen-text-height   = 0.380
+  solder-mask-registration     = 0.050
+  min-th-pad-expand-outer      = 0.050
+  min-soldermask-opening       = 0.152
+  min-soldermask-bridge        = 0.102
+  min-hole-to-hole             = 0.100
+  min-pth-pin-solder-clearance = 0.500
+
+;==== Materials ================================================================
+pcb-material copper:
+  type = Conductor
+  name = "Copper"
+
+pcb-material core:
+  type = Dielectric
+  dielectric-coefficient = 3.6
+  name = "FR4 Core"
+
+pcb-material soldermask:
+  type = Dielectric
+  dielectric-coefficient = 3.7
+  name = "Taiyo BSN4000"
+
+pcb-material prepreg:
+  type = Dielectric
+  dielectric-coefficient = 3.5
+  name = "FR4 Prepreg"
+
+public pcb-stackup example-stackup:
+  name = "Example 10-layer 0.064in"
+  stack(0.013, soldermask)
+  stack(0.030, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.030, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.015, copper    )
+  stack(0.070, core      )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.030, copper    )
+  stack(0.060, prepreg   )
+  stack(0.025, copper    )
+  stack(0.060, prepreg   )
+  stack(0.030, copper    )
+  stack(0.013, soldermask)
+
+doc: \<DOC>
+@brief Parametric via generator for laser-drilled vias
+This function creates vias based on the input arguments
+@param via-start the layer that the via starts on
+@param via-stop the layer that the via ends on
+For other via types and arguments, please
+consult: https://docs.jitx.com/reference/statements/viastmt/heading.html
+<DOC>
+
+val small-drill = Backdrill(
+    diameter = 0.3                     ; drill diameter, mm
+    startpad-diameter =   0.6                     ; starting pad diameter, mm
+    solder-mask-opening = 0.5                     ; Soldermask Opening diameter, mm
+    copper-clearance = 0.5                     ; Copper Clearance Diameter, mm
+  )
+
+public pcb-via bd-via (via-start:LayerIndex via-stop:LayerIndex via-name:String):
+  name = via-name
+  start = via-start
+  stop = via-stop
+  diameter = 0.200
+  hole-diameter = 0.100
+  type = MechanicalDrill
+  backdrill = Backdrill(bottom = small-drill)
+
+public pcb-via th-via (via-name:String):
+  name = via-name
+  start = LayerIndex(0, Top)
+  stop = LayerIndex(0, Bottom)
+  diameter = 0.275
+  hole-diameter = 0.150
+  type = MechanicalDrill
+
+doc: \<DOC>
+@brief Simple board shape
+This variable defines a shape for a board.
+<DOC>
+; Define the shape/size of the board
+public val board-shape = RoundedRectangle(50.0, 30.0, 0.25)
+
+public val bd-2 = bd-via(LayerIndex(0,Top), LayerIndex(2,Top), "bd-2")  ; Gnd
+public val bd-4 = bd-via(LayerIndex(0,Top), LayerIndex(4,Top), "bd-4")  ; Signal
+public val bd-6 = bd-via(LayerIndex(0,Top), LayerIndex(6,Top), "bd-6")  ; Gnd
+public val bd-8 = bd-via(LayerIndex(0,Top), LayerIndex(8,Top), "bd-8")  ; Signal
+public val default-th = th-via("th") ; Signal
+
+doc: \<DOC>
+@brief Simple board definition function
+This function call defines a board by creating a board with shape, stackup and allowable vias.
+@param outline the shape of the board
+<DOC>
+public pcb-board lpddr5-board (outline:Shape):
+  stackup = example-stackup
+  boundary = outline
+  signal-boundary = outline
+  vias = [default-th bd-2 bd-4 bd-6 bd-8]
+
+doc: \<DOC>
+@brief Simple board setup function
+This function call sets up a board for a design by creating a board with a shape, stackup and design rules.
+<DOC>
+
+; Setup the board
+public defn setup-board ():
+  set-board(lpddr5-board(board-shape))
+  set-rules(lpddr5-board-rules)
+
+
+val diff-nd = DifferentialNeckDown(0.070, 0.066, 0.100, 0.008, 0.1499e12)
+    ; pair-spacing: Double|False
+    ; trace-width: Double|False
+    ; clearance: Double|False
+    ; insertion-loss: Double|False
+    ; velocity: Double|False
+
+val nd = NeckDown(0.066, 0.100, 0.008, 0.1499e12)
+    ; trace-width: Double|False
+    ; clearance: Double|False
+    ; insertion-loss: Double|False
+    ; velocity: Double|False
+
+doc: \<DOC>
+The pcb-differential-routing-structure template below is an example of a differential-routing-structure needed
+by different protocols. This pcb-differential-routing-structure will be applied to the differential traces
+in the targeted bus by using the helper function `<bus>-apply-routing-structure()`.
+It should also reference a single ended routing structure for the uncoupled region.
+@param trace-impedance Target impedance. Accepted values are 85, 90, and 100 ohm.
+<DOC>
+public pcb-differential-routing-structure diff:
+  name = "Differential Impedance - Select Values"
+  val tw = 0.066
+  ; whatever layers are to be used for routing the differential pairs (defined by the user)
+  layer-constraints(Top):
+    trace-width  = tw       ; mm
+    pair-spacing = tw / 1.2 ; mm
+    clearance    = 0.100    ; mm
+    velocity = 0.19e12      ; mm/s Er << 4
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = diff-nd
+
+  layer-constraints(LayerIndex(2, Top)):
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.100    ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = diff-nd
+
+  layer-constraints(LayerIndex(4, Top)):
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.100    ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = diff-nd
+
+  layer-constraints(LayerIndex(4, Bottom)):
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.100    ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = diff-nd
+
+  layer-constraints(LayerIndex(2, Bottom)):
+    trace-width  = tw       ; mm
+    pair-spacing = 2.0 * tw ; mm
+    clearance    = 0.100    ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = diff-nd
+
+doc: \<DOC>
+The pcb-routing-structure(s) below are just examples of the routing structures that need to be maintained
+in the project code because they are dependant on the stack-up and other factors.
+<DOC>
+public pcb-routing-structure se-50 :
+  name = "50 Ohm single-ended"
+  layer-constraints(Top) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100     ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd
+
+  layer-constraints(LayerIndex(2, Top)) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100     ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd
+
+  layer-constraints(LayerIndex(4, Top)) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100     ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd
+
+  layer-constraints(LayerIndex(4, Bottom)) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100         ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd
+
+  layer-constraints(LayerIndex(2, Bottom)) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100         ; mm
+    velocity = 0.1499e12    ; mm/s Er ~ 4.0 stripline
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd
+
+  layer-constraints(Bottom) :
+    trace-width = 0.066    ; mm
+    clearance = 0.100         ; mm
+    velocity = 0.19e12   ; mm/s
+    insertion-loss = 0.008  ; db/mm @ 1GHz
+    neck-down = nd

@@ -1,0 +1,60 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/lpddr5/lpddr5-main:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+  import jsl/design/settings
+  import jsl/symbols
+  import jsl/symbols/net-symbols
+  import jsl/symbols/SymbolDefn
+
+  import jsl/protocols/memory/lpddr5
+  import jsl/bundles
+  import jsl/si
+
+  import jsl/examples/protocols/memory/lpddr5/lpddr5-src
+  import jsl/examples/protocols/memory/lpddr5/lpddr5-board
+
+public pcb-module lpddr5-example:
+  port vdd : pin
+  port gnd : pin
+
+  net GND (gnd)
+  net VDD (vdd)
+
+  inst dut1 : jsl/examples/protocols/memory/lpddr5/lpddr5-src/mem-module
+  inst dut2 : jsl/examples/protocols/memory/lpddr5/lpddr5-src/ic-module
+
+
+  ; Connect LPDDR5 interface
+  connect-LPDDR5(dut1.io, dut2.io, width = LPDDR5-x32, rank = LPDDR5-SingleRank,
+    diff-ck-rs = diff,
+    diff-wck-rdqs-rs = diff,
+    dq-rs = se-50,
+    ca-rs = se-50
+  )
+
+  ; Define geometries
+  geom(GND) :
+    copper-pour(LayerIndex(1, Top), isolate = 0.127) = board-shape
+    copper-pour(LayerIndex(1, Bottom), isolate = 0.127) = board-shape
+  geom(VDD) :
+    copper-pour(LayerIndex(3, Top), isolate = 0.127) = board-shape
+
+  ; Place components
+;   place(dut1, Point(50.0, 50.0))
+;   place(dut2, Point(0.0, 50.0))
+
+; Set current design
+set-current-design("lpddr5-example")
+setup-board()
+set-paper(ANSI-B)
+set-main-module(lpddr5-example)
+
+; Add view commands
+view-board()
+view-schematic()
+view-design-explorer()
+view-bom() 

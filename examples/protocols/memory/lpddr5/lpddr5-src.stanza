@@ -1,0 +1,599 @@
+doc: \<DOC>
+@brief LPDDR5/LPDDR5X Memory Protocol
+
+LPDDR5/LPDDR5X is a high speed memory protocol for mobile devices
+@see https://en.wikipedia.org/wiki/LPDDR
+
+This functions and definitions in this example support defining LPDDR5
+interfaces on controllers and memories.
+<DOC>
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/memory/lpddr5/lpddr5-src:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/symbols
+  import jsl/landpatterns
+
+  import jsl/design/settings
+  import jsl/si
+  import jsl/pin-assignment
+  import jsl/bundles
+  import jsl/protocols/memory/lpddr5
+
+val dl = DensityLevelC
+
+val BGA-pkg = BGA(
+  num-leads = 196,
+  rows = 14,
+  columns = 14,
+  lead-diam = 0.5,
+  pitch = 0.8,
+  package-body = PackageBody(
+    width = 15.0 +/- 0.1,
+    length = 15.0 +/- 0.1,
+    height = 0.71 +/- [0.06, 0.0]
+  ),
+  density-level = DensityLevelB
+)
+
+
+public pcb-component mem-device:
+  reference-prefix = "U"
+  mpn = "memory-JITX-LPDDR5"
+  description = "Dummy LPDDR5 memory"
+
+  pin-properties:
+    [pin:Ref     | pads:Ref ... ]
+    [ VSS[001]   |     A[1]     ]
+    [ VSS[002]   |     A[2]     ]
+    [ DQ[0]      |     A[3]     ]
+    [ VSS[003]   |     A[4]     ]
+    [ DQS[0]     |     A[5]     ]
+    [ VSS[004]   |     A[6]     ]
+    [ DQ[1]      |     A[7]     ]
+    [ DQ[2]      |     A[8]     ]
+    [ VSS[005]   |     A[9]     ]
+    [ DQS[1]     |     A[10]    ]
+    [ VSS[006]   |     A[11]    ]
+    [ DQ[3]      |     A[12]    ]
+    [ VSS[007]   |     A[13]    ]
+    [ VSS[008]   |     A[14]    ]
+    [ DQ[4]      |     B[1]     ]
+    [ VSS[009]   |     B[2]     ]
+    [ VSS[010]   |     B[3]     ]
+    [ VDDQ[000]  |     B[4]     ]
+    [ VSS[011]   |     B[5]     ]
+    [ VDD[000]   |     B[6]     ]
+    [ VSS[012]   |     B[7]     ]
+    [ VSS[013]   |     B[8]     ]
+    [ VDD[001]   |     B[9]     ]
+    [ VSS[014]   |     B[10]    ]
+    [ VDDQ[001]  |     B[11]    ]
+    [ VSS[015]   |     B[12]    ]
+    [ VSS[016]   |     B[13]    ]
+    [ DQ[5]      |     B[14]    ]
+    [ VSS[017]   |     C[1]     ]
+    [ VSS[018]   |     C[2]     ]
+    [ DQ[6]      |     C[3]     ]
+    [ VSS[019]   |     C[4]     ]
+    [ DQ[7]      |     C[5]     ]
+    [ VSS[020]   |     C[6]     ]
+    [ DQ[8]      |     C[7]     ]
+    [ DQ[9]      |     C[8]     ]
+    [ VSS[021]   |     C[9]     ]
+    [ DQ[10]     |     C[10]    ]
+    [ VSS[022]   |     C[11]    ]
+    [ DQ[11]     |     C[12]    ]
+    [ VSS[023]   |     C[13]    ]
+    [ VSS[024]   |     C[14]    ]
+    [ WCK[0]     |     D[1]     ]
+    [ VDDQ[002]  |     D[2]     ]
+    [ VSS[025]   |     D[3]     ]
+    [ VDDQ[003]  |     D[4]     ]
+    [ VSS[026]   |     D[5]     ]
+    [ VDDQ[004]  |     D[6]     ]
+    [ VSS[027]   |     D[7]     ]
+    [ VSS[028]   |     D[8]     ]
+    [ VDDQ[005]  |     D[9]     ]
+    [ VSS[029]   |     D[10]    ]
+    [ VDDQ[006]  |     D[11]    ]
+    [ VSS[030]   |     D[12]    ]
+    [ VDDQ[007]  |     D[13]    ]
+    [ WCK[1]     |     D[14]    ]
+    [ CK[0]      |     E[1]     ]
+    [ VSS[031]   |     E[2]     ]
+    [ DQ[12]     |     E[3]     ]
+    [ VSS[032]   |     E[4]     ]
+    [ DQ[13]     |     E[5]     ]
+    [ VSS[033]   |     E[6]     ]
+    [ DQ[14]     |     E[7]     ]
+    [ DQ[15]     |     E[8]     ]
+    [ VSS[034]   |     E[9]     ]
+    [ DQ[16]     |     E[10]    ]
+    [ VSS[035]   |     E[11]    ]
+    [ DQ[17]     |     E[12]    ]
+    [ VSS[036]   |     E[13]    ]
+    [ VSS[037]   |     E[14]    ]
+    [ CK[1]      |     F[1]     ]
+    [ VSS[038]   |     F[2]     ]
+    [ DQ[18]     |     F[3]     ]
+    [ VSS[039]   |     F[4]     ]
+    [ DQ[19]     |     F[5]     ]
+    [ VSS[040]   |     F[6]     ]
+    [ DQ[20]     |     F[7]     ]
+    [ DQ[21]     |     F[8]     ]
+    [ VSS[041]   |     F[9]     ]
+    [ DQ[22]     |     F[10]    ]
+    [ VSS[042]   |     F[11]    ]
+    [ DQ[23]     |     F[12]    ]
+    [ VSS[043]   |     F[13]    ]
+    [ VSS[044]   |     F[14]    ]
+    [ CA[0]      |     G[1]     ]
+    [ VSS[045]   |     G[2]     ]
+    [ DQ[24]     |     G[3]     ]
+    [ VSS[046]   |     G[4]     ]
+    [ DQ[25]     |     G[5]     ]
+    [ VSS[047]   |     G[6]     ]
+    [ DQ[26]     |     G[7]     ]
+    [ DQ[27]     |     G[8]     ]
+    [ VSS[048]   |     G[9]     ]
+    [ DQ[28]     |     G[10]    ]
+    [ VSS[049]   |     G[11]    ]
+    [ DQ[29]     |     G[12]    ]
+    [ VSS[050]   |     G[13]    ]
+    [ VSS[051]   |     G[14]    ]
+    [ CA[1]      |     H[1]     ]
+    [ VSS[052]   |     H[2]     ]
+    [ DQ[30]     |     H[3]     ]
+    [ VSS[053]   |     H[4]     ]
+    [ DQ[31]     |     H[5]     ]
+    [ VSS[054]   |     H[6]     ]
+    [ CA[2]      |     H[7]     ]
+    [ CA[3]      |     H[8]     ]
+    [ VSS[055]   |     H[9]     ]
+    [ CA[4]      |     H[10]    ]
+    [ VSS[056]   |     H[11]    ]
+    [ CA[5]      |     H[12]    ]
+    [ VSS[057]   |     H[13]    ]
+    [ VSS[058]   |     H[14]    ]
+    [ CA[6]      |     J[1]     ]
+    [ VSS[059]   |     J[2]     ]
+    [ CA[7]      |     J[3]     ]
+    [ VSS[060]   |     J[4]     ]
+    [ CA[8]      |     J[5]     ]
+    [ VSS[061]   |     J[6]     ]
+    [ CA[9]      |     J[7]     ]
+    [ CA[10]     |     J[8]     ]
+    [ VSS[062]   |     J[9]     ]
+    [ CA[11]     |     J[10]    ]
+    [ VSS[063]   |     J[11]    ]
+    [ CA[12]     |     J[12]    ]
+    [ VSS[064]   |     J[13]    ]
+    [ VSS[065]   |     J[14]    ]
+    [ CA[13]     |     K[1]     ]
+    [ VSS[066]   |     K[2]     ]
+    [ CA[14]     |     K[3]     ]
+    [ VSS[067]   |     K[4]     ]
+    [ CA[15]     |     K[5]     ]
+    [ VSS[068]   |     K[6]     ]
+    [ CA[16]     |     K[7]     ]
+    [ CA[17]     |     K[8]     ]
+    [ VSS[069]   |     K[9]     ]
+    [ ZQ         |     K[10]    ]
+    [ VSS[070]   |     K[11]    ]
+    [ VDD[002]   |     K[12]    ]
+    [ VSS[071]   |     K[13]    ]
+    [ VSS[072]   |     K[14]    ]
+    [ VSS[073]   |     L[1]     ]
+    [ VSS[074]   |     L[2]     ]
+    [ VSS[075]   |     L[3]     ]
+    [ VSS[076]   |     L[4]     ]
+    [ VSS[077]   |     L[5]     ]
+    [ VSS[078]   |     L[6]     ]
+    [ VSS[079]   |     L[7]     ]
+    [ VSS[080]   |     L[8]     ]
+    [ VSS[081]   |     L[9]     ]
+    [ VSS[082]   |     L[10]    ]
+    [ VSS[083]   |     L[11]    ]
+    [ VSS[084]   |     L[12]    ]
+    [ VSS[085]   |     L[13]    ]
+    [ VSS[086]   |     L[14]    ]
+    [ VSS[087]   |     M[1]     ]
+    [ VSS[088]   |     M[2]     ]
+    [ VSS[089]   |     M[3]     ]
+    [ VSS[090]   |     M[4]     ]
+    [ VSS[091]   |     M[5]     ]
+    [ VSS[092]   |     M[6]     ]
+    [ VSS[093]   |     M[7]     ]
+    [ DMI[3]     |     M[8]     ]
+    [ DMI[2]     |     M[9]     ]
+    [ WCK[7]     |     M[10]    ]
+    [ WCK[6]     |     M[11]    ]
+    [ WCK[5]     |     M[12]    ]
+    [ WCK[4]     |     M[13]    ]
+    [ DQS[7]     |     M[14]    ]
+    [ DQS[6]     |     N[1]     ]
+    [ DQS[5]     |     N[2]     ]
+    [ DQS[4]     |     N[3]     ]
+    [ DQS[3]     |     N[4]     ]
+    [ DQS[2]     |     N[5]     ]
+    [ WCK[3]     |     N[6]     ]
+    [ WCK[2]     |     N[7]     ]
+    [ DMI[1]     |     N[8]     ]
+    [ DMI[0]     |     N[9]     ]
+    [ CS[1]      |     N[10]    ]
+    [ CS[0]      |     N[11]    ]
+    [ CK[3]      |     N[12]    ]
+    [ CK[2]      |     N[13]    ]
+    [ RESET_N    |     N[14]    ]
+
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+
+  val lp = create-landpattern(BGA-pkg)
+  assign-landpattern(lp)
+
+public pcb-module mem-module:
+  port io : lpddr5(LPDDR5-x32, LPDDR5-SingleRank)
+  port pwr : power
+
+  public inst m : mem-device
+  topo-net(io.reset_n => m.RESET_N)
+  topo-net(io.ck[0].P => m.CK[0])
+  topo-net(io.ck[0].N => m.CK[1])
+  topo-net(io.ck[1].P => m.CK[2])
+  topo-net(io.ck[1].N => m.CK[3])
+  topo-net(io.cs[0][0] => m.CS[0])
+  topo-net(io.cs[1][0] => m.CS[1])
+  topo-net(io.d[0][0].wck.P => m.WCK[0])
+  topo-net(io.d[0][0].wck.N => m.WCK[1])
+  topo-net(io.d[0][1].wck.P => m.WCK[2])
+  topo-net(io.d[0][1].wck.N => m.WCK[3])
+  topo-net(io.d[0][0].rdqs.P => m.DQS[0])
+  topo-net(io.d[0][0].rdqs.N => m.DQS[1])
+  topo-net(io.d[0][1].rdqs.P => m.DQS[2])
+  topo-net(io.d[0][1].rdqs.N => m.DQS[3])
+  topo-net(io.d[1][0].wck.P => m.WCK[4])
+  topo-net(io.d[1][0].wck.N => m.WCK[5])
+  topo-net(io.d[1][1].wck.P => m.WCK[6])
+  topo-net(io.d[1][1].wck.N => m.WCK[7])
+  topo-net(io.d[1][0].rdqs.P => m.DQS[4])
+  topo-net(io.d[1][0].rdqs.N => m.DQS[5])
+  topo-net(io.d[1][1].rdqs.P => m.DQS[6])
+  topo-net(io.d[1][1].rdqs.N => m.DQS[7])
+  topo-net(io.d[0][0].dmi => m.DMI[0])
+  topo-net(io.d[0][1].dmi => m.DMI[1])
+  topo-net(io.d[1][0].dmi => m.DMI[2])
+  topo-net(io.d[1][1].dmi => m.DMI[3])
+
+  topo-net(io.d[0][0].dq[0] => m.DQ[0])
+  topo-net(io.d[0][0].dq[1] => m.DQ[1])
+  topo-net(io.d[0][0].dq[2] => m.DQ[2])
+  topo-net(io.d[0][0].dq[3] => m.DQ[3])
+  topo-net(io.d[0][0].dq[4] => m.DQ[4])
+  topo-net(io.d[0][0].dq[5] => m.DQ[5])
+  topo-net(io.d[0][0].dq[6] => m.DQ[6])
+  topo-net(io.d[0][0].dq[7] => m.DQ[7])
+  topo-net(io.d[0][1].dq[0] => m.DQ[8])
+  topo-net(io.d[0][1].dq[1] => m.DQ[9])
+  topo-net(io.d[0][1].dq[2] => m.DQ[10])
+  topo-net(io.d[0][1].dq[3] => m.DQ[11])
+  topo-net(io.d[0][1].dq[4] => m.DQ[12])
+  topo-net(io.d[0][1].dq[5] => m.DQ[13])
+  topo-net(io.d[0][1].dq[6] => m.DQ[14])
+  topo-net(io.d[0][1].dq[7] => m.DQ[15])
+  topo-net(io.d[1][0].dq[0] => m.DQ[16])
+  topo-net(io.d[1][0].dq[1] => m.DQ[17])
+  topo-net(io.d[1][0].dq[2] => m.DQ[18])
+  topo-net(io.d[1][0].dq[3] => m.DQ[19])
+  topo-net(io.d[1][0].dq[4] => m.DQ[20])
+  topo-net(io.d[1][0].dq[5] => m.DQ[21])
+  topo-net(io.d[1][0].dq[6] => m.DQ[22])
+  topo-net(io.d[1][0].dq[7] => m.DQ[23])
+  topo-net(io.d[1][1].dq[0] => m.DQ[24])
+  topo-net(io.d[1][1].dq[1] => m.DQ[25])
+  topo-net(io.d[1][1].dq[2] => m.DQ[26])
+  topo-net(io.d[1][1].dq[3] => m.DQ[27])
+  topo-net(io.d[1][1].dq[4] => m.DQ[28])
+  topo-net(io.d[1][1].dq[5] => m.DQ[29])
+  topo-net(io.d[1][1].dq[6] => m.DQ[30])
+  topo-net(io.d[1][1].dq[7] => m.DQ[31])
+
+
+
+
+  topo-net(io.ca[0][0] => m.CA[0])
+  topo-net(io.ca[0][1] => m.CA[1])
+  topo-net(io.ca[0][2] => m.CA[2])
+  topo-net(io.ca[0][3] => m.CA[3])
+  topo-net(io.ca[0][4] => m.CA[4])
+  topo-net(io.ca[0][5] => m.CA[5])
+  topo-net(io.ca[0][6] => m.CA[6])
+  topo-net(io.ca[1][0] => m.CA[7])
+  topo-net(io.ca[1][1] => m.CA[8])
+  topo-net(io.ca[1][2] => m.CA[9])
+  topo-net(io.ca[1][3] => m.CA[10])
+  topo-net(io.ca[1][4] => m.CA[11])
+  topo-net(io.ca[1][5] => m.CA[12])
+  topo-net(io.ca[1][6] => m.CA[13])
+
+    
+
+public pcb-component ic-device:
+  reference-prefix = "U"
+  mpn = "ic-JITX-LPDDR5"
+  description = "Dummy LPDDR5 controller"
+
+  pin-properties:
+    [pin:Ref     | pads:Ref ... ]
+    [ VSS[001]   |     A[1]     ]
+    [ VSS[002]   |     A[2]     ]
+    [ DQ[0]      |     A[3]     ]
+    [ VSS[003]   |     A[4]     ]
+    [ DQS[0]     |     A[5]     ]
+    [ VSS[004]   |     A[6]     ]
+    [ DQ[1]      |     A[7]     ]
+    [ DQ[2]      |     A[8]     ]
+    [ VSS[005]   |     A[9]     ]
+    [ DQS[1]     |     A[10]    ]
+    [ VSS[006]   |     A[11]    ]
+    [ DQ[3]      |     A[12]    ]
+    [ VSS[007]   |     A[13]    ]
+    [ VSS[008]   |     A[14]    ]
+    [ DQ[4]      |     B[1]     ]
+    [ VSS[009]   |     B[2]     ]
+    [ VSS[010]   |     B[3]     ]
+    [ VDDQ[000]  |     B[4]     ]
+    [ VSS[011]   |     B[5]     ]
+    [ VDD[000]   |     B[6]     ]
+    [ VSS[012]   |     B[7]     ]
+    [ VSS[013]   |     B[8]     ]
+    [ VDD[001]   |     B[9]     ]
+    [ VSS[014]   |     B[10]    ]
+    [ VDDQ[001]  |     B[11]    ]
+    [ VSS[015]   |     B[12]    ]
+    [ VSS[016]   |     B[13]    ]
+    [ DQ[5]      |     B[14]    ]
+    [ VSS[017]   |     C[1]     ]
+    [ VSS[018]   |     C[2]     ]
+    [ DQ[6]      |     C[3]     ]
+    [ VSS[019]   |     C[4]     ]
+    [ DQ[7]      |     C[5]     ]
+    [ VSS[020]   |     C[6]     ]
+    [ DQ[8]      |     C[7]     ]
+    [ DQ[9]      |     C[8]     ]
+    [ VSS[021]   |     C[9]     ]
+    [ DQ[10]     |     C[10]    ]
+    [ VSS[022]   |     C[11]    ]
+    [ DQ[11]     |     C[12]    ]
+    [ VSS[023]   |     C[13]    ]
+    [ VSS[024]   |     C[14]    ]
+    [ WCK[0]     |     D[1]     ]
+    [ VDDQ[002]  |     D[2]     ]
+    [ VSS[025]   |     D[3]     ]
+    [ VDDQ[003]  |     D[4]     ]
+    [ VSS[026]   |     D[5]     ]
+    [ VDDQ[004]  |     D[6]     ]
+    [ VSS[027]   |     D[7]     ]
+    [ VSS[028]   |     D[8]     ]
+    [ VDDQ[005]  |     D[9]     ]
+    [ VSS[029]   |     D[10]    ]
+    [ VDDQ[006]  |     D[11]    ]
+    [ VSS[030]   |     D[12]    ]
+    [ VDDQ[007]  |     D[13]    ]
+    [ WCK[1]     |     D[14]    ]
+    [ CK[0]      |     E[1]     ]
+    [ VSS[031]   |     E[2]     ]
+    [ DQ[12]     |     E[3]     ]
+    [ VSS[032]   |     E[4]     ]
+    [ DQ[13]     |     E[5]     ]
+    [ VSS[033]   |     E[6]     ]
+    [ DQ[14]     |     E[7]     ]
+    [ DQ[15]     |     E[8]     ]
+    [ VSS[034]   |     E[9]     ]
+    [ DQ[16]     |     E[10]    ]
+    [ VSS[035]   |     E[11]    ]
+    [ DQ[17]     |     E[12]    ]
+    [ VSS[036]   |     E[13]    ]
+    [ VSS[037]   |     E[14]    ]
+    [ CK[1]      |     F[1]     ]
+    [ VSS[038]   |     F[2]     ]
+    [ DQ[18]     |     F[3]     ]
+    [ VSS[039]   |     F[4]     ]
+    [ DQ[19]     |     F[5]     ]
+    [ VSS[040]   |     F[6]     ]
+    [ DQ[20]     |     F[7]     ]
+    [ DQ[21]     |     F[8]     ]
+    [ VSS[041]   |     F[9]     ]
+    [ DQ[22]     |     F[10]    ]
+    [ VSS[042]   |     F[11]    ]
+    [ DQ[23]     |     F[12]    ]
+    [ VSS[043]   |     F[13]    ]
+    [ VSS[044]   |     F[14]    ]
+    [ CA[0]      |     G[1]     ]
+    [ VSS[045]   |     G[2]     ]
+    [ DQ[24]     |     G[3]     ]
+    [ VSS[046]   |     G[4]     ]
+    [ DQ[25]     |     G[5]     ]
+    [ VSS[047]   |     G[6]     ]
+    [ DQ[26]     |     G[7]     ]
+    [ DQ[27]     |     G[8]     ]
+    [ VSS[048]   |     G[9]     ]
+    [ DQ[28]     |     G[10]    ]
+    [ VSS[049]   |     G[11]    ]
+    [ DQ[29]     |     G[12]    ]
+    [ VSS[050]   |     G[13]    ]
+    [ VSS[051]   |     G[14]    ]
+    [ CA[1]      |     H[1]     ]
+    [ VSS[052]   |     H[2]     ]
+    [ DQ[30]     |     H[3]     ]
+    [ VSS[053]   |     H[4]     ]
+    [ DQ[31]     |     H[5]     ]
+    [ VSS[054]   |     H[6]     ]
+    [ CA[2]      |     H[7]     ]
+    [ CA[3]      |     H[8]     ]
+    [ VSS[055]   |     H[9]     ]
+    [ CA[4]      |     H[10]    ]
+    [ VSS[056]   |     H[11]    ]
+    [ CA[5]      |     H[12]    ]
+    [ VSS[057]   |     H[13]    ]
+    [ VSS[058]   |     H[14]    ]
+    [ CA[6]      |     J[1]     ]
+    [ VSS[059]   |     J[2]     ]
+    [ CA[7]      |     J[3]     ]
+    [ VSS[060]   |     J[4]     ]
+    [ CA[8]      |     J[5]     ]
+    [ VSS[061]   |     J[6]     ]
+    [ CA[9]      |     J[7]     ]
+    [ CA[10]     |     J[8]     ]
+    [ VSS[062]   |     J[9]     ]
+    [ CA[11]     |     J[10]    ]
+    [ VSS[063]   |     J[11]    ]
+    [ CA[12]     |     J[12]    ]
+    [ VSS[064]   |     J[13]    ]
+    [ VSS[065]   |     J[14]    ]
+    [ CA[13]     |     K[1]     ]
+    [ VSS[066]   |     K[2]     ]
+    [ CA[14]     |     K[3]     ]
+    [ VSS[067]   |     K[4]     ]
+    [ CA[15]     |     K[5]     ]
+    [ VSS[068]   |     K[6]     ]
+    [ CA[16]     |     K[7]     ]
+    [ CA[17]     |     K[8]     ]
+    [ VSS[069]   |     K[9]     ]
+    [ ZQ         |     K[10]    ]
+    [ VSS[070]   |     K[11]    ]
+    [ VDD[002]   |     K[12]    ]
+    [ VSS[071]   |     K[13]    ]
+    [ VSS[072]   |     K[14]    ]
+    [ VSS[073]   |     L[1]     ]
+    [ VSS[074]   |     L[2]     ]
+    [ VSS[075]   |     L[3]     ]
+    [ VSS[076]   |     L[4]     ]
+    [ VSS[077]   |     L[5]     ]
+    [ VSS[078]   |     L[6]     ]
+    [ VSS[079]   |     L[7]     ]
+    [ VSS[080]   |     L[8]     ]
+    [ VSS[081]   |     L[9]     ]
+    [ VSS[082]   |     L[10]    ]
+    [ VSS[083]   |     L[11]    ]
+    [ VSS[084]   |     L[12]    ]
+    [ VSS[085]   |     L[13]    ]
+    [ VSS[086]   |     L[14]    ]
+    [ VSS[087]   |     M[1]     ]
+    [ VSS[088]   |     M[2]     ]
+    [ VSS[089]   |     M[3]     ]
+    [ VSS[090]   |     M[4]     ]
+    [ VSS[091]   |     M[5]     ]
+    [ VSS[092]   |     M[6]     ]
+    [ VSS[093]   |     M[7]     ]
+    [ DMI[3]     |     M[8]     ]
+    [ DMI[2]     |     M[9]     ]
+    [ WCK[7]     |     M[10]    ]
+    [ WCK[6]     |     M[11]    ]
+    [ WCK[5]     |     M[12]    ]
+    [ WCK[4]     |     M[13]    ]
+    [ DQS[7]     |     M[14]    ]
+    [ DQS[6]     |     N[1]     ]
+    [ DQS[5]     |     N[2]     ]
+    [ DQS[4]     |     N[3]     ]
+    [ DQS[3]     |     N[4]     ]
+    [ DQS[2]     |     N[5]     ]
+    [ WCK[3]     |     N[6]     ]
+    [ WCK[2]     |     N[7]     ]
+    [ DMI[1]     |     N[8]     ]
+    [ DMI[0]     |     N[9]     ]
+    [ CS[1]      |     N[10]    ]
+    [ CS[0]      |     N[11]    ]
+    [ CK[3]      |     N[12]    ]
+    [ CK[2]      |     N[13]    ]
+    [ RESET_N    |     N[14]    ]
+
+  val box = BoxSymbol(self)
+  assign-symbol $ create-symbol(box)
+  val lp = create-landpattern(BGA-pkg)
+  assign-landpattern(lp)
+
+public pcb-module ic-module :
+  port io : lpddr5(LPDDR5-x32, LPDDR5-SingleRank)
+  port pwr : power
+
+  public inst m : ic-device
+  topo-net(io.reset_n => m.RESET_N)
+  topo-net(io.ck[0].P => m.CK[0])
+  topo-net(io.ck[0].N => m.CK[1])
+  topo-net(io.ck[1].P => m.CK[2])
+  topo-net(io.ck[1].N => m.CK[3])
+  topo-net(io.cs[0][0] => m.CS[0])
+  topo-net(io.cs[1][0] => m.CS[1])
+  topo-net(io.d[0][0].wck.P => m.WCK[0])
+  topo-net(io.d[0][0].wck.N => m.WCK[1])
+  topo-net(io.d[0][1].wck.P => m.WCK[2])
+  topo-net(io.d[0][1].wck.N => m.WCK[3])
+  topo-net(io.d[0][0].rdqs.P => m.DQS[0])
+  topo-net(io.d[0][0].rdqs.N => m.DQS[1])
+  topo-net(io.d[0][1].rdqs.P => m.DQS[2])
+  topo-net(io.d[0][1].rdqs.N => m.DQS[3])
+  topo-net(io.d[1][0].wck.P => m.WCK[4])
+  topo-net(io.d[1][0].wck.N => m.WCK[5])
+  topo-net(io.d[1][1].wck.P => m.WCK[6])
+  topo-net(io.d[1][1].wck.N => m.WCK[7])
+  topo-net(io.d[1][0].rdqs.P => m.DQS[4])
+  topo-net(io.d[1][0].rdqs.N => m.DQS[5])
+  topo-net(io.d[1][1].rdqs.P => m.DQS[6])
+  topo-net(io.d[1][1].rdqs.N => m.DQS[7])
+  topo-net(io.d[0][0].dmi => m.DMI[0])
+  topo-net(io.d[0][1].dmi => m.DMI[1])
+  topo-net(io.d[1][0].dmi => m.DMI[2])
+  topo-net(io.d[1][1].dmi => m.DMI[3])
+
+  topo-net(io.d[0][0].dq[0] => m.DQ[0])
+  topo-net(io.d[0][0].dq[1] => m.DQ[1])
+  topo-net(io.d[0][0].dq[2] => m.DQ[2])
+  topo-net(io.d[0][0].dq[3] => m.DQ[3])
+  topo-net(io.d[0][0].dq[4] => m.DQ[4])
+  topo-net(io.d[0][0].dq[5] => m.DQ[5])
+  topo-net(io.d[0][0].dq[6] => m.DQ[6])
+  topo-net(io.d[0][0].dq[7] => m.DQ[7])
+  topo-net(io.d[0][1].dq[0] => m.DQ[8] )
+  topo-net(io.d[0][1].dq[1] => m.DQ[9] )
+  topo-net(io.d[0][1].dq[2] => m.DQ[10])
+  topo-net(io.d[0][1].dq[3] => m.DQ[11])
+  topo-net(io.d[0][1].dq[4] => m.DQ[12])
+  topo-net(io.d[0][1].dq[5] => m.DQ[13])
+  topo-net(io.d[0][1].dq[6] => m.DQ[14])
+  topo-net(io.d[0][1].dq[7] => m.DQ[15])
+  topo-net(io.d[1][0].dq[0] => m.DQ[16])
+  topo-net(io.d[1][0].dq[1] => m.DQ[17])
+  topo-net(io.d[1][0].dq[2] => m.DQ[18])
+  topo-net(io.d[1][0].dq[3] => m.DQ[19])
+  topo-net(io.d[1][0].dq[4] => m.DQ[20])
+  topo-net(io.d[1][0].dq[5] => m.DQ[21])
+  topo-net(io.d[1][0].dq[6] => m.DQ[22])
+  topo-net(io.d[1][0].dq[7] => m.DQ[23])
+  topo-net(io.d[1][1].dq[0] => m.DQ[24])
+  topo-net(io.d[1][1].dq[1] => m.DQ[25])
+  topo-net(io.d[1][1].dq[2] => m.DQ[26])
+  topo-net(io.d[1][1].dq[3] => m.DQ[27])
+  topo-net(io.d[1][1].dq[4] => m.DQ[28])
+  topo-net(io.d[1][1].dq[5] => m.DQ[29])
+  topo-net(io.d[1][1].dq[6] => m.DQ[30])
+  topo-net(io.d[1][1].dq[7] => m.DQ[31])
+
+  topo-net(io.ca[0][0] => m.CA[0])
+  topo-net(io.ca[0][1] => m.CA[1])
+  topo-net(io.ca[0][2] => m.CA[2])
+  topo-net(io.ca[0][3] => m.CA[3])
+  topo-net(io.ca[0][4] => m.CA[4])
+  topo-net(io.ca[0][5] => m.CA[5])
+  topo-net(io.ca[0][6] => m.CA[6])
+  topo-net(io.ca[1][0] => m.CA[7])
+  topo-net(io.ca[1][1] => m.CA[8])
+  topo-net(io.ca[1][2] => m.CA[9])
+  topo-net(io.ca[1][3] => m.CA[10])
+  topo-net(io.ca[1][4] => m.CA[11])
+  topo-net(io.ca[1][5] => m.CA[12])
+  topo-net(io.ca[1][6] => m.CA[13])
