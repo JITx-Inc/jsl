@@ -108,7 +108,7 @@ one or more ddr3 memory chips/DIMMs.
 @param data Data channel(s) for ddr3 depending on the width
 @param acc ACC (address command control) channel for ddr3
 @param rank Rank configuration of the DDR3 memory (DDR3-SingleRank, DDR3-DualRank, or DDR3-QuadRank)
-@param topology Topology of the DDR3 connection (DDR3-FlyBy or DDR3-ClamShell)
+@param topology Topology of the DDR3 connection (only DDR3-FlyBy is supported)
 @param BA-len Number of BA pins
 <DOC>
 
@@ -204,7 +204,7 @@ public defstruct DDR3-Data-Constraint <: SI-Constraint :
   skew-dq-dqs:Toleranced with :
     default => 0.0 +/- 3.50e-12
   doc: \<DOC>
-  DM_n to DQS.P Timing Skew Constraint in Seconds
+  DM to DQS.P Timing Skew Constraint in Seconds
   <DOC>
   skew-dm-dqs:Toleranced with:
     default => 0.0 +/- 3.50e-12 ; Same as DQ timing
@@ -219,7 +219,7 @@ public defstruct DDR3-Data-Constraint <: SI-Constraint :
   <DOC>
   diff-dqs-rs:DifferentialRoutingStructure
   doc: \<DOC>
-  Single-Ended Routing Structure for each DQ signal as well as the DM_n signal [50.0 Ohms +/- (5 %)]
+  Single-Ended Routing Structure for each DQ signal as well as the DM signal [50.0 Ohms +/- (5 %)]
   <DOC>
   se-dq-rs:RoutingStructure
 with:
@@ -428,14 +428,14 @@ public defmethod constrain (cst:DDR3-Data-Constraint, src:JITXObject, dst:JITXOb
       ; constrain DQ with respect to DQS
       val bs = i * 8
       val be = bs + 8
-      val target-dqm-bus = to-tuple $ cat{_, [src.DM_n[i] => dst.DM_n[i]]} $ for j in bs to be seq : src.DQ[j] => dst.DQ[j]
+      val target-dqm-bus = to-tuple $ cat{_, [src.DM[i] => dst.DM[i]]} $ for j in bs to be seq : src.DQ[j] => dst.DQ[j]
       timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
       max-loss(loss(cst), ep-sets = target-dqm-bus)
     ; needs to be outside the loop as structure() can't handle a Tuple<KeyValue> argument
     ; this statement will handle the entire DQ bus
     structure(src.DQ, dst.DQ) = se-dq-rs(cst)
-    ; this statement will handle the DM_n signal
-    structure(src.DM_n, dst.DM_n) = se-dq-rs(cst)
+    ; this statement will handle the DM signal
+    structure(src.DM, dst.DM) = se-dq-rs(cst)
 
 doc: \<DOC>
 Constrain a DDR3 ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
