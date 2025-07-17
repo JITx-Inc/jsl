@@ -69,7 +69,10 @@ Convert a Grid Numbering Reference into a PadIsland
 @param r Index Reference that indicates a particular pad to convert to a PadIsland
 <DOC>
 public defn to-pad-island (grid:Grid-Numbering, r:IndexRef) -> PadIsland :
-  val colNum = index(r) - 1
+  val colNum = match(index(r)):
+    (i:Int): i - 1
+    (x): throw $ ValueError("Invalid Column Index Type: %_" % [x])
+  ; val colNum = index(r) - 1
   if colNum < 0 :
     throw $ ValueError("Invalid Column Index - Expected Column Index > 0")
   val rowNum = to-row-index(grid, ref(r))
