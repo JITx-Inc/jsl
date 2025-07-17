@@ -134,10 +134,25 @@ public pcb-component component :
     diff-pin-model(self.PTXP[i], self.PTXN[i],       delay = typ(10.0e-15) loss = typ(0.1))
     diff-pin-model(self.REFCLKP[i], self.REFCLKN[i], delay = typ(10.0e-15) loss = typ(0.1))
 
+; This is an attempt to recreate the issues
+;  LM was having with parameterized bundles
+public pcb-bundle lm_pcie (lanes:Int = 1) :
+  port lane : lane-pair[lanes]
 
 public pcb-module module :
 
   public inst sw : component
+
+  ; Parameterized bundle test
+  port pcie2x : lm_pcie(2)
+
+  for i in 0 to 2 do :
+    net (pcie2x.lane[i].RX.P, sw.PRXP[i])
+    net (pcie2x.lane[i].RX.N, sw.PRXN[i])
+    net (pcie2x.lane[i].TX.P, sw.PTXP[i])
+    net (pcie2x.lane[i].TX.N, sw.PTXN[i])
+
+
 
   val bd-4x = pcie(4)
   supports bd-4x :

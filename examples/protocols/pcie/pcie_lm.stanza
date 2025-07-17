@@ -1,0 +1,36 @@
+#use-added-syntax(jitx)
+defpackage jsl/examples/protocols/pcie/lm:
+  import core
+  import collections
+  import jitx
+  import jitx/commands
+
+
+  import jsl
+
+  import jsl/examples/protocols/common/example-board
+  import jsl/examples/protocols/common/example-components
+  import jsl/examples/protocols/pcie/pcie-src
+
+
+pcb-module pcie-example :
+
+  inst dut1 : jsl/examples/protocols/pcie/pcie-src/module
+  inst dut2 : jsl/examples/protocols/pcie/pcie-src/module
+
+  net DUT_CONN (dut1.pcie2x, dut2.pcie2x)
+
+
+set-current-design("LM-pcie-example")
+setup-board()
+; Set the schematic sheet size
+set-paper(ANSI-A)
+
+; Set the top level module (the module to be compile into a schematic and PCB)
+set-main-module(pcie-example)
+
+; View the results
+view-board()
+; view-schematic()
+view-design-explorer()
+; view-bom(BOM-STD)
