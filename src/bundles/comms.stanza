@@ -286,7 +286,7 @@ pcb-bundle uart-b (pins:Collection<UARTPins>):
       UART-CTS : make-port(`cts)
       UART-DCD : make-port(`dcd)
       UART-RI  : make-port(`ri)
-      UART-DSR : make-port(`dst)
+      UART-DSR : make-port(`dsr)
       UART-RTS : make-port(`rts)
       UART-CK : make-port(`ck)
       UART-DE : make-port(`de)
