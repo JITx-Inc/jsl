@@ -182,6 +182,7 @@ Constructor for the DDR3 Data ACC Inter-signal timing skew constraint
 public defstruct DDR3-Data-ACC-Constraint <: SI-Constraint :
   doc: \<DOC>
   CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
+  Note: These values may need verification against specific DDR3 implementations
   <DOC>
   skew-ck-dqs:Toleranced with :
     default => min-typ-max(-75.0e-12, 0.0, 900.0e-12)
@@ -270,7 +271,7 @@ public defstruct DDR3-Constraint <: SI-Constraint :
   <DOC>
   width:DDR3-width
   doc: \<DOC>
-  Topology of memory channel
+  Topology of memory channel (currently only DDR3-FlyBy is supported)
   <DOC>
   topology:DDR3-topology
   doc: \<DOC>
@@ -364,10 +365,17 @@ public defmethod constrain (cst:DDR3-Constraint, src:JITXObject, dst:JITXObject)
     constrain(data-acc-cst(cst), src, dst)
 
 doc: \<DOC>
-Helper function to connect and constrain a DDR3 link assuming that it is a discrete point to point link (not FlyBy)
+Helper function to connect and constrain a DDR3 link
 @param src Source End Point - must be of `ddr3-b` type
 @param dst Destination End Point - must be of `ddr3-b` type and match
 the parameterization of `src`, including width.
+@param width DDR3 channel width (DDR3-x8 or DDR3-x16)
+@param topology DDR3 topology (currently only DDR3-FlyBy is supported)
+@param rank DDR3 rank configuration
+@param diff-ck-rs Differential routing structure for CK signals
+@param diff-dqs-rs Differential routing structure for DQS signals
+@param dq-rs Single-ended routing structure for DQ/DM signals
+@param rs Single-ended routing structure for address/command/control signals
 <DOC>
 
 
@@ -400,7 +408,7 @@ the parameterization of `src`, including width.
 
 public defmethod constrain (cst:DDR3-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
   inside pcb-module :
-    val guide-ck  = src.acc.CK[0].P => dst.acc.CK[0].P
+    val guide-ck  = src.acc.CK.P => dst.acc.CK.P
 
     for i in 0 to length(src.data.DQS) do :
       val guide-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
@@ -420,7 +428,6 @@ public defmethod constrain (cst:DDR3-Data-Constraint, src:JITXObject, dst:JITXOb
     val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
     ; ex. for x8,  i goes from 0 to 1, so all of the byte lanes are individually constrained
     ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
-    ; ex. for x72, i goes from 0 to 9, so all of the byte lanes are individually constrained
     for i in 0 to length(src.DQS) do :
       ; constrain DQS per byte lane
       val guide-dqs = src.DQS[i].P => dst.DQS[i].P
@@ -450,70 +457,88 @@ public defmethod constrain (cst:DDR3-ACC-Constraint, src:JITXObject, dst:JITXObj
 
     val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
 
-    ; constrain first CK as root to others with the same tight constraint?
-    val guide-cks = src.CK[0].P => dst.CK[0].P
-
-    for i in 0 to length(src.CK) do :
-      val guide-ck = src.CK[i].P => dst.CK[i].P
-      constrain(cst-ck, src.CK[i], dst.CK[i])
-      if i > 0 :
-        timing-window(skew-ck(cst), guide-cks,  src.CK[i] => dst.CK[i])
+    ; constrain the single CK differential pair
+    val guide-ck = src.CK.P => dst.CK.P
+    constrain(cst-ck, src.CK, dst.CK)
 
     ; now constrain addr/cmd/ctrl signals (1x per bus)
     ; there are two constraints to be applied:
-    ; First is versus CK and is +/- 20 ps
-    ; Second is versus the other signals in the same group and is +/- 10 ps
+    ; First is versus CK and is +/- 25 ps
+    ; Second is versus the other signals in the same group and is +/- 12 ps
     ; let's pick an arbitrary signal to serve as the guide for the overall ADDR/CMD/CTL group
-    val guide-acc-group = src.CKE[0] => dst.CKE[0]
-    ; now back to our regularly scheduled program
-    for j in 0 to length(src.CKE) do :
-      val target-cke = src.CKE[j] => dst.CKE[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cke)
-      ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
-      structure(target-cke) = se-rs(cst)
-      max-loss(loss(cst), target-cke)
+    val guide-acc-group = src.CKE => dst.CKE
+    ; CKE signal constraint
+    val target-cke = src.CKE => dst.CKE
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cke)
+    ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
+    structure(target-cke) = se-rs(cst)
+    max-loss(loss(cst), target-cke)
+    ; Address bus constraints
     for j in 0 to length(src.A) do :
       val target-addr = src.A[j] => dst.A[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-addr)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-addr)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
       structure(target-addr) = se-rs(cst)
-      max-loss(loss(cst), target-addr)
+    
+    ; Bank address constraints
     for j in 0 to length(src.BA) do :
       val target-ba = src.BA[j] => dst.BA[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-ba)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ba)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
       structure(target-ba) = se-rs(cst)
-      max-loss(loss(cst), target-ba)
+    
+    ; Chip select constraints (varies by rank)
     for j in 0 to length(src.CS_n) do:
       val target-cs = src.CS_n[j] => dst.CS_n[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cs)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cs)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cs)
       structure(target-cs) = se-rs(cst)
-      max-loss(loss(cst), target-cs)
+    
+    ; Reset signal constraint
     val target-reset = src.RESET_n => dst.RESET_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-reset)
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-reset)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-reset)
     structure(target-reset) = se-rs(cst)
-    max-loss(loss(cst), target-reset)
+    
+    ; ODT constraints (varies by rank)
     for j in 0 to length(src.ODT) do :
       val target-odt = src.ODT[j] => dst.ODT[j]
-      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-odt)
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-odt)
       timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
       structure(target-odt) = se-rs(cst)
-      max-loss(loss(cst), target-odt)
+    
+    ; Command signal constraints
     val target-ras = src.RAS_n => dst.RAS_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-ras)
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-ras)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ras)
     structure(target-ras) = se-rs(cst)
-    max-loss(loss(cst), target-ras)
+    
     val target-cas = src.CAS_n => dst.CAS_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cas)
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-cas)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cas)
     structure(target-cas) = se-rs(cst)
-    max-loss(loss(cst), target-cas)
+    
     val target-we = src.WE_n => dst.WE_n
-    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-we)
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-ck, target-we)
     timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-we)
     structure(target-we) = se-rs(cst)
-    max-loss(loss(cst), target-we)
+    
+    ; Apply loss constraints to signal groups for efficiency
+    ; Address and Bank Address signals
+    val addr-signals = to-tuple $ cat(
+      for j in 0 to length(src.A) seq : src.A[j] => dst.A[j],
+      for j in 0 to length(src.BA) seq : src.BA[j] => dst.BA[j]
+    )
+    max-loss(loss(cst), ep-sets = addr-signals)
+    
+    ; Control signals (CS_n and ODT vary by rank)
+    val ctrl-signals = to-tuple $ cat(
+      for j in 0 to length(src.CS_n) seq : src.CS_n[j] => dst.CS_n[j],
+      for j in 0 to length(src.ODT) seq : src.ODT[j] => dst.ODT[j]
+    )
+    max-loss(loss(cst), ep-sets = ctrl-signals)
+    
+    ; Command signals (fixed set)
+    val cmd-signals = [target-cke, target-reset, target-ras, target-cas, target-we]
+    max-loss(loss(cst), ep-sets = cmd-signals)
 
