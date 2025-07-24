@@ -1,0 +1,541 @@
+doc: \<DOC>
+@brief Double Data Rate 5 Memory Standard (DDR5)
+
+DDR5 is a high speed memory protocol
+@see https://en.wikipedia.org/wiki/DDR5_SDRAM
+
+The functions and definitions in this file support defining DDR5
+connections between microprocessors and memories in a board design. The
+DDR5 standard is a complex specification with many timing constraints and
+impedance requirements. This file supports point to point connections.
+
+This file contains curated values for skew and loss of DDR5 channel
+It specifies the bounds on the intra-pair
+skew timing and maximum loss as expected by this particular standard. The values
+returned are a toleranced value with upper/lower limits for the
+intra-pair skew and the maximum loss as a double representing dB. Some defaults in the
+table are derived from the references listed below.
+
+1. Skew match between A[13:0] and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
+2. Skew match between RAS_n, CAS_n, WE_n, and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
+3. Skew match between BA[1:0], BG[2:0] and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
+4. Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is 0.0 +/- 20e-12 (20 ps) Intel or -50ps, -34ps AMD
+5. Skew match between CMD/ADDR/CTRL within a channel is 0.0 +/- 20e-12 (20 ps) Intel
+6. Skew match of CK is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
+7. Skew match of DQS is 0.0 +/- 1.0e-12 (1 ps) Intel or 0.0 +/- 2.0e-12 (2 ps) AMD
+8. Skew match between DQ and DQS.P within a byte lane is 0.0 +/- 3.5e-12 (3.5 ps) Intel or 0.0 +/- 100.0e-12 (100 ps) AMD 
+9. Skew match between CK.P and DQS.P is -85 ps to 935 ps Intel or -149 ps to +1796 ps AMD
+
+AMD specs derived from:
+https://docs.amd.com/internal/api/webapp/print/a76c692f-691c-4a1d-ad9a-da2d4238be8bfor the DDR5 data
+
+<DOC>
+
+#use-added-syntax(jitx)
+defpackage jsl/protocols/memory/ddr5:
+  import core
+  import jitx
+  import jitx/commands
+
+  import jsl/bundles
+  import jsl/errors
+  import jsl/ensure
+  import jsl/si
+  import jsl/pin-assignment
+
+doc: \<DOC>
+@brief DDR5 width enums
+This is a fixed list of possible lane widths for DDR5 memory channels (i.e. number of DQ signals). 
+@member DDR5-x16 16 bit width
+@member DDR5-x20 20 bit width
+@member DDR5-x24 24 bit width
+@member DDR5-x32 32 bit width
+@member DDR5-x40 40 bit width
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr5/DDR5-width:
+  DDR5-x16
+  DDR5-x20
+  DDR5-x24
+  DDR5-x32
+  DDR5-x40
+
+doc: \<DOC>
+@brief DDR5 Width enum conversion to integers
+This converts possible lane widths for DDR5 memory channels into the corresponding integer
+<DOC>
+public defn width-to-int (en:DDR5-width) -> Int:
+  switch(en) :
+    DDR5-x16 : 16
+    DDR5-x20 : 20
+    DDR5-x24 : 24
+    DDR5-x32 : 32
+    DDR5-x40 : 40
+
+doc: \<DOC>
+@brief DDR5 Width enum conversion to lane count
+This converts possible lane widths for DDR5 memory channels
+into the corresponding integer number of 8-bit lanes which
+determines the number of DQS pairs required.
+<DOC>
+public defn width-to-lane (en:DDR5-width) -> Int:
+  switch(en) :
+    DDR5-x16 : 2
+    DDR5-x20 : 3  ; 20 bits requires 3 DQS pairs (24 bits total capacity)
+    DDR5-x24 : 3
+    DDR5-x32 : 4
+    DDR5-x40 : 5
+
+doc: \<DOC>
+@brief DDR5 topology
+This is a fixed list of possible topologies for DDR5 memories
+@member DDR5-FlyBy - Supported by the subordinate constraints for DDR5-Data-Constraints and DDR5-ACC-Constraints
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr5/DDR5-topology:
+  DDR5-FlyBy
+
+doc: \<DOC>
+@brief DDR5 rank Options
+This is a fixed list of possible rank options for DDR5 implementations (i.e. number of CS_n signals)
+@member DDR5-SingleRank - 1 CS_n signal
+@member DDR5-DualRank - 2 CS_n signals
+<DOC>
+public pcb-enum jsl/protocols/memory/ddr5/DDR5-rank:
+  DDR5-SingleRank
+  DDR5-DualRank
+
+doc: \<DOC>
+@brief DDR5 rank enum conversion to integers
+This converts possible rank options for DDR5 memory channels into a corresponding integer
+which determines the number of CS_n signals needed to control the memories
+<DOC>
+public defn rank-to-int (en:DDR5-rank) -> Int:
+  switch(en) :
+    DDR5-SingleRank : 1
+    DDR5-DualRank   : 2
+
+doc: \<DOC>
+@brief DDR5 Bundle
+One DDR5 bundle consists of the connections between an integrated memory controller and
+one or more DDR5 memory chips/DIMMs.
+@member data Data channel(s) for DDR5 depending on the width
+@member acc ACC channel for DDR5
+@member rank Rank configuration of the DDR5 memory (DDR5-SingleRank or DDR5-DualRank)
+@member topology Topology of the DDR5 connection (DDR5-FlyBy)
+@member BG-len Number of BG pins
+@member BA-len Number of BA pins
+<DOC>
+
+public defn ddr5 (width:DDR5-width -- rank:DDR5-rank = DDR5-SingleRank, topology:DDR5-topology = DDR5-FlyBy, CK-len:Int = 1, BG-len:Int = 3, BA-len:Int = 2) :
+  ddr5-b(width, rank, topology, CK-len, BG-len, BA-len)
+
+public pcb-bundle ddr5-b (width:DDR5-width, rank:DDR5-rank, topology:DDR5-topology, CK-len:Int, BG-len:Int, BA-len:Int) :
+  name = "DDR5"
+  description = "DDR5 Dynamic Random-Access Memory protocol"
+  port data    : ddr5-data-channel(width) ;
+  port acc     : ddr5-acc-channel(rank, CK-len, BG-len, BA-len) ; covers all CMD/CTRL/ADDR
+
+public pcb-bundle ddr5-data-channel (width:DDR5-width):
+  port DQ    : pin[width-to-int(width)] ; will vary from 15:0 to 39:0 as appropriate
+  port DQS   : diff-pair[width-to-lane(width)] ; will be 1:0 to 4:0
+  port DM_n  : pin[width-to-lane(width)] ; data mask per 8b lane
+
+public pcb-bundle ddr5-acc-channel (rank:DDR5-rank, CK-len:Int, BG-len:Int, BA-len:Int):
+  port CK      : diff-pair[CK-len] 
+  port CKE     : pin[rank-to-int(rank)]
+  port A       : pin[14] ; DDR5 has 14 address pins (A[13:0])
+  port ACT_n   : pin
+  port BG      : pin[BG-len] ; DDR5 typically has 3 BG pins
+  port BA      : pin[BA-len] ; DDR5 has 2 BA pins
+  port CS_n    : pin[rank-to-int(rank)]
+  port RESET_n : pin
+  port ODT     : pin[rank-to-int(rank)]
+  port PAR     : pin
+  port ALERT_n : pin
+
+
+doc: \<DOC>
+@brief Differential impedance specified by the DDR5 standard
+This is a defstruct that holds the expected differential
+trace impedance for the standard.
+
+@return Upper/lower limits for the impedance in a struct.
+<DOC>
+public defstruct DDR5-Impedances <: Equalable:
+  ck-imped:Toleranced with:
+     default => 100.0 +/- (5 %)
+  dqs-imped:Toleranced with:
+     default => 100.0 +/- (5 %)
+  dq-imped:Toleranced with:
+    default => 50.0 +/- (5 %)
+  acc-imped:Toleranced with:
+    default => 50.0 +/- (5 %)
+with:
+  printer => true
+  keyword-constructor => true
+  equalable => true
+
+doc: \<DOC>
+DDR5 SI Constraint Type
+
+This derives from the whole data lane constraint as most of the dq signals
+are single-ended but referenced to the dqs pairs. The remainder of the signals are
+constrained to the CK pair. The constraints are:
+
+    0.0 +/-    1.0e-12   ; Intra-pair skew match of CK is +/- 1 ps Intel or +/- 2 ps AMD
+    0.0 +/-    1.0e-12   ; Intra-pair skew match of DQS is +/- 1 ps Intel or +/- 2 ps AMD
+  -85.0e-12 +935.0e-12   ; Skew match between CK.P and DQS.P -85 ps to 935 ps Intel or -149 ps to +1796 ps AMD
+    0.0 +/-    3.5e-12   ; Skew match between DQ and DQS.P within a byte lane is +/- 3.5 ps Intel or +/- 100 ps AMD
+    0.0 +/-   20.0e-12   ; Skew match between A[13:0] and CK.P +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between BA[1:0], BG[2:0] and CK.P is +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between CMD/ADDR/CTRL within a channel is +/- 20 ps
+    0.0 +/-   20.0e-12   ; Skew match between ACT_n, CKE, CS_n, ODT, PAR and CK.P is +/- 20 ps
+
+<DOC>
+
+doc: \<DOC>
+Constructor for the DDR5 Data ACC Inter-signal timing skew constraint
+<DOC>
+public defstruct DDR5-Data-ACC-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  CK.P to DQS.P Inter-signal Timing Skew Constraint in Seconds
+  <DOC>
+  skew-ck-dqs:Toleranced with :
+    default => min-typ-max(-85.0e-12, 0.0, 935.0e-12)
+with:
+  keyword-constructor => true
+  constructor => #DDR5-Data-ACC-Constraint
+
+
+doc: \<DOC>
+Constructor for the DDR5 Data Link Constraint
+<DOC>
+public defstruct DDR5-Data-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  DQS Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-dqs:Toleranced with :
+    default => 0.0 +/- 1.00e-12
+  doc: \<DOC>
+  DQ to DQS Inter-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-dq-dqs:Toleranced with :
+    default => 0.0 +/- 3.50e-12
+  doc: \<DOC>
+  DM_n to DQS.P Timing Skew Constraint in Seconds
+  <DOC>
+  skew-dm-dqs:Toleranced with:
+    default => 0.0 +/- 3.50e-12 ; Same as DQ timing
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    default => 5.0
+  doc: \<DOC>
+  Differential Routing Structure for DQS [100.0 Ohms +/- (5 %)]
+  <DOC>
+  diff-dqs-rs:DifferentialRoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for each DQ signal as well as the DM_n signal [50.0 Ohms +/- (5 %)]
+  <DOC>
+  se-dq-rs:RoutingStructure
+with:
+  keyword-constructor => true
+  constructor => #DDR5-Data-Constraint
+
+doc: \<DOC>
+Constructor for the DDR5 ACC Link Constraint
+<DOC>
+public defstruct DDR5-ACC-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  CK Intra-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-ck:Toleranced with :
+    default => 0.0 +/- 1.00e-12
+  doc: \<DOC>
+  CMD/ADDR/CTRL to CK Inter-pair Timing Skew Constraint in Seconds
+  <DOC>
+  skew-cmd-addr-ctrl-ck:Toleranced with :
+    default => 0.0 +/- 20.0e-12
+  doc: \<DOC>
+  CMD, ADDR, CTRL (w/o CK) Intra-group Timing Skew Constraint in Seconds
+  <DOC>
+  skew-cmd-addr-ctrl:Toleranced  with:
+    default =>  0.0 +/- 10.0e-12
+  doc: \<DOC>
+  Diff-Pair Max Loss Limit Constraint in dB
+  <DOC>
+  loss:Double with:
+    ensure => ensure-positive!,
+    default => 5.0
+  doc: \<DOC>
+  Differential Routing Structure for CK  [100.0 Ohms +/- (5 %)]
+  <DOC>
+  diff-ck-rs:DifferentialRoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for all other SE signal [50.0 Ohms +/- (5 %)]
+  <DOC>
+  se-rs:RoutingStructure
+with:
+  keyword-constructor => true
+  constructor => #DDR5-ACC-Constraint
+
+public defstruct DDR5-Constraint <: SI-Constraint :
+  doc: \<DOC>
+  Channel Bit Width (16, 20, 24, 32, 40)
+  <DOC>
+  width:DDR5-width
+  doc: \<DOC>
+  Topology of memory channel (DDR5-FlyBy is the only supported topology)
+  <DOC>
+  topology:DDR5-topology
+  doc: \<DOC>
+  Channel Rank
+  <DOC>
+  rank:DDR5-rank
+  doc: \<DOC>
+  Differential Routing Structure for CK  [100.0 +/- (5 %)]
+  <DOC>
+  diff-ck-rs:DifferentialRoutingStructure
+  doc: \<DOC>
+  Differential Routing Structure for DQS [100.0 +/- (5 %)]
+  <DOC>
+  diff-dqs-rs:DifferentialRoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for each DQ signal [50.0 +/- (5 %)]
+  <DOC>
+  se-dq-rs:RoutingStructure
+  doc: \<DOC>
+  Single-Ended Routing Structure for all other SE signal [50.0 +/- (5 %)]
+  <DOC>
+  se-rs:RoutingStructure
+
+  doc: \<DOC>
+  Data Link Constraint
+  <DOC>
+  data-cst:DDR5-Data-Constraint with:
+    default => DDR5-Data-Constraint(diff-dqs-rs = diff-dqs-rs, se-dq-rs = se-dq-rs)
+  doc: \<DOC>
+  ACC Link Constraint
+  <DOC>
+  acc-cst:DDR5-ACC-Constraint with:
+    default => DDR5-ACC-Constraint(diff-ck-rs = diff-ck-rs, se-rs = se-rs)
+  doc: \<DOC>
+  Data To ACC Constraint
+  <DOC>
+  data-acc-cst:DDR5-Data-ACC-Constraint with:
+    default => DDR5-Data-ACC-Constraint()
+
+with:
+  keyword-constructor => true
+  constructor => #DDR5-Constraint
+
+
+doc: \<DOC>
+Constructor for the DDR5 Link Constraint
+@param ck-rs Differential Routing Structure constraints for CK signals
+@param dqs-rs Differential Routing Structure constraints for DQS signals
+@param dq-rs Routing Structure constraints for DQ signals
+@param rs Routing Structure constraints for remaining signals (CMD/CTRL/ADDR)
+@param data-cst Data Link sub-constraint
+@param acc-cst ACC Link sub-constraint
+@param data-acc-cst Data To ACC sub-constraint
+<DOC>
+public defn DDR5-Constraint (
+    width:DDR5-width,
+    topology:DDR5-topology,
+    rank:DDR5-rank,
+    diff-ck-rs:DifferentialRoutingStructure,
+    diff-dqs-rs:DifferentialRoutingStructure,
+    se-dq-rs:RoutingStructure,
+    se-rs:RoutingStructure,
+    data-cst:DDR5-Data-Constraint,
+    acc-cst:DDR5-ACC-Constraint,
+    data-acc-cst:DDR5-Data-ACC-Constraint ) -> DDR5-Constraint:
+  DDR5-Constraint(
+    width = width,
+    topology = topology,
+    rank = rank,
+    diff-ck-rs = diff-ck-rs,
+    diff-dqs-rs = diff-dqs-rs,
+    se-dq-rs = se-dq-rs,
+    se-rs = se-rs,
+    data-cst = data-cst,
+    acc-cst = acc-cst,
+    data-acc-cst = data-acc-cst
+  )
+
+doc: \<DOC>
+Constrain a DDR5 Link assuming that it is a discrete link (not DIMM)
+
+@param cst Constraint Object
+@param src Source End Point - must be of `ddr5-b` type
+@param dst Destination End Point - must be of `ddr5-b` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defmethod constrain (cst:DDR5-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+    constrain(data-cst(cst), src.data, dst.data)
+    constrain(acc-cst(cst), src.acc, dst.acc)
+    constrain(data-acc-cst(cst), src, dst)
+
+doc: \<DOC>
+Helper function to connect and constrain a DDR5 link assuming that it is a discrete point to point link (not FlyBy)
+@param src Source End Point - must be of `ddr5-b` type
+@param dst Destination End Point - must be of `ddr5-b` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defn connect-DDR5 (src:JITXObject, dst:JITXObject
+                          -- width:DDR5-width = DDR5-x16,
+                          topology:DDR5-topology = DDR5-FlyBy,
+                          rank:DDR5-rank = DDR5-SingleRank,
+                          diff-ck-rs:DifferentialRoutingStructure,
+                          diff-dqs-rs:DifferentialRoutingStructure,
+                          dq-rs:RoutingStructure,
+                          rs:RoutingStructure) :
+  inside pcb-module :
+    val ddr5-cst = DDR5-Constraint(width = width,
+                                   topology = topology,
+                                   rank = rank,
+                                   diff-ck-rs = diff-ck-rs,
+                                   diff-dqs-rs = diff-dqs-rs,
+                                   se-dq-rs = dq-rs,
+                                   se-rs = rs)
+    constrain-topology(src, dst, ddr5-cst)
+
+doc: \<DOC>
+Constrain a DDR5 Data to ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
+
+@param cst Data to ACC channel constraint object
+@param src Source end point - must be of `ddr5` type
+@param dst Destination end point - must be of `ddr5` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defmethod constrain (cst:DDR5-Data-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module :
+    ; there could be multiple clock pairs but let's just use the 1st one for now
+    val guide-ck = src.acc.CK[0].P => dst.acc.CK[0].P
+
+    for i in 0 to length(src.data.DQS) do :
+      val target-dqs = src.data.DQS[i].P => dst.data.DQS[i].P
+      ; constrain DQS with respect to CK
+      timing-window(skew-ck-dqs(cst), guide-ck, target-dqs)
+
+doc: \<DOC>
+Constrain a DDR5 Data Link assuming that it is a discrete link (not DIMM or combined data/control)
+
+@param cst Data channel constraint object
+@param src Source end point - must be of `ddr5-data-channel` type
+@param dst Destination end point - must be of `ddr5-data-channel` type and match
+the parameterization of `src`, including width.
+<DOC>
+public defmethod constrain (cst:DDR5-Data-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+    val cst-dqs = DiffPair-Constraint(skew = skew-dqs(cst), loss = loss(cst), route-struct = diff-dqs-rs(cst))
+    ; ex. for x16, i goes from 0 to 2, so all of the byte lanes are individually constrained
+    ; ex. for x32, i goes from 0 to 4, so all of the byte lanes are individually constrained
+    ; ex. for x40, i goes from 0 to 5, so all of the byte lanes are individually constrained
+    val w = length(src.DQ)
+    for i in 0 to length(src.DQS) do :
+      ; constrain DQS per byte lane
+      val guide-dqs = src.DQS[i].P => dst.DQS[i].P
+      constrain(cst-dqs, src.DQS[i], dst.DQS[i])
+      ; constrain DQ with respect to DQS
+      val bs = i * 8
+      val be = if i + 8 > w : w else : bs + 8
+      val target-dqm-bus = to-tuple $ cat{_, [src.DM_n[i] => dst.DM_n[i]]} $ for j in bs to be seq : src.DQ[j] => dst.DQ[j]
+      timing-window(skew-dq-dqs(cst), guide-dqs, topos = target-dqm-bus)
+      max-loss(loss(cst), ep-sets = target-dqm-bus)
+    ; needs to be outside the loop as structure() can't handle a Tuple<KeyValue> argument
+    ; this statement will handle the entire DQ bus
+    structure(src.DQ, dst.DQ) = se-dq-rs(cst)
+    ; this statement will handle the DM_n signal
+    structure(src.DM_n, dst.DM_n) = se-dq-rs(cst)
+
+doc: \<DOC>
+Constrain a DDR5 ACC Link assuming that it is a discrete link (not DIMM or combined data/control)
+
+@param cst ACC channel constraint object
+@param src Source end point - must be of `ddr5-acc-channel` type
+@param dst Destination end point - must be of `ddr5-acc-channel` type and match
+the parameterization of `src`, including rank.
+<DOC>
+public defmethod constrain (cst:DDR5-ACC-Constraint, src:JITXObject, dst:JITXObject) -> False :
+  inside pcb-module:
+
+    val cst-ck  = DiffPair-Constraint(skew = skew-ck(cst), loss = loss(cst), route-struct = diff-ck-rs(cst))
+
+    ; constrain first CK as root to others with the same tight constraint?
+    val guide-cks = src.CK[0].P => dst.CK[0].P
+
+    for i in 0 to length(src.CK) do :
+      val guide-ck = src.CK[i].P => dst.CK[i].P
+      constrain(cst-ck, src.CK[i], dst.CK[i])
+      if i > 0 :
+        timing-window(skew-ck(cst), guide-cks,  src.CK[i] => dst.CK[i])
+
+    ; now constrain addr/cmd/ctrl signals (1x per bus)
+    ; there are two constraints to be applied:
+    ; First is versus CK and is +/- 20 ps
+    ; Second is versus the other signals in the same group and is +/- 10 ps
+    ; let's pick an arbitrary signal to serve as the guide for the overall ADDR/CMD/CTL group
+    ; we now have created an indexed CKE so let's use the first one, eh?
+    val guide-acc-group = src.CKE[0] => dst.CKE[0]
+    ; now back to our regularly scheduled program
+    for j in 0 to length(src.CKE) do :
+      val target-cke = src.CKE[j] => dst.CKE[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cke)
+      ; no need for timing-window for the CKE signal versus guide-acc-group as it's defining the group timing constraint
+      structure(target-cke) = se-rs(cst)
+      max-loss(loss(cst), target-cke)
+    for j in 0 to length(src.A) do :
+      val target-addr = src.A[j] => dst.A[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-addr)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-addr)
+      structure(target-addr) = se-rs(cst)
+      max-loss(loss(cst), target-addr)
+    val target-act = src.ACT_n => dst.ACT_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-act)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-act)
+    structure(target-act) = se-rs(cst)
+    max-loss(loss(cst), target-act)
+    for j in 0 to length(src.BG) do :
+      val target-bg = src.BG[j] => dst.BG[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-bg)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-bg)
+      structure(target-bg) = se-rs(cst)
+      max-loss(loss(cst), target-bg)
+    for j in 0 to length(src.BA) do :
+      val target-ba = src.BA[j] => dst.BA[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-ba)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-ba)
+      structure(target-ba) = se-rs(cst)
+      max-loss(loss(cst), target-ba)
+    for j in 0 to length(src.CS_n) do:
+      val target-cs = src.CS_n[j] => dst.CS_n[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-cs)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-cs)
+      structure(target-cs) = se-rs(cst)
+      max-loss(loss(cst), target-cs)
+    val target-reset = src.RESET_n => dst.RESET_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-reset)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-reset)
+    structure(target-reset) = se-rs(cst)
+    max-loss(loss(cst), target-reset)
+    for j in 0 to length(src.ODT) do :
+      val target-odt = src.ODT[j] => dst.ODT[j]
+      timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-odt)
+      timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-odt)
+      structure(target-odt) = se-rs(cst)
+      max-loss(loss(cst), target-odt)
+    val target-par = src.PAR => dst.PAR
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-par)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-par)
+    structure(target-par) = se-rs(cst)
+    max-loss(loss(cst), target-par)
+    val target-alert = src.ALERT_n => dst.ALERT_n
+    timing-window(skew-cmd-addr-ctrl-ck(cst), guide-cks, target-alert)
+    timing-window(skew-cmd-addr-ctrl(cst), guide-acc-group, target-alert)
+    structure(target-alert) = se-rs(cst)
+    max-loss(loss(cst), target-alert)
+
