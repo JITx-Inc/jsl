@@ -120,7 +120,6 @@ public pcb-bundle lpddr5 (width:LPDDR5-Width, rank:LPDDR5-Rank) :
   port cs : pin[num-channels(width)][rank-to-int(rank)]
   port ck : diff-pair[num-channels(width)]
   port ca : pin[num-channels(width)][7]
-  port zq : pin[num-channels(width)]
   port reset_n : pin
 
 ;============================================================
