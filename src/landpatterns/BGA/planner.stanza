@@ -11,11 +11,11 @@ defpackage jsl/landpatterns/BGA/planner:
   import jsl/geometry/basics
   import jsl/ensure
 
-val DEF-PAD-CONFIG = PadConfig-R()
+val DEF-PAD-CONFIG = PadConfig-R() ; default pad config using radius
 
 doc: \<DOC>
-Default BGA Pad Planner
-This pad planner will create circular pads for each BGA
+@brief Default BGA-PadPlanner
+@desc This pad planner will create circular pads for each BGA
 ball location. The user can use the `pad-config` to
 modify the construction of each pad including the soldermask
 and pastemask openings.
@@ -28,29 +28,40 @@ at particular grid locations.
 <DOC>
 public defstruct BGA-PadPlanner <: PadPlanner & GridPlanner:
   doc: \<DOC>
-  Defines the features of each individual BGA pad.
+  @desc Defines the features of each individual BGA pad.
   This defines the shape and parameters for the copper,
-  soldermask opening, paste application, etc.
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
   <DOC>
   pad-config:PadConfig with:
     default => DEF-PAD-CONFIG
 
   ; GridPlanner Base
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
+    default => loc(0.0, 0.0, 0.0)
 
 doc: \<DOC>
-Default Pad Shaper for BGA packages.
-This accepts a `Dims` object and will convert
-it to a `Circle` using the `x` dimension of the `Dims`.
+@desc Default pad shaper for BGA pads.
+This accepts a `Dims` object and will generate a `Circle` object
+using only the `x` dimension of the `Dims`.
 <DOC>
 public defn BGA-Pad-Shaper (s:Dims) -> Shape :
   Circle(to-radius $ x(s))
 
+doc: \<DOC>
+@desc Shape generator for BGA pads.
+<DOC>
 public defmethod shape-generator (bga:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Shape)|False :
   BGA-Pad-Shaper
 
+doc: \<DOC>
+@desc Default pad generator for BGA packages.
+This accepts a `BGA-PadPlanner` and will generate a `Pad`
+using the `shape-generator` and `build-bga-pad` functions.
+<DOC>
 public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims -> Pad)|False :
   val func? = shape-generator(x, row, column)
   match(active?(x, row, column), func?):
@@ -60,11 +71,30 @@ public defmethod pad-generator (x:BGA-PadPlanner, row:Int, column:Int) -> (Dims 
     (active:True, f:False):
       throw $ NoGeneratorForActivePadError(row, column, "shape-generator")
 
-
 doc: \<DOC>
-Full Matrix - All Pads in the grid are active
+@desc Full matrix pad planner - all pads in the grid are active.
+
+@snippet Example of a Full Matrix BGA pad planner
+```stanza
+  ; NSMD
+  val rows = 3
+  val cols = 3
+  val grid = Grid-Numbering(rows, cols)
+  val pitch = 0.5
+
+  val planner = Full-Matrix-Planner(
+    rows = rows
+    columns = cols
+    pitch = pitch
+  )
+```
 <DOC>
 public defstruct Full-Matrix-Planner <: BGA-PadPlanner :
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
   pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
@@ -72,42 +102,64 @@ public defstruct Full-Matrix-Planner <: BGA-PadPlanner :
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Number of columns in the landpattern. Must be positive.
+  <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Center-to-center spacing between pads in millimeters (mm). Must be positive.
+  <DOC>
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
 
+doc: \<DOC>
+@desc Query if a pad is active.
+<DOC>
 public defmethod active? (x:Full-Matrix-Planner, row:Int, column:Int) -> True|False:
   true
 
 doc: \<DOC>
-Staggered Matrix - Every other pad is in-active.
+@desc Staggered Matrix - Every other pad is inactive.
 
 TODO - Diagram here
 
 This pad planner assumes that the grid is structured
-as
-
+in a staggered pitch pattern.
 <DOC>
 public defstruct Staggered-Matrix-Planner <: BGA-PadPlanner :
   doc: \<DOC>
-  Phase indicates whether the first row pad 0 is empty or populated.
-  By default this function uses `Even-Phase`
+  @desc Phase indicates whether the first row pad 0 is empty or populated.
+  Default is `Even-Phase`.
   <DOC>
   phase:StaggerPhase with:
     default => Even-Phase
 
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
   pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
@@ -115,47 +167,64 @@ public defstruct Staggered-Matrix-Planner <: BGA-PadPlanner :
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
 
   doc: \<DOC>
-  Columns in the Staggered Matrix Grid.
-  Note that there are typically 2x as many columns in
-  the grid as pads that will get populated.
+  @desc Number of columns in the landpattern. Must be positive.
+  Note that there are typically 2x as many columns in the grid as 
+  pads that will get populated.
   <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Center-to-center spacing between pads in millimeters (mm). Must be positive.
+  <DOC>
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
-
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
 
-
+doc: \<DOC>
+@desc Query if a particular pad is active in a Staggered-Matrix-Planner.
+<DOC>
 public defmethod active? (x:Staggered-Matrix-Planner, row:Int, column:Int) -> True|False:
   stagger-pattern(phase(x), row, column)
 
 doc: \<DOC>
-Equilateral Triangle Matrix - Similar to Staggered but all pads are equidistant.
+@desc Equilateral Triangle Matrix - Similar to Staggered but all pads are equidistant.
 
 TODO - Diagram
-
 <DOC>
 public defstruct EquilateralTriangle-Matrix-Planner <: Staggered-Matrix-Planner :
   doc: \<DOC>
-  See Staggered Matrix
+  @desc Phase indicates whether the first row pad 0 is empty or populated.
+  Default is `Even-Phase`.
   <DOC>
   phase:StaggerPhase with:
-    as-method => true,
+    as-method => true
     default => Even-Phase
 
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
   pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
@@ -163,40 +232,54 @@ public defstruct EquilateralTriangle-Matrix-Planner <: Staggered-Matrix-Planner 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
 
-  ; Same as Stagger - must be 2x the number of pads
+  doc: \<DOC>
+  @desc Number of columns in the landpattern. Must be positive.
+  Note that there are typically 2x as many columns in the grid as 
+  pads that will get populated.
+  <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Equilateral distance between triangle points in millimeters (mm) or `Dims` object. Must be positive.
+  All pads in this planner are equidistant apart and this parameter sets that distance.
+  <DOC>
+  pitch:Double|Dims with:
+    ensure => ensure-positive!
+    as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
-  doc: \<DOC>
-  Equilateral Distance between triangle points
-  All pads in this planner are equidistant apart and
-  this parameter sets that distance.
-  <DOC>
-  tri-pitch:Double with:
-    ensure => ensure-positive!
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
 
-defmethod pitch (g:EquilateralTriangle-Matrix-Planner) -> Double|Dims :
-  val p = tri-pitch(g)
-  equilateral-triangle-pitch(p)
+doc: \<DOC>
+@desc Query if a pad is active in an EquilateralTriangle-Matrix-Planner.
+<DOC>
+public defmethod active? (x:EquilateralTriangle-Matrix-Planner, row:Int, column:Int) -> True|False:
+  stagger-pattern(phase(x), row, column)
 
 doc: \<DOC>
-Perimeter Matrix - Full matrix with an island of pads in-active.
+@desc Perimeter Matrix - All pads in the grid are active except for a specified region.
 
 TODO - Diagram
 <DOC>
 public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
   doc: \<DOC>
-  Island of Pads that will be marked inactive.
+  @desc Island of pads that will be marked inactive.
   Typically, this will be an interior region near
   the center of the device.
   This argument can be either a single `PadIsland` or a
@@ -204,6 +287,12 @@ public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
   all `PadIsland`s in the tuple forms the inactive region.
   <DOC>
   inactive:PadIsland|Tuple<PadIsland>
+
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
   pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
@@ -211,22 +300,33 @@ public defstruct Perimeter-Matrix-Planner <: BGA-PadPlanner :
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Number of columns in the landpattern. Must be positive.
+  <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Center-to-center spacing between pads in millimeters (mm). Must be positive.
+  <DOC>
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
-
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
@@ -239,18 +339,20 @@ defn not-inactive? (inactive:PadIsland|Tuple<PadIsland>, row:Int, column:Int) ->
       for island in islands all?:
         not in-range?(island, row, column)
 
+doc: \<DOC>
+@desc Query if a pad is active in a Perimeter-Matrix-Planner setup.
+<DOC>
 public defmethod active? (p:Perimeter-Matrix-Planner, row:Int, column:Int) -> True|False :
   not-inactive?(inactive(p), row, column)
 
 doc: \<DOC>
-Thermally Enhanced Matrix
+@desc Thermally Enhanced Matrix - Matrix with pad(s) set for thermal features.
 
 TODO - Diagram
-
 <DOC>
 public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   doc: \<DOC>
-  Island of Pads that will be marked inactive.
+  @desc Island of pads that will be marked inactive.
   Typically, this will be an interior region near
   the center of the device.
   This argument can be either a single `PadIsland` or a
@@ -259,8 +361,9 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   <DOC>
   inactive:PadIsland|Tuple<PadIsland> with:
     as-method => true
+
   doc: \<DOC>
-  Island of Pads that will be marked active.
+  @desc Island of pads that will be marked active.
   This island will override the `inactive` island.
   This region is typically an interior region near
   the center of the device and enclosed by the `inactive` island.
@@ -270,6 +373,12 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   all `PadIsland`s in the tuple forms the active center region.
   <DOC>
   active:PadIsland|Tuple<PadIsland>
+
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
   pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
@@ -277,26 +386,36 @@ public defstruct ThermallyEnhanced-Matrix-Planner <: Perimeter-Matrix-Planner :
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Number of columns in the landpattern. Must be positive.
+  <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Center-to-center spacing between pads in millimeters (mm). Must be positive.
+  <DOC>
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
-
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
-
 
 defn is-active? (active:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True|False :
   match(active):
@@ -306,12 +425,15 @@ defn is-active? (active:PadIsland|Tuple<PadIsland>, row:Int, column:Int) -> True
       for island in islands any?:
         in-range?(island, row, column)
 
+doc: \<DOC>
+@desc Query if a pad is active in a ThermallyEnhanced-Matrix-Planner setup.
+<DOC>
 public defmethod active? (p:ThermallyEnhanced-Matrix-Planner, row:Int, column:Int) -> True|False :
   is-active?(active(p), row, column) or
     not-inactive?(inactive(p), row, column)
 
 doc: \<DOC>
-Corner Cut Matrix - A triangle of pads in each corner are inactive
+@desc Corner Cut Matrix - A triangle of pads in each corner are inactive.
 
 Example: corner-cut = 2
   ```
@@ -326,38 +448,58 @@ Example: corner-cut = 2
 <DOC>
 public defstruct Corner-Cut-Matrix-Planner <: BGA-PadPlanner :
   doc: \<DOC>
-  Width of the triangular region in each corner that will be inactive
+  @desc Size of the triangular inactive region in each corner. Must be positive.
   <DOC>
   corner-cut:Int
-  pad-config:PadConfig with: (
+
+  doc: \<DOC>
+  @desc Defines the features of each individual BGA pad.
+  This defines the shape and parameters for the copper,
+  soldermask opening, and paste application. Default is `PadConfig-R()`.
+  <DOC>
+  pad-config:PadConfig with:
     as-method => true
     default => DEF-PAD-CONFIG
-    )
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ; GridPlanner
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+  doc: \<DOC>
+  @desc Number of rows in the landpattern. Must be positive.
+  <DOC>
   rows:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Number of columns in the landpattern. Must be positive.
+  <DOC>
   columns:Int with:
     ensure => ensure-positive!
     as-method => true
 
+  doc: \<DOC>
+  @desc Center-to-center spacing between pads in millimeters (mm). Must be positive.
+  <DOC>
   pitch:Double|Dims with:
     ensure => ensure-positive!
     as-method => true
+
+  doc: \<DOC>
+  @desc Pose (location and orientation) of the landpattern. Default is loc(0.0, 0.0, 0.0).
+  <DOC>
   pose:Pose with:
     as-method => true
-    default => loc(0.0, 0.0)
-
+    default => loc(0.0, 0.0, 0.0)
 with:
   keyword-constructor => true
   printer => true
 
+doc: \<DOC>
+@desc Query if a pad is active in a Corner-Cut-Matrix-Planner setup.
+<DOC>
 public defmethod active? (x:Corner-Cut-Matrix-Planner, row:Int, column:Int) -> True|False:
   val r-inv = rows(x) - row - 1
   val c-inv = columns(x) - column - 1
   min(row, r-inv) + min(column, c-inv) >= corner-cut(x)
+

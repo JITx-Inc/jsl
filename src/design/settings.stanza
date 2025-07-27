@@ -5,6 +5,7 @@ defpackage jsl/design/settings:
   import jitx/commands
 
 doc: \<DOC>
+@brief Board density level for landpatterns (IPC standard).
 @member DensityLevelA
 @member DensityLevelB
 @member DensityLevelC
@@ -17,6 +18,9 @@ public pcb-enum jsl/design/settings/DensityLevel:
 public val DensityLevels = to-tuple $ for i in 0 to DensityLevel-length seq:
   DensityLevel(i)
 
+doc: \<DOC>
+@brief Operating temperature for the board in a adjustable Toleranced variable named `OPERATING-TEMPERATURE`. Default is 0.0C - 25C.
+<DOC>
 public var OPERATING-TEMPERATURE : Toleranced
 OPERATING-TEMPERATURE = min-max(0.0 25.0)
 
